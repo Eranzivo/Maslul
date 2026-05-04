@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מסלול — ניהול טכנאי שטח</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#1D9E75;--green-dark:#0F6E56;--green-light:#E1F5EE;--green-mid:#9FE1CB;
+  --amber:#EF9F27;--amber-light:#FAEEDA;--red:#E24B4A;--red-light:#FCEBEB;
+  --purple:#7F77DD;--purple-light:#EEEDFE;--blue:#378ADD;--blue-light:#E6F1FB;
+  --teal:#1D9E75;--gray-50:#F7F6F3;--gray-100:#EEECEA;--gray-200:#D3D1C7;
+  --gray-400:#888780;--gray-600:#5F5E5A;--gray-900:#1A1A18;--white:#fff;
+  --radius:10px;--radius-lg:14px;--radius-xl:20px;
+  --shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04);
+  --shadow-md:0 4px 20px rgba(0,0,0,0.1);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Heebo',sans-serif;background:var(--gray-50);color:var(--gray-900);min-height:100vh;direction:rtl;}
+
+/* ── LAYOUT ── */
+.app{display:flex;min-height:100vh;}
+.sidebar{width:224px;background:var(--white);border-left:1px solid var(--gray-100);padding:1.5rem 1rem 1rem;display:flex;flex-direction:column;position:fixed;height:100vh;right:0;z-index:100;overflow-y:auto;}
+.main{margin-right:224px;padding:2rem;flex:1;max-width:980px;}
+
+/* ── LOGO ── */
+.logo{display:flex;align-items:center;gap:10px;margin-bottom:2rem;padding:0 4px;}
+.logo-mark{width:34px;height:34px;background:var(--green);border-radius:9px;display:flex;align-items:center;justify-content:center;}
+.logo-mark svg{width:18px;height:18px;fill:white;}
+.logo-text{font-size:19px;font-weight:800;color:var(--gray-900);letter-spacing:-0.8px;}
+.logo-text span{color:var(--green);}
+
+/* ── NAV ── */
+.nav-section{font-size:10px;font-weight:700;color:var(--gray-400);letter-spacing:0.8px;text-transform:uppercase;padding:4px 12px;margin:8px 0 4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--radius);font-size:13.5px;font-weight:500;color:var(--gray-600);cursor:pointer;transition:all 0.12s;margin-bottom:1px;border:none;background:none;width:100%;text-align:right;font-family:'Heebo',sans-serif;}
+.nav-item:hover{background:var(--gray-50);color:var(--gray-900);}
+.nav-item.active{background:var(--green-light);color:var(--green-dark);font-weight:600;}
+.nav-icon{font-size:15px;width:18px;text-align:center;}
+
+/* ── ROLE SWITCHER ── */
+.role-switcher{background:var(--gray-50);border-radius:var(--radius);padding:8px 10px;margin-bottom:1rem;border:1px solid var(--gray-100);}
+.role-label{font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;}
+.role-select{width:100%;border:none;background:transparent;font-size:13px;font-family:'Heebo',sans-serif;color:var(--gray-900);font-weight:600;outline:none;cursor:pointer;}
+
+/* ── PAGE ── */
+.page-header{margin-bottom:1.5rem;}
+.page-title{font-size:22px;font-weight:800;color:var(--gray-900);letter-spacing:-0.6px;}
+.page-sub{font-size:13px;color:var(--gray-400);margin-top:3px;}
+
+/* ── CARDS ── */
+.card{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-100);padding:1.25rem 1.5rem;box-shadow:var(--shadow);}
+.card+.card{margin-top:1rem;}
+
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem;}
+.stat-card{background:var(--white);border:1px solid var(--gray-100);border-radius:var(--radius-lg);padding:1rem 1.25rem;box-shadow:var(--shadow);}
+.stat-label{font-size:11px;color:var(--gray-400);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:5px;}
+.stat-value{font-size:28px;font-weight:800;color:var(--gray-900);letter-spacing:-1px;}
+.stat-value.green{color:var(--green);}
+.stat-value.amber{color:var(--amber);}
+.stat-sub{font-size:11px;color:var(--green);margin-top:2px;}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.12s;border:none;font-family:'Heebo',sans-serif;white-space:nowrap;}
+.btn-green{background:var(--green);color:white;}
+.btn-green:hover{background:var(--green-dark);}
+.btn-blue{background:var(--blue);color:white;}
+.btn-blue:hover{background:#185FA5;}
+.btn-amber{background:var(--amber);color:white;}
+.btn-red{background:var(--red);color:white;}
+.btn-red:hover{background:#A32D2D;}
+.btn-outline{background:white;color:var(--gray-600);border:1px solid var(--gray-200);}
+.btn-outline:hover{background:var(--gray-50);}
+.btn-ghost{background:transparent;color:var(--gray-400);border:none;padding:6px 10px;}
+.btn-ghost:hover{color:var(--gray-900);background:var(--gray-100);}
+.btn-lg{padding:11px 22px;font-size:14px;width:100%;justify-content:center;}
+.btn-sm{padding:5px 10px;font-size:12px;}
+
+/* ── FORMS ── */
+.form-group{margin-bottom:1rem;}
+.form-label{display:block;font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.3px;}
+.form-control{width:100%;padding:9px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:14px;font-family:'Heebo',sans-serif;color:var(--gray-900);background:white;transition:border-color 0.15s;}
+.form-control:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(29,158,117,0.1);}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;}
+.badge-green{background:var(--green-light);color:var(--green-dark);}
+.badge-amber{background:var(--amber-light);color:#854F0B;}
+.badge-red{background:var(--red-light);color:#A32D2D;}
+.badge-gray{background:var(--gray-100);color:var(--gray-600);}
+.badge-blue{background:var(--blue-light);color:#185FA5;}
+.badge-purple{background:var(--purple-light);color:#3C3489;}
+
+/* ── TASK LIST ── */
+.task-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--gray-100);}
+.task-row:last-child{border:none;}
+.task-main{flex:1;min-width:0;}
+.task-client{font-size:14px;font-weight:700;color:var(--gray-900);}
+.task-meta{font-size:12px;color:var(--gray-400);margin-top:2px;}
+.task-actions{display:flex;gap:5px;align-items:center;flex-shrink:0;}
+
+/* ── SEARCH ── */
+.search-bar{display:flex;align-items:center;gap:8px;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:var(--radius);padding:8px 12px;margin-bottom:1rem;}
+.search-bar input{border:none;outline:none;font-size:13px;font-family:'Heebo',sans-serif;color:var(--gray-900);flex:1;background:transparent;}
+
+/* ── SUGGESTION CARDS ── */
+.suggestion-card{border:1.5px solid var(--gray-100);border-radius:var(--radius-lg);padding:1rem 1.25rem;cursor:pointer;transition:all 0.12s;margin-bottom:10px;background:white;}
+.suggestion-card:hover{border-color:var(--green-mid);}
+.suggestion-card.selected{border-color:var(--green);background:var(--green-light);}
+.suggestion-meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0;}
+.meta-item{text-align:center;}
+.meta-label{font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.3px;}
+.meta-value{font-size:14px;font-weight:700;color:var(--gray-900);}
+.fit-bar{height:5px;background:var(--gray-100);border-radius:3px;overflow:hidden;}
+.fit-fill{height:100%;border-radius:3px;transition:width 0.3s;}
+.fit-label{font-size:11px;color:var(--gray-400);margin-top:3px;}
+
+/* ── SCHEDULE (coordinator) ── */
+.sch-card{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-100);margin-bottom:1rem;box-shadow:var(--shadow);overflow:hidden;}
+.sch-header{display:flex;align-items:center;gap:12px;padding:1rem 1.25rem;border-bottom:1px solid var(--gray-100);}
+.sch-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white;flex-shrink:0;}
+.sch-body{padding:0 1.25rem;}
+.sch-row{display:flex;gap:12px;align-items:center;padding:9px 0;border-bottom:1px dashed var(--gray-100);}
+.sch-row:last-child{border:none;}
+.sch-time{font-size:12px;color:var(--gray-400);min-width:46px;font-weight:700;}
+.sch-chip{flex:1;padding:7px 12px;border-radius:8px;font-size:13px;font-weight:500;}
+.chip-green{background:var(--green-light);color:var(--green-dark);}
+.chip-purple{background:var(--purple-light);color:#3C3489;}
+.chip-amber{background:var(--amber-light);color:#854F0B;}
+.chip-blue{background:var(--blue-light);color:#185FA5;}
+.chip-gray{background:var(--gray-100);color:var(--gray-600);font-style:italic;}
+.load-bar{height:3px;background:var(--gray-100);border-radius:2px;overflow:hidden;}
+.load-fill{height:100%;border-radius:2px;transition:width 0.4s;}
+
+/* ── TECH VIEW SCHEDULE (visual timeline) ── */
+.tech-view{padding:1rem;}
+.tv-header{text-align:center;padding:1.5rem 0 1rem;border-bottom:1px solid var(--gray-100);margin-bottom:1rem;}
+.tv-name{font-size:20px;font-weight:800;letter-spacing:-0.5px;}
+.tv-date{font-size:13px;color:var(--gray-400);margin-top:4px;}
+.tv-job{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-100);padding:1rem 1.25rem;margin-bottom:10px;box-shadow:var(--shadow);display:flex;gap:14px;align-items:flex-start;}
+.tv-time-col{min-width:52px;text-align:center;}
+.tv-time{font-size:16px;font-weight:800;color:var(--gray-900);}
+.tv-ampm{font-size:10px;color:var(--gray-400);margin-top:1px;}
+.tv-divider{width:1px;background:var(--gray-100);align-self:stretch;margin:0 4px;}
+.tv-details{flex:1;}
+.tv-service{font-size:15px;font-weight:700;color:var(--gray-900);}
+.tv-client{font-size:13px;color:var(--gray-600);margin-top:2px;}
+.tv-city{font-size:12px;color:var(--gray-400);margin-top:2px;}
+.tv-actions{display:flex;gap:8px;margin-top:10px;}
+.tv-empty{text-align:center;padding:3rem;color:var(--gray-400);}
+.tv-status-bar{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+
+/* ── TECH CARDS ── */
+.tech-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:1rem;}
+.tech-card{background:white;border:1px solid var(--gray-100);border-radius:var(--radius-lg);padding:1.125rem;box-shadow:var(--shadow);}
+.tech-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:white;margin-bottom:10px;}
+.tech-name{font-size:15px;font-weight:700;color:var(--gray-900);}
+.tech-role{font-size:11px;color:var(--gray-400);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;}
+.tech-info{font-size:12px;color:var(--gray-600);margin-top:3px;}
+
+/* ── JOB TYPES MANAGER ── */
+.job-type-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+.job-type-tag{display:inline-flex;align-items:center;gap:6px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:20px;padding:5px 12px;font-size:13px;font-weight:500;position:relative;}
+.job-type-tag .del-btn{display:none;background:var(--red);color:white;border:none;border-radius:50%;width:16px;height:16px;font-size:10px;cursor:pointer;align-items:center;justify-content:center;font-family:'Heebo',sans-serif;line-height:1;}
+.job-type-tag:hover .del-btn{display:flex;}
+.add-job-type{display:flex;gap:8px;margin-top:8px;}
+
+/* ── MODALS ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.42);display:flex;align-items:center;justify-content:center;z-index:1000;padding:1rem;}
+.modal{background:white;border-radius:var(--radius-xl);padding:1.75rem;width:100%;max-width:520px;box-shadow:0 24px 64px rgba(0,0,0,0.18);max-height:90vh;overflow-y:auto;}
+.modal-title{font-size:18px;font-weight:800;margin-bottom:1.25rem;color:var(--gray-900);letter-spacing:-0.4px;}
+.modal-actions{display:flex;gap:8px;margin-top:1.25rem;}
+.step-dots{display:flex;gap:6px;margin-bottom:1.25rem;}
+.step-dot{width:7px;height:7px;border-radius:50%;background:var(--gray-200);}
+.step-dot.active{background:var(--green);}
+.step-dot.done{background:var(--green-dark);}
+.confirm-list{background:var(--gray-50);border-radius:var(--radius);padding:1rem;margin:1rem 0;}
+.confirm-row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--gray-100);}
+.confirm-row:last-child{border:none;}
+.confirm-key{color:var(--gray-400);}
+.confirm-val{font-weight:700;color:var(--gray-900);}
+.success-state{text-align:center;padding:1rem 0;}
+.success-circle{width:56px;height:56px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:24px;}
+
+/* ── ALERTS ── */
+.alert{border-radius:var(--radius);padding:10px 14px;font-size:13px;margin-bottom:12px;display:flex;gap:8px;align-items:flex-start;}
+.alert-amber{background:var(--amber-light);color:#854F0B;}
+.alert-red{background:var(--red-light);color:#A32D2D;}
+.alert-green{background:var(--green-light);color:var(--green-dark);}
+.alert-blue{background:var(--blue-light);color:#185FA5;}
+
+/* ── MISC ── */
+.hidden{display:none!important;}
+.flex-between{display:flex;justify-content:space-between;align-items:center;}
+.flex-gap{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.divider{height:1px;background:var(--gray-100);margin:1rem 0;}
+.section-label{font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;}
+.wa-btn{display:inline-flex;align-items:center;gap:6px;background:#25D366;color:white;padding:7px 14px;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:'Heebo',sans-serif;text-decoration:none;}
+.wa-btn:hover{background:#1da851;}
+.settings-section{margin-bottom:1.5rem;}
+.settings-title{font-size:14px;font-weight:700;color:var(--gray-900);margin-bottom:1rem;padding-bottom:8px;border-bottom:1px solid var(--gray-100);}
+.zone-card{border:1.5px solid var(--gray-100);border-radius:var(--radius-lg);padding:.9rem 1rem;cursor:pointer;transition:all 0.12s;margin-bottom:8px;}
+.zone-card.selected{border-color:var(--green);background:var(--green-light);}
+.zone-card:hover{border-color:var(--green-mid);}
+.recurring-toggle{display:flex;align-items:center;gap:10px;padding:8px 0;}
+.toggle-switch{width:36px;height:20px;background:var(--gray-200);border-radius:10px;position:relative;cursor:pointer;transition:background 0.2s;}
+.toggle-switch.on{background:var(--green);}
+.toggle-knob{position:absolute;width:16px;height:16px;background:white;border-radius:50%;top:2px;right:2px;transition:right 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);}
+.toggle-switch.on .toggle-knob{right:18px;}
+@media print{.sidebar,.btn,.modal-overlay,.stats-grid,.search-bar,.flex-gap button,.task-actions{display:none!important;}.main{margin-right:0;padding:1rem;}body{background:white;}.card{box-shadow:none;border:1px solid #ddd;}}
+@media(max-width:700px){.sidebar{display:none;}.main{margin-right:0;padding:1rem;}.stats-grid{grid-template-columns:1fr 1fr;}.form-grid,.form-grid-3{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ══ SIDEBAR ══ -->
+<nav class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+    </div>
+    <div class="logo-text"><span>מס</span>לול</div>
+  </div>
+
+  <div class="role-switcher">
+    <div class="role-label">תצוגה</div>
+    <select class="role-select" id="role-select" onchange="switchRole()">
+      <option value="admin">מנהל / מתאם</option>
+    </select>
+  </div>
+
+  <div id="admin-nav">
+    <div class="nav-section">ניהול</div>
+    <button class="nav-item active" onclick="switchPage('tasks')"><span class="nav-icon">📋</span> משימות</button>
+    <button class="nav-item" onclick="switchPage('schedule')"><span class="nav-icon">📅</span> יומן יומי</button>
+    <button class="nav-item" onclick="switchPage('technicians')"><span class="nav-icon">👷</span> פרסונל</button>
+    <div class="nav-section">הגדרות</div>
+    <button class="nav-item" onclick="switchPage('jobtypes')"><span class="nav-icon">🔧</span> סוגי קריאה</button>
+    <button class="nav-item" onclick="switchPage('settings')"><span class="nav-icon">⚙️</span> הגדרות</button>
+  </div>
+
+  <div id="tech-nav" class="hidden">
+    <div class="nav-section">תצוגת טכנאי</div>
+    <button class="nav-item active" onclick="switchPage('techview')"><span class="nav-icon">📅</span> היומן שלי</button>
+  </div>
+
+  <div style="flex:1"></div>
+  <div style="font-size:11px;color:var(--gray-400);padding:8px 12px;" id="biz-name-sidebar">מסלול</div>
+</nav>
+
+<!-- ══ MAIN ══ -->
+<main class="main">
+
+<!-- PAGE: TASKS -->
+<div id="page-tasks">
+  <div class="page-header flex-between" style="flex-wrap:wrap;gap:10px;">
+    <div>
+      <div class="page-title" id="tasks-page-title">משימות</div>
+      <div class="page-sub" id="today-date"></div>
+    </div>
+    <div class="flex-gap">
+      <button class="btn btn-blue" onclick="openNewDayModal()">🌅 פתח יום</button>
+      <button class="btn btn-outline" onclick="openCloseDayModal()">🌙 סגור יום</button>
+      <button class="btn btn-green" onclick="openNewTaskModal()">+ משימה חדשה</button>
+    </div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">פעילות</div><div class="stat-value green" id="stat-today">0</div></div>
+    <div class="stat-card"><div class="stat-label">ממתינות</div><div class="stat-value amber" id="stat-pending">0</div></div>
+    <div class="stat-card"><div class="stat-label">הושלמו</div><div class="stat-value" id="stat-done">0</div></div>
+    <div class="stat-card"><div class="stat-label">פרסונל</div><div class="stat-value" id="stat-techs">0</div></div>
+  </div>
+  <div id="overload-alert" class="alert alert-amber hidden">⚠️ כל הפרסונל קרובים לתקרה היומית — שקול להוסיף כוח אדם</div>
+  <div id="cancel-suggestion" class="alert alert-blue hidden"></div>
+  <div class="card">
+    <div class="flex-between" style="margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
+      <div class="section-label">רשימת משימות</div>
+      <div class="flex-gap">
+        <span class="badge badge-green" id="f-all" onclick="filterTasks('all')" style="cursor:pointer;">הכל</span>
+        <span class="badge badge-gray" id="f-assigned" onclick="filterTasks('assigned')" style="cursor:pointer;">משובצות</span>
+        <span class="badge badge-gray" id="f-pending" onclick="filterTasks('pending')" style="cursor:pointer;">ממתינות</span>
+        <span class="badge badge-gray" id="f-completed" onclick="filterTasks('completed')" style="cursor:pointer;">הושלמו</span>
+      </div>
+    </div>
+    <div class="search-bar">
+      <span style="color:var(--gray-400);">🔍</span>
+      <input type="text" id="search-input" placeholder="חיפוש לפי לקוח, עיר או שירות..." oninput="renderTasks()">
+    </div>
+    <div id="tasks-list"></div>
+  </div>
+</div>
+
+<!-- PAGE: SCHEDULE -->
+<div id="page-schedule" class="hidden">
+  <div class="page-header flex-between">
+    <div><div class="page-title">יומן יומי</div><div class="page-sub">כל הפרסונל</div></div>
+    <button class="btn btn-outline" onclick="window.print()">🖨️ הדפס</button>
+  </div>
+  <div id="schedule-content"></div>
+</div>
+
+<!-- PAGE: TECH VIEW -->
+<div id="page-techview" class="hidden">
+  <div id="techview-content"></div>
+</div>
+
+<!-- PAGE: TECHNICIANS -->
+<div id="page-technicians" class="hidden">
+  <div class="page-header flex-between">
+    <div><div class="page-title">ניהול פרסונל</div><div class="page-sub" id="tech-count-label"></div></div>
+    <button class="btn btn-green" onclick="openAddTechModal()">+ הוסף</button>
+  </div>
+  <div class="tech-grid" id="tech-grid"></div>
+</div>
+
+<!-- PAGE: JOB TYPES -->
+<div id="page-jobtypes" class="hidden">
+  <div class="page-header"><div class="page-title">סוגי קריאה</div><div class="page-sub">ניהול סוגי השירות שלך</div></div>
+  <div class="card">
+    <div class="section-label">סוגי קריאה פעילים</div>
+    <div class="job-type-list" id="job-type-list"></div>
+    <div class="add-job-type">
+      <input class="form-control" id="new-job-type-input" placeholder="שם סוג קריאה חדש..." style="flex:1;">
+      <button class="btn btn-green" onclick="addJobType()">+ הוסף</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: SETTINGS -->
+<div id="page-settings" class="hidden">
+  <div class="page-header"><div class="page-title">הגדרות</div></div>
+  <div class="card">
+    <div class="settings-section">
+      <div class="settings-title">פרטי העסק</div>
+      <div class="form-group"><label class="form-label">שם העסק</label><input class="form-control" id="set-biz-name" placeholder="שם העסק"></div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-title">שעות עבודה</div>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">שעת התחלה</label><select class="form-control" id="set-start-time"></select></div>
+        <div class="form-group"><label class="form-label">שעת סיום</label><select class="form-control" id="set-end-time"></select></div>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-title">כללי קריאה</div>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">אורך קריאה ברירת מחדל</label>
+          <select class="form-control" id="set-job-duration">
+            <option value="0.5">30 דקות</option><option value="1">שעה</option>
+            <option value="1.5">שעה וחצי</option><option value="2" selected>שעתיים</option>
+            <option value="3">3 שעות</option><option value="4">4 שעות</option>
+          </select></div>
+        <div class="form-group"><label class="form-label">חיץ בין קריאות</label>
+          <select class="form-control" id="set-buffer">
+            <option value="10">10 דקות</option><option value="15" selected>15 דקות</option>
+            <option value="20">20 דקות</option><option value="30">30 דקות</option>
+          </select></div>
+      </div>
+      <div class="form-group"><label class="form-label">מקסימום קריאות יומי לפרסונל</label>
+        <select class="form-control" id="set-max-jobs">
+          <option value="0">חישוב אוטומטי</option><option value="3">3</option>
+          <option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="8">8</option>
+        </select></div>
+    </div>
+    <button class="btn btn-green btn-lg" onclick="saveSettings()">שמור הגדרות</button>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- ══ MODAL: NEW TASK ══ -->
+<div class="modal-overlay hidden" id="modal-task">
+  <div class="modal">
+    <div id="task-step-form">
+      <div class="modal-title">משימה חדשה</div>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">שם לקוח</label><input class="form-control" id="t-client" placeholder="שם מלא"></div>
+        <div class="form-group"><label class="form-label">טלפון לקוח</label><input class="form-control" id="t-phone" placeholder="05X-XXXXXXX"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">עיר</label>
+          <select class="form-control" id="t-city">
+            <option>ראשון לציון</option><option>תל אביב</option><option>פתח תקווה</option>
+            <option>חולון</option><option>בת ים</option><option>רמת גן</option><option>גבעתיים</option>
+            <option>הרצליה</option><option>כפר סבא</option><option>נתניה</option><option>ירושלים</option>
+            <option>חיפה</option><option>באר שבע</option><option>דימונה</option><option>אילת</option><option>אחר</option>
+          </select></div>
+        <div class="form-group"><label class="form-label">סוג קריאה</label><select class="form-control" id="t-service"></select></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">תאריך</label><input class="form-control" type="date" id="t-date"></div>
+        <div class="form-group"><label class="form-label">טווח זמן</label>
+          <select class="form-control" id="t-time">
+            <option>בוקר (08:00–12:00)</option><option>צהריים (12:00–16:00)</option><option>אחה"צ (16:00–19:00)</option>
+          </select></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">משך ביצוע</label>
+          <select class="form-control" id="t-duration">
+            <option value="0.5">30 דקות</option><option value="1">שעה</option>
+            <option value="1.5">שעה וחצי</option><option value="2" selected>שעתיים</option>
+            <option value="3">3 שעות</option><option value="4">4 שעות</option>
+          </select></div>
+        <div class="form-group"><label class="form-label">עדיפות</label>
+          <select class="form-control" id="t-priority">
+            <option value="normal">רגיל</option><option value="urgent">דחוף</option><option value="low">נמוכה</option>
+          </select></div>
+      </div>
+      <div class="recurring-toggle" onclick="toggleRecurring()">
+        <div class="toggle-switch" id="recurring-toggle"><div class="toggle-knob"></div></div>
+        <span style="font-size:14px;font-weight:500;">קריאה חוזרת</span>
+      </div>
+      <div id="recurring-options" class="hidden" style="margin-top:8px;">
+        <div class="form-group"><label class="form-label">תדירות</label>
+          <select class="form-control" id="t-recur-freq">
+            <option value="weekly">שבועי</option><option value="biweekly">כל שבועיים</option>
+            <option value="monthly">חודשי</option><option value="custom">מותאם אישית</option>
+          </select></div>
+        <div id="custom-recur" class="hidden">
+          <div class="form-group"><label class="form-label">כל כמה שבועות</label>
+            <select class="form-control" id="t-recur-weeks">
+              <option value="1">שבוע</option><option value="2">שבועיים</option>
+              <option value="3">3 שבועות</option><option value="4">4 שבועות</option><option value="6">6 שבועות</option>
+            </select></div>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:8px;"><label class="form-label">הערות</label><input class="form-control" id="t-notes" placeholder="הערות נוספות..."></div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" style="flex:1" onclick="closeModal('modal-task')">ביטול</button>
+        <button class="btn btn-green" style="flex:2" onclick="findSuggestions()">מצא הצעות שיבוץ ←</button>
+      </div>
+    </div>
+
+    <div id="task-step-suggestions" class="hidden">
+      <div class="modal-title">הצעות שיבוץ</div>
+      <div id="alert-remote" class="alert alert-amber hidden">⚠️ האזור רחוק מהאזור הפעיל היום. מומלץ לדחות.</div>
+      <div id="alert-full" class="alert alert-red hidden">🚫 כל הפרסונל הגיעו לתקרה היומית.</div>
+      <div id="suggestions-list"></div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="backToForm()">← חזרה</button>
+        <button class="btn btn-green" style="flex:1" onclick="confirmAssignment()">שבץ עכשיו</button>
+      </div>
+    </div>
+
+    <div id="task-step-success" class="hidden">
+      <div class="success-state">
+        <div class="success-circle">✓</div>
+        <div style="font-size:18px;font-weight:800;margin-bottom:4px;">המשימה שובצה!</div>
+        <div style="font-size:13px;color:var(--gray-400);" id="recurring-confirm-note"></div>
+      </div>
+      <div class="confirm-list" id="confirm-details"></div>
+      <div id="wa-button-wrap" style="margin-bottom:1rem;text-align:center;"></div>
+      <button class="btn btn-green btn-lg" onclick="finishTask()">סגור</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: ADD/EDIT TECH ══ -->
+<div class="modal-overlay hidden" id="modal-tech">
+  <div class="modal">
+    <div class="modal-title" id="tech-modal-title">הוסף פרסונל</div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">שם מלא</label><input class="form-control" id="tech-name-input"></div>
+      <div class="form-group"><label class="form-label">טלפון</label><input class="form-control" id="tech-phone-input" placeholder="05X-XXXXXXX"></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">התמחות</label>
+        <select class="form-control" id="tech-specialty">
+          <option>מסנני מים</option><option>מזגנים</option><option>מצלמות</option>
+          <option>ניקיון</option><option>חשמל</option><option>משלוחים</option><option>כללי</option>
+        </select></div>
+      <div class="form-group"><label class="form-label">אזור פעילות</label><input class="form-control" id="tech-area-input" placeholder="גוש דן"></div>
+    </div>
+    <div class="form-group"><label class="form-label">כתובת בסיס</label><input class="form-control" id="tech-base-input" placeholder="עיר / כתובת מוצא"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal('modal-tech')">ביטול</button>
+      <button class="btn btn-green" style="flex:2" id="tech-save-btn" onclick="saveTech()">הוסף</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: STATUS ══ -->
+<div class="modal-overlay hidden" id="modal-status">
+  <div class="modal">
+    <div class="modal-title">עדכון סטטוס</div>
+    <div id="status-task-info" style="margin-bottom:1rem;"></div>
+    <div style="display:grid;gap:8px;" id="status-options"></div>
+    <div class="modal-actions" style="margin-top:1rem;">
+      <button class="btn btn-outline btn-lg" onclick="closeModal('modal-status')">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: CANCEL CONFIRM ══ -->
+<div class="modal-overlay hidden" id="modal-cancel">
+  <div class="modal">
+    <div class="modal-title">ביטול קריאה</div>
+    <div id="cancel-job-info" style="margin-bottom:1rem;"></div>
+    <div id="cancel-replacement" class="alert alert-blue hidden"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal('modal-cancel')">חזרה</button>
+      <button class="btn btn-amber" style="flex:1" id="cancel-no-replace-btn" onclick="doCancelNoReplace()">בטל בלבד</button>
+      <button class="btn btn-green" style="flex:2" id="cancel-assign-btn" onclick="doCancelAndAssign()" style="display:none">שבץ תחליף</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: NEW DAY ══ -->
+<div class="modal-overlay hidden" id="modal-newday">
+  <div class="modal">
+    <div class="modal-title">פתיחת יום חדש</div>
+    <div class="step-dots" id="nd-dots"></div>
+    <div id="nd-step-1">
+      <div class="form-group"><label class="form-label">תאריך</label><input class="form-control" type="date" id="nd-date"></div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal('modal-newday')">ביטול</button>
+        <button class="btn btn-green" style="flex:1" onclick="ndGo(2)">הבא ←</button>
+      </div>
+    </div>
+    <div id="nd-step-2" class="hidden">
+      <div class="section-label" style="margin-bottom:8px;">בחר אזורים פעילים</div>
+      <div id="nd-zones"></div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="ndGo(1)">← חזרה</button>
+        <button class="btn btn-green" style="flex:1" onclick="ndGo(3)">הבא ←</button>
+      </div>
+    </div>
+    <div id="nd-step-3" class="hidden">
+      <div class="section-label">המלצת כוח אדם</div>
+      <div id="nd-recs"></div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="ndGo(2)">← חזרה</button>
+        <button class="btn btn-green" style="flex:1" onclick="confirmNewDay()">פתח יום</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: CLOSE DAY ══ -->
+<div class="modal-overlay hidden" id="modal-closeday">
+  <div class="modal">
+    <div class="modal-title">סגירת יום</div>
+    <div id="closeday-summary"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-closeday')">ביטול</button>
+      <button class="btn btn-outline" onclick="window.print()">🖨️ הדפס</button>
+      <button class="btn btn-red" style="flex:1" onclick="confirmCloseDay()">סגור יום</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════
+// CONSTANTS
+// ════════════════════════════════
+const COLORS=['#1D9E75','#7F77DD','#EF9F27','#E24B4A','#185FA5','#D4537E','#0F6E56','#854F0B'];
+const REMOTE=['דימונה','באר שבע','אילת','ערד','מצפה רמון','קריית שמונה','צפת'];
+const STATUS_MAP={
+  pending:{label:'ממתין',badge:'badge-amber',next:['assigned']},
+  assigned:{label:'משובץ',badge:'badge-blue',next:['en_route','pending']},
+  en_route:{label:'בדרך',badge:'badge-purple',next:['arrived']},
+  arrived:{label:'הגיע',badge:'badge-green',next:['completed']},
+  completed:{label:'הושלם',badge:'badge-gray',next:[]},
+};
+const ZONES=[
+  {name:'תל אביב',avg:18},{name:'ראשון לציון',avg:12},{name:'פתח תקווה',avg:11},
+  {name:'חולון / בת ים',avg:10},{name:'רמת גן / גבעתיים',avg:9},
+  {name:'הרצליה / כפר סבא',avg:8},{name:'נתניה',avg:7},
+  {name:'ירושלים',avg:10},{name:'חיפה',avg:8},{name:'באר שבע / דרום',avg:4},
+];
+const TIME_SLOTS=[['08:30','10:30','12:00'],['12:30','13:00','14:00'],['16:00','16:30','17:00']];
+const TRAVEL_MINS=[[10,18,25],[14,20,8],[22,12,16]];
+const CHIP_COLORS=['chip-green','chip-purple','chip-amber','chip-blue'];
+
+// ════════════════════════════════
+// STATE
+// ════════════════════════════════
+let technicians=[],tasks=[],jobTypes=[],nextTaskId=1,nextTechId=1;
+let editingTechId=null,selectedSuggestion=0,currentFilter='all',assigningExistingId=null;
+let ndSelectedZones=[],cancelingTaskId=null,cancelReplacement=null,statusTaskId=null;
+let isRecurring=false,currentRole='admin',currentTechView=null;
+let settings={bizName:'מסלול',startTime:'08:00',endTime:'19:00',jobDuration:2,buffer:15,maxJobs:0};
+let _suggestions=[];
+
+// ════════════════════════════════
+// STORAGE
+// ════════════════════════════════
+function save(){
+  localStorage.setItem('ml_techs',JSON.stringify(technicians));
+  localStorage.setItem('ml_tasks',JSON.stringify(tasks));
+  localStorage.setItem('ml_settings',JSON.stringify(settings));
+  localStorage.setItem('ml_jobtypes',JSON.stringify(jobTypes));
+  localStorage.setItem('ml_ids',JSON.stringify({nextTaskId,nextTechId}));
+}
+function load(){
+  try{
+    const t=localStorage.getItem('ml_techs'),k=localStorage.getItem('ml_tasks'),
+          s=localStorage.getItem('ml_settings'),j=localStorage.getItem('ml_jobtypes'),
+          ids=localStorage.getItem('ml_ids');
+    if(t)technicians=JSON.parse(t);
+    if(k)tasks=JSON.parse(k);
+    if(s)settings=Object.assign(settings,JSON.parse(s));
+    if(j)jobTypes=JSON.parse(j);
+    if(ids){const i=JSON.parse(ids);nextTaskId=i.nextTaskId;nextTechId=i.nextTechId;}
+  }catch(e){}
+  if(!technicians.length)seedData();
+  if(!jobTypes.length)jobTypes=['התקנת מסנן מים','תיקון מזגן','ניקוי מזגן','התקנת מצלמה','ניקוי ספה','מדידות','התקנת סורג','משלוח','תיקון חשמלי','אחר'];
+}
+function seedData(){
+  technicians=[
+    {id:1,name:'אמיר לוי',phone:'052-1234567',specialty:'מסנני מים',area:'גוש דן',base:'ראשון לציון',color:'#1D9E75'},
+    {id:2,name:'יוסי מזרחי',phone:'054-9876543',specialty:'מזגנים',area:'שרון',base:'פתח תקווה',color:'#7F77DD'},
+    {id:3,name:'רון אביבי',phone:'050-5551234',specialty:'מצלמות',area:'מרכז',base:'תל אביב',color:'#EF9F27'},
+  ];
+  tasks=[
+    {id:1,client:'משפחת גולדברג',phone:'052-0000001',city:'ראשון לציון',service:'התקנת מסנן מים',date:today(),time:'08:30',duration:1,techId:1,status:'assigned',notes:'',priority:'normal',recurring:false},
+    {id:2,client:'חברת ספקטרום',phone:'03-0000002',city:'תל אביב',service:'תיקון מזגן',date:today(),time:'10:00',duration:2,techId:2,status:'en_route',notes:'',priority:'urgent',recurring:false},
+    {id:3,client:'משפחת לוינשטיין',phone:'054-0000003',city:'פתח תקווה',service:'ניקוי ספה',date:today(),time:'12:30',duration:1,techId:1,status:'completed',notes:'',priority:'normal',recurring:true,recurFreq:'monthly'},
+    {id:4,client:'דוד אברהם',phone:'050-0000004',city:'חולון',service:'התקנת מצלמה',date:today(),time:'09:00',duration:1,techId:3,status:'assigned',notes:'',priority:'normal',recurring:false},
+    {id:5,client:'משפחת פרץ',phone:'052-0000005',city:'גבעתיים',service:'תיקון חשמלי',date:'',time:'',duration:2,techId:null,status:'pending',notes:'',priority:'normal',recurring:false},
+    {id:6,client:'עסק טכנולוגיות',phone:'054-0000006',city:'רמת גן',service:'התקנת סורג',date:'',time:'',duration:2,techId:null,status:'pending',notes:'דחוף',priority:'urgent',recurring:false},
+  ];
+  nextTaskId=7;nextTechId=4;
+}
+function today(){return new Date().toISOString().split('T')[0];}
+
+// ════════════════════════════════
+// INIT
+// ════════════════════════════════
+document.addEventListener('DOMContentLoaded',()=>{
+  load();applySettings();buildRoleSelect();
+  setDateDisplay();renderTasks();renderSchedule();renderTechs();renderJobTypes();
+  populateTimeSels();populateServiceSelect();
+  document.getElementById('t-date').value=today();
+  document.getElementById('nd-date').value=today();
+  document.getElementById('t-recur-freq').addEventListener('change',function(){
+    document.getElementById('custom-recur').classList.toggle('hidden',this.value!=='custom');
+  });
+});
+function setDateDisplay(){
+  const d=new Date(),days=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+  document.getElementById('today-date').textContent='יום '+days[d.getDay()]+' — '+d.toLocaleDateString('he-IL');
+}
+function applySettings(){
+  const n=settings.bizName||'מסלול';
+  document.getElementById('biz-name-sidebar').textContent=n;
+  document.getElementById('tasks-page-title').textContent='משימות — '+n;
+  document.getElementById('set-biz-name').value=n;
+  document.getElementById('set-job-duration').value=settings.jobDuration;
+  document.getElementById('set-buffer').value=settings.buffer;
+  document.getElementById('set-max-jobs').value=settings.maxJobs;
+}
+function populateTimeSels(){
+  const s=document.getElementById('set-start-time'),e=document.getElementById('set-end-time');
+  for(let h=5;h<=10;h++){['00','30'].forEach(m=>{const v=pad(h)+':'+m;const o=new Option(v,v);if(v===settings.startTime)o.selected=true;s.appendChild(o);});}
+  for(let h=14;h<=22;h++){['00','30'].forEach(m=>{const v=pad(h)+':'+m;const o=new Option(v,v);if(v===settings.endTime)o.selected=true;e.appendChild(o);});}
+}
+function populateServiceSelect(){
+  const sel=document.getElementById('t-service');
+  sel.innerHTML=jobTypes.map(j=>`<option>${j}</option>`).join('');
+}
+function pad(n){return n<10?'0'+n:''+n;}
+function calcMax(){
+  if(settings.maxJobs>0)return settings.maxJobs;
+  const[sh,sm]=settings.startTime.split(':').map(Number),[eh,em]=settings.endTime.split(':').map(Number);
+  return Math.floor(((eh*60+em)-(sh*60+sm)-60)/(settings.jobDuration*60+settings.buffer));
+}
+
+// ════════════════════════════════
+// ROLES
+// ════════════════════════════════
+function buildRoleSelect(){
+  const sel=document.getElementById('role-select');
+  sel.innerHTML='<option value="admin">מנהל / מתאם</option>'+
+    technicians.map(t=>`<option value="tech_${t.id}">${t.name}</option>`).join('');
+}
+function switchRole(){
+  const val=document.getElementById('role-select').value;
+  currentRole=val;
+  const isAdmin=val==='admin';
+  document.getElementById('admin-nav').classList.toggle('hidden',!isAdmin);
+  document.getElementById('tech-nav').classList.toggle('hidden',isAdmin);
+  if(!isAdmin){
+    const techId=parseInt(val.replace('tech_',''));
+    currentTechView=technicians.find(t=>t.id===techId);
+    switchPage('techview');
+    renderTechView();
+  } else {
+    switchPage('tasks');
+  }
+}
+
+// ════════════════════════════════
+// PAGES
+// ════════════════════════════════
+function switchPage(page){
+  ['tasks','schedule','techview','technicians','jobtypes','settings'].forEach(p=>{
+    document.getElementById('page-'+p).classList.toggle('hidden',p!==page);
+  });
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  const pageNavMap={tasks:0,schedule:1,technicians:2,jobtypes:3,settings:4,techview:0};
+  const adminItems=document.querySelectorAll('#admin-nav .nav-item');
+  const techItems=document.querySelectorAll('#tech-nav .nav-item');
+  if(currentRole==='admin'&&adminItems[pageNavMap[page]])adminItems[pageNavMap[page]].classList.add('active');
+  if(currentRole!=='admin'&&techItems[0])techItems[0].classList.add('active');
+  if(page==='schedule')renderSchedule();
+  if(page==='technicians')renderTechs();
+  if(page==='techview')renderTechView();
+  if(page==='jobtypes')renderJobTypes();
+}
+
+// ════════════════════════════════
+// SETTINGS
+// ════════════════════════════════
+function saveSettings(){
+  settings.bizName=document.getElementById('set-biz-name').value||'מסלול';
+  settings.startTime=document.getElementById('set-start-time').value;
+  settings.endTime=document.getElementById('set-end-time').value;
+  settings.jobDuration=parseFloat(document.getElementById('set-job-duration').value);
+  settings.buffer=parseInt(document.getElementById('set-buffer').value);
+  settings.maxJobs=parseInt(document.getElementById('set-max-jobs').value);
+  save();applySettings();alert('ההגדרות נשמרו ✓');
+}
+
+// ════════════════════════════════
+// JOB TYPES
+// ════════════════════════════════
+function renderJobTypes(){
+  document.getElementById('job-type-list').innerHTML=jobTypes.map((j,i)=>
+    `<div class="job-type-tag">${j}<button class="del-btn" onclick="deleteJobType(${i})">×</button></div>`
+  ).join('');
+}
+function addJobType(){
+  const inp=document.getElementById('new-job-type-input');
+  const val=inp.value.trim();
+  if(!val)return;
+  jobTypes.push(val);inp.value='';
+  save();renderJobTypes();populateServiceSelect();
+}
+function deleteJobType(i){
+  jobTypes.splice(i,1);save();renderJobTypes();populateServiceSelect();
+}
+
+// ════════════════════════════════
+// TASKS
+// ════════════════════════════════
+function filterTasks(f){
+  currentFilter=f;
+  ['all','assigned','pending','completed'].forEach(x=>{
+    const el=document.getElementById('f-'+x);if(!el)return;
+    const map={all:'badge-green',assigned:'badge-blue',pending:'badge-amber',completed:'badge-gray'};
+    el.className='badge '+(x===f?map[x]:'badge-gray');
+  });
+  renderTasks();
+}
+function renderTasks(){
+  const q=(document.getElementById('search-input').value||'').toLowerCase();
+  let filtered=tasks.filter(t=>{
+    if(currentFilter!=='all'&&t.status!==currentFilter)return false;
+    if(q)return t.client.toLowerCase().includes(q)||t.city.toLowerCase().includes(q)||t.service.toLowerCase().includes(q);
+    return true;
+  }).sort((a,b)=>{
+    if(a.status==='pending'&&b.status!=='pending')return -1;
+    if(b.status==='pending'&&a.status!=='pending')return 1;
+    return(a.date+a.time).localeCompare(b.date+b.time);
+  });
+  const list=document.getElementById('tasks-list');
+  if(!filtered.length){list.innerHTML='<div style="text-align:center;padding:2rem;color:var(--gray-400);">אין משימות</div>';
+  }else{
+    list.innerHTML=filtered.map(t=>{
+      const tech=technicians.find(x=>x.id===t.techId);
+      const s=STATUS_MAP[t.status]||STATUS_MAP.pending;
+      const isRemote=REMOTE.includes(t.city);
+      const dateLabel=t.date&&t.date!==today()?` • ${t.date}`:'';
+      return `<div class="task-row">
+        <div class="task-main">
+          <div class="task-client">${t.priority==='urgent'?'<span class="badge badge-red" style="margin-left:5px;font-size:10px;">דחוף</span>':''}${t.recurring?'🔄 ':''}<strong>${t.client}</strong></div>
+          <div class="task-meta">${t.service} • ${t.city}${t.time?' • '+t.time:''}${dateLabel}${tech?' • '+tech.name:''}</div>
+        </div>
+        <div class="task-actions">
+          ${isRemote?'<span class="badge badge-amber">רחוק</span>':''}
+          <span class="badge ${s.badge}" style="cursor:pointer;" onclick="openStatusModal(${t.id})">${s.label}</span>
+          ${t.status==='pending'?`<button class="btn btn-sm btn-green" onclick="quickAssign(${t.id})">שבץ</button>`:''}
+          ${['assigned','en_route','arrived'].includes(t.status)?`<button class="btn btn-sm btn-ghost" onclick="openCancelModal(${t.id})" style="color:var(--red);">בטל</button>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('stat-today').textContent=tasks.filter(t=>['assigned','en_route','arrived'].includes(t.status)).length;
+  document.getElementById('stat-pending').textContent=tasks.filter(t=>t.status==='pending').length;
+  document.getElementById('stat-done').textContent=tasks.filter(t=>t.status==='completed').length;
+  document.getElementById('stat-techs').textContent=technicians.length;
+  const max=calcMax();
+  const overloaded=technicians.filter(tech=>tasks.filter(t=>t.techId===tech.id&&['assigned','en_route','arrived'].includes(t.status)).length>=max*0.8);
+  document.getElementById('overload-alert').classList.toggle('hidden',overloaded.length<technicians.length||!technicians.length);
+}
+
+// ════════════════════════════════
+// CANCEL FLOW
+// ════════════════════════════════
+function openCancelModal(id){
+  cancelingTaskId=id;cancelReplacement=null;
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+  const tech=technicians.find(x=>x.id===t.techId);
+  document.getElementById('cancel-job-info').innerHTML=`<div style="font-weight:700;font-size:15px;">${t.client}</div><div style="font-size:13px;color:var(--gray-400);">${t.service} • ${t.city} • ${t.time||''}</div>${tech?`<div style="font-size:13px;margin-top:4px;">טכנאי: ${tech.name}</div>`:''}`;
+  // find best replacement: pending task in same or nearby city
+  const pending=tasks.filter(x=>x.status==='pending');
+  const same=pending.find(x=>x.city===t.city)||pending[0];
+  const replEl=document.getElementById('cancel-replacement');
+  const assignBtn=document.getElementById('cancel-assign-btn');
+  if(same){
+    cancelReplacement=same;
+    replEl.classList.remove('hidden');
+    replEl.textContent=`💡 קריאה ממתינה שיכולה להתאים לחלון הזה: ${same.client} — ${same.service} — ${same.city}`;
+    assignBtn.style.display='inline-flex';
+  }else{
+    replEl.classList.add('hidden');
+    assignBtn.style.display='none';
+  }
+  document.getElementById('modal-cancel').classList.remove('hidden');
+}
+function doCancelNoReplace(){
+  const t=tasks.find(x=>x.id===cancelingTaskId);
+  if(t){t.status='pending';t.techId=null;t.time='';}
+  save();closeModal('modal-cancel');renderTasks();renderSchedule();
+}
+function doCancelAndAssign(){
+  doCancelNoReplace();
+  if(cancelReplacement){
+    assigningExistingId=cancelReplacement.id;
+    document.getElementById('t-client').value=cancelReplacement.client;
+    document.getElementById('t-phone').value=cancelReplacement.phone||'';
+    document.getElementById('t-city').value=cancelReplacement.city;
+    document.getElementById('t-notes').value=cancelReplacement.notes||'';
+    document.getElementById('t-duration').value=cancelReplacement.duration||2;
+    document.getElementById('modal-task').classList.remove('hidden');
+    setTimeout(()=>findSuggestions(),60);
+  }
+}
+
+// ════════════════════════════════
+// STATUS MODAL
+// ════════════════════════════════
+function openStatusModal(id){
+  statusTaskId=id;
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+  const s=STATUS_MAP[t.status];
+  document.getElementById('status-task-info').innerHTML=`<div style="font-weight:700;">${t.client}</div><div style="font-size:13px;color:var(--gray-400);">${t.service} • ${t.city}</div>`;
+  document.getElementById('status-options').innerHTML=s.next.map(ns=>{
+    const ni=STATUS_MAP[ns];
+    return `<button class="btn btn-outline" style="justify-content:flex-start;font-size:14px;" onclick="setStatus('${ns}')"><span class="badge ${ni.badge}">${ni.label}</span> שנה לסטטוס זה</button>`;
+  }).join('')||'<div style="color:var(--gray-400);font-size:13px;">אין פעולות זמינות</div>';
+  document.getElementById('modal-status').classList.remove('hidden');
+}
+function setStatus(ns){
+  const t=tasks.find(x=>x.id===statusTaskId);
+  if(t){
+    t.status=ns;
+    // if completed and recurring → auto-generate next
+    if(ns==='completed'&&t.recurring){
+      scheduleNextRecurring(t);
+    }
+  }
+  save();renderTasks();renderSchedule();closeModal('modal-status');
+}
+function scheduleNextRecurring(t){
+  const daysMap={weekly:7,biweekly:14,monthly:30,custom:(t.recurWeeks||4)*7};
+  const days=daysMap[t.recurFreq]||30;
+  const base=t.date||today();
+  const d=new Date(base);d.setDate(d.getDate()+days);
+  const nextDate=d.toISOString().split('T')[0];
+  tasks.push({...t,id:nextTaskId++,date:nextDate,time:'',techId:null,status:'pending'});
+  save();
+}
+
+// ════════════════════════════════
+// RECURRING TOGGLE
+// ════════════════════════════════
+function toggleRecurring(){
+  isRecurring=!isRecurring;
+  document.getElementById('recurring-toggle').classList.toggle('on',isRecurring);
+  document.getElementById('recurring-options').classList.toggle('hidden',!isRecurring);
+}
+
+// ════════════════════════════════
+// TASK MODAL
+// ════════════════════════════════
+function openNewTaskModal(){
+  assigningExistingId=null;isRecurring=false;
+  document.getElementById('recurring-toggle').classList.remove('on');
+  document.getElementById('recurring-options').classList.add('hidden');
+  showTaskStep('form');
+  document.getElementById('modal-task').classList.remove('hidden');
+}
+function closeModal(id){document.getElementById(id).classList.add('hidden');}
+function showTaskStep(s){
+  ['form','suggestions','success'].forEach(x=>document.getElementById('task-step-'+x).classList.toggle('hidden',x!==s));
+}
+function backToForm(){showTaskStep('form');}
+function quickAssign(id){
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+  assigningExistingId=id;
+  document.getElementById('t-client').value=t.client;
+  document.getElementById('t-phone').value=t.phone||'';
+  document.getElementById('t-city').value=t.city;
+  document.getElementById('t-notes').value=t.notes||'';
+  document.getElementById('t-duration').value=t.duration||2;
+  document.getElementById('modal-task').classList.remove('hidden');
+  setTimeout(()=>findSuggestions(),60);
+}
+function findSuggestions(){
+  const city=document.getElementById('t-city').value;
+  const isRemote=REMOTE.includes(city);
+  document.getElementById('alert-remote').classList.toggle('hidden',!isRemote);
+  const max=calcMax();
+  const tidx=document.getElementById('t-time').selectedIndex;
+  const times=TIME_SLOTS[tidx]||TIME_SLOTS[0],travels=TRAVEL_MINS[tidx]||TRAVEL_MINS[0];
+  _suggestions=technicians.map((tech,i)=>{
+    const cnt=tasks.filter(t=>t.techId===tech.id&&['assigned','en_route','arrived'].includes(t.status)).length;
+    const atMax=cnt>=max;
+    const tp=travels[i]<=15?0:travels[i]<=30?15:travels[i]<=45?30:40;
+    const zb=tasks.some(t=>t.techId===tech.id&&t.city===city)?30:0;
+    const lb=i===0?20:i===1?10:0;
+    const op=atMax?50:0;
+    const score=Math.max(0,100-tp+zb+lb-op);
+    return{tech,i,cnt,atMax,score,time:times[Math.min(i,times.length-1)],travel:travels[Math.min(i,travels.length-1)]};
+  }).sort((a,b)=>b.score-a.score);
+  document.getElementById('alert-full').classList.toggle('hidden',!_suggestions.every(s=>s.atMax));
+  document.getElementById('suggestions-list').innerHTML=_suggestions.map((s,rank)=>{
+    const pct=Math.min(100,s.score);
+    const fc=pct>=70?'var(--green)':pct>=40?'var(--amber)':'var(--red)';
+    const rb=rank===0?'<span class="badge badge-green">מומלץ</span>':rank===1?'<span class="badge badge-amber">זמין</span>':'<span class="badge badge-gray">אפשרי</span>';
+    return `<div class="suggestion-card ${rank===0?'selected':''}" onclick="selectSug(${rank})">
+      <div class="flex-between" style="margin-bottom:8px;"><span style="font-size:15px;font-weight:700;">${s.tech.name}</span>${rb}</div>
+      <div class="suggestion-meta">
+        <div class="meta-item"><div class="meta-value">${s.time}</div><div class="meta-label">הגעה</div></div>
+        <div class="meta-item"><div class="meta-value">${s.travel} דק'</div><div class="meta-label">נסיעה</div></div>
+        <div class="meta-item"><div class="meta-value">${s.cnt}/${calcMax()}</div><div class="meta-label">קריאות</div></div>
+      </div>
+      <div class="fit-bar"><div class="fit-fill" style="width:${pct}%;background:${fc};"></div></div>
+      <div class="fit-label">התאמה: ${pct}%</div>
+    </div>`;
+  }).join('');
+  selectedSuggestion=0;showTaskStep('suggestions');
+}
+function selectSug(rank){
+  selectedSuggestion=rank;
+  document.querySelectorAll('.suggestion-card').forEach((c,i)=>c.classList.toggle('selected',i===rank));
+}
+function confirmAssignment(){
+  const s=_suggestions[selectedSuggestion];if(!s)return;
+  const client=document.getElementById('t-client').value||'לקוח חדש';
+  const phone=document.getElementById('t-phone').value||'';
+  const city=document.getElementById('t-city').value;
+  const service=document.getElementById('t-service').value;
+  const duration=parseFloat(document.getElementById('t-duration').value);
+  const notes=document.getElementById('t-notes').value;
+  const date=document.getElementById('t-date').value||today();
+  const priority=document.getElementById('t-priority').value;
+  const recurFreq=document.getElementById('t-recur-freq').value;
+  const recurWeeks=parseInt(document.getElementById('t-recur-weeks')?.value||4);
+  const tech=s.tech;const arrivalTime=s.time;
+  if(assigningExistingId){
+    const t=tasks.find(x=>x.id===assigningExistingId);
+    if(t){Object.assign(t,{techId:tech.id,status:'assigned',time:arrivalTime,date,recurring:isRecurring,recurFreq,recurWeeks});}
+  }else{
+    tasks.push({id:nextTaskId++,client,phone,city,service,time:arrivalTime,date,duration,techId:tech.id,status:'assigned',notes,priority,recurring:isRecurring,recurFreq,recurWeeks});
+  }
+  save();
+  document.getElementById('confirm-details').innerHTML=`
+    <div class="confirm-row"><span class="confirm-key">לקוח</span><span class="confirm-val">${client}</span></div>
+    <div class="confirm-row"><span class="confirm-key">שירות</span><span class="confirm-val">${service}</span></div>
+    <div class="confirm-row"><span class="confirm-key">עיר</span><span class="confirm-val">${city}</span></div>
+    <div class="confirm-row"><span class="confirm-key">תאריך</span><span class="confirm-val">${date}</span></div>
+    <div class="confirm-row"><span class="confirm-key">פרסונל</span><span class="confirm-val">${tech.name}</span></div>
+    <div class="confirm-row"><span class="confirm-key">שעת הגעה</span><span class="confirm-val">${arrivalTime}</span></div>
+    ${isRecurring?`<div class="confirm-row"><span class="confirm-key">חזרה</span><span class="confirm-val">${{weekly:'שבועי',biweekly:'כל שבועיים',monthly:'חודשי',custom:'מותאם'}[recurFreq]}</span></div>`:''}
+  `;
+  document.getElementById('recurring-confirm-note').textContent=isRecurring?'קריאה חוזרת — תופיע אוטומטית בסיום':'נשמר ביומן הפרסונל';
+  const wm=encodeURIComponent(`שלום ${client}, ${tech.name} יגיע אליכם ב${city} בשעה ${arrivalTime} לביצוע ${service}. לפרטים: ${tech.phone}`);
+  const wp=phone.replace(/[^0-9]/g,'').replace(/^0/,'972');
+  document.getElementById('wa-button-wrap').innerHTML=phone?`<a class="wa-btn" href="https://wa.me/${wp}?text=${wm}" target="_blank">📱 שלח וואטסאפ ללקוח</a>`:'';
+  renderTasks();renderSchedule();showTaskStep('success');
+}
+function finishTask(){
+  closeModal('modal-task');
+  ['t-client','t-phone','t-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('t-date').value=today();
+  isRecurring=false;document.getElementById('recurring-toggle').classList.remove('on');
+  document.getElementById('recurring-options').classList.add('hidden');
+  showTaskStep('form');
+}
+
+// ════════════════════════════════
+// SCHEDULE (coordinator)
+// ════════════════════════════════
+function renderSchedule(){
+  const max=calcMax();
+  document.getElementById('schedule-content').innerHTML=technicians.map((tech,ti)=>{
+    const tt=tasks.filter(t=>t.techId===tech.id&&t.status!=='pending').sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+    const lp=Math.min(100,Math.round((tt.length/Math.max(max,1))*100));
+    const fc=lp>=90?'var(--red)':lp>=70?'var(--amber)':'var(--green)';
+    const rows=tt.map(t=>{
+      const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;
+      return `<div class="sch-row">
+        <span class="sch-time">${t.time||'—'}</span>
+        <div class="sch-chip ${CHIP_COLORS[ti%CHIP_COLORS.length]}">${t.service} — ${t.city}${t.recurring?' 🔄':''}</div>
+        <span class="badge ${s.badge}" style="font-size:10px;">${s.label}</span>
+        <a class="btn btn-ghost btn-sm" href="https://waze.com/ul?q=${encodeURIComponent(t.city)}" target="_blank">🗺️</a>
+      </div>`;
+    }).join('')||'<div class="sch-row"><span class="sch-time">—</span><div class="sch-chip chip-gray">אין משימות</div></div>';
+    return `<div class="sch-card">
+      <div class="sch-header">
+        <div class="sch-avatar" style="background:${tech.color};">${initials(tech.name)}</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:15px;">${tech.name}</div>
+          <div style="font-size:12px;color:var(--gray-400);">${tech.specialty} • ${tt.length}/${max} קריאות</div>
+          <div class="load-bar" style="margin-top:5px;"><div class="load-fill" style="width:${lp}%;background:${fc};"></div></div>
+        </div>
+        <div class="flex-gap">
+          <span class="badge ${tt.length>0?'badge-green':'badge-gray'}">${tt.length>0?'פעיל':'פנוי'}</span>
+          <button class="wa-btn btn-sm" onclick="sendDaySummary(${tech.id})" style="font-size:11px;padding:5px 10px;">📱 סיכום יומי</button>
+        </div>
+      </div>
+      <div class="sch-body">${rows}</div>
+    </div>`;
+  }).join('')||'<div style="color:var(--gray-400);text-align:center;padding:2rem;">אין פרסונל — הוסף בעמוד הפרסונל</div>';
+}
+function sendDaySummary(techId){
+  const tech=technicians.find(t=>t.id===techId);if(!tech)return;
+  const tt=tasks.filter(t=>t.techId===techId&&t.status!=='pending').sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  if(!tt.length){alert('אין משימות לפרסונל זה');return;}
+  const lines=tt.map((t,i)=>`${i+1}. ${t.time||'?'} — ${t.service}, ${t.city} (${t.client})`).join('\n');
+  const msg=encodeURIComponent(`שלום ${tech.name}, הנה המשימות שלך להיום:\n\n${lines}\n\nבהצלחה! 💪`);
+  const wp=tech.phone.replace(/[^0-9]/g,'').replace(/^0/,'972');
+  window.open(`https://wa.me/${wp}?text=${msg}`,'_blank');
+}
+
+// ════════════════════════════════
+// TECH VIEW (visual schedule)
+// ════════════════════════════════
+function renderTechView(){
+  if(!currentTechView){document.getElementById('techview-content').innerHTML='<div class="tv-empty">בחר פרסונל מהתפריט</div>';return;}
+  const tech=currentTechView;
+  const tt=tasks.filter(t=>t.techId===tech.id&&t.status!=='pending').sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const d=new Date(),days=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+  const jobs=tt.length?tt.map(t=>{
+    const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;
+    const[h,m]=t.time?t.time.split(':').map(Number):[0,0];
+    const ampm=h<12?'AM':'PM';
+    return `<div class="tv-job">
+      <div class="tv-time-col">
+        <div class="tv-time">${t.time||'—'}</div>
+        <div class="tv-ampm">${t.time?ampm:''}</div>
+      </div>
+      <div class="tv-divider"></div>
+      <div class="tv-details">
+        <div class="tv-service">${t.service}${t.recurring?' 🔄':''}</div>
+        <div class="tv-client">${t.client} ${t.phone?`• <a href="tel:${t.phone}" style="color:var(--blue);text-decoration:none;">${t.phone}</a>`:''}</div>
+        <div class="tv-city">📍 ${t.city}</div>
+        <div class="tv-status-bar">
+          <span class="badge ${s.badge}">${s.label}</span>
+        </div>
+        <div class="tv-actions">
+          <a class="btn btn-sm btn-outline" href="https://waze.com/ul?q=${encodeURIComponent(t.city)}" target="_blank">🗺️ נווט</a>
+          ${t.phone?`<a class="btn btn-sm btn-green" href="tel:${t.phone}">📞 התקשר</a>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join(''):`<div class="tv-empty">🎉<br>אין משימות להיום</div>`;
+  document.getElementById('techview-content').innerHTML=`
+    <div class="tv-header">
+      <div style="width:56px;height:56px;border-radius:50%;background:${tech.color};display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:white;margin:0 auto 10px;">${initials(tech.name)}</div>
+      <div class="tv-name">${tech.name}</div>
+      <div class="tv-date">יום ${days[d.getDay()]} • ${d.toLocaleDateString('he-IL')} • ${tt.length} קריאות</div>
+    </div>
+    <div class="tech-view">${jobs}</div>
+  `;
+}
+
+// ════════════════════════════════
+// TECHNICIANS
+// ════════════════════════════════
+function renderTechs(){
+  document.getElementById('tech-count-label').textContent=technicians.length+' פרסונל';
+  const max=calcMax();
+  document.getElementById('tech-grid').innerHTML=technicians.map(tech=>{
+    const cnt=tasks.filter(t=>t.techId===tech.id&&['assigned','en_route','arrived'].includes(t.status)).length;
+    const lp=Math.min(100,Math.round((cnt/Math.max(max,1))*100));
+    const fc=lp>=90?'var(--red)':lp>=60?'var(--amber)':'var(--green)';
+    return `<div class="tech-card">
+      <div class="tech-avatar" style="background:${tech.color};">${initials(tech.name)}</div>
+      <div class="tech-name">${tech.name}</div>
+      <div class="tech-role">${tech.specialty}</div>
+      <div class="tech-info">📍 ${tech.area}</div>
+      <div class="tech-info">📞 ${tech.phone}</div>
+      ${tech.base?`<div class="tech-info">🏠 ${tech.base}</div>`:''}
+      <div class="load-bar" style="margin-top:8px;"><div class="load-fill" style="width:${lp}%;background:${fc};"></div></div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:3px;">${cnt}/${max} קריאות</div>
+      <div style="display:flex;gap:6px;margin-top:10px;">
+        <button class="btn btn-sm btn-outline" onclick="editTech(${tech.id})">עריכה</button>
+        <button class="btn btn-sm btn-ghost" onclick="deleteTech(${tech.id})" style="color:var(--red);">הסר</button>
+      </div>
+    </div>`;
+  }).join('')||'<div style="color:var(--gray-400);padding:2rem;">אין פרסונל</div>';
+}
+function openAddTechModal(){
+  editingTechId=null;
+  document.getElementById('tech-modal-title').textContent='הוסף פרסונל';
+  ['tech-name-input','tech-phone-input','tech-area-input','tech-base-input'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('tech-save-btn').textContent='הוסף';
+  document.getElementById('modal-tech').classList.remove('hidden');
+}
+function editTech(id){
+  const tech=technicians.find(t=>t.id===id);if(!tech)return;
+  editingTechId=id;
+  document.getElementById('tech-modal-title').textContent='עריכת פרסונל';
+  document.getElementById('tech-name-input').value=tech.name;
+  document.getElementById('tech-phone-input').value=tech.phone;
+  document.getElementById('tech-area-input').value=tech.area;
+  document.getElementById('tech-base-input').value=tech.base||'';
+  document.getElementById('tech-specialty').value=tech.specialty;
+  document.getElementById('tech-save-btn').textContent='שמור';
+  document.getElementById('modal-tech').classList.remove('hidden');
+}
+function saveTech(){
+  const name=document.getElementById('tech-name-input').value.trim();
+  const phone=document.getElementById('tech-phone-input').value.trim();
+  const area=document.getElementById('tech-area-input').value.trim();
+  const base=document.getElementById('tech-base-input').value.trim();
+  const specialty=document.getElementById('tech-specialty').value;
+  if(!name){alert('נא להזין שם');return;}
+  if(editingTechId){
+    const tech=technicians.find(t=>t.id===editingTechId);
+    if(tech)Object.assign(tech,{name,phone,area,base,specialty});
+  }else{
+    technicians.push({id:nextTechId++,name,phone,specialty,area,base,color:COLORS[technicians.length%COLORS.length]});
+  }
+  save();buildRoleSelect();closeModal('modal-tech');renderTechs();
+}
+function deleteTech(id){
+  if(!confirm('למחוק פרסונל זה?'))return;
+  technicians=technicians.filter(t=>t.id!==id);
+  tasks.forEach(t=>{if(t.techId===id){t.techId=null;t.status='pending';t.time='';}});
+  save();buildRoleSelect();renderTechs();renderTasks();
+}
+
+// ════════════════════════════════
+// NEW DAY
+// ════════════════════════════════
+let ndStep=1;
+function openNewDayModal(){
+  ndStep=1;ndSelectedZones=[];
+  document.getElementById('nd-date').value=today();
+  [1,2,3].forEach(s=>document.getElementById('nd-step-'+s).classList.toggle('hidden',s!==1));
+  renderNdDots();
+  document.getElementById('modal-newday').classList.remove('hidden');
+}
+function ndGo(s){
+  ndStep=s;
+  [1,2,3].forEach(x=>document.getElementById('nd-step-'+x).classList.toggle('hidden',x!==s));
+  renderNdDots();
+  if(s===2)renderNdZones();
+  if(s===3)renderNdRecs();
+}
+function renderNdDots(){
+  document.getElementById('nd-dots').innerHTML=[1,2,3].map(s=>`<div class="step-dot ${s<ndStep?'done':s===ndStep?'active':''}"></div>`).join('');
+}
+function renderNdZones(){
+  document.getElementById('nd-zones').innerHTML=ZONES.map(z=>{
+    const sel=ndSelectedZones.includes(z.name);
+    const lb=z.avg>=15?'badge-red':z.avg>=8?'badge-amber':'badge-green';
+    return `<div class="zone-card ${sel?'selected':''}" onclick="toggleZone('${z.name}')"><div class="flex-between"><span style="font-weight:600;">${z.name}</span><span class="badge ${lb}">~${z.avg} קריאות</span></div></div>`;
+  }).join('');
+}
+function toggleZone(name){
+  const i=ndSelectedZones.indexOf(name);
+  if(i>=0)ndSelectedZones.splice(i,1);else ndSelectedZones.push(name);
+  renderNdZones();
+}
+function renderNdRecs(){
+  const max=calcMax();
+  const rows=ndSelectedZones.map(name=>{
+    const z=ZONES.find(x=>x.name===name)||{avg:5};
+    const needed=Math.ceil(z.avg/max);
+    return `<div class="confirm-row"><span class="confirm-key">${name}</span><span class="confirm-val">${z.avg} קריאות → ${needed} פרסונל</span></div>`;
+  }).join('')||'<div style="color:var(--gray-400);font-size:13px;">לא נבחרו אזורים</div>';
+  const total=ndSelectedZones.reduce((s,n)=>{const z=ZONES.find(x=>x.name===n);return s+(z?z.avg:0);},0);
+  document.getElementById('nd-recs').innerHTML=`<div class="confirm-list">${rows}</div><div class="alert alert-blue">סה"כ: ~${total} קריאות צפויות • ${Math.ceil(total/Math.max(max,1))} פרסונל מומלץ</div>`;
+}
+function confirmNewDay(){closeModal('modal-newday');ndSelectedZones=[];}
+
+// ════════════════════════════════
+// CLOSE DAY
+// ════════════════════════════════
+function openCloseDayModal(){
+  const done=tasks.filter(t=>t.status==='completed').length;
+  const active=tasks.filter(t=>['assigned','en_route','arrived'].includes(t.status)).length;
+  const pending=tasks.filter(t=>t.status==='pending').length;
+  const perTech=technicians.map(tech=>{
+    const d=tasks.filter(t=>t.techId===tech.id&&t.status==='completed').length;
+    const a=tasks.filter(t=>t.techId===tech.id&&['assigned','en_route','arrived'].includes(t.status)).length;
+    return `<div class="confirm-row"><span class="confirm-key">${tech.name}</span><span class="confirm-val">${d} הושלמו, ${a} פעילות</span></div>`;
+  }).join('');
+  document.getElementById('closeday-summary').innerHTML=`
+    <div class="confirm-list">
+      <div class="confirm-row"><span class="confirm-key">הושלמו</span><span class="confirm-val" style="color:var(--green);">${done}</span></div>
+      <div class="confirm-row"><span class="confirm-key">לא הושלמו</span><span class="confirm-val" style="color:var(--amber);">${active}</span></div>
+      <div class="confirm-row"><span class="confirm-key">ממתינות</span><span class="confirm-val">${pending}</span></div>
+    </div>
+    <div class="section-label" style="margin-top:1rem;">לפי פרסונל</div>
+    <div class="confirm-list">${perTech||'אין פרסונל'}</div>
+    ${active?'<div class="alert alert-amber">⚠️ משימות לא הושלמו יחזרו לממתין</div>':''}
+  `;
+  document.getElementById('modal-closeday').classList.remove('hidden');
+}
+function confirmCloseDay(){
+  tasks.forEach(t=>{if(['assigned','en_route','arrived'].includes(t.status)){t.status='pending';t.techId=null;t.time='';}});
+  save();closeModal('modal-closeday');renderTasks();renderSchedule();
+  alert('היום נסגר. משימות שלא הושלמו חזרו לממתין.');
+}
+
+// ════════════════════════════════
+// UTILS
+// ════════════════════════════════
+function initials(name){return name.split(' ').map(w=>w[0]).join('').slice(0,2);}
+</script>
+</body>
+</html>
