@@ -335,8 +335,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div class="fg-2">
       <div class="fg">
         <label class="fl"><span class="req">*</span> עיר / יישוב</label>
-        <input class="fc" id="s-city" placeholder="בחר עיר..." list="cities-dl">
-        <datalist id="cities-dl"></datalist>
+        <select class="fc" id="s-city">
+          <option value="">בחר עיר מהרשימה...</option>
+        </select>
+        <div style="font-size:0.75rem;color:var(--ink-4);margin-top:3px;">עיר לא מופיעה? <a onclick="goPage('zones')" style="color:var(--blue);cursor:pointer;font-weight:700;">הוסף אותה בהגדרות האזורים ←</a></div>
       </div>
       <div class="fg">
         <label class="fl"><span class="req">*</span> רחוב ומספר</label>
@@ -704,10 +706,23 @@ function populateTimeSels(){
   document.getElementById('set-end').value=settings.endTime;
 }
 function populateCitiesDl(){
-  const cities=new Set();
-  zones.forEach(z=>z.cities.forEach(c=>cities.add(c)));
-  ['תל אביב','חולון','בת ים','ראשון לציון','פתח תקווה','נתניה','הרצליה','רחובות','אשדוד'].forEach(c=>cities.add(c));
-  document.getElementById('cities-dl').innerHTML=[...cities].map(c=>`<option value="${c}">`).join('');
+  const sel=document.getElementById('s-city');
+  if(!sel)return;
+  const prevVal=sel.value;
+  sel.innerHTML='<option value="">בחר עיר מהרשימה...</option>';
+  // Group by zone
+  zones.forEach(z=>{
+    if(!z.cities.length)return;
+    const grp=document.createElement('optgroup');
+    grp.label=z.name;
+    z.cities.forEach(c=>{
+      const o=document.createElement('option');
+      o.value=c;o.textContent=c;
+      grp.appendChild(o);
+    });
+    sel.appendChild(grp);
+  });
+  if(prevVal)sel.value=prevVal;
 }
 function buildRoleSelect(){
   const sel=document.getElementById('role-sel');
