@@ -3,1621 +3,879 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>מסלול</title>
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<title>מסלול — תוכנה לניהול ושיבוץ טכנאים לעסקים קטנים</title>
+<meta name="description" content="מסלול מחליפה את הוואטסאפ וגוגל שיטס. שיבוץ אוטומטי חכם לטכנאים, מתקינים ועובדי שטח. ניהול קריאות, יומן יומי ומספר שיבוץ לכל קריאה. מתאים לעסקים עם 2-20 טכנאים.">
+<meta name="keywords" content="ניהול טכנאים, שיבוץ טכנאים, תוכנה לעסקים קטנים, ניהול קריאות שירות, שיבוץ אוטומטי, ניהול עובדי שטח, תוכנה למתקינים, יומן טכנאים, ניהול שטח, תוכנה לשיבוץ עובדים">
+<meta property="og:title" content="מסלול — שיבוץ טכנאים חכם לעסקים קטנים">
+<meta property="og:description" content="בדקות — לא בשעות. מסלול מחשבת למי לשלוח, מתי, ולמה.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 <style>
-:root{
-  --ink:#0F1117;--ink-2:#3D4152;--ink-3:#6B7280;--ink-4:#9CA3AF;
-  --line:#E5E7EB;--line-2:#F3F4F6;--bg:#F9FAFB;--white:#fff;
-  --blue:#2563EB;--blue-d:#1D4ED8;--blue-l:#EFF6FF;--blue-m:#BFDBFE;
-  --green:#16A34A;--green-l:#F0FDF4;--amber:#D97706;--amber-l:#FFFBEB;
-  --red:#DC2626;--red-l:#FEF2F2;--purple:#7C3AED;--purple-l:#F5F3FF;
-  --r:10px;--r-lg:16px;--r-xl:22px;
-  --sh:0 1px 3px rgba(0,0,0,0.07),0 1px 2px rgba(0,0,0,0.04);
-  --sh-md:0 4px 12px rgba(0,0,0,0.08);
-  --sh-lg:0 12px 32px rgba(0,0,0,0.1);
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --navy: #0A1628;
+  --navy-2: #0F2040;
+  --blue: #2563EB;
+  --blue-bright: #3B82F6;
+  --blue-glow: rgba(37,99,235,0.25);
+  --teal: #0891B2;
+  --green: #10B981;
+  --amber: #F59E0B;
+  --white: #FFFFFF;
+  --off: #F0F4FF;
+  --gray: #94A3B8;
+  --light: #E2E8F0;
 }
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direction:rtl;min-height:100vh;-webkit-font-smoothing:antialiased;}
-.shell{display:flex;min-height:100vh;}
-.sidebar{width:228px;background:var(--white);border-left:1px solid var(--line);position:fixed;right:0;top:0;height:100vh;display:flex;flex-direction:column;z-index:100;}
-.content{margin-right:228px;flex:1;}
-.page{padding:2rem 2.5rem;max-width:1200px;animation:fi 0.18s ease;}
-@keyframes fi{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
 
-/* SIDEBAR */
-.sb-top{padding:1.5rem 1.25rem 1rem;}
-.sb-logo{font-size:1.5rem;font-weight:900;letter-spacing:-1px;}
-.sb-logo span{color:var(--blue);}
-.sb-tag{font-size:0.6rem;color:var(--ink-4);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-top:2px;}
-.sb-div{height:1px;background:var(--line);margin:0 1.25rem;}
-.sb-nav{padding:0.75rem;flex:1;overflow-y:auto;}
-.sb-sec{font-size:0.6rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:1px;padding:0.75rem 0.75rem 0.375rem;}
-.ni-btn{display:flex;align-items:center;gap:9px;width:100%;padding:8px 12px;border-radius:var(--r);font-size:0.875rem;font-weight:500;color:var(--ink-2);background:none;border:none;cursor:pointer;font-family:'Heebo',sans-serif;transition:all 0.1s;text-align:right;margin-bottom:1px;}
-.ni-btn:hover{background:var(--bg);color:var(--ink);}
-.ni-btn.active{background:var(--blue-l);color:var(--blue-d);font-weight:700;}
-.sb-bot{padding:1rem 1.25rem;border-top:1px solid var(--line);}
-.role-box{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;}
-.role-lbl{font-size:0.6rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;}
-.role-sel{width:100%;border:none;background:transparent;font-size:0.875rem;font-family:'Heebo',sans-serif;font-weight:600;color:var(--ink);outline:none;cursor:pointer;}
+html { scroll-behavior: smooth; }
 
-/* PAGE */
-.ph{margin-bottom:1.75rem;}
-.ph-row{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;}
-.ph-title{font-size:1.5rem;font-weight:900;letter-spacing:-0.8px;}
-.ph-sub{font-size:0.875rem;color:var(--ink-3);margin-top:3px;}
+body {
+  font-family: 'Heebo', sans-serif;
+  background: var(--navy);
+  color: var(--white);
+  direction: rtl;
+  overflow-x: hidden;
+}
 
-/* BUTTONS */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r);font-size:0.875rem;font-weight:700;cursor:pointer;border:none;font-family:'Heebo',sans-serif;transition:all 0.12s;white-space:nowrap;}
-.btn-blue{background:var(--blue);color:white;}
-.btn-blue:hover{background:var(--blue-d);}
-.btn-outline{background:var(--white);color:var(--ink-2);border:1px solid var(--line);}
-.btn-outline:hover{background:var(--bg);}
-.btn-ghost{background:transparent;color:var(--ink-3);border:none;padding:6px 10px;}
-.btn-ghost:hover{background:var(--line-2);color:var(--ink);}
-.btn-amber{background:var(--amber);color:white;}
-.btn-sm{padding:5px 10px;font-size:0.75rem;}
-.btn-lg{padding:12px 28px;font-size:1rem;border-radius:var(--r-lg);}
-.btn-full{width:100%;justify-content:center;}
+/* ── NOISE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
 
-/* FORMS */
-.fg{margin-bottom:1rem;}
-.fl{display:block;font-size:0.8125rem;font-weight:700;color:var(--ink-2);margin-bottom:5px;}
-.fl .req{color:var(--red);}
-.fc{width:100%;padding:10px 13px;border:1.5px solid var(--line);border-radius:var(--r);font-size:0.9375rem;font-family:'Heebo',sans-serif;color:var(--ink);background:var(--white);transition:border-color 0.12s;}
-.fc:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,0.1);}
-.fc::placeholder{color:var(--ink-4);}
-.fc.error{border-color:var(--red);}
-.fg-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.fg-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
-.field-error{font-size:0.75rem;color:var(--red);margin-top:3px;}
+/* ── GRID PATTERN ── */
+.grid-bg {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(37,99,235,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37,99,235,0.06) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 0%, transparent 100%);
+}
 
-/* CARDS */
-.card{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:1.375rem 1.5rem;box-shadow:var(--sh);}
-.card+.card{margin-top:1rem;}
-.card-title{font-size:0.7rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:1rem;}
+/* ── NAV ── */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  padding: 1.25rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  backdrop-filter: blur(20px);
+  background: rgba(10,22,40,0.85);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.nav-logo {
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+.nav-logo span { color: var(--blue-bright); }
+.nav-cta {
+  background: var(--blue);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Heebo', sans-serif;
+  transition: all 0.15s;
+  text-decoration: none;
+  display: inline-block;
+}
+.nav-cta:hover { background: #1D4ED8; transform: translateY(-1px); }
 
-/* BADGES */
-.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:0.7rem;font-weight:700;}
-.badge-blue{background:var(--blue-l);color:var(--blue-d);}
-.badge-green{background:var(--green-l);color:var(--green);}
-.badge-amber{background:var(--amber-l);color:var(--amber);}
-.badge-red{background:var(--red-l);color:var(--red);}
-.badge-gray{background:var(--line-2);color:var(--ink-3);}
+/* ── HERO ── */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 8rem 2rem 6rem;
+  overflow: hidden;
+}
+.hero-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(37,99,235,0.2) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.hero-content { position: relative; z-index: 1; max-width: 820px; }
 
-/* ALERTS */
-.alert{border-radius:var(--r);padding:10px 14px;font-size:0.8125rem;margin-bottom:12px;display:flex;gap:8px;}
-.alert-amber{background:var(--amber-l);color:var(--amber);}
-.alert-blue{background:var(--blue-l);color:var(--blue-d);}
-.alert-green{background:var(--green-l);color:var(--green);}
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(37,99,235,0.15);
+  border: 1px solid rgba(37,99,235,0.4);
+  border-radius: 30px;
+  padding: 6px 16px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #93C5FD;
+  margin-bottom: 2rem;
+  animation: fadeUp 0.6s ease both;
+}
+.badge-dot {
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.3); }
+}
 
-/* DISPATCH */
-.dispatch-search{background:var(--white);border:1.5px solid var(--line);border-radius:var(--r-xl);padding:1.75rem 2rem;box-shadow:var(--sh-md);margin-bottom:1.5rem;}
-.dispatch-search h2{font-size:1.125rem;font-weight:800;margin-bottom:1.25rem;}
-.cat-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;}
-.cat-chip{padding:8px 16px;border-radius:30px;font-size:0.875rem;font-weight:600;cursor:pointer;border:1.5px solid var(--line);background:var(--white);color:var(--ink-2);transition:all 0.12s;}
-.cat-chip:hover{border-color:var(--blue-m);color:var(--blue);}
-.cat-chip.selected{border-color:var(--blue);background:var(--blue-l);color:var(--blue-d);}
-.cat-add-btn{padding:8px 14px;border-radius:30px;font-size:0.875rem;font-weight:600;cursor:pointer;border:1.5px dashed var(--line);background:transparent;color:var(--ink-4);transition:all 0.12s;font-family:'Heebo',sans-serif;}
-.cat-add-btn:hover{border-color:var(--blue);color:var(--blue);}
-.pkg-builder{background:var(--line-2);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-bottom:1rem;}
-.pkg-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
-.pkg-name{flex:1;font-size:0.9375rem;font-weight:600;}
-.pkg-qty{width:70px;}
-.pkg-time{font-size:0.8125rem;color:var(--ink-3);}
-.find-btn{width:100%;padding:13px;background:var(--blue);color:white;border:none;border-radius:var(--r-lg);font-size:1.0625rem;font-weight:800;cursor:pointer;font-family:'Heebo',sans-serif;transition:all 0.15s;margin-top:4px;}
-.find-btn:hover{background:var(--blue-d);box-shadow:var(--sh-lg);transform:translateY(-1px);}
+.hero h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -1px;
+  margin-bottom: 1.5rem;
+  animation: fadeUp 0.6s ease 0.1s both;
+}
+.hero h1 em {
+  font-style: italic;
+  color: #93C5FD;
+}
+.hero-sub {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  color: var(--gray);
+  line-height: 1.7;
+  max-width: 580px;
+  margin: 0 auto 2.5rem;
+  animation: fadeUp 0.6s ease 0.2s both;
+  font-weight: 400;
+}
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  animation: fadeUp 0.6s ease 0.3s both;
+}
+.btn-primary {
+  background: var(--blue);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 14px 28px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Heebo', sans-serif;
+  transition: all 0.15s;
+  box-shadow: 0 0 30px rgba(37,99,235,0.4);
+}
+.btn-primary:hover { background: #1D4ED8; transform: translateY(-2px); box-shadow: 0 0 40px rgba(37,99,235,0.5); }
+.btn-secondary {
+  background: rgba(255,255,255,0.07);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  padding: 14px 28px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Heebo', sans-serif;
+  transition: all 0.15s;
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.12); }
 
-/* SINGLE SUGGESTION CARD */
-.suggestion-result{background:var(--white);border:2px solid var(--blue);border-radius:var(--r-xl);padding:1.5rem 1.75rem;box-shadow:var(--sh-lg);animation:fi 0.25s ease;}
-.sr-header{display:flex;align-items:center;gap:14px;margin-bottom:1rem;}
-.sr-avatar{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.125rem;font-weight:800;color:white;flex-shrink:0;}
-.sr-name{font-size:1.25rem;font-weight:900;letter-spacing:-0.3px;}
-.sr-area{font-size:0.875rem;color:var(--ink-3);margin-top:2px;}
-.sr-date-box{background:var(--blue-l);border:1px solid var(--blue-m);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-bottom:1rem;}
-.sr-date-label{font-size:0.7rem;font-weight:800;color:var(--blue-d);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;}
-.sr-date-value{font-size:1.25rem;font-weight:900;color:var(--ink);letter-spacing:-0.5px;}
-.sr-reason{font-size:0.8125rem;color:var(--green);font-weight:600;margin-top:4px;}
+.hero-stats {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  margin-top: 3rem;
+  flex-wrap: wrap;
+  animation: fadeUp 0.6s ease 0.4s both;
+}
+.hero-stat { text-align: center; }
+.hero-stat-num {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: white;
+  letter-spacing: -1px;
+  display: block;
+}
+.hero-stat-lbl { font-size: 0.8125rem; color: var(--gray); }
 
-/* TIME SLOTS */
-.time-slots{display:flex;flex-direction:column;gap:6px;margin:1rem 0;}
-.time-slot{display:flex;align-items:center;justify-content:space-between;background:var(--green-l);border:1.5px solid #BBF7D0;border-radius:8px;padding:8px 12px;cursor:pointer;transition:all 0.12s;font-size:0.875rem;}
-.time-slot:hover{background:#DCFCE7;border-color:var(--green);}
-.time-slot.selected{background:var(--green);color:white;border-color:var(--green);}
-.time-slot.busy{background:var(--red-l);border-color:#FECACA;cursor:default;color:var(--red);}
-.time-slot-range{font-weight:700;}
-.time-slot-status{font-size:0.7rem;}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
-/* EXISTING TASKS PREVIEW */
-.etp{background:var(--line-2);border-radius:var(--r);padding:10px 14px;margin-top:8px;}
-.etp-title{font-size:0.7rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
-.etp-row{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:0.8125rem;border-bottom:1px solid var(--line);}
-.etp-row:last-child{border:none;}
-.etp-time{font-weight:700;color:var(--ink-2);min-width:46px;}
-.etp-detail{color:var(--ink-3);flex:1;}
+/* ── APP PREVIEW ── */
+.preview-section {
+  position: relative;
+  padding: 0 2rem 6rem;
+  display: flex;
+  justify-content: center;
+}
+.app-window {
+  max-width: 860px;
+  width: 100%;
+  background: rgba(15,32,64,0.8);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+  position: relative;
+  animation: fadeUp 0.8s ease 0.5s both;
+}
+.window-bar {
+  background: rgba(0,0,0,0.3);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot-red { background: #FF5F57; }
+.dot-yellow { background: #FFBD2E; }
+.dot-green { background: #28CA42; }
+.window-title { font-size: 0.75rem; color: var(--gray); margin-right: auto; margin-left: auto; }
+.app-preview-body { padding: 1.5rem; }
 
-/* CUSTOMER FORM */
-.customer-form{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--line);}
-.sr-actions{display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap;}
+/* MOCK DISPATCH UI */
+.mock-header { font-size: 0.65rem; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+.mock-search-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.mock-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 12px; font-size: 0.8125rem; color: #94A3B8; flex: 1; min-width: 120px; }
+.mock-btn-find { background: var(--blue); color: white; border: none; border-radius: 8px; padding: 8px 18px; font-size: 0.8125rem; font-weight: 700; cursor: default; font-family: 'Heebo', sans-serif; white-space: nowrap; }
+.mock-cats { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom:14px; }
+.mock-cat { padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; border: 1.5px solid rgba(255,255,255,0.1); color: #94A3B8; }
+.mock-cat.active { border-color: var(--blue); background: rgba(37,99,235,0.15); color: #93C5FD; }
+.mock-date-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 12px; }
+.mock-date-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; text-align: center; }
+.mock-date-card.best { border-color: var(--blue); background: rgba(37,99,235,0.1); }
+.mock-dc-merge { font-size: 0.6rem; color: var(--green); font-weight: 700; margin-bottom: 3px; }
+.mock-dc-day { font-size: 0.65rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; }
+.mock-dc-date { font-size: 1rem; font-weight: 900; color: white; margin: 2px 0; }
+.mock-dc-tech { font-size: 0.7rem; color: #93C5FD; font-weight: 600; }
 
-/* ASSIGN ID */
-.assign-id-box{text-align:center;margin:8px 0;}
-.assign-id{font-family:monospace;font-size:1rem;font-weight:800;color:var(--blue);background:var(--blue-l);padding:5px 14px;border-radius:var(--r);display:inline-block;letter-spacing:1px;}
+/* ── PAIN SECTION ── */
+.pain-section {
+  padding: 6rem 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.section-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #3B82F6;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 1rem;
+}
+.section-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: clamp(1.75rem, 4vw, 3rem);
+  font-weight: 400;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+}
+.section-title em { font-style: italic; color: #93C5FD; }
+.section-sub { font-size: 1rem; color: var(--gray); line-height: 1.7; max-width: 560px; }
+
+.pain-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 3rem;
+}
+.pain-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 1.5rem;
+  transition: border-color 0.2s;
+}
+.pain-card:hover { border-color: rgba(59,130,246,0.4); }
+.pain-icon { font-size: 1.75rem; margin-bottom: 12px; display: block; }
+.pain-title { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+.pain-desc { font-size: 0.875rem; color: var(--gray); line-height: 1.6; }
+
+/* ── HOW IT WORKS ── */
+.how-section {
+  padding: 6rem 2rem;
+  background: rgba(255,255,255,0.02);
+  border-top: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.how-inner { max-width: 1100px; margin: 0 auto; }
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+  margin-top: 3rem;
+}
+.step-card {
+  position: relative;
+  padding: 1.5rem;
+}
+.step-num {
+  width: 40px; height: 40px;
+  background: rgba(37,99,235,0.15);
+  border: 1px solid rgba(37,99,235,0.4);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: #93C5FD;
+  margin-bottom: 14px;
+}
+.step-title { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+.step-desc { font-size: 0.875rem; color: var(--gray); line-height: 1.6; }
+.step-time {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--green);
+  background: rgba(16,185,129,0.1);
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+/* ── FEATURES ── */
+.features-section {
+  padding: 6rem 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  margin-top: 3rem;
+}
+.feature-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 1.5rem;
+  display: flex;
+  gap: 14px;
+  transition: all 0.2s;
+}
+.feature-card:hover { border-color: rgba(59,130,246,0.4); background: rgba(37,99,235,0.05); }
+.feature-icon-wrap {
+  width: 44px; height: 44px; flex-shrink: 0;
+  background: rgba(37,99,235,0.12);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.25rem;
+}
+.feature-title { font-size: 0.9375rem; font-weight: 700; margin-bottom: 4px; }
+.feature-desc { font-size: 0.8125rem; color: var(--gray); line-height: 1.6; }
+
+/* ── WHO IT'S FOR ── */
+.for-section {
+  padding: 6rem 2rem;
+  background: rgba(255,255,255,0.02);
+  border-top: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.for-inner { max-width: 900px; margin: 0 auto; text-align: center; }
+.for-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 2.5rem;
+}
+.for-tag {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 30px;
+  padding: 10px 20px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+.for-tag:hover { border-color: var(--blue); background: rgba(37,99,235,0.1); color: #93C5FD; }
+
+/* ── LEAD FORM ── */
+.form-section {
+  padding: 6rem 2rem;
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+}
+.form-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: 2.5rem;
+  margin-top: 2.5rem;
+  position: relative;
+  overflow: hidden;
+}
+.form-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 50%; transform: translateX(-50%);
+  width: 60%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(59,130,246,0.6), transparent);
+}
+.form-group { margin-bottom: 1rem; text-align: right; }
+.form-label { display: block; font-size: 0.8125rem; font-weight: 700; color: #CBD5E1; margin-bottom: 6px; }
+.form-input {
+  width: 100%;
+  padding: 11px 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  font-family: 'Heebo', sans-serif;
+  color: white;
+  transition: border-color 0.15s;
+  outline: none;
+}
+.form-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
+.form-input::placeholder { color: #475569; }
+.form-select {
+  width: 100%;
+  padding: 11px 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  font-family: 'Heebo', sans-serif;
+  color: white;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+.form-select option { background: #0F2040; color: white; }
+.submit-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--blue);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: 'Heebo', sans-serif;
+  margin-top: 8px;
+  transition: all 0.15s;
+  box-shadow: 0 0 30px rgba(37,99,235,0.35);
+}
+.submit-btn:hover { background: #1D4ED8; box-shadow: 0 0 40px rgba(37,99,235,0.5); }
+.form-note { font-size: 0.75rem; color: #475569; margin-top: 10px; }
 
 /* SUCCESS */
-.success-card{background:var(--white);border:1px solid var(--line);border-radius:var(--r-xl);padding:2rem;text-align:center;box-shadow:var(--sh-lg);animation:fi 0.25s ease;}
-.success-icon{width:56px;height:56px;border-radius:50%;background:var(--green-l);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.5rem;}
-.success-id{font-family:monospace;font-size:1.75rem;font-weight:900;color:var(--blue);letter-spacing:2px;background:var(--blue-l);padding:8px 20px;border-radius:var(--r-lg);display:inline-block;margin:8px 0;}
-.confirm-box{background:var(--bg);border-radius:var(--r);padding:1rem;margin:1rem 0;text-align:right;}
-.cr{display:flex;justify-content:space-between;font-size:0.875rem;padding:5px 0;border-bottom:1px solid var(--line);}
-.cr:last-child{border:none;}
-.ck{color:var(--ink-3);}
-.cv{font-weight:700;}
+.form-success {
+  display: none;
+  padding: 2rem;
+  text-align: center;
+}
+.success-circle {
+  width: 64px; height: 64px;
+  background: rgba(16,185,129,0.15);
+  border: 2px solid rgba(16,185,129,0.4);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem;
+  margin: 0 auto 1rem;
+}
+.success-title { font-size: 1.25rem; font-weight: 800; margin-bottom: 8px; }
+.success-sub { font-size: 0.875rem; color: var(--gray); }
 
-/* TASKS */
-.task-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line-2);}
-.task-row:last-child{border:none;}
-.task-main{flex:1;min-width:0;}
-.task-client{font-size:0.9375rem;font-weight:700;}
-.task-detail{font-size:0.8125rem;color:var(--ink-3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.task-actions{display:flex;gap:6px;align-items:center;flex-shrink:0;}
-.status-pill{padding:3px 10px;border-radius:20px;font-size:0.7rem;font-weight:700;cursor:pointer;}
-.assign-id-tag{font-family:monospace;font-size:0.65rem;font-weight:700;color:var(--ink-4);background:var(--line-2);padding:2px 6px;border-radius:4px;}
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 2rem;
+  text-align: center;
+}
+.footer-logo { font-size: 1.25rem; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 6px; }
+.footer-logo span { color: var(--blue-bright); }
+.footer-text { font-size: 0.8125rem; color: #475569; }
 
-/* HOME — TECH CARDS */
-.tech-home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-top:1rem;}
-.tech-home-card{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:1.25rem;box-shadow:var(--sh);cursor:pointer;transition:all 0.15s;text-align:center;}
-.tech-home-card:hover{border-color:var(--blue-m);box-shadow:var(--sh-md);transform:translateY(-2px);}
-.th-avatar{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.125rem;font-weight:800;color:white;margin:0 auto 10px;}
-.th-name{font-size:1rem;font-weight:800;margin-bottom:3px;}
-.th-area{font-size:0.75rem;color:var(--ink-3);}
-.th-load{font-size:0.75rem;font-weight:700;margin-top:6px;}
-.load-bar{height:4px;background:var(--line-2);border-radius:2px;overflow:hidden;margin-top:4px;}
-.load-fill{height:100%;border-radius:2px;}
+/* ── SCROLL REVEAL ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
 
-/* WEEKLY CALENDAR */
-.week-nav{display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;}
-.week-nav-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all 0.12s;}
-.week-nav-btn:hover{background:var(--blue-l);border-color:var(--blue);}
-.week-title{font-size:1rem;font-weight:700;flex:1;}
-.week-grid{display:grid;border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;background:var(--white);box-shadow:var(--sh);}
-.week-header{display:grid;grid-template-columns:50px repeat(6,1fr);border-bottom:2px solid var(--line);}
-.wh-cell{padding:8px 6px;text-align:center;font-size:0.75rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.3px;background:var(--line-2);}
-.wh-cell.today{background:var(--blue-l);color:var(--blue-d);}
-.week-body{display:grid;grid-template-columns:50px repeat(6,1fr);}
-.time-col{display:flex;flex-direction:column;}
-.time-label{height:60px;display:flex;align-items:flex-start;justify-content:center;padding-top:6px;font-size:0.65rem;font-weight:700;color:var(--ink-4);border-bottom:1px solid var(--line-2);}
-.day-col{border-right:1px solid var(--line-2);position:relative;min-height:540px;}
-.day-col:first-of-type{border-right:none;}
-.day-cell{height:60px;border-bottom:1px solid var(--line-2);position:relative;}
-.cal-task{position:absolute;right:2px;left:2px;border-radius:5px;padding:3px 5px;font-size:0.65rem;font-weight:600;cursor:pointer;overflow:hidden;z-index:1;line-height:1.3;}
-.cal-task:hover{z-index:10;box-shadow:var(--sh-md);}
-.cal-client{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.cal-city{color:rgba(0,0,0,0.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-
-/* TECH CARDS PAGE */
-.tech-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
-.tech-card{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:1.125rem;box-shadow:var(--sh);}
-.tech-av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:800;color:white;margin-bottom:10px;}
-.tech-name{font-size:0.9375rem;font-weight:800;}
-.tech-area{font-size:0.7rem;color:var(--ink-3);font-weight:700;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;}
-.tech-info{font-size:0.8125rem;color:var(--ink-2);margin-top:3px;}
-.skill-tag{display:inline-flex;align-items:center;background:var(--blue-l);border-radius:4px;padding:2px 7px;font-size:0.7rem;color:var(--blue-d);font-weight:600;margin:2px;}
-.restrict-tag{display:inline-flex;align-items:center;background:var(--line-2);border-radius:4px;padding:2px 7px;font-size:0.7rem;color:var(--ink-2);font-weight:500;margin:2px;}
-
-/* ZONES */
-.zone-card{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-bottom:10px;box-shadow:var(--sh);}
-.zone-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
-.zone-cities{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
-.city-tag{background:var(--blue-l);color:var(--blue-d);border-radius:20px;padding:3px 10px;font-size:0.8125rem;font-weight:600;display:inline-flex;align-items:center;gap:4px;}
-.city-tag button{background:none;border:none;cursor:pointer;color:var(--red);font-size:0.75rem;padding:0;line-height:1;}
-.zone-add{display:flex;gap:8px;margin-top:6px;}
-
-/* SKILL CHECKS */
-.skill-checks{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}
-.skill-check{display:flex;align-items:center;gap:6px;background:var(--bg);border:1.5px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;transition:all 0.1s;font-size:0.875rem;font-weight:500;}
-.skill-check.checked{background:var(--blue-l);border-color:var(--blue);color:var(--blue-d);font-weight:700;}
-.skill-check input{display:none;}
-
-/* ROTATION */
-.rotation-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:8px;}
-.rotation-day{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px;}
-.rotation-day .day-name{font-weight:700;color:var(--ink-3);margin-bottom:3px;font-size:0.7rem;text-align:center;}
-.rotation-day select{width:100%;border:none;background:transparent;font-size:0.65rem;font-family:'Heebo',sans-serif;outline:none;cursor:pointer;}
-
-/* MODALS */
-.mo{position:fixed;inset:0;background:rgba(0,0,0,0.42);display:flex;align-items:center;justify-content:center;z-index:1000;padding:1rem;}
-.mo-box{background:var(--white);border-radius:var(--r-xl);padding:1.75rem;width:100%;max-width:580px;box-shadow:0 25px 50px rgba(0,0,0,0.18);max-height:90vh;overflow-y:auto;}
-.mo-title{font-size:1.125rem;font-weight:900;margin-bottom:1.25rem;}
-.mo-actions{display:flex;gap:8px;margin-top:1.25rem;}
-
-/* SETTINGS */
-.set-sec{margin-bottom:1.5rem;}
-.set-title{font-size:0.9375rem;font-weight:800;padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:1rem;}
-
-/* TAG MANAGER */
-.tag-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
-.tag-item{display:inline-flex;align-items:center;gap:6px;background:var(--line-2);border-radius:20px;padding:5px 12px;font-size:0.875rem;font-weight:500;}
-.tag-del{background:none;border:none;cursor:pointer;color:var(--red);font-size:0.875rem;line-height:1;padding:0;}
-.tag-add-row{display:flex;gap:8px;}
-.sb-bar{display:flex;gap:8px;margin-bottom:1rem;align-items:center;}
-.sb-bar input{flex:1;}
-
-/* MISC */
-.hidden{display:none!important;}
-.flex-between{display:flex;justify-content:space-between;align-items:center;}
-.flex-gap{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-.divider{height:1px;background:var(--line);margin:1rem 0;}
-.empty{text-align:center;padding:3rem;color:var(--ink-4);}
-.empty-icon{font-size:2.5rem;margin-bottom:10px;}
-
-@media(max-width:900px){.sidebar{display:none;}.content{margin-right:0;}.week-header,.week-body{grid-template-columns:40px repeat(3,1fr);}.page{padding:1rem;}}
-@media print{.sidebar,.btn,.mo{display:none!important;}.content{margin-right:0;}}
+@media(max-width: 640px) {
+  nav { padding: 1rem; }
+  .hero { padding: 7rem 1.25rem 4rem; }
+  .hero h1 { font-size: 2.25rem; }
+  .mock-date-cards { grid-template-columns: 1fr; }
+  .hero-stats { gap: 1.25rem; }
+  .form-card { padding: 1.5rem; }
+}
 </style>
 </head>
 <body>
-<div class="shell">
-<nav class="sidebar">
-  <div class="sb-top">
-    <div class="sb-logo"><span>מס</span>לול</div>
-    <div class="sb-tag">מנוע שיבוץ חכם</div>
-  </div>
-  <div class="sb-div"></div>
-  <div class="sb-nav">
-    <div class="sb-sec">תפעול</div>
-    <button class="ni-btn active" onclick="goPage('home')"><span>🏠</span> דף הבית</button>
-    <button class="ni-btn" onclick="goPage('dispatch')"><span>🎯</span> שיבוץ קריאה</button>
-    <button class="ni-btn" onclick="goPage('tasks')"><span>📋</span> קריאות</button>
-    <div class="sb-sec">הגדרות</div>
-    <button class="ni-btn" onclick="goPage('technicians')"><span>👷</span> טכנאים</button>
-    <button class="ni-btn" onclick="goPage('zones')"><span>🗺️</span> אזורים</button>
-    <button class="ni-btn" onclick="goPage('categories')"><span>📦</span> קטגוריות</button>
-    <button class="ni-btn" onclick="goPage('settings')"><span>⚙️</span> הגדרות</button>
-  </div>
-  <div class="sb-bot">
-    <div class="role-box">
-      <div class="role-lbl">תצוגה</div>
-      <select class="role-sel" id="role-sel" onchange="switchRole()">
-        <option value="admin">מתאמת / מנהל</option>
-      </select>
-    </div>
-  </div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo"><span>מס</span>לול</div>
+  <a class="nav-cta" href="#lead-form">הצטרף לפיילוט</a>
 </nav>
 
-<main class="content">
-
-<!-- HOME -->
-<div id="page-home" class="page">
-  <div class="ph ph-row">
-    <div><div class="ph-title" id="home-title">דף הבית</div><div class="ph-sub" id="home-date"></div></div>
-    <div class="flex-gap">
-      <button class="btn btn-outline btn-sm" onclick="openDayoffModal()">📵 חופשות</button>
-      <button class="btn btn-blue" onclick="goPage('dispatch')">+ שיבוץ קריאה</button>
+<!-- HERO -->
+<section class="hero">
+  <div class="grid-bg"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      פתוח לעסקים מובילים — גרסת פיילוט
     </div>
-  </div>
-  <div id="home-tech-grid" class="tech-home-grid"></div>
-
-  <!-- WEEKLY CALENDAR (shown when tech selected) -->
-  <div id="weekly-cal" class="hidden" style="margin-top:1.5rem;">
-    <div class="flex-between" style="margin-bottom:1rem;">
-      <button class="btn btn-outline btn-sm" onclick="closeWeeklyCal()">← חזרה לכל הטכנאים</button>
-      <div class="week-nav">
-        <button class="week-nav-btn" onclick="changeWeek(-1)">›</button>
-        <div class="week-title" id="week-title"></div>
-        <button class="week-nav-btn" onclick="changeWeek(1)">‹</button>
+    <h1>
+      שיבוץ טכנאים<br>
+      <em>בשניות, לא בשעות</em>
+    </h1>
+    <p class="hero-sub">
+      מסלול מחליפה את הוואטסאפ וגוגל שיטס. המתאמת מזינה עיר וסוג קריאה — המערכת מחשבת מי הטכנאי, מתי, ולמה.
+    </p>
+    <div class="hero-actions">
+      <button class="btn-primary" onclick="document.getElementById('lead-form').scrollIntoView({behavior:'smooth'})">
+        התחל פיילוט חינמי ←
+      </button>
+      <button class="btn-secondary" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">
+        איך זה עובד?
+      </button>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <span class="hero-stat-num">30 שנ'</span>
+        <span class="hero-stat-lbl">מקריאה לשיבוץ</span>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="window.print()">🖨️ הדפס</button>
-    </div>
-    <div class="week-grid" id="week-grid"></div>
-  </div>
-</div>
-
-<!-- DISPATCH -->
-<div id="page-dispatch" class="page hidden">
-  <div class="ph ph-row">
-    <div><div class="ph-title">שיבוץ קריאה</div><div class="ph-sub" id="dispatch-date"></div></div>
-    <button class="btn btn-outline btn-sm" onclick="goPage('home')">← דף הבית</button>
-  </div>
-
-  <div id="dispatch-search-card" class="dispatch-search">
-    <h2>קריאה חדשה</h2>
-    <div class="fg">
-      <label class="fl"><span class="req">*</span> קטגוריה / סוג קריאה</label>
-      <div class="cat-chips" id="cat-chips-container"></div>
-    </div>
-    <div id="pkg-section" class="hidden">
-      <div class="pkg-builder">
-        <div style="font-size:0.75rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">פרטי הזמנה</div>
-        <div id="pkg-rows"></div>
-        <div style="font-size:0.8125rem;color:var(--ink-3);margin-top:6px;">זמן כולל משוער: <strong id="total-time">0 דקות</strong></div>
+      <div class="hero-stat">
+        <span class="hero-stat-num">2–20</span>
+        <span class="hero-stat-lbl">טכנאים בעסק</span>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-num">0 ₪</span>
+        <span class="hero-stat-lbl">לחודש הראשון</span>
       </div>
     </div>
-    <div class="fg-2">
-      <div class="fg">
-        <label class="fl"><span class="req">*</span> עיר / יישוב</label>
-        <select class="fc" id="s-city">
-          <option value="">בחר עיר מהרשימה...</option>
+  </div>
+</section>
+
+<!-- APP PREVIEW -->
+<section class="preview-section">
+  <div class="app-window reveal">
+    <div class="window-bar">
+      <div class="dot dot-red"></div>
+      <div class="dot dot-yellow"></div>
+      <div class="dot dot-green"></div>
+      <span class="window-title">מסלול — שיבוץ קריאה</span>
+    </div>
+    <div class="app-preview-body">
+      <div class="mock-header">קריאה חדשה</div>
+      <div class="mock-cats">
+        <div class="mock-cat active">טוחן אשפה</div>
+        <div class="mock-cat">מערכת מים</div>
+        <div class="mock-cat">מרכך אבנית</div>
+        <div class="mock-cat">קריאת שירות</div>
+      </div>
+      <div class="mock-search-row">
+        <div class="mock-input">חולון</div>
+        <div class="mock-input">הרצל 15</div>
+        <div class="mock-btn-find">מצא תורים פנויים ←</div>
+      </div>
+      <div class="mock-header" style="margin-top:14px;">3 מועדים קרובים</div>
+      <div class="mock-date-cards">
+        <div class="mock-date-card best">
+          <div class="mock-dc-merge">⚡ ממלא יום קיים</div>
+          <div class="mock-dc-day">יום שני</div>
+          <div class="mock-dc-date">12 במאי</div>
+          <div class="mock-dc-tech">אלירן כהן</div>
+        </div>
+        <div class="mock-date-card">
+          <div class="mock-dc-day">יום רביעי</div>
+          <div class="mock-dc-date">14 במאי</div>
+          <div class="mock-dc-tech">יוסי מזרחי</div>
+        </div>
+        <div class="mock-date-card">
+          <div class="mock-dc-day">יום חמישי</div>
+          <div class="mock-dc-date">15 במאי</div>
+          <div class="mock-dc-tech">רון אביבי</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PAIN SECTION -->
+<section class="pain-section">
+  <div class="reveal">
+    <div class="section-label">הבעיה שאנחנו פותרים</div>
+    <h2 class="section-title">עסקים קטנים מבזבזים<br><em>שעות על שיבוץ ידני</em></h2>
+    <p class="section-sub">כל מתאמת שמנהלת טכנאים מכירה את הסיטואציה הזו.</p>
+  </div>
+  <div class="pain-grid">
+    <div class="pain-card reveal">
+      <span class="pain-icon">📱</span>
+      <div class="pain-title">וואטסאפ וגוגל שיטס</div>
+      <div class="pain-desc">1-2 שעות ביום על תיאום ידני. שאלות, בלבולים, טעויות שעולות כסף.</div>
+    </div>
+    <div class="pain-card reveal">
+      <span class="pain-icon">🗺️</span>
+      <div class="pain-title">לוגיקה גיאוגרפית לא קיימת</div>
+      <div class="pain-desc">טכנאי מנתניה נוסע לאשקלון כי "יש לו פנוי" — במקום לאחד יום מלא בשרון.</div>
+    </div>
+    <div class="pain-card reveal">
+      <span class="pain-icon">🔄</span>
+      <div class="pain-title">ביטולים שיוצרים בלגן</div>
+      <div class="pain-desc">לקוח מבטל ברגע האחרון — המתאמת צריכה למצוא תחליף ידנית תוך דקות.</div>
+    </div>
+    <div class="pain-card reveal">
+      <span class="pain-icon">📋</span>
+      <div class="pain-title">אין מעקב אמיתי</div>
+      <div class="pain-desc">אי אפשר לדעת בזמן אמת איפה כל טכנאי, מה הסטטוס, ומה עוד לא בוצע.</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how">
+  <div class="how-inner">
+    <div class="reveal">
+      <div class="section-label">איך זה עובד</div>
+      <h2 class="section-title">מקריאה לשיבוץ —<br><em>ב-4 צעדים פשוטים</em></h2>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card reveal">
+        <div class="step-num">1</div>
+        <div class="step-title">בחירת קטגוריה ועיר</div>
+        <div class="step-desc">המתאמת בוחרת סוג קריאה (טוחן, מערכת מים, שירות) ומזינה כתובת.</div>
+        <span class="step-time">5 שניות</span>
+      </div>
+      <div class="step-card reveal">
+        <div class="step-num">2</div>
+        <div class="step-title">המערכת מחשבת</div>
+        <div class="step-desc">מסלול בודקת מי זמין, באיזה אזור, מה העומס — ומציגה 3 תאריכים מיטביים.</div>
+        <span class="step-time">אוטומטי</span>
+      </div>
+      <div class="step-card reveal">
+        <div class="step-num">3</div>
+        <div class="step-title">בחירת חלון זמן</div>
+        <div class="step-desc">רואים את כל החלונות הפנויים של הטכנאי ובוחרים. שם הלקוח נכנס רק עכשיו.</div>
+        <span class="step-time">10 שניות</span>
+      </div>
+      <div class="step-card reveal">
+        <div class="step-num">4</div>
+        <div class="step-title">אישור ווואטסאפ</div>
+        <div class="step-desc">מספר שיבוץ ייחודי נוצר. הודעת וואטסאפ מוכנה לשליחה ללקוח בלחיצה.</div>
+        <span class="step-time">5 שניות</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section">
+  <div class="reveal">
+    <div class="section-label">פיצ'רים</div>
+    <h2 class="section-title">כל מה שצריך<br><em>כלום מיותר</em></h2>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card reveal">
+      <div class="feature-icon-wrap">🎯</div>
+      <div>
+        <div class="feature-title">מנוע שיבוץ חכם</div>
+        <div class="feature-desc">מחשב אזורים, עומסים, מיומנויות ורוטציה. לא ינסה לשלוח טכנאי לאזור שלא מתאים לו.</div>
+      </div>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon-wrap">⚡</div>
+      <div>
+        <div class="feature-title">מיזוג ימים אוטומטי</div>
+        <div class="feature-desc">אם יש 3 קריאות בגוש דן לאלירן, הקריאה החדשה תצטרף אליהן — לא תפתח יום חדש.</div>
+      </div>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon-wrap">📅</div>
+      <div>
+        <div class="feature-title">יומן ויזואלי מסודר</div>
+        <div class="feature-desc">כל טכנאי רואה את המשימות שלו לפי שעות. ניווט ישיר לוויז מכל קריאה.</div>
+      </div>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon-wrap">🔢</div>
+      <div>
+        <div class="feature-title">מספר שיבוץ ייחודי</div>
+        <div class="feature-desc">כל קריאה מקבלת מזהה MSL-XXXXX. מועתק לאודו או לכל מערכת אחרת.</div>
+      </div>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon-wrap">📦</div>
+      <div>
+        <div class="feature-title">קטגוריות וחבילות</div>
+        <div class="feature-desc">מגדירים קטגוריות עם זמני התקנה. מייצרים חבילות (טוחן + מערכת מים) בקלות.</div>
+      </div>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon-wrap">⚙️</div>
+      <div>
+        <div class="feature-title">חוקים גמישים</div>
+        <div class="feature-desc">מקסימום קריאות לפי קטגוריה, גבולות גיאוגרפיים, ערים חסומות, חופשות חלקיות.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHO IT'S FOR -->
+<section class="for-section">
+  <div class="for-inner">
+    <div class="reveal">
+      <div class="section-label">קהל יעד</div>
+      <h2 class="section-title">בנוי בדיוק עבורך אם אתה...</h2>
+      <p class="section-sub" style="margin:0 auto;margin-top:0.75rem;">כל עסק שמעסיק עובדי שטח ורוצה להפסיק לנהל דרך וואטסאפ.</p>
+    </div>
+    <div class="for-grid reveal">
+      <div class="for-tag">🔧 מתקין מסנני מים</div>
+      <div class="for-tag">❄️ טכנאי מזגנים</div>
+      <div class="for-tag">🗑️ מתקין טוחני אשפה</div>
+      <div class="for-tag">📹 מתקין מצלמות</div>
+      <div class="for-tag">🧹 חברת ניקיון</div>
+      <div class="for-tag">📦 חברת משלוחים</div>
+      <div class="for-tag">⚡ חשמלאים</div>
+      <div class="for-tag">🔩 אינסטלטורים</div>
+      <div class="for-tag">🪟 מתקין סורגים וחלונות</div>
+      <div class="for-tag">🛠️ כל עסק עם עובדי שטח</div>
+    </div>
+  </div>
+</section>
+
+<!-- LEAD FORM -->
+<section class="form-section" id="lead-form">
+  <div class="reveal">
+    <div class="section-label">הצטרף לפיילוט</div>
+    <h2 class="section-title">חינם לחלוטין<br><em>לעסקים ראשונים</em></h2>
+    <p style="color:var(--gray);font-size:0.9375rem;margin-top:0.75rem;line-height:1.7;">
+      אנחנו מחפשים עסקים ראשונים לפיילוט. תשתמש בחינם, תיתן פידבק, ותעצב את המוצר יחד איתנו.
+    </p>
+  </div>
+
+  <div class="form-card reveal">
+    <div id="lead-form-inner">
+      <div class="form-group">
+        <label class="form-label">שם העסק</label>
+        <input class="form-input" id="f-biz" placeholder="לדוגמה: טכנאי מזגנים כהן">
+      </div>
+      <div class="form-group">
+        <label class="form-label">שם איש הקשר</label>
+        <input class="form-input" id="f-name" placeholder="שם פרטי ושם משפחה">
+      </div>
+      <div class="form-group">
+        <label class="form-label">טלפון</label>
+        <input class="form-input" id="f-phone" placeholder="05X-XXXXXXX" type="tel">
+      </div>
+      <div class="form-group">
+        <label class="form-label">סוג עסק</label>
+        <select class="form-select" id="f-type">
+          <option value="">בחר סוג עסק...</option>
+          <option>מסנני מים / מערכות מים</option>
+          <option>טוחני אשפה</option>
+          <option>מזגנים</option>
+          <option>מצלמות ואבטחה</option>
+          <option>ניקיון</option>
+          <option>משלוחים</option>
+          <option>חשמל / אינסטלציה</option>
+          <option>אחר</option>
         </select>
-        <div style="font-size:0.75rem;color:var(--ink-4);margin-top:3px;">עיר לא מופיעה? <a onclick="goPage('zones')" style="color:var(--blue);cursor:pointer;font-weight:700;">הוסף אותה בהגדרות האזורים ←</a></div>
       </div>
-      <div class="fg">
-        <label class="fl"><span class="req">*</span> רחוב ומספר</label>
-        <input class="fc" id="s-street" placeholder="לדוגמה: הרצל 15">
+      <div class="form-group">
+        <label class="form-label">כמה טכנאים / עובדי שטח?</label>
+        <select class="form-select" id="f-size">
+          <option value="">בחר...</option>
+          <option>2-3</option>
+          <option>4-6</option>
+          <option>7-10</option>
+          <option>11-20</option>
+          <option>20+</option>
+        </select>
       </div>
+      <button class="submit-btn" onclick="submitForm()">
+        אני רוצה להצטרף לפיילוט ←
+      </button>
+      <p class="form-note">לא נשלח ספאם. ניצור קשר תוך 24 שעות.</p>
     </div>
-    <button class="find-btn" onclick="findBestSlot()">מצא שיבוץ אופטימלי ←</button>
+    <div class="form-success" id="form-success">
+      <div class="success-circle">✓</div>
+      <div class="success-title">קיבלנו! 🎉</div>
+      <p class="success-sub">ניצור איתך קשר תוך 24 שעות לתיאום הדגמה.<br>בינתיים — תודה על האמון!</p>
+    </div>
   </div>
+</section>
 
-  <!-- SINGLE SUGGESTION -->
-  <div id="dispatch-result" class="hidden">
-    <div id="d-alert" class="hidden"></div>
-    <div id="suggestion-card"></div>
-    <!-- FIND OTHER DATE -->
-    <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;" id="alt-buttons">
-      <button class="btn btn-outline" onclick="findNextSlot()">🔄 מצא מועד אחר</button>
-      <div style="display:flex;align-items:center;gap:8px;flex:1;">
-        <span style="font-size:0.875rem;color:var(--ink-3);white-space:nowrap;">בדוק תאריך ספציפי:</span>
-        <input type="date" class="fc" id="specific-date" style="flex:1;max-width:160px;" onchange="checkSpecificDate(this.value)">
-      </div>
-    </div>
-  </div>
-
-  <div id="dispatch-success" class="hidden">
-    <div class="success-card">
-      <div class="success-icon">✓</div>
-      <div style="font-size:1.125rem;font-weight:900;margin-bottom:4px;">הקריאה שובצה בהצלחה!</div>
-      <div class="success-id" id="suc-id"></div>
-      <div class="confirm-box" id="suc-details"></div>
-      <div class="flex-gap" style="justify-content:center;margin-top:1rem;">
-        <a id="wa-link" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#25D366;color:white;padding:9px 18px;border-radius:10px;font-size:0.875rem;font-weight:700;text-decoration:none;">📱 וואטסאפ ללקוח</a>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- TASKS -->
-<div id="page-tasks" class="page hidden">
-  <div class="ph-row ph">
-    <div><div class="ph-title">קריאות</div></div>
-    <div class="flex-gap">
-      <span class="badge badge-blue" id="tf-all" onclick="filterTasks('all')" style="cursor:pointer;padding:5px 12px;">הכל</span>
-      <span class="badge badge-gray" id="tf-pending" onclick="filterTasks('pending')" style="cursor:pointer;padding:5px 12px;">ממתינות</span>
-      <span class="badge badge-gray" id="tf-assigned" onclick="filterTasks('assigned')" style="cursor:pointer;padding:5px 12px;">משובצות</span>
-      <span class="badge badge-gray" id="tf-completed" onclick="filterTasks('completed')" style="cursor:pointer;padding:5px 12px;">הושלמו</span>
-    </div>
-  </div>
-  <div class="card">
-    <div class="sb-bar"><span style="color:var(--ink-4);">🔍</span><input class="fc" id="task-search" placeholder="חיפוש..." oninput="renderTasks()" style="border:none;padding:6px 0;font-size:0.875rem;"></div>
-    <div id="tasks-list"></div>
-  </div>
-</div>
-
-<!-- TECH VIEW -->
-<div id="page-techview" class="page hidden">
-  <div id="techview-content"></div>
-</div>
-
-<!-- TECHNICIANS -->
-<div id="page-technicians" class="page hidden">
-  <div class="ph-row ph">
-    <div><div class="ph-title">טכנאים</div><div class="ph-sub" id="tech-count-sub"></div></div>
-    <button class="btn btn-blue" onclick="openAddTechModal()">+ הוסף</button>
-  </div>
-  <div class="tech-grid" id="tech-grid"></div>
-</div>
-
-<!-- ZONES -->
-<div id="page-zones" class="page hidden">
-  <div class="ph-row ph">
-    <div><div class="ph-title">אזורי פעילות</div></div>
-    <button class="btn btn-blue" onclick="addZone()">+ אזור חדש</button>
-  </div>
-  <div id="zones-list"></div>
-</div>
-
-<!-- CATEGORIES -->
-<div id="page-categories" class="page hidden">
-  <div class="ph"><div class="ph-title">קטגוריות וחבילות</div></div>
-  <div class="card" style="margin-bottom:1rem;">
-    <div class="card-title">קטגוריות</div>
-    <div class="tag-list" id="cats-list"></div>
-    <div class="tag-add-row">
-      <input class="fc" id="new-cat-name" placeholder="שם קטגוריה..." style="flex:1;">
-      <input class="fc" id="new-cat-time" type="number" placeholder="דקות" style="width:90px;">
-      <button class="btn btn-blue" onclick="addCategory()">+ הוסף</button>
-    </div>
-    <div style="font-size:0.75rem;color:var(--ink-4);margin-top:6px;">ברירת מחדל: קריאה רגילה = 30 דקות, חבילה = 45 דקות</div>
-  </div>
-  <div class="card">
-    <div class="card-title">חבילות</div>
-    <div id="pkgs-list"></div>
-    <button class="btn btn-outline" style="margin-top:10px;" onclick="openAddPkgModal()">+ חבילה חדשה</button>
-  </div>
-</div>
-
-<!-- SETTINGS -->
-<div id="page-settings" class="page hidden">
-  <div class="ph"><div class="ph-title">הגדרות חברה</div></div>
-  <div class="card">
-    <div class="set-sec">
-      <div class="set-title">פרטי חברה</div>
-      <div class="fg-2">
-        <div class="fg"><label class="fl">שם החברה</label><input class="fc" id="set-company"></div>
-        <div class="fg"><label class="fl">נפח קריאות חודשי</label><input class="fc" id="set-monthly" type="number"></div>
-      </div>
-    </div>
-    <div class="set-sec">
-      <div class="set-title">שעות עבודה</div>
-      <div class="fg-2">
-        <div class="fg"><label class="fl">התחלה</label><select class="fc" id="set-start"></select></div>
-        <div class="fg"><label class="fl">סיום</label><select class="fc" id="set-end"></select></div>
-      </div>
-    </div>
-    <div class="set-sec">
-      <div class="set-title">זמני קריאה (דקות)</div>
-      <div class="fg-2">
-        <div class="fg"><label class="fl">קריאה רגילה</label><input class="fc" id="set-regular-time" type="number" value="30"></div>
-        <div class="fg"><label class="fl">חבילה / התקנה מורחבת</label><input class="fc" id="set-package-time" type="number" value="45"></div>
-      </div>
-    </div>
-    <div class="set-sec">
-      <div class="set-title">כללי שיבוץ</div>
-      <div class="fg-3">
-        <div class="fg"><label class="fl">טווח הגעה ללקוח</label><select class="fc" id="set-window"><option value="2">2 שעות</option><option value="3" selected>3 שעות</option><option value="4">4 שעות</option></select></div>
-        <div class="fg"><label class="fl">מקסימום קריאות ליום</label><input class="fc" id="set-max" type="number" placeholder="9"></div>
-        <div class="fg"><label class="fl">ימי קדימה לחיפוש</label><input class="fc" id="set-lookahead" type="number" placeholder="30"></div>
-      </div>
-    </div>
-    <button class="btn btn-blue btn-lg" onclick="saveSettings()">שמור הגדרות</button>
-  </div>
-</div>
-
-</main>
-</div>
-
-<!-- MODAL: ADD/EDIT TECH -->
-<div class="mo hidden" id="mo-tech">
-  <div class="mo-box">
-    <div class="mo-title" id="mo-tech-title">הוסף טכנאי</div>
-    <div class="fg-2">
-      <div class="fg"><label class="fl"><span class="req">*</span> שם מלא</label><input class="fc" id="ti-name"><div class="field-error hidden" id="e-ti-name">שדה חובה</div></div>
-      <div class="fg"><label class="fl"><span class="req">*</span> טלפון</label><input class="fc" id="ti-phone" placeholder="05X-XXXXXXX"><div class="field-error hidden" id="e-ti-phone">שדה חובה</div></div>
-    </div>
-    <div class="fg"><label class="fl"><span class="req">*</span> כתובת בסיס / יציאה</label><input class="fc" id="ti-base" placeholder="עיר / כתובת"><div class="field-error hidden" id="e-ti-base">שדה חובה</div></div>
-    <div class="fg-2">
-      <div class="fg"><label class="fl"><span class="req">*</span> מינימום קריאות ביום</label><input class="fc" id="ti-min" type="number" value="2"></div>
-      <div class="fg"><label class="fl"><span class="req">*</span> מקסימום קריאות ביום</label><input class="fc" id="ti-max" type="number" value="9"></div>
-    </div>
-    <div class="fg-2">
-      <div class="fg"><label class="fl"><span class="req">*</span> שעת התחלה</label><select class="fc" id="ti-start"></select></div>
-      <div class="fg"><label class="fl"><span class="req">*</span> שעת סיום</label><select class="fc" id="ti-end"></select></div>
-    </div>
-    <div class="fg">
-      <label class="fl"><span class="req">*</span> מיומנויות</label>
-      <div class="field-error hidden" id="e-ti-skills">יש לבחור לפחות מיומנות אחת</div>
-      <div class="skill-checks" id="ti-skills-container"></div>
-    </div>
-    <div class="fg">
-      <label class="fl">מקסימום קריאות לפי קטגוריה ביום</label>
-      <div id="ti-cat-limits"></div>
-    </div>
-    <div class="fg">
-      <label class="fl"><span class="req">*</span> רוטציה אזורים (ראשון–שישי)</label>
-      <div class="field-error hidden" id="e-ti-rotation">יש להגדיר לפחות יום אחד</div>
-      <div class="rotation-grid" id="ti-rotation"></div>
-    </div>
-    <div class="fg"><label class="fl">ערים חסומות (מופרד בפסיק)</label><input class="fc" id="ti-blocked" placeholder="לדוגמה: אילת, דימונה"></div>
-    <div class="mo-actions">
-      <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-tech')">ביטול</button>
-      <button class="btn btn-blue" style="flex:2;" id="ti-save-btn" onclick="saveTech()">הוסף</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: STATUS -->
-<div class="mo hidden" id="mo-status">
-  <div class="mo-box">
-    <div class="mo-title">עדכון סטטוס</div>
-    <div id="status-info" style="margin-bottom:1rem;"></div>
-    <div style="display:grid;gap:8px;" id="status-opts"></div>
-    <div class="mo-actions"><button class="btn btn-outline btn-full" onclick="closeMo('mo-status')">ביטול</button></div>
-  </div>
-</div>
-
-<!-- MODAL: DAY OFF -->
-<div class="mo hidden" id="mo-dayoff">
-  <div class="mo-box">
-    <div class="mo-title">חופשות וזמינות</div>
-    <div class="fg-2">
-      <div class="fg"><label class="fl">טכנאי</label><select class="fc" id="do-tech"></select></div>
-      <div class="fg"><label class="fl">תאריך</label><input class="fc" type="date" id="do-date"></div>
-    </div>
-    <div class="fg"><label class="fl">סוג</label>
-      <select class="fc" id="do-type" onchange="document.getElementById('do-times').classList.toggle('hidden',this.value!=='partial')">
-        <option value="full">כל היום</option><option value="partial">שעות מסוימות</option>
-      </select>
-    </div>
-    <div class="fg-2 hidden" id="do-times">
-      <div class="fg"><label class="fl">משעה</label><select class="fc" id="do-from"></select></div>
-      <div class="fg"><label class="fl">עד שעה</label><select class="fc" id="do-to"></select></div>
-    </div>
-    <div class="fg"><label class="fl">סיבה</label><input class="fc" id="do-reason" placeholder="חופש, מחלה..."></div>
-    <div id="do-list" style="margin-top:1rem;"></div>
-    <div class="mo-actions">
-      <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-dayoff')">סגור</button>
-      <button class="btn btn-blue" style="flex:2;" onclick="addDayoff()">הוסף</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: ADD PACKAGE -->
-<div class="mo hidden" id="mo-pkg">
-  <div class="mo-box">
-    <div class="mo-title">חבילה חדשה</div>
-    <div class="fg"><label class="fl">שם החבילה</label><input class="fc" id="pkg-name" placeholder="לדוגמה: טוחן + מערכת מים"></div>
-    <div id="pkg-cat-rows"></div>
-    <button class="btn btn-outline btn-sm" onclick="addPkgRow()" style="margin-top:8px;">+ הוסף קטגוריה</button>
-    <div class="mo-actions">
-      <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-pkg')">ביטול</button>
-      <button class="btn btn-blue" style="flex:2;" onclick="savePkg()">שמור</button>
-    </div>
-  </div>
-</div>
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo"><span>מס</span>לול</div>
+  <p class="footer-text">מנוע שיבוץ חכם לעסקים קטנים • ישראל 2025</p>
+</footer>
 
 <script>
-// ═══════════════════════════════════════════
-// CONSTANTS
-// ═══════════════════════════════════════════
-const COLORS=['#2563EB','#7C3AED','#D97706','#DC2626','#059669','#DB2777','#0891B2','#65A30D'];
-const CAL_COLORS=[
-  {bg:'#FEF3C7',fg:'#92400E',border:'#FDE68A'},
-  {bg:'#DBEAFE',fg:'#1E40AF',border:'#BFDBFE'},
-  {bg:'#D1FAE5',fg:'#065F46',border:'#A7F3D0'},
-  {bg:'#EDE9FE',fg:'#4C1D95',border:'#DDD6FE'},
-  {bg:'#FCE7F3',fg:'#831843',border:'#FBCFE8'},
-  {bg:'#E0F2FE',fg:'#0C4A6E',border:'#BAE6FD'},
-];
-const DAYS_HE=['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
-const DAYS_SHORT=['א','ב','ג','ד','ה','ו'];
-const STATUS_MAP={
-  pending:{label:'ממתין',badge:'badge-amber',next:['assigned']},
-  assigned:{label:'משובץ',badge:'badge-blue',next:['en_route','pending']},
-  en_route:{label:'בדרך',badge:'badge-blue',next:['arrived']},
-  arrived:{label:'הגיע',badge:'badge-green',next:['completed','issue']},
-  completed:{label:'הושלם',badge:'badge-gray',next:[]},
-  issue:{label:'בעיה',badge:'badge-red',next:['assigned']},
-};
-
-// ═══════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════
-let technicians=[], tasks=[], dayoffs=[], zones=[], categories=[], packages=[];
-let nextTaskId=1, nextTechId=1, editingTechId=null;
-let selectedCat=null, currentFilter='all', statusTaskId=null;
-let currentRole='admin', currentTechView=null;
-let currentWeekOffset=0, selectedTechForCal=null;
-let allCandidates=[], currentCandidateIdx=0, selectedTimeSlot=null;
-let settings={company:'מסלול',startTime:'07:00',endTime:'18:00',window:3,maxDaily:9,lookahead:30,monthlyVolume:300,regularTime:30,packageTime:45};
-
-// ═══════════════════════════════════════════
-// STORAGE
-// ═══════════════════════════════════════════
-function save(){
-  localStorage.setItem('ml7_techs',JSON.stringify(technicians));
-  localStorage.setItem('ml7_tasks',JSON.stringify(tasks));
-  localStorage.setItem('ml7_settings',JSON.stringify(settings));
-  localStorage.setItem('ml7_zones',JSON.stringify(zones));
-  localStorage.setItem('ml7_cats',JSON.stringify(categories));
-  localStorage.setItem('ml7_pkgs',JSON.stringify(packages));
-  localStorage.setItem('ml7_dayoffs',JSON.stringify(dayoffs));
-  localStorage.setItem('ml7_ids',JSON.stringify({nextTaskId,nextTechId}));
-}
-function load(){
-  try{
-    const t=localStorage.getItem('ml7_techs'),k=localStorage.getItem('ml7_tasks'),
-          s=localStorage.getItem('ml7_settings'),z=localStorage.getItem('ml7_zones'),
-          c=localStorage.getItem('ml7_cats'),p=localStorage.getItem('ml7_pkgs'),
-          d=localStorage.getItem('ml7_dayoffs'),ids=localStorage.getItem('ml7_ids');
-    if(t)technicians=JSON.parse(t);
-    if(k)tasks=JSON.parse(k);
-    if(s)settings=Object.assign(settings,JSON.parse(s));
-    if(z)zones=JSON.parse(z);
-    if(c)categories=JSON.parse(c);
-    if(p)packages=JSON.parse(p);
-    if(d)dayoffs=JSON.parse(d);
-    if(ids){const i=JSON.parse(ids);nextTaskId=i.nextTaskId;nextTechId=i.nextTechId;}
-  }catch(e){}
-  if(!technicians.length)seedData();
-  if(!categories.length)categories=[
-    {id:'c1',name:'טוחן אשפה',time:30},
-    {id:'c2',name:'מערכת מים',time:30},
-    {id:'c3',name:'מרכך אבנית',time:30},
-    {id:'c4',name:'קריאת שירות',time:30},
-  ];
-  if(!zones.length)zones=[
-    {id:'z1',name:'גוש דן',cities:['תל אביב','חולון','בת ים','ראשון לציון','רמת גן','גבעתיים','אור יהודה','יהוד','בני ברק']},
-    {id:'z2',name:'שרון',cities:['נתניה','הרצליה','כפר סבא','רעננה','הוד השרון']},
-    {id:'z3',name:'שפלה',cities:['רחובות','נס ציונה','לוד','רמלה','מודיעין']},
-    {id:'z4',name:'דרום',cities:['אשדוד','אשקלון','באר שבע','קריית גת']},
-  ];
-  if(!packages.length)packages=[
-    {id:'p1',name:'טוחן + מערכת מים',items:[{catId:'c1',qty:1},{catId:'c2',qty:1}]},
-  ];
-}
-function seedData(){
-  technicians=[
-    {id:1,name:'אלירן כהן',phone:'052-1111111',base:'ראשון לציון',min:2,max:9,start:'07:00',end:'17:00',blocked:'',color:'#D97706',skills:['c1','c2','c3','c4'],catLimits:{c4:2},rotation:{0:'z1',1:'z2',2:'z1',3:'z3',4:'z1',5:''}},
-    {id:2,name:'יוסי מזרחי',phone:'054-2222222',base:'פתח תקווה',min:2,max:9,start:'07:00',end:'17:00',blocked:'',color:'#2563EB',skills:['c1','c2','c4'],catLimits:{},rotation:{0:'z2',1:'z1',2:'z2',3:'z1',4:'z2',5:''}},
-    {id:3,name:'רון אביבי',phone:'050-3333333',base:'נתניה',min:2,max:8,start:'08:00',end:'16:00',blocked:'אילת',color:'#7C3AED',skills:['c1','c3','c4'],catLimits:{c4:1},rotation:{0:'z2',1:'z3',2:'z2',3:'z4',4:'z2',5:''}},
-    {id:4,name:'דני שמש',phone:'053-4444444',base:'רחובות',min:2,max:9,start:'07:00',end:'17:00',blocked:'',color:'#059669',skills:['c1','c2','c3','c4'],catLimits:{},rotation:{0:'z3',1:'z1',2:'z3',3:'z1',4:'z3',5:''}},
-  ];
-  const today=todayStr();
-  tasks=[
-    {id:1,client:'משפחת לוי',phone:'052-0000001',city:'חולון',street:'הרצל 12',cat:'טוחן אשפה',catId:'c1',techId:1,status:'assigned',time:'07:30',date:today,notes:'',assignId:'MSL-00001'},
-    {id:2,client:'דוד כהן',phone:'053-0000002',city:'חולון',street:'סוקולוב 3',cat:'מערכת מים',catId:'c2',techId:1,status:'assigned',time:'08:30',date:today,notes:'',assignId:'MSL-00002'},
-    {id:3,client:'שרה גולן',phone:'052-0000003',city:'ראשון לציון',street:'הרצל 22',cat:'טוחן אשפה',catId:'c1',techId:1,status:'assigned',time:'10:00',date:today,notes:'',assignId:'MSL-00003'},
-    {id:4,client:'חיים רוזן',phone:'054-0000004',city:'ראשון לציון',street:'ביאליק 5',cat:'קריאת שירות',catId:'c4',techId:1,status:'completed',time:'12:00',date:today,notes:'',assignId:'MSL-00004'},
-    {id:5,client:'רחל אברהם',phone:'052-0000005',city:'נתניה',street:'הרצל 10',cat:'טוחן אשפה',catId:'c1',techId:2,status:'assigned',time:'07:30',date:today,notes:'',assignId:'MSL-00005'},
-    {id:6,client:'עסק טכנולוגיות',phone:'054-0000006',city:'הרצליה',street:'פיתוח 1',cat:'מערכת מים',catId:'c2',techId:2,status:'assigned',time:'09:30',date:today,notes:'',assignId:'MSL-00006'},
-    {id:7,client:'משפחת פרץ',phone:'055-0000007',city:'רמת גן',street:'ביאליק 20',cat:'טוחן אשפה',catId:'c1',techId:null,status:'pending',time:'',date:'',notes:'',assignId:''},
-  ];
-  nextTaskId=8;nextTechId=5;
-}
-function todayStr(){return new Date().toISOString().split('T')[0];}
-function pad(n){return n<10?'0'+n:''+n;}
-function initials(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2);}
-function genId(){return 'MSL-'+String(nextTaskId).padStart(5,'0');}
-function timeToMins(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m;}
-function minsToTime(m){return pad(Math.floor(m/60))+':'+pad(m%60);}
-
-// ═══════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════
-document.addEventListener('DOMContentLoaded',()=>{
-  load();
-  buildRoleSelect();
-  populateTimeSels();
-  populateCitiesDl();
-  setDateLabel();
-  renderCatChips();
-  renderTasks();
-  renderHomeTechCards();
-  renderTechs();
-  renderZones();
-  renderCategories();
-  renderSettings();
-  document.getElementById('do-date').value=todayStr();
-  document.getElementById('specific-date').value=todayStr();
-});
-function setDateLabel(){
-  const d=new Date(),days=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-  const label='יום '+days[d.getDay()]+' — '+d.toLocaleDateString('he-IL');
-  document.getElementById('dispatch-date').textContent=label;
-  document.getElementById('home-date').textContent=label;
-}
-function populateTimeSels(){
-  const times=[];
-  for(let h=5;h<=22;h++){['00','30'].forEach(m=>times.push(pad(h)+':'+m));}
-  ['set-start','set-end','ti-start','ti-end','do-from','do-to'].forEach(id=>{
-    const el=document.getElementById(id);if(!el)return;
-    times.forEach(t=>{const o=new Option(t,t);el.appendChild(o);});
-  });
-  document.getElementById('set-start').value=settings.startTime;
-  document.getElementById('set-end').value=settings.endTime;
-}
-function populateCitiesDl(){
-  const sel=document.getElementById('s-city');
-  if(!sel)return;
-  const prevVal=sel.value;
-  sel.innerHTML='<option value="">בחר עיר מהרשימה...</option>';
-  // Group by zone
-  zones.forEach(z=>{
-    if(!z.cities.length)return;
-    const grp=document.createElement('optgroup');
-    grp.label=z.name;
-    z.cities.forEach(c=>{
-      const o=document.createElement('option');
-      o.value=c;o.textContent=c;
-      grp.appendChild(o);
-    });
-    sel.appendChild(grp);
-  });
-  if(prevVal)sel.value=prevVal;
-}
-function buildRoleSelect(){
-  const sel=document.getElementById('role-sel');
-  sel.innerHTML='<option value="admin">מתאמת / מנהל</option>'+
-    technicians.map(t=>`<option value="tech_${t.id}">${t.name}</option>`).join('');
-}
-function renderSettings(){
-  document.getElementById('set-company').value=settings.company;
-  document.getElementById('set-monthly').value=settings.monthlyVolume;
-  document.getElementById('set-max').value=settings.maxDaily;
-  document.getElementById('set-lookahead').value=settings.lookahead;
-  document.getElementById('set-regular-time').value=settings.regularTime||30;
-  document.getElementById('set-package-time').value=settings.packageTime||45;
-}
-
-// ═══════════════════════════════════════════
-// PAGES
-// ═══════════════════════════════════════════
-function goPage(page){
-  ['home','dispatch','tasks','techview','technicians','zones','categories','settings'].forEach(p=>{
-    document.getElementById('page-'+p).classList.toggle('hidden',p!==page);
-  });
-  document.querySelectorAll('.ni-btn').forEach(b=>b.classList.remove('active'));
-  const map={home:0,dispatch:1,tasks:2,technicians:3,zones:4,categories:5,settings:6,techview:0};
-  const btns=document.querySelectorAll('.ni-btn');
-  if(btns[map[page]])btns[map[page]].classList.add('active');
-  if(page==='dispatch'){resetDispatch();}
-  if(page==='technicians'){renderTechs();buildRoleSelect();}
-  if(page==='techview')renderTechView();
-  if(page==='zones')renderZones();
-  if(page==='categories')renderCategories();
-  if(page==='tasks')renderTasks();
-  if(page==='home')renderHomeTechCards();
-}
-function switchRole(){
-  const val=document.getElementById('role-sel').value;
-  currentRole=val;
-  if(val!=='admin'){
-    const techId=parseInt(val.replace('tech_',''));
-    currentTechView=technicians.find(t=>t.id===techId);
-    goPage('techview');
-  }else{goPage('home');}
-}
-
-// ═══════════════════════════════════════════
-// HOME — TECH CARDS + WEEKLY CALENDAR
-// ═══════════════════════════════════════════
-function renderHomeTechCards(){
-  document.getElementById('weekly-cal').classList.add('hidden');
-  const grid=document.getElementById('home-tech-grid');
-  grid.innerHTML=technicians.map(tech=>{
-    const todayTasks=tasks.filter(t=>t.techId===tech.id&&['assigned','en_route','arrived'].includes(t.status)&&t.date===todayStr());
-    const lp=Math.min(100,Math.round((todayTasks.length/Math.max(tech.max,1))*100));
-    const fc=lp>=90?'var(--red)':lp>=60?'var(--amber)':'var(--green)';
-    return`<div class="tech-home-card" onclick="openTechWeekly(${tech.id})">
-      <div class="th-avatar" style="background:${tech.color};">${initials(tech.name)}</div>
-      <div class="th-name">${tech.name}</div>
-      <div class="th-area">${getTechTodayZone(tech)||'—'}</div>
-      <div class="th-load" style="color:${fc};">${todayTasks.length}/${tech.max} קריאות היום</div>
-      <div class="load-bar" style="margin-top:6px;"><div class="load-fill" style="width:${lp}%;background:${fc};"></div></div>
-    </div>`;
-  }).join('')||'<div class="empty"><div class="empty-icon">👷</div><div>הוסף טכנאי ראשון בהגדרות</div></div>';
-}
-function getTechTodayZone(tech){
-  const d=new Date().getDay();
-  const zoneId=tech.rotation?tech.rotation[d]:null;
-  if(!zoneId)return null;
-  const z=zones.find(x=>x.id===zoneId);
-  return z?z.name:null;
-}
-function openTechWeekly(techId){
-  selectedTechForCal=technicians.find(t=>t.id===techId);
-  currentWeekOffset=0;
-  document.getElementById('weekly-cal').classList.remove('hidden');
-  document.getElementById('home-tech-grid').classList.add('hidden');
-  renderWeeklyCalendar();
-  document.getElementById('weekly-cal').scrollIntoView({behavior:'smooth'});
-}
-function closeWeeklyCal(){
-  document.getElementById('weekly-cal').classList.add('hidden');
-  document.getElementById('home-tech-grid').classList.remove('hidden');
-  selectedTechForCal=null;
-}
-function changeWeek(dir){
-  currentWeekOffset+=dir;
-  renderWeeklyCalendar();
-}
-function getWeekDates(offset){
-  const now=new Date();
-  const day=now.getDay();
-  // Sun = 0 in JS, we want Sunday as start
-  const sunday=new Date(now);
-  sunday.setDate(now.getDate()-day+(offset*7));
-  const dates=[];
-  for(let i=0;i<6;i++){
-    const d=new Date(sunday);
-    d.setDate(sunday.getDate()+i);
-    dates.push(d);
-  }
-  return dates;
-}
-function renderWeeklyCalendar(){
-  if(!selectedTechForCal)return;
-  const tech=selectedTechForCal;
-  const dates=getWeekDates(currentWeekOffset);
-  const todayStr2=todayStr();
-  // week title
-  const first=dates[0],last=dates[5];
-  document.getElementById('week-title').textContent=
-    tech.name+' — '+first.toLocaleDateString('he-IL')+' עד '+last.toLocaleDateString('he-IL');
-  // hours 7-18
-  const hours=[];
-  for(let h=7;h<=17;h++)hours.push(h);
-  const calColors=CAL_COLORS[technicians.indexOf(tech)%CAL_COLORS.length];
-  // build header
-  let headerHtml='<div class="wh-cell"></div>';
-  dates.forEach((d,i)=>{
-    const isToday=d.toISOString().split('T')[0]===todayStr2;
-    headerHtml+=`<div class="wh-cell ${isToday?'today':''}">${DAYS_SHORT[i]}<br><span style="font-size:0.9rem;font-weight:900;">${d.getDate()}</span></div>`;
-  });
-  // build body — time labels + day columns
-  let timeColHtml='';
-  hours.forEach(h=>{timeColHtml+=`<div class="time-label">${pad(h)}:00</div>`;});
-  // for each day, get tasks and position them
-  let dayCols='';
-  dates.forEach((d,di)=>{
-    const dStr=d.toISOString().split('T')[0];
-    const dayTasks=tasks.filter(t=>t.techId===tech.id&&t.date===dStr&&['assigned','en_route','arrived','completed'].includes(t.status)&&t.time)
-      .sort((a,b)=>a.time.localeCompare(b.time));
-    let tasksHtml='';
-    dayTasks.forEach(t=>{
-      const startMins=timeToMins(t.time);
-      const cat=categories.find(c=>c.id===t.catId);
-      const isPkg=packages.some(p=>p.items.some(i=>i.catId===t.catId));
-      const durMins=isPkg?(settings.packageTime||45):(settings.regularTime||30);
-      // position: top = (startMins - 7*60) / 60 * 60px
-      const topPx=((startMins-7*60)/60)*60;
-      const heightPx=Math.max((durMins/60)*60,20);
-      tasksHtml+=`<div class="cal-task" style="top:${topPx}px;height:${heightPx}px;background:${calColors.bg};color:${calColors.fg};border:1px solid ${calColors.border};" title="${t.client} — ${t.cat} — ${t.street}, ${t.city}">
-        <div class="cal-client">${t.client}</div>
-        <div class="cal-city">${t.city}</div>
-        <div style="font-size:0.6rem;opacity:0.7;">${t.time}</div>
-      </div>`;
-    });
-    dayCols+=`<div class="day-col" style="position:relative;min-height:${hours.length*60}px;">${tasksHtml}</div>`;
-  });
-  // assemble
-  document.getElementById('week-grid').innerHTML=`
-    <div class="week-header">${headerHtml}</div>
-    <div class="week-body">
-      <div class="time-col">${timeColHtml}</div>
-      ${dayCols}
-    </div>`;
-}
-
-// ═══════════════════════════════════════════
-// CATEGORY CHIPS
-// ═══════════════════════════════════════════
-function renderCatChips(){
-  const container=document.getElementById('cat-chips-container');
-  const allItems=[
-    ...categories.map(c=>({id:'cat_'+c.id,label:c.name,isPkg:false})),
-    ...packages.map(p=>({id:'pkg_'+p.id,label:p.name+' 📦',isPkg:true})),
-  ];
-  container.innerHTML=allItems.map(item=>
-    `<button class="cat-chip ${selectedCat===item.id?'selected':''}" onclick="selectCat('${item.id}')">${item.label}</button>`
-  ).join('')+`<button class="cat-add-btn" onclick="goPage('categories')">+ הוסף</button>`;
-}
-function selectCat(id){selectedCat=id;renderCatChips();renderPkgSection();}
-function calcPkgTime(pkg){
-  return pkg.items.reduce((sum,item)=>{
-    const cat=categories.find(c=>c.id===item.catId);
-    return sum+(cat?cat.time*item.qty:0);
-  },0);
-}
-function renderPkgSection(){
-  if(!selectedCat){document.getElementById('pkg-section').classList.add('hidden');return;}
-  document.getElementById('pkg-section').classList.remove('hidden');
-  const rows=document.getElementById('pkg-rows');
-  if(selectedCat.startsWith('pkg_')){
-    const pkg=packages.find(p=>'pkg_'+p.id===selectedCat);
-    if(!pkg){rows.innerHTML='';return;}
-    rows.innerHTML=pkg.items.map(item=>{
-      const cat=categories.find(c=>c.id===item.catId);
-      return`<div class="pkg-row"><span class="pkg-name">${cat?cat.name:'?'}</span>
-        <input class="fc pkg-qty" type="number" min="1" max="10" value="${item.qty}" onchange="updateTotalTime()">
-        <span class="pkg-time">${cat?cat.time:0} דק' ליח'</span></div>`;
-    }).join('');
-  }else{
-    const catId=selectedCat.replace('cat_','');
-    const cat=categories.find(c=>c.id===catId);
-    if(!cat){rows.innerHTML='';return;}
-    rows.innerHTML=`<div class="pkg-row"><span class="pkg-name">${cat.name}</span>
-      <input class="fc pkg-qty" type="number" min="1" max="10" value="1" onchange="updateTotalTime()">
-      <span class="pkg-time">${cat.time} דק' ליח'</span></div>`;
-  }
-  updateTotalTime();
-}
-function updateTotalTime(){
-  let total=0;
-  document.querySelectorAll('.pkg-row').forEach(row=>{
-    const te=row.querySelector('.pkg-time'),qe=row.querySelector('.pkg-qty');
-    if(te&&qe)total+=(parseInt(te.textContent)||0)*(parseInt(qe.value)||1);
-  });
-  document.getElementById('total-time').textContent=total+' דקות';
-}
-function getJobDuration(){
-  // package = 45min, regular = 30min
-  if(!selectedCat)return settings.regularTime||30;
-  if(selectedCat.startsWith('pkg_'))return settings.packageTime||45;
-  return settings.regularTime||30;
-}
-function getCatId(){
-  if(!selectedCat)return null;
-  if(selectedCat.startsWith('cat_'))return selectedCat.replace('cat_','');
-  return null;
-}
-function getCatName(){
-  if(!selectedCat)return '—';
-  if(selectedCat.startsWith('cat_')){
-    const c=categories.find(x=>'cat_'+x.id===selectedCat);
-    return c?c.name:'—';
-  }
-  const p=packages.find(x=>'pkg_'+x.id===selectedCat);
-  return p?p.name:'—';
-}
-
-// ═══════════════════════════════════════════
-// SMART SCHEDULING ENGINE
-// ═══════════════════════════════════════════
-function getCityZone(city){return zones.find(z=>z.cities.includes(city))||null;}
-function isTechAvailable(tech,dateStr){
-  return !dayoffs.some(d=>d.techId===tech.id&&d.date===dateStr&&d.type==='full');
-}
-function getTechDayTasks(tech,dateStr){
-  return tasks.filter(t=>t.techId===tech.id&&t.date===dateStr&&['assigned','en_route','arrived'].includes(t.status))
-    .sort((a,b)=>a.time.localeCompare(b.time));
-}
-function getTechLoad(tech,dateStr){return getTechDayTasks(tech,dateStr).length;}
-function isCityBlocked(tech,city){
-  if(!tech.blocked)return false;
-  return tech.blocked.split(',').map(c=>c.trim()).filter(Boolean).includes(city);
-}
-function techHasSkill(tech,catId){
-  if(!catId)return true;
-  return(tech.skills||[]).includes(catId);
-}
-function getCatLimitOk(tech,catId,dateStr){
-  if(!catId)return true;
-  const limits=tech.catLimits||{};
-  if(!limits[catId])return true;
-  const count=tasks.filter(t=>t.techId===tech.id&&t.date===dateStr&&t.catId===catId&&['assigned','en_route','arrived'].includes(t.status)).length;
-  return count<limits[catId];
-}
-// KEY: tech can ONLY work in zone assigned to that day of week
-function getTechZoneForDate(tech,dateStr){
-  const d=new Date(dateStr);
-  const dayOfWeek=d.getDay(); // 0=Sun,1=Mon...5=Fri
-  if(dayOfWeek===6)return null; // Sat = no work
-  const zoneId=tech.rotation?tech.rotation[dayOfWeek]:null;
-  if(!zoneId)return null;
-  return zones.find(z=>z.id===zoneId)||null;
-}
-function isCityInTechZone(tech,city,dateStr){
-  const zone=getTechZoneForDate(tech,dateStr);
-  if(!zone)return false;
-  return zone.cities.includes(city);
-}
-// Find best time slot in a day
-function findBestTimeInDay(tech,dateStr,durMins){
-  const[sh]=tech.start.split(':').map(Number);
-  const[eh]=tech.end.split(':').map(Number);
-  const dayTasks=getTechDayTasks(tech,dateStr);
-  const window=settings.window*60; // client arrival window in mins
-  // Try to fit after last existing task (fill day logic)
-  if(dayTasks.length>0){
-    const lastTask=dayTasks[dayTasks.length-1];
-    const lastEnd=timeToMins(lastTask.time)+(settings.regularTime||30);
-    const slotStart=lastEnd+10; // 10 min buffer
-    const slotEnd=slotStart+window;
-    if(Math.floor(slotEnd/60)<=eh){
-      return minsToTime(slotStart);
+// SCROLL REVEAL
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      observer.unobserve(entry.target);
     }
-  }
-  // Otherwise start of day
-  return tech.start;
-}
-// Build candidate list sorted by priority: fill existing days first
-function buildCandidates(city,catId,durMins){
-  const dates=getNextDates();
-  const candidates=[];
-  for(const date of dates){
-    for(const tech of technicians){
-      // STRICT: city must be in tech's zone for that day
-      if(!isCityInTechZone(tech,city,date.str))continue;
-      if(!isTechAvailable(tech,date.str))continue;
-      if(isCityBlocked(tech,city))continue;
-      if(!techHasSkill(tech,catId))continue;
-      if(!getCatLimitOk(tech,catId,date.str))continue;
-      const load=getTechLoad(tech,date.str);
-      if(load>=tech.max)continue;
-      // MERGE SCORE: already has tasks in same zone today = higher priority
-      const existingInCity=tasks.filter(t=>t.techId===tech.id&&t.date===date.str&&getCityZone(t.city)?.id===getCityZone(city)?.id&&['assigned','en_route','arrived'].includes(t.status)).length;
-      const fillScore=existingInCity*100 + load; // more existing = better (fill day)
-      const dateScore=dates.indexOf(date); // earlier = better
-      const bestTime=findBestTimeInDay(tech,date.str,durMins);
-      candidates.push({tech,date,load,existingInCity,fillScore,dateScore,bestTime});
-    }
-  }
-  // Sort: fill existing days first (higher fillScore), then earlier date
-  candidates.sort((a,b)=>{
-    if(b.fillScore!==a.fillScore)return b.fillScore-a.fillScore;
-    return a.dateScore-b.dateScore;
   });
-  return candidates;
-}
-function getNextDates(){
-  const dates=[];const d=new Date();let i=1;
-  while(dates.length<(settings.lookahead||30)&&i<90){
-    const nd=new Date(d);nd.setDate(d.getDate()+i);
-    if(nd.getDay()!==6){
-      const ds=nd.toISOString().split('T')[0];
-      dates.push({str:ds,d:nd});
-    }
-    i++;
-  }
-  return dates;
-}
+}, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-// ═══════════════════════════════════════════
-// DISPATCH
-// ═══════════════════════════════════════════
-function findBestSlot(){
-  const city=document.getElementById('s-city').value.trim();
-  const street=document.getElementById('s-street').value.trim();
-  if(!city||!street){alert('נא למלא עיר ורחוב');return;}
-  if(!selectedCat){alert('נא לבחור קטגוריה');return;}
-  const catId=getCatId();
-  const durMins=getJobDuration();
-  allCandidates=buildCandidates(city,catId,durMins);
-  currentCandidateIdx=0;
-  selectedTimeSlot=null;
-  if(!allCandidates.length){
-    showNoResult();
+// FORM SUBMIT
+function submitForm() {
+  const biz = document.getElementById('f-biz').value.trim();
+  const name = document.getElementById('f-name').value.trim();
+  const phone = document.getElementById('f-phone').value.trim();
+  const type = document.getElementById('f-type').value;
+  const size = document.getElementById('f-size').value;
+
+  if (!name || !phone) {
+    alert('נא למלא שם וטלפון');
     return;
   }
-  document.getElementById('dispatch-search-card').style.opacity='0.5';
-  document.getElementById('dispatch-search-card').style.pointerEvents='none';
-  document.getElementById('dispatch-result').classList.remove('hidden');
-  document.getElementById('dispatch-success').classList.add('hidden');
-  showCandidate(0);
-}
-function findNextSlot(){
-  currentCandidateIdx++;
-  selectedTimeSlot=null;
-  if(currentCandidateIdx>=allCandidates.length){
-    alert('אין עוד מועדים זמינים לפי החוקיות. בדוק הגדרות אזורים.');
-    currentCandidateIdx=allCandidates.length-1;
-    return;
-  }
-  showCandidate(currentCandidateIdx);
-}
-function checkSpecificDate(dateStr){
-  if(!dateStr)return;
-  const city=document.getElementById('s-city').value.trim();
-  const catId=getCatId();
-  const durMins=getJobDuration();
-  // find candidate for this specific date
-  for(const tech of technicians){
-    if(!isCityInTechZone(tech,city,dateStr))continue;
-    if(!isTechAvailable(tech,dateStr))continue;
-    if(isCityBlocked(tech,city))continue;
-    if(!techHasSkill(tech,catId))continue;
-    if(!getCatLimitOk(tech,catId,dateStr))continue;
-    const load=getTechLoad(tech,dateStr);
-    if(load>=tech.max)continue;
-    const d=new Date(dateStr);
-    const bestTime=findBestTimeInDay(tech,dateStr,durMins);
-    const c={tech,date:{str:dateStr,d},load,existingInCity:0,bestTime};
-    // inject at current position
-    allCandidates.splice(currentCandidateIdx,0,c);
-    showCandidate(currentCandidateIdx);
-    return;
-  }
-  document.getElementById('d-alert').className='alert alert-amber';
-  document.getElementById('d-alert').textContent='⚠️ לא ניתן לשבץ בתאריך זה — אין טכנאי זמין באזור הנדרש.';
-  document.getElementById('d-alert').classList.remove('hidden');
-}
-function showNoResult(){
-  document.getElementById('dispatch-search-card').style.opacity='0.5';
-  document.getElementById('dispatch-search-card').style.pointerEvents='none';
-  document.getElementById('dispatch-result').classList.remove('hidden');
-  document.getElementById('d-alert').className='alert alert-amber';
-  document.getElementById('d-alert').textContent='⚠️ לא נמצא שיבוץ אפשרי. בדוק שהעיר משויכת לאזור עם טכנאי זמין.';
-  document.getElementById('d-alert').classList.remove('hidden');
-  document.getElementById('suggestion-card').innerHTML='';
-}
-function showCandidate(idx){
-  const c=allCandidates[idx];if(!c)return;
-  document.getElementById('d-alert').classList.add('hidden');
-  const tech=c.tech;
-  const d=c.date.d;
-  const months=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
-  const dateLabel=`יום ${['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][d.getDay()]}, ${d.getDate()} ב${months[d.getMonth()]} ${d.getFullYear()}`;
-  const zone=getTechZoneForDate(tech,c.date.str);
-  const isMerge=c.existingInCity>0;
-  const reasonText=isMerge?`⚡ ממלא יום קיים — ${c.existingInCity} קריאות כבר קיימות באזור`:`📅 פתח יום חדש — טכנאי ראשון לאזור זה`;
-  // existing tasks for this tech/day
-  const dayTasks=getTechDayTasks(tech,c.date.str);
-  const etpHtml=dayTasks.length?`<div class="etp">
-    <div class="etp-title">משימות קיימות ביום זה</div>
-    ${dayTasks.map(t=>`<div class="etp-row"><span class="etp-time">${t.time}</span><span class="etp-detail">${t.cat} — ${t.city}</span></div>`).join('')}
-  </div>`:'';
-  // time slots
-  const[sh]=tech.start.split(':').map(Number);
-  const[eh]=tech.end.split(':').map(Number);
-  const slotSizeH=settings.window;
-  const slots=[];
-  for(let h=sh;h<=eh-slotSizeH;h+=1){
-    const slotStart=pad(h)+':00';
-    const slotEnd=pad(h+slotSizeH)+':00';
-    const busy=dayTasks.some(t=>{const th=parseInt(t.time.split(':')[0]);return th>=h&&th<h+slotSizeH;});
-    slots.push({start:slotStart,end:slotEnd,busy});
-  }
-  const slotsHtml=slots.map((s,si)=>`
-    <div class="time-slot ${s.busy?'busy':''} ${selectedTimeSlot===si&&!s.busy?'selected':''}" onclick="${s.busy?'':'selectTimeSlot('+si+')'}" id="ts-${si}">
-      <span class="time-slot-range">${s.start} — ${s.end}</span>
-      <span class="time-slot-status">${s.busy?'תפוס':'פנוי'}</span>
-    </div>`).join('');
-  const assignId=genId();
-  document.getElementById('suggestion-card').innerHTML=`
-    <div class="suggestion-result">
-      <div class="sr-header">
-        <div class="sr-avatar" style="background:${tech.color};">${initials(tech.name)}</div>
-        <div style="flex:1;">
-          <div class="sr-name">${tech.name}</div>
-          <div class="sr-area">${zone?zone.name:'—'} • ${tech.phone}</div>
-        </div>
-        <div style="text-align:center;">
-          <div style="font-size:0.65rem;color:var(--ink-3);font-weight:700;text-transform:uppercase;margin-bottom:3px;">${currentCandidateIdx+1} מתוך ${allCandidates.length}</div>
-          <div class="assign-id">${assignId}</div>
-        </div>
-      </div>
-      <div class="sr-date-box">
-        <div class="sr-date-label">תאריך מוצע</div>
-        <div class="sr-date-value">${dateLabel}</div>
-        <div class="sr-reason">${reasonText}</div>
-        <div style="font-size:0.8125rem;color:var(--ink-3);margin-top:3px;">${c.load}/${tech.max} קריאות באותו יום</div>
-      </div>
-      ${etpHtml}
-      <div style="font-size:0.8rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 6px;">בחר חלון זמן</div>
-      <div class="time-slots" id="time-slots-container">${slotsHtml}</div>
-      <div class="customer-form" id="customer-form-${idx}" style="display:none;">
-        <div style="font-size:0.8rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">פרטי לקוח</div>
-        <div class="fg-2">
-          <div class="fg"><label class="fl">שם לקוח</label><input class="fc" id="c-name" placeholder="שם מלא"></div>
-          <div class="fg"><label class="fl">טלפון</label><input class="fc" id="c-phone" placeholder="05X-XXXXXXX"></div>
-        </div>
-        <div class="fg"><label class="fl">הערות</label><input class="fc" id="c-notes" placeholder="הערות להתקנה..."></div>
-        <div class="sr-actions">
-          <button class="btn btn-outline" onclick="clearDispatch()">← חזרה</button>
-          <button class="btn btn-blue btn-lg" style="flex:1;" onclick="confirmAssign(${idx},'${assignId}')">אשר שיבוץ ✓</button>
-        </div>
-      </div>
-    </div>`;
-  // store slots for selection
-  window._currentSlots=slots;
-  window._currentIdx=idx;
-  selectedTimeSlot=null;
-}
-function selectTimeSlot(si){
-  if(window._currentSlots&&window._currentSlots[si]&&window._currentSlots[si].busy)return;
-  selectedTimeSlot=si;
-  document.querySelectorAll('.time-slot:not(.busy)').forEach((el,i)=>el.classList.toggle('selected',i===si));
-  const idx=window._currentIdx;
-  const formEl=document.getElementById('customer-form-'+idx);
-  if(formEl)formEl.style.display='block';
-}
-function confirmAssign(idx,assignId){
-  if(selectedTimeSlot===null){alert('נא לבחור חלון זמן');return;}
-  const slots=window._currentSlots;
-  if(!slots||!slots[selectedTimeSlot]||slots[selectedTimeSlot].busy){alert('חלון זמן תפוס');return;}
-  const c=allCandidates[idx];if(!c)return;
-  const city=document.getElementById('s-city').value.trim();
-  const street=document.getElementById('s-street').value.trim();
-  const client=document.getElementById('c-name').value||'לקוח';
-  const phone=document.getElementById('c-phone').value||'';
-  const notes=document.getElementById('c-notes').value||'';
-  const slot=slots[selectedTimeSlot];
-  const catId=getCatId();
-  const catName=getCatName();
-  tasks.push({id:nextTaskId++,client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:slot.start,date:c.date.str,notes,assignId});
-  save();
-  // show success
-  document.getElementById('dispatch-result').classList.add('hidden');
-  document.getElementById('suc-id').textContent=assignId;
-  document.getElementById('suc-details').innerHTML=`
-    <div class="cr"><span class="ck">לקוח</span><span class="cv">${client}</span></div>
-    <div class="cr"><span class="ck">כתובת</span><span class="cv">${street}, ${city}</span></div>
-    <div class="cr"><span class="ck">קטגוריה</span><span class="cv">${catName}</span></div>
-    <div class="cr"><span class="ck">תאריך</span><span class="cv">${c.date.d.toLocaleDateString('he-IL')}</span></div>
-    <div class="cr"><span class="ck">שעות</span><span class="cv">${slot.start} — ${slot.end}</span></div>
-    <div class="cr"><span class="ck">טכנאי</span><span class="cv">${c.tech.name}</span></div>
-  `;
-  const wm=encodeURIComponent(`שלום ${client}, קריאה שובצה ב${city} בתאריך ${c.date.d.toLocaleDateString('he-IL')} בין השעות ${slot.start}-${slot.end}. מספר קריאה: ${assignId}. לפרטים: ${c.tech.phone}`);
-  const wp=phone.replace(/[^0-9]/g,'').replace(/^0/,'972');
-  document.getElementById('wa-link').href=phone?`https://wa.me/${wp}?text=${wm}`:'#';
-  document.getElementById('wa-link').style.display=phone?'inline-flex':'none';
-  document.getElementById('dispatch-success').classList.remove('hidden');
-  // AUTO RETURN after 3 seconds
-  setTimeout(()=>{goPage('home');},3000);
-}
-function clearDispatch(){
-  document.getElementById('dispatch-search-card').style.opacity='1';
-  document.getElementById('dispatch-search-card').style.pointerEvents='';
-  document.getElementById('dispatch-result').classList.add('hidden');
-  selectedTimeSlot=null;
-  allCandidates=[];currentCandidateIdx=0;
-}
-function resetDispatch(){
-  clearDispatch();
-  selectedCat=null;
-  renderCatChips();
-  document.getElementById('pkg-section').classList.add('hidden');
-  document.getElementById('dispatch-success').classList.add('hidden');
-  document.getElementById('s-city').value='';
-  document.getElementById('s-street').value='';
-  document.getElementById('dispatch-search-card').style.opacity='1';
-  document.getElementById('dispatch-search-card').style.pointerEvents='';
-}
 
-// ═══════════════════════════════════════════
-// TASKS
-// ═══════════════════════════════════════════
-function filterTasks(f){
-  currentFilter=f;
-  const map={all:'badge-blue',pending:'badge-amber',assigned:'badge-blue',completed:'badge-gray'};
-  ['all','pending','assigned','completed'].forEach(x=>{
-    const el=document.getElementById('tf-'+x);if(!el)return;
-    el.className='badge '+(x===f?map[x]:'badge-gray');
-    el.style.cssText='cursor:pointer;padding:5px 12px;';
-  });
-  renderTasks();
-}
-function renderTasks(){
-  const q=(document.getElementById('task-search').value||'').toLowerCase();
-  const fMap={all:null,pending:'pending',assigned:'assigned',completed:'completed'};
-  const fs=fMap[currentFilter];
-  let filtered=tasks.filter(t=>{
-    if(fs&&t.status!==fs)return false;
-    if(q)return(t.client+t.city+t.cat).toLowerCase().includes(q);
-    return true;
-  }).sort((a,b)=>{
-    if(a.status==='pending'&&b.status!=='pending')return -1;
-    if(b.status==='pending'&&a.status!=='pending')return 1;
-    return(a.date+a.time).localeCompare(b.date+b.time);
-  });
-  const list=document.getElementById('tasks-list');
-  if(!filtered.length){list.innerHTML='<div class="empty"><div class="empty-icon">📭</div><div>אין קריאות</div></div>';return;}
-  list.innerHTML=filtered.map(t=>{
-    const tech=technicians.find(x=>x.id===t.techId);
-    const s=STATUS_MAP[t.status]||STATUS_MAP.pending;
-    return`<div class="task-row">
-      <div class="task-main">
-        <div class="task-client">${t.client} ${t.assignId?`<span class="assign-id-tag">${t.assignId}</span>`:''}</div>
-        <div class="task-detail">${t.cat} • ${t.street}, ${t.city}${t.time?' • '+t.time:''}${tech?' • '+tech.name:''}</div>
-      </div>
-      <div class="task-actions">
-        <span class="badge ${s.badge} status-pill" onclick="openStatusModal(${t.id})">${s.label}</span>
-        ${t.status==='pending'?`<button class="btn btn-blue btn-sm" onclick="quickAssign(${t.id})">שבץ</button>`:''}
-      </div>
-    </div>`;
-  }).join('');
-}
-function quickAssign(id){
-  const t=tasks.find(x=>x.id===id);if(!t)return;
-  document.getElementById('s-city').value=t.city;
-  document.getElementById('s-street').value=t.street||'';
-  goPage('dispatch');
-  setTimeout(()=>{if(t.catId){selectedCat='cat_'+t.catId;renderCatChips();renderPkgSection();}},100);
-}
-function openStatusModal(id){
-  statusTaskId=id;
-  const t=tasks.find(x=>x.id===id);if(!t)return;
-  const s=STATUS_MAP[t.status];
-  document.getElementById('status-info').innerHTML=`<div style="font-weight:700;">${t.client}</div><div style="font-size:0.8125rem;color:var(--ink-3);">${t.cat} • ${t.city}${t.assignId?' • '+t.assignId:''}</div>`;
-  document.getElementById('status-opts').innerHTML=s.next.map(ns=>{
-    const ni=STATUS_MAP[ns];
-    return`<button class="btn btn-outline btn-full" style="justify-content:flex-start;" onclick="setStatus('${ns}')"><span class="badge ${ni.badge}">${ni.label}</span> עדכן</button>`;
-  }).join('')||'<div style="color:var(--ink-4);">אין פעולות</div>';
-  document.getElementById('mo-status').classList.remove('hidden');
-}
-function setStatus(ns){
-  const t=tasks.find(x=>x.id===statusTaskId);
-  if(t)t.status=ns;
-  save();renderTasks();renderHomeTechCards();
-  closeMo('mo-status');
-}
+  // Save to localStorage for now (until backend)
+  const leads = JSON.parse(localStorage.getItem('maslul_leads') || '[]');
+  leads.push({ biz, name, phone, type, size, date: new Date().toISOString() });
+  localStorage.setItem('maslul_leads', JSON.stringify(leads));
 
-// ═══════════════════════════════════════════
-// TECH VIEW
-// ═══════════════════════════════════════════
-function renderTechView(){
-  if(!currentTechView){document.getElementById('techview-content').innerHTML='<div class="empty"><div class="empty-icon">👤</div><div>בחר טכנאי</div></div>';return;}
-  const tech=currentTechView;
-  const tt=tasks.filter(t=>t.techId===tech.id&&['assigned','en_route','arrived','completed'].includes(t.status)&&t.time).sort((a,b)=>a.time.localeCompare(b.time));
-  const d=new Date();
-  const jobs=tt.map(t=>{
-    const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;
-    return`<div style="background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-bottom:10px;box-shadow:var(--sh);display:flex;gap:14px;">
-      <div style="min-width:56px;text-align:center;"><div style="font-size:1.25rem;font-weight:900;">${t.time}</div></div>
-      <div style="width:1px;background:var(--line);margin:0 4px;"></div>
-      <div style="flex:1;">
-        <div style="font-size:0.9375rem;font-weight:700;">${t.cat}</div>
-        <div style="font-size:0.8125rem;color:var(--ink-2);margin-top:2px;">${t.client}${t.phone?` · <a href="tel:${t.phone}" style="color:var(--blue);text-decoration:none;">${t.phone}</a>`:''}</div>
-        <div style="font-size:0.75rem;color:var(--ink-4);margin-top:2px;">📍 ${t.street}, ${t.city}</div>
-        <div style="font-size:0.65rem;font-family:monospace;color:var(--ink-4);margin-top:3px;">${t.assignId}</div>
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <span class="badge ${s.badge}">${s.label}</span>
-          <a class="btn btn-outline btn-sm" href="https://waze.com/ul?q=${encodeURIComponent(t.street+', '+t.city)}" target="_blank">🗺️ נווט</a>
-          ${t.phone?`<a class="btn btn-blue btn-sm" href="tel:${t.phone}">📞</a>`:''}
-        </div>
-      </div>
-    </div>`;
-  }).join('')||'<div class="empty"><div class="empty-icon">🎉</div><div>אין קריאות</div></div>';
-  document.getElementById('techview-content').innerHTML=`
-    <div class="page">
-      <div style="text-align:center;padding:1.5rem 0 1rem;border-bottom:1px solid var(--line);margin-bottom:1rem;">
-        <div style="width:52px;height:52px;border-radius:50%;background:${tech.color};color:white;font-size:1.125rem;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">${initials(tech.name)}</div>
-        <div style="font-size:1.25rem;font-weight:900;">${tech.name}</div>
-        <div style="font-size:0.875rem;color:var(--ink-3);">יום ${['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][d.getDay()]} · ${d.toLocaleDateString('he-IL')} · ${tt.length} קריאות</div>
-      </div>
-      ${jobs}
-    </div>`;
-}
+  // Show success
+  document.getElementById('lead-form-inner').style.display = 'none';
+  document.getElementById('form-success').style.display = 'block';
 
-// ═══════════════════════════════════════════
-// TECHNICIANS
-// ═══════════════════════════════════════════
-function renderTechs(){
-  document.getElementById('tech-count-sub').textContent=technicians.length+' טכנאים';
-  document.getElementById('tech-grid').innerHTML=technicians.map(tech=>{
-    const cnt=getTechLoad(tech,todayStr());
-    const lp=Math.min(100,Math.round((cnt/Math.max(tech.max,1))*100));
-    const fc=lp>=90?'var(--red)':lp>=60?'var(--amber)':'var(--green)';
-    const skills=(tech.skills||[]).map(sid=>{const c=categories.find(x=>x.id===sid);return c?`<span class="skill-tag">${c.name}</span>`:''}).join('');
-    const blocked=tech.blocked?tech.blocked.split(',').map(c=>`<span class="restrict-tag">🚫 ${c.trim()}</span>`).join(''):'';
-    return`<div class="tech-card">
-      <div class="tech-av" style="background:${tech.color};">${initials(tech.name)}</div>
-      <div class="tech-name">${tech.name}</div>
-      <div class="tech-info">📞 ${tech.phone}</div>
-      <div class="tech-info">🏠 ${tech.base}</div>
-      <div class="tech-info">📊 ${tech.min}–${tech.max} קריאות/יום</div>
-      ${skills?`<div style="margin-top:6px;">${skills}</div>`:''}
-      <div class="load-bar" style="margin:8px 0 3px;"><div class="load-fill" style="width:${lp}%;background:${fc};"></div></div>
-      <div style="font-size:0.7rem;color:var(--ink-4);">${cnt}/${tech.max} היום</div>
-      ${blocked?`<div style="margin-top:6px;">${blocked}</div>`:''}
-      <div style="display:flex;gap:6px;margin-top:10px;">
-        <button class="btn btn-outline btn-sm" onclick="editTech(${tech.id})">עריכה</button>
-        <button class="btn btn-ghost btn-sm" onclick="deleteTech(${tech.id})" style="color:var(--red);">הסר</button>
-      </div>
-    </div>`;
-  }).join('')||'<div class="empty"><div class="empty-icon">👷</div><div>הוסף טכנאי ראשון</div></div>';
+  // Also open WhatsApp to notify you
+  const msg = encodeURIComponent(`ליד חדש ממסלול!\nעסק: ${biz}\nשם: ${name}\nטלפון: ${phone}\nסוג: ${type}\nגודל: ${size} טכנאים`);
+  setTimeout(() => {
+    window.open(`https://wa.me/972508911100?text=${msg}`, '_blank');
+  }, 800);
 }
-function buildTechModalUI(){
-  const container=document.getElementById('ti-skills-container');
-  container.innerHTML=categories.map(c=>
-    `<label class="skill-check" id="skill-lbl-${c.id}" onclick="toggleSkill('${c.id}')">
-      <input type="checkbox" id="skill-${c.id}"> ${c.name}
-    </label>`
-  ).join('');
-  document.getElementById('ti-cat-limits').innerHTML=categories.map(c=>
-    `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-      <span style="font-size:0.875rem;flex:1;">${c.name}</span>
-      <input class="fc" id="catlim-${c.id}" type="number" min="0" placeholder="ללא הגבלה" style="width:130px;">
-    </div>`
-  ).join('');
-  // rotation Sun-Fri (6 days, no Sat)
-  const rotDays=['א׳','ב׳','ג׳','ד׳','ה׳','ו׳'];
-  document.getElementById('ti-rotation').innerHTML=rotDays.map((day,i)=>
-    `<div class="rotation-day">
-      <div class="day-name">${day}</div>
-      <select id="rot-${i}">${[{id:'',name:'—'},...zones].map(z=>`<option value="${z.id}">${z.id?z.name:z.name}</option>`).join('')}</select>
-    </div>`
-  ).join('');
-}
-function toggleSkill(catId){
-  const inp=document.getElementById('skill-'+catId);
-  const lbl=document.getElementById('skill-lbl-'+catId);
-  inp.checked=!inp.checked;
-  lbl.classList.toggle('checked',inp.checked);
-}
-function openAddTechModal(){
-  editingTechId=null;
-  buildTechModalUI();
-  document.getElementById('mo-tech-title').textContent='הוסף טכנאי';
-  ['ti-name','ti-phone','ti-base','ti-blocked'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('ti-min').value='2';
-  document.getElementById('ti-max').value='9';
-  if(document.getElementById('ti-start').options.length){document.getElementById('ti-start').value='07:00';document.getElementById('ti-end').value='17:00';}
-  document.getElementById('ti-save-btn').textContent='הוסף';
-  document.querySelectorAll('.field-error').forEach(e=>e.classList.add('hidden'));
-  document.getElementById('mo-tech').classList.remove('hidden');
-}
-function editTech(id){
-  const tech=technicians.find(t=>t.id===id);if(!tech)return;
-  editingTechId=id;
-  buildTechModalUI();
-  document.getElementById('mo-tech-title').textContent='עריכת טכנאי';
-  document.getElementById('ti-name').value=tech.name;
-  document.getElementById('ti-phone').value=tech.phone;
-  document.getElementById('ti-base').value=tech.base;
-  document.getElementById('ti-min').value=tech.min;
-  document.getElementById('ti-max').value=tech.max;
-  document.getElementById('ti-blocked').value=tech.blocked||'';
-  if(document.getElementById('ti-start').options.length){document.getElementById('ti-start').value=tech.start||'07:00';document.getElementById('ti-end').value=tech.end||'17:00';}
-  (tech.skills||[]).forEach(sid=>{
-    const inp=document.getElementById('skill-'+sid);
-    const lbl=document.getElementById('skill-lbl-'+sid);
-    if(inp){inp.checked=true;lbl?.classList.add('checked');}
-  });
-  Object.entries(tech.catLimits||{}).forEach(([catId,val])=>{
-    const inp=document.getElementById('catlim-'+catId);if(inp)inp.value=val;
-  });
-  Object.entries(tech.rotation||{}).forEach(([day,zoneId])=>{
-    const sel=document.getElementById('rot-'+day);if(sel)sel.value=zoneId||'';
-  });
-  document.getElementById('ti-save-btn').textContent='שמור';
-  document.getElementById('mo-tech').classList.remove('hidden');
-}
-function saveTech(){
-  const required={'ti-name':'e-ti-name','ti-phone':'e-ti-phone','ti-base':'e-ti-base'};
-  let valid=true;
-  Object.entries(required).forEach(([field,errId])=>{
-    const el=document.getElementById(field),err=document.getElementById(errId);
-    if(!el.value.trim()){el.classList.add('error');err.classList.remove('hidden');valid=false;}
-    else{el.classList.remove('error');err.classList.add('hidden');}
-  });
-  const selectedSkills=categories.filter(c=>document.getElementById('skill-'+c.id)?.checked).map(c=>c.id);
-  if(!selectedSkills.length){document.getElementById('e-ti-skills').classList.remove('hidden');valid=false;}
-  else document.getElementById('e-ti-skills').classList.add('hidden');
-  const rotation={};
-  let hasRotation=false;
-  for(let i=0;i<6;i++){rotation[i]=document.getElementById('rot-'+i)?.value||'';if(rotation[i])hasRotation=true;}
-  if(!hasRotation){document.getElementById('e-ti-rotation').classList.remove('hidden');valid=false;}
-  else document.getElementById('e-ti-rotation').classList.add('hidden');
-  if(!valid)return;
-  const catLimits={};
-  categories.forEach(c=>{const v=parseInt(document.getElementById('catlim-'+c.id)?.value);if(v>0)catLimits[c.id]=v;});
-  const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:document.getElementById('ti-start').value,end:document.getElementById('ti-end').value,blocked:document.getElementById('ti-blocked').value.trim(),skills:selectedSkills,catLimits,rotation};
-  if(editingTechId){const tech=technicians.find(t=>t.id===editingTechId);if(tech)Object.assign(tech,data);}
-  else technicians.push({id:nextTechId++,...data,color:COLORS[technicians.length%COLORS.length]});
-  save();buildRoleSelect();closeMo('mo-tech');renderTechs();renderHomeTechCards();
-}
-function deleteTech(id){
-  if(!confirm('למחוק?'))return;
-  technicians=technicians.filter(t=>t.id!==id);
-  tasks.forEach(t=>{if(t.techId===id){t.techId=null;t.status='pending';t.time='';}});
-  save();buildRoleSelect();renderTechs();renderTasks();renderHomeTechCards();
-}
-
-// ═══════════════════════════════════════════
-// ZONES
-// ═══════════════════════════════════════════
-function renderZones(){
-  document.getElementById('zones-list').innerHTML=zones.map((z,zi)=>`
-    <div class="zone-card">
-      <div class="zone-header">
-        <input class="fc" value="${z.name}" onchange="zones[${zi}].name=this.value;save();" style="font-weight:800;font-size:0.9375rem;border:none;padding:0;background:transparent;flex:1;">
-        <button class="btn btn-ghost btn-sm" onclick="deleteZone('${z.id}')" style="color:var(--red);">הסר</button>
-      </div>
-      <div class="zone-cities">
-        ${z.cities.map((c,ci)=>`<span class="city-tag">${c}<button onclick="removeCity('${z.id}',${ci})">×</button></span>`).join('')}
-      </div>
-      <div style="font-size:0.75rem;color:var(--ink-3);margin-bottom:6px;">הדבק ערים (שורה לכל עיר) או פסיקים</div>
-      <div class="zone-add">
-        <textarea class="fc" id="new-city-${z.id}" placeholder="תל אביב&#10;חולון&#10;בת ים" style="flex:1;height:60px;resize:vertical;font-size:0.875rem;"></textarea>
-        <button class="btn btn-outline btn-sm" onclick="addCities('${z.id}')" style="align-self:flex-end;">+ הוסף</button>
-      </div>
-    </div>`
-  ).join('')||'<div class="empty"><div class="empty-icon">🗺️</div><div>הוסף אזור ראשון</div></div>';
-}
-function addZone(){zones.push({id:'z'+Date.now(),name:'אזור חדש',cities:[]});save();renderZones();populateCitiesDl();}
-function deleteZone(id){zones=zones.filter(z=>z.id!==id);save();renderZones();}
-function addCities(zoneId){
-  const inp=document.getElementById('new-city-'+zoneId);
-  const text=inp.value.trim();if(!text)return;
-  const z=zones.find(x=>x.id===zoneId);if(!z)return;
-  text.split(/[\n,]+/).map(c=>c.trim()).filter(c=>c).forEach(c=>{if(!z.cities.includes(c))z.cities.push(c);});
-  inp.value='';save();renderZones();populateCitiesDl();
-}
-function removeCity(zoneId,ci){const z=zones.find(x=>x.id===zoneId);if(z)z.cities.splice(ci,1);save();renderZones();}
-
-// ═══════════════════════════════════════════
-// CATEGORIES
-// ═══════════════════════════════════════════
-function renderCategories(){
-  document.getElementById('cats-list').innerHTML=categories.map((c,i)=>
-    `<div class="tag-item">${c.name} <span style="font-size:0.75rem;color:var(--ink-3);">(${c.time} דק')</span><button class="tag-del" onclick="deleteCat(${i})">×</button></div>`
-  ).join('');
-  document.getElementById('pkgs-list').innerHTML=packages.map((p,i)=>{
-    const items=p.items.map(item=>{const c=categories.find(x=>x.id===item.catId);return`${c?c.name:'?'} ×${item.qty}`;}).join(' + ');
-    return`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-2);font-size:0.875rem;">
-      <div><strong>${p.name}</strong> <span style="color:var(--ink-3);">${items}</span></div>
-      <button class="btn btn-ghost btn-sm" onclick="deletePkg(${i})" style="color:var(--red);">הסר</button>
-    </div>`;
-  }).join('')||'<div style="color:var(--ink-4);font-size:0.875rem;padding:1rem 0;">אין חבילות</div>';
-  renderCatChips();
-}
-function addCategory(){
-  const name=document.getElementById('new-cat-name').value.trim();
-  const time=parseInt(document.getElementById('new-cat-time').value)||settings.regularTime||30;
-  if(!name)return;
-  categories.push({id:'c'+Date.now(),name,time});
-  document.getElementById('new-cat-name').value='';document.getElementById('new-cat-time').value='';
-  save();renderCategories();
-}
-function deleteCat(i){categories.splice(i,1);save();renderCategories();}
-function deletePkg(i){packages.splice(i,1);save();renderCategories();}
-let pkgRowCount=0;
-function openAddPkgModal(){
-  pkgRowCount=0;document.getElementById('pkg-name').value='';document.getElementById('pkg-cat-rows').innerHTML='';
-  addPkgRow();document.getElementById('mo-pkg').classList.remove('hidden');
-}
-function addPkgRow(){
-  const id=pkgRowCount++;
-  const div=document.createElement('div');div.className='fg-2';
-  div.innerHTML=`<div class="fg"><label class="fl">קטגוריה</label><select class="fc" id="pkg-cat-${id}">${categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
-    <div class="fg"><label class="fl">כמות</label><input class="fc" id="pkg-qty-${id}" type="number" min="1" value="1" style="width:90px;"></div>`;
-  document.getElementById('pkg-cat-rows').appendChild(div);
-}
-function savePkg(){
-  const name=document.getElementById('pkg-name').value.trim();if(!name){alert('נא להזין שם');return;}
-  const items=[];
-  for(let i=0;i<pkgRowCount;i++){
-    const catEl=document.getElementById('pkg-cat-'+i),qtyEl=document.getElementById('pkg-qty-'+i);
-    if(catEl&&qtyEl)items.push({catId:catEl.value,qty:parseInt(qtyEl.value)||1});
-  }
-  packages.push({id:'p'+Date.now(),name,items});
-  save();closeMo('mo-pkg');renderCategories();
-}
-
-// ═══════════════════════════════════════════
-// DAY OFF
-// ═══════════════════════════════════════════
-function openDayoffModal(){
-  const sel=document.getElementById('do-tech');
-  sel.innerHTML=technicians.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
-  renderDayoffList();document.getElementById('mo-dayoff').classList.remove('hidden');
-}
-function addDayoff(){
-  const techId=parseInt(document.getElementById('do-tech').value);
-  const date=document.getElementById('do-date').value;
-  const type=document.getElementById('do-type').value;
-  const from=document.getElementById('do-from').value;
-  const to=document.getElementById('do-to').value;
-  const reason=document.getElementById('do-reason').value;
-  if(!date){alert('נא לבחור תאריך');return;}
-  dayoffs.push({techId,date,type,from,to,reason});
-  save();renderDayoffList();
-}
-function renderDayoffList(){
-  const list=document.getElementById('do-list');
-  if(!dayoffs.length){list.innerHTML='';return;}
-  list.innerHTML='<div style="font-size:0.75rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">היעדרויות קיימות</div>'+
-    dayoffs.map((d,i)=>{
-      const tech=technicians.find(t=>t.id===d.techId);
-      return`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line-2);font-size:0.875rem;">
-        <div><strong>${tech?tech.name:'?'}</strong> · ${d.date} · ${d.type==='full'?'כל היום':d.from+'–'+d.to}${d.reason?' · '+d.reason:''}</div>
-        <button class="btn btn-ghost btn-sm" onclick="removeDayoff(${i})" style="color:var(--red);">×</button>
-      </div>`;
-    }).join('');
-}
-function removeDayoff(i){dayoffs.splice(i,1);save();renderDayoffList();}
-
-// ═══════════════════════════════════════════
-// SETTINGS
-// ═══════════════════════════════════════════
-function saveSettings(){
-  settings.company=document.getElementById('set-company').value||'מסלול';
-  settings.startTime=document.getElementById('set-start').value;
-  settings.endTime=document.getElementById('set-end').value;
-  settings.window=parseInt(document.getElementById('set-window').value)||3;
-  settings.maxDaily=parseInt(document.getElementById('set-max').value)||9;
-  settings.lookahead=parseInt(document.getElementById('set-lookahead').value)||30;
-  settings.monthlyVolume=parseInt(document.getElementById('set-monthly').value)||300;
-  settings.regularTime=parseInt(document.getElementById('set-regular-time').value)||30;
-  settings.packageTime=parseInt(document.getElementById('set-package-time').value)||45;
-  save();alert('נשמר ✓');
-}
-
-// ═══════════════════════════════════════════
-// UTILS
-// ═══════════════════════════════════════════
-function closeMo(id){document.getElementById(id).classList.add('hidden');}
 </script>
 </body>
 </html>
