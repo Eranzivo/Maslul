@@ -11,7 +11,7 @@
   --line:#E5E7EB;--line-2:#F3F4F6;--bg:#F9FAFB;--white:#fff;
   --blue:#2563EB;--blue-d:#1D4ED8;--blue-l:#EFF6FF;--blue-m:#BFDBFE;
   --green:#16A34A;--green-l:#F0FDF4;--amber:#D97706;--amber-l:#FFFBEB;
-  --red:#DC2626;--red-l:#FEF2F2;
+  --red:#DC2626;--red-l:#FEF2F2;--purple:#7C3AED;--purple-l:#F5F3FF;
   --r:10px;--r-lg:16px;--r-xl:22px;
   --sh:0 1px 3px rgba(0,0,0,0.07),0 1px 2px rgba(0,0,0,0.04);
   --sh-md:0 4px 12px rgba(0,0,0,0.08);
@@ -19,15 +19,11 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direction:rtl;min-height:100vh;-webkit-font-smoothing:antialiased;}
-
-/* LAYOUT */
 .shell{display:flex;min-height:100vh;}
 .sidebar{width:228px;background:var(--white);border-left:1px solid var(--line);position:fixed;right:0;top:0;height:100vh;display:flex;flex-direction:column;z-index:100;}
 .content{margin-right:228px;flex:1;}
-.page{padding:2rem 2.5rem;max-width:920px;animation:fi 0.18s ease;}
+.page{padding:2rem 2.5rem;max-width:960px;animation:fi 0.18s ease;}
 @keyframes fi{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
-
-/* SIDEBAR */
 .sb-top{padding:1.5rem 1.25rem 1rem;}
 .sb-logo{font-size:1.5rem;font-weight:900;letter-spacing:-1px;}
 .sb-logo span{color:var(--blue);}
@@ -42,14 +38,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .role-box{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;}
 .role-lbl{font-size:0.6rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;}
 .role-sel{width:100%;border:none;background:transparent;font-size:0.875rem;font-family:'Heebo',sans-serif;font-weight:600;color:var(--ink);outline:none;cursor:pointer;}
-
-/* PAGE HEADER */
 .ph{margin-bottom:1.75rem;}
 .ph-row{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;}
 .ph-title{font-size:1.5rem;font-weight:900;letter-spacing:-0.8px;}
 .ph-sub{font-size:0.875rem;color:var(--ink-3);margin-top:3px;}
-
-/* STATS */
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.75rem;}
 .stat{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:1rem 1.125rem;box-shadow:var(--sh);}
 .stat-lbl{font-size:0.68rem;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.4px;}
@@ -57,8 +49,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .stat-val.blue{color:var(--blue);}
 .stat-val.green{color:var(--green);}
 .stat-val.amber{color:var(--amber);}
-
-/* BUTTONS */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r);font-size:0.875rem;font-weight:700;cursor:pointer;border:none;font-family:'Heebo',sans-serif;transition:all 0.12s;white-space:nowrap;}
 .btn-blue{background:var(--blue);color:white;}
 .btn-blue:hover{background:var(--blue-d);box-shadow:var(--sh-md);}
@@ -71,88 +61,83 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .btn-sm{padding:5px 10px;font-size:0.75rem;}
 .btn-lg{padding:12px 28px;font-size:1rem;border-radius:var(--r-lg);}
 .btn-full{width:100%;justify-content:center;}
-
-/* FORMS */
 .fg{margin-bottom:1rem;}
 .fl{display:block;font-size:0.8125rem;font-weight:700;color:var(--ink-2);margin-bottom:5px;}
 .fl .req{color:var(--red);}
 .fc{width:100%;padding:10px 13px;border:1.5px solid var(--line);border-radius:var(--r);font-size:0.9375rem;font-family:'Heebo',sans-serif;color:var(--ink);background:var(--white);transition:border-color 0.12s;}
 .fc:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,0.1);}
 .fc::placeholder{color:var(--ink-4);}
+.fc.error{border-color:var(--red);}
 .fg-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .fg-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
-
-/* CARDS */
+.field-error{font-size:0.75rem;color:var(--red);margin-top:3px;}
 .card{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:1.375rem 1.5rem;box-shadow:var(--sh);}
 .card+.card{margin-top:1rem;}
 .card-title{font-size:0.7rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:1rem;}
-
-/* BADGES */
 .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:0.7rem;font-weight:700;}
 .badge-blue{background:var(--blue-l);color:var(--blue-d);}
 .badge-green{background:var(--green-l);color:var(--green);}
 .badge-amber{background:var(--amber-l);color:var(--amber);}
 .badge-red{background:var(--red-l);color:var(--red);}
 .badge-gray{background:var(--line-2);color:var(--ink-3);}
-
-/* ALERTS */
+.badge-purple{background:var(--purple-l);color:var(--purple);}
 .alert{border-radius:var(--r);padding:10px 14px;font-size:0.8125rem;margin-bottom:12px;display:flex;gap:8px;}
 .alert-amber{background:var(--amber-l);color:var(--amber);}
 .alert-red{background:var(--red-l);color:var(--red);}
 .alert-blue{background:var(--blue-l);color:var(--blue-d);}
 .alert-green{background:var(--green-l);color:var(--green);}
 
-/* ═══ DISPATCH — MAIN SCREEN ═══ */
+/* DISPATCH */
 .dispatch-search{background:var(--white);border:1.5px solid var(--line);border-radius:var(--r-xl);padding:1.75rem 2rem;box-shadow:var(--sh-md);margin-bottom:1.5rem;}
 .dispatch-search h2{font-size:1.125rem;font-weight:800;margin-bottom:1.25rem;letter-spacing:-0.3px;}
-
-/* CATEGORY CHIPS */
 .cat-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;}
 .cat-chip{padding:8px 16px;border-radius:30px;font-size:0.875rem;font-weight:600;cursor:pointer;border:1.5px solid var(--line);background:var(--white);color:var(--ink-2);transition:all 0.12s;}
 .cat-chip:hover{border-color:var(--blue-m);color:var(--blue);}
 .cat-chip.selected{border-color:var(--blue);background:var(--blue-l);color:var(--blue-d);}
 .cat-add-btn{padding:8px 14px;border-radius:30px;font-size:0.875rem;font-weight:600;cursor:pointer;border:1.5px dashed var(--line);background:transparent;color:var(--ink-4);transition:all 0.12s;font-family:'Heebo',sans-serif;}
 .cat-add-btn:hover{border-color:var(--blue);color:var(--blue);}
-
-/* PACKAGE BUILDER */
 .pkg-builder{background:var(--line-2);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-bottom:1rem;}
 .pkg-title{font-size:0.75rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;}
 .pkg-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
 .pkg-name{flex:1;font-size:0.9375rem;font-weight:600;color:var(--ink);}
 .pkg-qty{width:70px;}
 .pkg-time{font-size:0.8125rem;color:var(--ink-3);}
-
-/* FIND BTN */
 .find-btn{width:100%;padding:13px;background:var(--blue);color:white;border:none;border-radius:var(--r-lg);font-size:1.0625rem;font-weight:800;cursor:pointer;font-family:'Heebo',sans-serif;transition:all 0.15s;letter-spacing:-0.2px;margin-top:4px;}
 .find-btn:hover{background:var(--blue-d);box-shadow:var(--sh-lg);transform:translateY(-1px);}
 
-/* DATE CARDS — 3 boxes */
+/* DATE CARDS */
 .date-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1rem;}
-.date-card{background:var(--white);border:1.5px solid var(--line);border-radius:var(--r-lg);padding:1.25rem;cursor:pointer;transition:all 0.14s;text-align:center;box-shadow:var(--sh);}
+.date-card{background:var(--white);border:1.5px solid var(--line);border-radius:var(--r-lg);padding:1.25rem;cursor:pointer;transition:all 0.14s;box-shadow:var(--sh);}
 .date-card:hover{border-color:var(--blue-m);box-shadow:var(--sh-md);}
 .date-card.selected{border-color:var(--blue);background:var(--blue-l);box-shadow:var(--sh-md);}
-.date-card.unavailable{opacity:0.45;cursor:default;}
 .dc-day{font-size:0.75rem;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;}
 .dc-date{font-size:1.375rem;font-weight:900;letter-spacing:-0.8px;margin:4px 0;}
-.dc-range{font-size:0.8125rem;font-weight:600;color:var(--ink-2);}
-.dc-avail{font-size:0.7rem;color:var(--green);font-weight:700;margin-top:6px;}
-.dc-avail.busy{color:var(--amber);}
-.dc-avail.full{color:var(--red);}
+.dc-tech{font-size:0.8125rem;font-weight:700;color:var(--ink-2);margin-top:4px;}
 
-/* BROWSE DATE */
-.browse-date{display:flex;align-items:center;gap:12px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-lg);padding:10px 14px;cursor:pointer;margin-bottom:1.25rem;transition:border-color 0.12s;}
-.browse-date:hover{border-color:var(--blue);}
-.browse-date span{font-size:0.9375rem;font-weight:600;color:var(--ink-2);}
-.browse-date input{border:none;background:transparent;font-size:0.9375rem;font-family:'Heebo',sans-serif;color:var(--blue);font-weight:700;outline:none;cursor:pointer;}
+/* TIME SLOTS */
+.time-slots{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+.time-slot{display:flex;align-items:center;justify-content:space-between;background:var(--green-l);border:1px solid #BBF7D0;border-radius:8px;padding:6px 10px;cursor:pointer;transition:all 0.12s;font-size:0.8125rem;}
+.time-slot:hover{background:#DCFCE7;border-color:var(--green);}
+.time-slot.selected{background:var(--green);color:white;border-color:var(--green);}
+.time-slot.busy{background:var(--red-l);border-color:#FECACA;cursor:default;color:var(--red);}
+.time-slot-range{font-weight:700;}
+.time-slot-status{font-size:0.7rem;}
 
-/* TECH RESULT CARD */
+/* EXISTING TASKS PREVIEW */
+.existing-tasks-preview{background:var(--line-2);border-radius:var(--r);padding:10px 14px;margin-top:8px;}
+.etp-title{font-size:0.7rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+.etp-row{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:0.8125rem;border-bottom:1px solid var(--line);} 
+.etp-row:last-child{border:none;}
+.etp-time{font-weight:700;color:var(--ink-2);min-width:46px;}
+.etp-detail{color:var(--ink-3);flex:1;}
+
+/* TECH RESULT */
 .tech-result{background:var(--white);border:1.5px solid var(--blue);border-radius:var(--r-lg);padding:1.25rem 1.5rem;box-shadow:var(--sh-md);animation:fi 0.2s ease;}
 .tr-header{display:flex;align-items:center;gap:14px;margin-bottom:1rem;}
 .tr-avatar{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.125rem;font-weight:800;color:white;flex-shrink:0;}
 .tr-name{font-size:1.125rem;font-weight:800;}
 .tr-detail{font-size:0.875rem;color:var(--ink-3);margin-top:1px;}
 .tr-slot{background:var(--blue-l);border-radius:var(--r);padding:10px 14px;margin-bottom:1rem;font-size:0.9375rem;font-weight:600;color:var(--blue-d);}
-.confirm-form{margin-top:1rem;}
 .assign-id-preview{font-family:monospace;font-size:1.125rem;font-weight:800;color:var(--blue);background:var(--blue-l);padding:6px 14px;border-radius:var(--r);display:inline-block;letter-spacing:1px;}
 
 /* SUCCESS */
@@ -207,6 +192,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .tech-area{font-size:0.7rem;color:var(--ink-3);font-weight:700;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;}
 .tech-info{font-size:0.8125rem;color:var(--ink-2);margin-top:3px;}
 .restrict-tag{display:inline-flex;align-items:center;background:var(--line-2);border-radius:4px;padding:2px 7px;font-size:0.7rem;color:var(--ink-2);font-weight:500;margin:2px;}
+.skill-tag{display:inline-flex;align-items:center;background:var(--blue-l);border-radius:4px;padding:2px 7px;font-size:0.7rem;color:var(--blue-d);font-weight:600;margin:2px;}
 
 /* ZONES */
 .zone-card{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-bottom:10px;box-shadow:var(--sh);}
@@ -217,9 +203,21 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .city-tag button{background:none;border:none;cursor:pointer;color:var(--red);font-size:0.75rem;padding:0;line-height:1;}
 .zone-add{display:flex;gap:8px;margin-top:6px;}
 
+/* SKILL CHECKBOXES */
+.skill-checks{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}
+.skill-check{display:flex;align-items:center;gap:6px;background:var(--bg);border:1.5px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;transition:all 0.1s;font-size:0.875rem;font-weight:500;}
+.skill-check.checked{background:var(--blue-l);border-color:var(--blue);color:var(--blue-d);font-weight:700;}
+.skill-check input{display:none;}
+
+/* ROTATION SCHEDULE */
+.rotation-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px;}
+.rotation-day{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px;font-size:0.7rem;text-align:center;}
+.rotation-day .day-name{font-weight:700;color:var(--ink-3);margin-bottom:3px;}
+.rotation-day select{width:100%;border:none;background:transparent;font-size:0.65rem;font-family:'Heebo',sans-serif;outline:none;cursor:pointer;}
+
 /* MODALS */
 .mo{position:fixed;inset:0;background:rgba(0,0,0,0.42);display:flex;align-items:center;justify-content:center;z-index:1000;padding:1rem;}
-.mo-box{background:var(--white);border-radius:var(--r-xl);padding:1.75rem;width:100%;max-width:540px;box-shadow:0 25px 50px rgba(0,0,0,0.18);max-height:90vh;overflow-y:auto;}
+.mo-box{background:var(--white);border-radius:var(--r-xl);padding:1.75rem;width:100%;max-width:580px;box-shadow:0 25px 50px rgba(0,0,0,0.18);max-height:90vh;overflow-y:auto;}
 .mo-title{font-size:1.125rem;font-weight:900;margin-bottom:1.25rem;letter-spacing:-0.3px;}
 .mo-actions{display:flex;gap:8px;margin-top:1.25rem;}
 
@@ -240,24 +238,19 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .divider{height:1px;background:var(--line);margin:1rem 0;}
 .empty{text-align:center;padding:3rem;color:var(--ink-4);}
 .empty-icon{font-size:2.5rem;margin-bottom:10px;}
-.sb-bar{display:flex;gap:8px;margin-bottom:1rem;}
+.sb-bar{display:flex;gap:8px;margin-bottom:1rem;align-items:center;}
 .sb-bar input{flex:1;}
+.browse-date{display:flex;align-items:center;gap:12px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-lg);padding:10px 14px;cursor:pointer;margin-bottom:1.25rem;transition:border-color 0.12s;}
+.browse-date:hover{border-color:var(--blue);}
+.browse-date span{font-size:0.9375rem;font-weight:600;color:var(--ink-2);}
+.browse-date input{border:none;background:transparent;font-size:0.9375rem;font-family:'Heebo',sans-serif;color:var(--blue);font-weight:700;outline:none;cursor:pointer;}
 
-@media(max-width:700px){
-  .sidebar{display:none;}
-  .content{margin-right:0;}
-  .stats{grid-template-columns:1fr 1fr;}
-  .date-cards{grid-template-columns:1fr;}
-  .fg-2,.fg-3{grid-template-columns:1fr;}
-  .page{padding:1rem;}
-}
+@media(max-width:700px){.sidebar{display:none;}.content{margin-right:0;}.stats{grid-template-columns:1fr 1fr;}.date-cards{grid-template-columns:1fr;}.fg-2,.fg-3{grid-template-columns:1fr;}.page{padding:1rem;}}
 @media print{.sidebar,.btn,.mo,.stats{display:none!important;}.content{margin-right:0;}}
 </style>
 </head>
 <body>
 <div class="shell">
-
-<!-- SIDEBAR -->
 <nav class="sidebar">
   <div class="sb-top">
     <div class="sb-logo"><span>מס</span>לול</div>
@@ -272,8 +265,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div class="sb-sec">הגדרות</div>
     <button class="ni-btn" onclick="goPage('technicians')"><span>👷</span> טכנאים</button>
     <button class="ni-btn" onclick="goPage('zones')"><span>🗺️</span> אזורים</button>
-    <button class="ni-btn" onclick="goPage('categories')"><span>📦</span> קטגוריות וחבילות</button>
-    <button class="ni-btn" onclick="goPage('settings')"><span>⚙️</span> הגדרות חברה</button>
+    <button class="ni-btn" onclick="goPage('categories')"><span>📦</span> קטגוריות</button>
+    <button class="ni-btn" onclick="goPage('settings')"><span>⚙️</span> הגדרות</button>
   </div>
   <div class="sb-bot">
     <div class="role-box">
@@ -285,38 +278,27 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   </div>
 </nav>
 
-<!-- CONTENT -->
 <main class="content">
 
-<!-- ═══ PAGE: DISPATCH ═══ -->
+<!-- DISPATCH -->
 <div id="page-dispatch" class="page">
   <div class="ph ph-row">
-    <div>
-      <div class="ph-title">שיבוץ קריאה</div>
-      <div class="ph-sub" id="dispatch-date"></div>
-    </div>
+    <div><div class="ph-title">שיבוץ קריאה</div><div class="ph-sub" id="dispatch-date"></div></div>
     <div class="flex-gap">
       <button class="btn btn-outline btn-sm" onclick="openDayoffModal()">📵 חופשות</button>
     </div>
   </div>
+  <div id="s-active" class="hidden"></div>
+  <div id="s-pending" class="hidden"></div>
+  <div id="s-done" class="hidden"></div>
+  <div id="s-techs" class="hidden"></div>
 
-  <div class="stats">
-    <div class="stat"><div class="stat-lbl">פעילות</div><div class="stat-val blue" id="s-active">0</div></div>
-    <div class="stat"><div class="stat-lbl">ממתינות</div><div class="stat-val amber" id="s-pending">0</div></div>
-    <div class="stat"><div class="stat-lbl">הושלמו</div><div class="stat-val green" id="s-done">0</div></div>
-    <div class="stat"><div class="stat-lbl">טכנאים</div><div class="stat-val" id="s-techs">0</div></div>
-  </div>
-
-  <!-- SEARCH CARD -->
   <div id="dispatch-search-card" class="dispatch-search">
     <h2>קריאה חדשה</h2>
-
     <div class="fg">
       <label class="fl"><span class="req">*</span> קטגוריה / סוג קריאה</label>
       <div class="cat-chips" id="cat-chips-container"></div>
     </div>
-
-    <!-- PACKAGE BUILDER (shown when cat selected) -->
     <div id="pkg-section" class="hidden">
       <div class="pkg-builder">
         <div class="pkg-title">פרטי הזמנה</div>
@@ -324,7 +306,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
         <div style="font-size:0.8125rem;color:var(--ink-3);margin-top:6px;">זמן כולל משוער: <strong id="total-time">0 דקות</strong></div>
       </div>
     </div>
-
     <div class="fg-2">
       <div class="fg">
         <label class="fl"><span class="req">*</span> עיר / יישוב</label>
@@ -336,44 +317,41 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
         <input class="fc" id="s-street" placeholder="לדוגמה: הרצל 15">
       </div>
     </div>
-
     <button class="find-btn" onclick="findSlots()">מצא תורים פנויים ←</button>
   </div>
 
-  <!-- RESULTS -->
   <div id="dispatch-results" class="hidden">
     <div id="d-alert" class="hidden"></div>
-
-    <div style="margin-bottom:1rem;">
-      <div style="font-size:0.7rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px;">3 מועדים קרובים</div>
-      <div class="date-cards" id="date-cards"></div>
-    </div>
-
-    <!-- BROWSE OTHER DATE -->
-    <div class="browse-date" onclick="document.getElementById('browse-input').showPicker?.() || document.getElementById('browse-input').click()">
-      <span>🔍</span>
-      <span>חפש לפי תאריך אחר</span>
+    <div style="font-size:0.7rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px;">3 מועדים קרובים</div>
+    <div class="date-cards" id="date-cards"></div>
+    <div class="browse-date">
+      <span>🔍</span><span>חפש לפי תאריך אחר</span>
       <input type="date" id="browse-input" style="margin-right:auto;" onchange="browseDate(this.value)">
     </div>
-
-    <!-- TECH RESULT (after date selected) -->
     <div id="tech-result" class="hidden">
       <div class="tech-result">
         <div class="tr-header">
           <div class="tr-avatar" id="tr-avatar"></div>
-          <div>
-            <div class="tr-name" id="tr-name"></div>
-            <div class="tr-detail" id="tr-detail"></div>
-          </div>
+          <div><div class="tr-name" id="tr-name"></div><div class="tr-detail" id="tr-detail"></div></div>
           <div style="margin-right:auto;text-align:center;">
             <div style="font-size:0.7rem;color:var(--ink-3);font-weight:700;text-transform:uppercase;">מספר שיבוץ</div>
             <div class="assign-id-preview" id="tr-assign-id"></div>
           </div>
         </div>
-        <div class="tr-slot" id="tr-slot"></div>
-
-        <!-- CUSTOMER DETAILS — entered after slot chosen -->
-        <div class="confirm-form">
+        <!-- TIME SLOTS -->
+        <div id="time-slots-section">
+          <div style="font-size:0.8rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">בחר חלון זמן</div>
+          <div class="time-slots" id="time-slots-list"></div>
+        </div>
+        <!-- EXISTING TASKS -->
+        <div id="existing-tasks-section" class="hidden">
+          <div class="existing-tasks-preview">
+            <div class="etp-title">משימות קיימות לטכנאי באותו יום</div>
+            <div id="existing-tasks-list"></div>
+          </div>
+        </div>
+        <!-- CUSTOMER FORM -->
+        <div class="confirm-form" id="customer-form" style="margin-top:1rem;">
           <div style="font-size:0.8rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">פרטי לקוח</div>
           <div class="fg-2">
             <div class="fg"><label class="fl">שם לקוח</label><input class="fc" id="c-name" placeholder="שם מלא"></div>
@@ -389,7 +367,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     </div>
   </div>
 
-  <!-- SUCCESS -->
   <div id="dispatch-success" class="hidden">
     <div class="success-card">
       <div class="success-icon">✓</div>
@@ -405,7 +382,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   </div>
 </div>
 
-<!-- ═══ PAGE: TASKS ═══ -->
+<!-- TASKS -->
 <div id="page-tasks" class="page hidden">
   <div class="ph-row ph">
     <div><div class="ph-title">קריאות</div></div>
@@ -417,15 +394,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     </div>
   </div>
   <div class="card">
-    <div class="sb-bar">
-      <span style="color:var(--ink-4);">🔍</span>
-      <input class="fc" id="task-search" placeholder="חיפוש..." oninput="renderTasks()" style="border:none;padding:6px 0;font-size:0.875rem;">
-    </div>
+    <div class="sb-bar"><span style="color:var(--ink-4);">🔍</span><input class="fc" id="task-search" placeholder="חיפוש..." oninput="renderTasks()" style="border:none;padding:6px 0;font-size:0.875rem;"></div>
     <div id="tasks-list"></div>
   </div>
 </div>
 
-<!-- ═══ PAGE: SCHEDULE ═══ -->
+<!-- SCHEDULE -->
 <div id="page-schedule" class="page hidden">
   <div class="ph-row ph">
     <div><div class="ph-title">יומן יומי</div></div>
@@ -434,12 +408,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div id="schedule-content"></div>
 </div>
 
-<!-- ═══ PAGE: TECH VIEW ═══ -->
+<!-- TECH VIEW -->
 <div id="page-techview" class="page hidden">
   <div id="techview-content"></div>
 </div>
 
-<!-- ═══ PAGE: TECHNICIANS ═══ -->
+<!-- TECHNICIANS -->
 <div id="page-technicians" class="page hidden">
   <div class="ph-row ph">
     <div><div class="ph-title">טכנאים</div><div class="ph-sub" id="tech-count-sub"></div></div>
@@ -448,7 +422,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div class="tech-grid" id="tech-grid"></div>
 </div>
 
-<!-- ═══ PAGE: ZONES ═══ -->
+<!-- ZONES -->
 <div id="page-zones" class="page hidden">
   <div class="ph-row ph">
     <div><div class="ph-title">אזורי פעילות</div><div class="ph-sub">הגדר ערים לכל אזור</div></div>
@@ -457,10 +431,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div id="zones-list"></div>
 </div>
 
-<!-- ═══ PAGE: CATEGORIES ═══ -->
+<!-- CATEGORIES -->
 <div id="page-categories" class="page hidden">
   <div class="ph"><div class="ph-title">קטגוריות וחבילות</div></div>
-
   <div class="card" style="margin-bottom:1rem;">
     <div class="card-title">קטגוריות</div>
     <div class="tag-list" id="cats-list"></div>
@@ -469,17 +442,16 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <input class="fc" id="new-cat-time" type="number" placeholder="דקות" style="width:90px;">
       <button class="btn btn-blue" onclick="addCategory()">+ הוסף</button>
     </div>
-    <div style="font-size:0.75rem;color:var(--ink-4);margin-top:6px;">זמן = זמן התקנה ממוצע לקטגוריה זו בדקות</div>
+    <div style="font-size:0.75rem;color:var(--ink-4);margin-top:6px;">זמן = זמן התקנה ממוצע לקטגוריה זו</div>
   </div>
-
   <div class="card">
-    <div class="card-title">חבילות (שילוב קטגוריות)</div>
+    <div class="card-title">חבילות</div>
     <div id="pkgs-list"></div>
     <button class="btn btn-outline" style="margin-top:10px;" onclick="openAddPkgModal()">+ חבילה חדשה</button>
   </div>
 </div>
 
-<!-- ═══ PAGE: SETTINGS ═══ -->
+<!-- SETTINGS -->
 <div id="page-settings" class="page hidden">
   <div class="ph"><div class="ph-title">הגדרות חברה</div></div>
   <div class="card">
@@ -512,29 +484,45 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 </main>
 </div>
 
-<!-- MODAL: ADD TECH -->
+<!-- MODAL: ADD/EDIT TECH -->
 <div class="mo hidden" id="mo-tech">
   <div class="mo-box">
     <div class="mo-title" id="mo-tech-title">הוסף טכנאי</div>
     <div class="fg-2">
-      <div class="fg"><label class="fl">שם מלא</label><input class="fc" id="ti-name"></div>
-      <div class="fg"><label class="fl">טלפון</label><input class="fc" id="ti-phone" placeholder="05X-XXXXXXX"></div>
+      <div class="fg"><label class="fl"><span class="req">*</span> שם מלא</label><input class="fc" id="ti-name"><div class="field-error hidden" id="e-ti-name">שדה חובה</div></div>
+      <div class="fg"><label class="fl"><span class="req">*</span> טלפון</label><input class="fc" id="ti-phone" placeholder="05X-XXXXXXX"><div class="field-error hidden" id="e-ti-phone">שדה חובה</div></div>
     </div>
     <div class="fg-2">
-      <div class="fg"><label class="fl">כתובת בסיס / יציאה</label><input class="fc" id="ti-base" placeholder="עיר / כתובת"></div>
-      <div class="fg"><label class="fl">אזור פעילות</label><input class="fc" id="ti-area" placeholder="לדוגמה: גוש דן"></div>
+      <div class="fg"><label class="fl"><span class="req">*</span> כתובת בסיס</label><input class="fc" id="ti-base" placeholder="עיר / כתובת"><div class="field-error hidden" id="e-ti-base">שדה חובה</div></div>
+      <div class="fg"><label class="fl"><span class="req">*</span> אזור פעילות ראשי</label><input class="fc" id="ti-area" placeholder="לדוגמה: גוש דן"><div class="field-error hidden" id="e-ti-area">שדה חובה</div></div>
     </div>
     <div class="fg-2">
-      <div class="fg"><label class="fl">גבול צפוני</label><input class="fc" id="ti-north" placeholder="עיר קצה צפוני"></div>
-      <div class="fg"><label class="fl">גבול דרומי</label><input class="fc" id="ti-south" placeholder="עיר קצה דרומי"></div>
+      <div class="fg"><label class="fl"><span class="req">*</span> גבול צפוני</label><input class="fc" id="ti-north" placeholder="עיר קצה צפוני"><div class="field-error hidden" id="e-ti-north">שדה חובה</div></div>
+      <div class="fg"><label class="fl"><span class="req">*</span> גבול דרומי</label><input class="fc" id="ti-south" placeholder="עיר קצה דרומי"><div class="field-error hidden" id="e-ti-south">שדה חובה</div></div>
     </div>
     <div class="fg-2">
-      <div class="fg"><label class="fl">מינימום קריאות ביום</label><input class="fc" id="ti-min" type="number" value="2"></div>
-      <div class="fg"><label class="fl">מקסימום קריאות ביום</label><input class="fc" id="ti-max" type="number" value="6"></div>
+      <div class="fg"><label class="fl"><span class="req">*</span> מינימום קריאות ביום</label><input class="fc" id="ti-min" type="number" value="2"></div>
+      <div class="fg"><label class="fl"><span class="req">*</span> מקסימום קריאות ביום</label><input class="fc" id="ti-max" type="number" value="6"></div>
     </div>
     <div class="fg-2">
-      <div class="fg"><label class="fl">שעת התחלה</label><select class="fc" id="ti-start"></select></div>
-      <div class="fg"><label class="fl">שעת סיום</label><select class="fc" id="ti-end"></select></div>
+      <div class="fg"><label class="fl"><span class="req">*</span> שעת התחלה</label><select class="fc" id="ti-start"></select></div>
+      <div class="fg"><label class="fl"><span class="req">*</span> שעת סיום</label><select class="fc" id="ti-end"></select></div>
+    </div>
+    <!-- SKILLS -->
+    <div class="fg">
+      <label class="fl"><span class="req">*</span> מיומנויות (סוגי קריאה מותרים)</label>
+      <div class="field-error hidden" id="e-ti-skills">יש לבחור לפחות מיומנות אחת</div>
+      <div class="skill-checks" id="ti-skills-container"></div>
+    </div>
+    <!-- MAX PER CATEGORY -->
+    <div class="fg">
+      <label class="fl">מקסימום קריאות לפי קטגוריה ביום</label>
+      <div id="ti-cat-limits"></div>
+    </div>
+    <!-- ROTATION -->
+    <div class="fg">
+      <label class="fl">רוטציה אזורים לפי יום שבוע</label>
+      <div class="rotation-grid" id="ti-rotation"></div>
     </div>
     <div class="fg"><label class="fl">ערים חסומות (מופרד בפסיק)</label><input class="fc" id="ti-blocked" placeholder="לדוגמה: אילת, דימונה"></div>
     <div class="mo-actions">
@@ -564,8 +552,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     </div>
     <div class="fg"><label class="fl">סוג</label>
       <select class="fc" id="do-type" onchange="document.getElementById('do-times').classList.toggle('hidden',this.value!=='partial')">
-        <option value="full">כל היום</option>
-        <option value="partial">שעות מסוימות</option>
+        <option value="full">כל היום</option><option value="partial">שעות מסוימות</option>
       </select>
     </div>
     <div class="fg-2 hidden" id="do-times">
@@ -590,14 +577,14 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <button class="btn btn-outline btn-sm" onclick="addPkgRow()" style="margin-top:8px;">+ הוסף קטגוריה</button>
     <div class="mo-actions">
       <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-pkg')">ביטול</button>
-      <button class="btn btn-blue" style="flex:2;" onclick="savePkg()">שמור חבילה</button>
+      <button class="btn btn-blue" style="flex:2;" onclick="savePkg()">שמור</button>
     </div>
   </div>
 </div>
 
 <script>
 // ═══════════════════════════════════════════
-// DATA
+// CONSTANTS
 // ═══════════════════════════════════════════
 const COLORS=['#2563EB','#7C3AED','#D97706','#DC2626','#059669','#DB2777','#0891B2','#65A30D'];
 const CHIP_BG=['#EFF6FF','#F5F3FF','#FFFBEB','#FEF2F2','#F0FDF4','#FDF2F8'];
@@ -613,33 +600,35 @@ const STATUS_MAP={
   issue:{label:'בעיה',badge:'badge-red',next:['assigned']},
 };
 
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
 let technicians=[], tasks=[], dayoffs=[], zones=[], categories=[], packages=[];
 let nextTaskId=1, nextTechId=1, editingTechId=null;
-let selectedCat=null, selectedPkg=null, selectedDateIdx=null;
+let selectedCat=null, selectedDateIdx=null, selectedTimeSlot=null;
 let currentSlots=[], currentFilter='all', statusTaskId=null;
 let currentRole='admin', currentTechView=null;
-
 let settings={company:'מסלול',startTime:'07:00',endTime:'18:00',window:3,maxDaily:6,lookahead:14,monthlyVolume:300};
 
 // ═══════════════════════════════════════════
 // STORAGE
 // ═══════════════════════════════════════════
 function save(){
-  localStorage.setItem('ml5_techs',JSON.stringify(technicians));
-  localStorage.setItem('ml5_tasks',JSON.stringify(tasks));
-  localStorage.setItem('ml5_settings',JSON.stringify(settings));
-  localStorage.setItem('ml5_zones',JSON.stringify(zones));
-  localStorage.setItem('ml5_cats',JSON.stringify(categories));
-  localStorage.setItem('ml5_pkgs',JSON.stringify(packages));
-  localStorage.setItem('ml5_dayoffs',JSON.stringify(dayoffs));
-  localStorage.setItem('ml5_ids',JSON.stringify({nextTaskId,nextTechId}));
+  localStorage.setItem('ml6_techs',JSON.stringify(technicians));
+  localStorage.setItem('ml6_tasks',JSON.stringify(tasks));
+  localStorage.setItem('ml6_settings',JSON.stringify(settings));
+  localStorage.setItem('ml6_zones',JSON.stringify(zones));
+  localStorage.setItem('ml6_cats',JSON.stringify(categories));
+  localStorage.setItem('ml6_pkgs',JSON.stringify(packages));
+  localStorage.setItem('ml6_dayoffs',JSON.stringify(dayoffs));
+  localStorage.setItem('ml6_ids',JSON.stringify({nextTaskId,nextTechId}));
 }
 function load(){
   try{
-    const t=localStorage.getItem('ml5_techs'),k=localStorage.getItem('ml5_tasks'),
-          s=localStorage.getItem('ml5_settings'),z=localStorage.getItem('ml5_zones'),
-          c=localStorage.getItem('ml5_cats'),p=localStorage.getItem('ml5_pkgs'),
-          d=localStorage.getItem('ml5_dayoffs'),ids=localStorage.getItem('ml5_ids');
+    const t=localStorage.getItem('ml6_techs'),k=localStorage.getItem('ml6_tasks'),
+          s=localStorage.getItem('ml6_settings'),z=localStorage.getItem('ml6_zones'),
+          c=localStorage.getItem('ml6_cats'),p=localStorage.getItem('ml6_pkgs'),
+          d=localStorage.getItem('ml6_dayoffs'),ids=localStorage.getItem('ml6_ids');
     if(t)technicians=JSON.parse(t);
     if(k)tasks=JSON.parse(k);
     if(s)settings=Object.assign(settings,JSON.parse(s));
@@ -663,21 +652,20 @@ function load(){
   ];
   if(!packages.length)packages=[
     {id:'p1',name:'טוחן + מערכת מים',items:[{catId:'c1',qty:1},{catId:'c2',qty:1}]},
-    {id:'p2',name:'טוחן + מערכת + מרכך',items:[{catId:'c1',qty:1},{catId:'c2',qty:1},{catId:'c3',qty:1}]},
   ];
 }
 function seedData(){
   technicians=[
-    {id:1,name:'אלירן כהן',phone:'052-1111111',base:'ראשון לציון',area:'גוש דן',north:'תל אביב',south:'אשדוד',min:2,max:6,start:'07:00',end:'17:00',blocked:'',color:'#2563EB'},
-    {id:2,name:'יוסי מזרחי',phone:'054-2222222',base:'פתח תקווה',area:'גוש דן',north:'הרצליה',south:'ראשון לציון',min:2,max:6,start:'07:00',end:'17:00',blocked:'',color:'#7C3AED'},
-    {id:3,name:'רון אביבי',phone:'050-3333333',base:'נתניה',area:'שרון',north:'חדרה',south:'הרצליה',min:2,max:5,start:'08:00',end:'16:00',blocked:'אילת,דימונה',color:'#D97706'},
-    {id:4,name:'דני שמש',phone:'053-4444444',base:'רחובות',area:'שפלה',north:'ראשון לציון',south:'אשדוד',min:2,max:6,start:'07:00',end:'17:00',blocked:'',color:'#059669'},
+    {id:1,name:'אלירן כהן',phone:'052-1111111',base:'ראשון לציון',area:'גוש דן',north:'תל אביב',south:'אשדוד',min:2,max:6,start:'07:00',end:'17:00',blocked:'',color:'#2563EB',skills:['c1','c2','c3','c4'],catLimits:{c4:2},rotation:{0:'z1',1:'z2',2:'z1',3:'z3',4:'z1',5:'',6:''}},
+    {id:2,name:'יוסי מזרחי',phone:'054-2222222',base:'פתח תקווה',area:'גוש דן',north:'הרצליה',south:'ראשון לציון',min:2,max:6,start:'07:00',end:'17:00',blocked:'',color:'#7C3AED',skills:['c1','c2','c4'],catLimits:{},rotation:{0:'z2',1:'z1',2:'z2',3:'z1',4:'z2',5:'',6:''}},
+    {id:3,name:'רון אביבי',phone:'050-3333333',base:'נתניה',area:'שרון',north:'חדרה',south:'הרצליה',min:2,max:5,start:'08:00',end:'16:00',blocked:'אילת,דימונה',color:'#D97706',skills:['c1','c3','c4'],catLimits:{c4:1},rotation:{0:'z2',1:'z3',2:'z2',3:'z3',4:'z2',5:'',6:''}},
+    {id:4,name:'דני שמש',phone:'053-4444444',base:'רחובות',area:'שפלה',north:'ראשון לציון',south:'אשדוד',min:2,max:6,start:'07:00',end:'17:00',blocked:'',color:'#059669',skills:['c1','c2','c3','c4'],catLimits:{},rotation:{0:'z3',1:'z1',2:'z3',3:'z1',4:'z3',5:'',6:''}},
   ];
   tasks=[
-    {id:1,client:'משפחת לוי',phone:'052-0000001',city:'חולון',street:'הרצל 12',cat:'טוחן אשפה',pkg:null,qty:1,techId:1,status:'assigned',time:'08:30',date:todayStr(),notes:'',assignId:'MSL-00001'},
-    {id:2,client:'דוד כהן',phone:'053-0000002',city:'ראשון לציון',street:'רוטשילד 5',cat:'מערכת מים',pkg:null,qty:1,techId:2,status:'en_route',time:'10:00',date:todayStr(),notes:'',assignId:'MSL-00002'},
-    {id:3,client:'חברת טכנו',phone:'054-0000003',city:'נתניה',street:'הרצל 8',cat:'קריאת שירות',pkg:null,qty:1,techId:3,status:'completed',time:'12:30',date:todayStr(),notes:'',assignId:'MSL-00003'},
-    {id:4,client:'משפחת גולן',phone:'055-0000004',city:'רמת גן',street:'ביאליק 20',cat:'טוחן אשפה',pkg:null,qty:1,techId:null,status:'pending',time:'',date:'',notes:'',assignId:''},
+    {id:1,client:'משפחת לוי',phone:'052-0000001',city:'חולון',street:'הרצל 12',cat:'טוחן אשפה',catId:'c1',techId:1,status:'assigned',time:'08:30',date:todayStr(),notes:'',assignId:'MSL-00001'},
+    {id:2,client:'דוד כהן',phone:'053-0000002',city:'ראשון לציון',street:'רוטשילד 5',cat:'מערכת מים',catId:'c2',techId:2,status:'assigned',time:'10:00',date:todayStr(),notes:'',assignId:'MSL-00002'},
+    {id:3,client:'חברת טכנו',phone:'054-0000003',city:'נתניה',street:'הרצל 8',cat:'קריאת שירות',catId:'c4',techId:3,status:'completed',time:'07:30',date:todayStr(),notes:'',assignId:'MSL-00003'},
+    {id:4,client:'משפחת גולן',phone:'055-0000004',city:'רמת גן',street:'ביאליק 20',cat:'טוחן אשפה',catId:'c1',techId:null,status:'pending',time:'',date:'',notes:'',assignId:''},
   ];
   nextTaskId=5;nextTechId=5;
 }
@@ -704,6 +692,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   updateStats();
   document.getElementById('do-date').value=todayStr();
   document.getElementById('browse-input').value=todayStr();
+  document.getElementById('set-company').value=settings.company;
+  document.getElementById('set-monthly').value=settings.monthlyVolume;
+  document.getElementById('set-max').value=settings.maxDaily;
+  document.getElementById('set-lookahead').value=settings.lookahead;
 });
 function setDateLabel(){
   const d=new Date();
@@ -720,10 +712,9 @@ function populateTimeSels(){
   document.getElementById('set-end').value=settings.endTime;
 }
 function populateCitiesDl(){
-  const cities=['תל אביב','חולון','בת ים','ראשון לציון','פתח תקווה','רמת גן','גבעתיים','הרצליה','כפר סבא','נתניה','רחובות','נס ציונה','לוד','רמלה','אשדוד','אשקלון','ירושלים','חיפה','באר שבע','דימונה','אילת'];
-  const dl=document.getElementById('cities-dl');
-  zones.forEach(z=>z.cities.forEach(c=>{if(!cities.includes(c))cities.push(c);}));
-  dl.innerHTML=cities.map(c=>`<option value="${c}">`).join('');
+  const cities=new Set(['תל אביב','חולון','בת ים','ראשון לציון','פתח תקווה','רמת גן','גבעתיים','הרצליה','כפר סבא','נתניה','רחובות','נס ציונה','לוד','רמלה','אשדוד','אשקלון','ירושלים','חיפה','באר שבע','דימונה','אילת']);
+  zones.forEach(z=>z.cities.forEach(c=>cities.add(c)));
+  document.getElementById('cities-dl').innerHTML=[...cities].map(c=>`<option value="${c}">`).join('');
 }
 function buildRoleSelect(){
   const sel=document.getElementById('role-sel');
@@ -745,9 +736,9 @@ function goPage(page){
     document.getElementById('page-'+p).classList.toggle('hidden',p!==page);
   });
   document.querySelectorAll('.ni-btn').forEach(b=>b.classList.remove('active'));
-  const pageMap={dispatch:0,tasks:1,schedule:2,technicians:3,zones:4,categories:5,settings:6,techview:2};
+  const map={dispatch:0,tasks:1,schedule:2,technicians:3,zones:4,categories:5,settings:6,techview:2};
   const btns=document.querySelectorAll('.ni-btn');
-  if(btns[pageMap[page]])btns[pageMap[page]].classList.add('active');
+  if(btns[map[page]])btns[map[page]].classList.add('active');
   if(page==='schedule')renderSchedule();
   if(page==='technicians'){renderTechs();buildRoleSelect();}
   if(page==='techview')renderTechView();
@@ -763,9 +754,7 @@ function switchRole(){
     const techId=parseInt(val.replace('tech_',''));
     currentTechView=technicians.find(t=>t.id===techId);
     goPage('techview');
-  }else{
-    goPage('dispatch');
-  }
+  }else{goPage('dispatch');}
 }
 
 // ═══════════════════════════════════════════
@@ -774,12 +763,12 @@ function switchRole(){
 function renderCatChips(){
   const container=document.getElementById('cat-chips-container');
   const allItems=[
-    ...categories.map(c=>({id:'cat_'+c.id,label:c.name,time:c.time,isPkg:false})),
-    ...packages.map(p=>({id:'pkg_'+p.id,label:p.name+'  📦',time:calcPkgTime(p),isPkg:true})),
+    ...categories.map(c=>({id:'cat_'+c.id,label:c.name,isPkg:false})),
+    ...packages.map(p=>({id:'pkg_'+p.id,label:p.name+' 📦',isPkg:true})),
   ];
-  container.innerHTML=allItems.map(item=>`
-    <button class="cat-chip ${selectedCat===item.id?'selected':''}" onclick="selectCat('${item.id}')">${item.label}</button>
-  `).join('')+`<button class="cat-add-btn" onclick="goPage('categories')">+ הוסף</button>`;
+  container.innerHTML=allItems.map(item=>
+    `<button class="cat-chip ${selectedCat===item.id?'selected':''}" onclick="selectCat('${item.id}')">${item.label}</button>`
+  ).join('')+`<button class="cat-add-btn" onclick="goPage('categories')">+ הוסף</button>`;
 }
 function selectCat(id){
   selectedCat=id;
@@ -797,45 +786,43 @@ function renderPkgSection(){
   document.getElementById('pkg-section').classList.remove('hidden');
   const rows=document.getElementById('pkg-rows');
   if(selectedCat.startsWith('pkg_')){
-    const pkgId=selectedCat.replace('pkg_','');
-    const pkg=packages.find(p=>p.id===pkgId);
+    const pkg=packages.find(p=>'pkg_'+p.id===selectedCat);
     if(!pkg){rows.innerHTML='';return;}
     rows.innerHTML=pkg.items.map(item=>{
       const cat=categories.find(c=>c.id===item.catId);
-      return`<div class="pkg-row">
-        <span class="pkg-name">${cat?cat.name:'?'}</span>
+      return`<div class="pkg-row"><span class="pkg-name">${cat?cat.name:'?'}</span>
         <input class="fc pkg-qty" type="number" min="1" max="10" value="${item.qty}" onchange="updateTotalTime()">
-        <span class="pkg-time">${cat?cat.time:0} דק' ליח'</span>
-      </div>`;
+        <span class="pkg-time">${cat?cat.time:0} דק' ליח'</span></div>`;
     }).join('');
   }else{
     const catId=selectedCat.replace('cat_','');
     const cat=categories.find(c=>c.id===catId);
     if(!cat){rows.innerHTML='';return;}
-    rows.innerHTML=`<div class="pkg-row">
-      <span class="pkg-name">${cat.name}</span>
+    rows.innerHTML=`<div class="pkg-row"><span class="pkg-name">${cat.name}</span>
       <input class="fc pkg-qty" type="number" min="1" max="10" value="1" onchange="updateTotalTime()">
-      <span class="pkg-time">${cat.time} דק' ליח'</span>
-    </div>`;
+      <span class="pkg-time">${cat.time} דק' ליח'</span></div>`;
   }
   updateTotalTime();
 }
 function updateTotalTime(){
   let total=0;
   document.querySelectorAll('.pkg-row').forEach(row=>{
-    const timeEl=row.querySelector('.pkg-time');
-    const qtyEl=row.querySelector('.pkg-qty');
-    if(timeEl&&qtyEl){
-      const t=parseInt(timeEl.textContent)||0;
-      const q=parseInt(qtyEl.value)||1;
-      total+=t*q;
-    }
+    const te=row.querySelector('.pkg-time'),qe=row.querySelector('.pkg-qty');
+    if(te&&qe)total+=(parseInt(te.textContent)||0)*(parseInt(qe.value)||1);
   });
   document.getElementById('total-time').textContent=total+' דקות';
 }
+function getTotalTime(){
+  let total=0;
+  document.querySelectorAll('.pkg-row').forEach(row=>{
+    const te=row.querySelector('.pkg-time'),qe=row.querySelector('.pkg-qty');
+    if(te&&qe)total+=(parseInt(te.textContent)||0)*(parseInt(qe.value)||1);
+  });
+  return total||60;
+}
 
 // ═══════════════════════════════════════════
-// SMART SCHEDULING ENGINE
+// SCHEDULING ENGINE
 // ═══════════════════════════════════════════
 function getCityZone(city){
   return zones.find(z=>z.cities.includes(city))||null;
@@ -844,49 +831,99 @@ function isTechAvailable(tech,dateStr){
   return !dayoffs.some(d=>d.techId===tech.id&&d.date===dateStr&&d.type==='full');
 }
 function getTechLoad(tech,dateStr){
-  return tasks.filter(t=>t.techId===tech.id&&t.date===dateStr&&!['pending','completed'].includes(t.status)).length;
+  return tasks.filter(t=>t.techId===tech.id&&t.date===dateStr&&['assigned','en_route','arrived'].includes(t.status)).length;
 }
 function isCityBlocked(tech,city){
   if(!tech.blocked)return false;
   return tech.blocked.split(',').map(c=>c.trim()).filter(Boolean).includes(city);
 }
-function getTotalTime(){
-  let total=0;
-  document.querySelectorAll('.pkg-row').forEach(row=>{
-    const timeEl=row.querySelector('.pkg-time');
-    const qtyEl=row.querySelector('.pkg-qty');
-    if(timeEl&&qtyEl){total+=(parseInt(timeEl.textContent)||0)*(parseInt(qtyEl.value)||1);}
-  });
-  return total||60;
+function techHasSkill(tech,catId){
+  if(!catId)return true;
+  const skills=tech.skills||[];
+  if(skills.includes('all'))return true;
+  return skills.includes(catId);
 }
-function scoreForDate(tech,city,dateStr){
+function getCatLimitOk(tech,catId,dateStr){
+  if(!catId)return true;
+  const limits=tech.catLimits||{};
+  if(!limits[catId])return true;
+  const count=tasks.filter(t=>t.techId===tech.id&&t.date===dateStr&&t.catId===catId&&['assigned','en_route','arrived'].includes(t.status)).length;
+  return count<limits[catId];
+}
+// MERGE LOGIC: if tech already has tasks in this zone today, prefer filling that day
+function getTechZoneForDate(tech,dateStr){
+  const dayTasks=tasks.filter(t=>t.techId===tech.id&&t.date===dateStr&&['assigned','en_route','arrived'].includes(t.status));
+  if(dayTasks.length===0)return null;
+  // find most common zone
+  const zoneCounts={};
+  dayTasks.forEach(t=>{
+    const z=getCityZone(t.city);
+    if(z){zoneCounts[z.id]=(zoneCounts[z.id]||0)+1;}
+  });
+  const topZoneId=Object.entries(zoneCounts).sort((a,b)=>b[1]-a[1])[0]?.[0];
+  return topZoneId?zones.find(z=>z.id===topZoneId):null;
+}
+// ROTATION: get assigned zone for tech on given day of week
+function getTechRotationZone(tech,dayOfWeek){
+  if(!tech.rotation)return null;
+  const zoneId=tech.rotation[dayOfWeek];
+  return zoneId?zones.find(z=>z.id===zoneId):null;
+}
+function scoreForDate(tech,city,catId,dateStr){
   if(!isTechAvailable(tech,dateStr))return null;
   if(isCityBlocked(tech,city))return null;
+  if(!techHasSkill(tech,catId))return null;
+  if(!getCatLimitOk(tech,catId,dateStr))return null;
   const load=getTechLoad(tech,dateStr);
   if(load>=tech.max)return null;
-  // zone check
+
   const cityZone=getCityZone(city);
-  const techZone=zones.find(z=>z.name.includes(tech.area)||z.cities.some(c=>c===tech.base));
-  const zoneMatch=cityZone&&techZone&&cityZone.id===techZone.id;
-  if(!zoneMatch&&cityZone&&techZone)return null; // different zone = skip
-  const loadBonus=load===0?20:load<=2?15:5;
-  const score=80+loadBonus-(REMOTE.includes(city)?30:0);
+  const existingZone=getTechZoneForDate(tech,dateStr);
+  const d=new Date(dateStr);
+  const rotZone=getTechRotationZone(tech,d.getDay());
+
+  // MERGE: if tech already works in same zone today, strong preference
+  let mergeBonus=0;
+  if(existingZone&&cityZone&&existingZone.id===cityZone.id)mergeBonus=40;
+  // if tech has tasks in different zone today, penalize
+  let zonePenalty=0;
+  if(existingZone&&cityZone&&existingZone.id!==cityZone.id)zonePenalty=35;
+  // rotation match
+  let rotBonus=0;
+  if(rotZone&&cityZone&&rotZone.id===cityZone.id)rotBonus=20;
+
+  const loadBonus=load===0?15:load<=2?10:5;
+  const remotePenalty=REMOTE.includes(city)?30:0;
+  const score=Math.max(0,80+mergeBonus+rotBonus+loadBonus-zonePenalty-remotePenalty);
   return{score,load,tech};
 }
-function getTimeSlot(load){
-  const[sh]=settings.startTime.split(':').map(Number);
-  const slotStart=sh+(load*2);
-  return pad(Math.min(slotStart,17))+':00 — '+pad(Math.min(slotStart+settings.window,19))+':00';
+function getAvailableTimeSlots(tech,dateStr,totalTime){
+  const[sh]=tech.start.split(':').map(Number);
+  const[eh]=tech.end.split(':').map(Number);
+  const dayTasks=tasks.filter(t=>t.techId===tech.id&&t.date===dateStr&&['assigned','en_route','arrived'].includes(t.status))
+    .sort((a,b)=>a.time.localeCompare(b.time));
+  const slotDuration=settings.window;
+  const slots=[];
+  // generate possible slots
+  for(let h=sh;h<=eh-slotDuration;h++){
+    const slotStart=pad(h)+':00';
+    const slotEnd=pad(h+slotDuration)+':00';
+    // check if slot conflicts with existing tasks
+    const conflict=dayTasks.some(t=>{
+      const[th]=t.time.split(':').map(Number);
+      return th>=h&&th<h+slotDuration;
+    });
+    if(!conflict)slots.push({start:slotStart,end:slotEnd,busy:false});
+    else slots.push({start:slotStart,end:slotEnd,busy:true});
+  }
+  return slots.slice(0,6);
 }
 function getNextDates(){
-  const dates=[];
-  const d=new Date();
-  let i=0;
+  const dates=[];const d=new Date();let i=0;
   while(dates.length<(settings.lookahead||14)&&i<60){
     d.setDate(d.getDate()+1);
     const ds=d.toISOString().split('T')[0];
-    const day=d.getDay();
-    if(day!==6){dates.push({str:ds,day,d:new Date(d)});}
+    if(d.getDay()!==6)dates.push({str:ds,day:d.getDay(),d:new Date(d)});
     i++;
   }
   return dates;
@@ -894,120 +931,176 @@ function getNextDates(){
 function findSlots(){
   const city=document.getElementById('s-city').value.trim();
   const street=document.getElementById('s-street').value.trim();
-  if(!city){alert('נא לבחור עיר');return;}
+  if(!city||!street){alert('נא למלא עיר ורחוב');return;}
   if(!selectedCat){alert('נא לבחור קטגוריה');return;}
-  if(!street){alert('נא להזין רחוב');return;}
+  const catId=selectedCat.startsWith('cat_')?selectedCat.replace('cat_',''):null;
   const totalTime=getTotalTime();
-  // find 3 available dates
   const dates=getNextDates();
   const slots=[];
+
+  // MERGE FIRST: check if any existing day can absorb this task (same zone, not full)
+  const existingDays=[];
   for(const date of dates){
-    if(slots.length>=3)break;
+    for(const tech of technicians){
+      const existingZone=getTechZoneForDate(tech,date.str);
+      const cityZone=getCityZone(city);
+      if(existingZone&&cityZone&&existingZone.id===cityZone.id){
+        const load=getTechLoad(tech,date.str);
+        if(load<tech.max&&isTechAvailable(tech,date.str)&&!isCityBlocked(tech,city)&&techHasSkill(tech,catId)&&getCatLimitOk(tech,catId,date.str)){
+          existingDays.push({date,tech,score:100,load});
+        }
+      }
+    }
+  }
+
+  // Add merge days first, then regular suggestions
+  const allCandidates=[...existingDays];
+  for(const date of dates){
+    if(allCandidates.length>=6)break;
     let best=null;
     for(const tech of technicians){
-      const r=scoreForDate(tech,city,date.str);
-      if(r&&(!best||r.score>best.score))best={...r,date,slot:getTimeSlot(r.load)};
+      const r=scoreForDate(tech,city,catId,date.str);
+      if(r&&(!best||r.score>best.score))best={...r,date};
     }
-    if(best)slots.push(best);
+    if(best&&!allCandidates.some(c=>c.date.str===best.date.str&&c.tech.id===best.tech.id)){
+      allCandidates.push(best);
+    }
   }
+
+  // Take top 3 unique dates
+  const seen=new Set();
+  for(const c of allCandidates){
+    if(seen.size>=3)break;
+    if(!seen.has(c.date.str)){seen.add(c.date.str);slots.push(c);}
+  }
+
   currentSlots=slots;
   renderDateCards(slots);
   document.getElementById('dispatch-search-card').style.opacity='0.5';
   document.getElementById('dispatch-search-card').style.pointerEvents='none';
   document.getElementById('dispatch-results').classList.remove('hidden');
   document.getElementById('tech-result').classList.add('hidden');
-  selectedDateIdx=null;
+  selectedDateIdx=null;selectedTimeSlot=null;
 }
+
 function renderDateCards(slots){
   const container=document.getElementById('date-cards');
   if(!slots.length){
-    container.innerHTML='<div style="grid-column:1/-1;"><div class="alert alert-amber">⚠️ לא נמצאו תורים פנויים בטווח של '+settings.lookahead+' ימים. בדוק הגדרות אזורים וטכנאים.</div></div>';
+    container.innerHTML='<div style="grid-column:1/-1;"><div class="alert alert-amber">⚠️ לא נמצאו תורים פנויים. בדוק הגדרות אזורים וטכנאים.</div></div>';
     return;
   }
   container.innerHTML=slots.map((s,i)=>{
     const d=s.date.d;
+    const months=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+    const isMerge=s.score===100;
     return`<div class="date-card ${selectedDateIdx===i?'selected':''}" onclick="selectDate(${i})">
+      ${isMerge?'<div style="font-size:0.65rem;font-weight:700;color:var(--green);margin-bottom:4px;">⚡ ממלא יום קיים</div>':''}
       <div class="dc-day">יום ${DAYS_HE[d.getDay()]}</div>
-      <div class="dc-date">${d.getDate()} ב${['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'][d.getMonth()]}</div>
-      <div class="dc-range">${s.slot}</div>
-      <div class="dc-avail">${s.tech.name}</div>
+      <div class="dc-date">${d.getDate()} ב${months[d.getMonth()]}</div>
+      <div class="dc-tech">${s.tech.name}</div>
     </div>`;
   }).join('');
 }
+
 function selectDate(i){
-  selectedDateIdx=i;
+  selectedDateIdx=i;selectedTimeSlot=null;
   renderDateCards(currentSlots);
   const s=currentSlots[i];
-  showTechResult(s);
-}
-function browseDate(dateStr){
-  if(!dateStr)return;
-  let best=null;
-  for(const tech of technicians){
-    const r=scoreForDate(tech,document.getElementById('s-city').value.trim(),dateStr);
-    if(r&&(!best||r.score>best.score)){
-      const d=new Date(dateStr);
-      best={...r,date:{str:dateStr,d},slot:getTimeSlot(r.load)};
-    }
-  }
-  if(!best){
-    document.getElementById('tech-result').classList.add('hidden');
-    alert('אין זמינות בתאריך זה לעיר שנבחרה.');
-    return;
-  }
-  selectedDateIdx=-1;
-  currentSlots[-1]=best;
-  document.querySelectorAll('.date-card').forEach(c=>c.classList.remove('selected'));
-  showTechResult(best);
-}
-function showTechResult(s){
-  const tech=s.tech;
-  document.getElementById('tr-avatar').style.background=tech.color;
-  document.getElementById('tr-avatar').textContent=initials(tech.name);
-  document.getElementById('tr-name').textContent=tech.name;
-  document.getElementById('tr-detail').textContent=tech.area+' • '+tech.phone;
-  document.getElementById('tr-slot').textContent='📅 '+s.date.d.toLocaleDateString('he-IL')+' | ⏰ '+s.slot;
+  const catId=selectedCat?.startsWith('cat_')?selectedCat.replace('cat_',''):null;
+  const slots=getAvailableTimeSlots(s.tech,s.date.str,getTotalTime());
+  // render tech header
+  document.getElementById('tr-avatar').style.background=s.tech.color;
+  document.getElementById('tr-avatar').textContent=initials(s.tech.name);
+  document.getElementById('tr-name').textContent=s.tech.name;
+  document.getElementById('tr-detail').textContent=s.tech.area+' • '+s.tech.phone;
   document.getElementById('tr-assign-id').textContent=genId();
-  document.getElementById('c-name').value='';
-  document.getElementById('c-phone').value='';
-  document.getElementById('c-notes').value='';
+  // render time slots
+  document.getElementById('time-slots-list').innerHTML=slots.map((slot,si)=>`
+    <div class="time-slot ${slot.busy?'busy':''}" onclick="${slot.busy?'':'selectTimeSlot('+si+')'}" id="ts-${si}">
+      <span class="time-slot-range">${slot.start} — ${slot.end}</span>
+      <span class="time-slot-status">${slot.busy?'תפוס':'פנוי'}</span>
+    </div>`).join('');
+  // render existing tasks
+  const dayTasks=tasks.filter(t=>t.techId===s.tech.id&&t.date===s.date.str&&['assigned','en_route','arrived'].includes(t.status))
+    .sort((a,b)=>a.time.localeCompare(b.time));
+  const etpSection=document.getElementById('existing-tasks-section');
+  if(dayTasks.length){
+    etpSection.classList.remove('hidden');
+    document.getElementById('existing-tasks-list').innerHTML=dayTasks.map(t=>
+      `<div class="etp-row"><span class="etp-time">${t.time}</span><span class="etp-detail">${t.cat} — ${t.city}</span></div>`
+    ).join('');
+  }else{etpSection.classList.add('hidden');}
+  document.getElementById('customer-form').style.display='none';
   document.getElementById('tech-result').classList.remove('hidden');
 }
+
+function selectTimeSlot(si){
+  selectedTimeSlot=si;
+  document.querySelectorAll('.time-slot:not(.busy)').forEach((el,i)=>el.classList.toggle('selected',i===si));
+  document.getElementById('customer-form').style.display='block';
+  document.getElementById('c-name').value='';
+  document.getElementById('c-phone').value='';
+}
+
+function browseDate(dateStr){
+  if(!dateStr)return;
+  const catId=selectedCat?.startsWith('cat_')?selectedCat.replace('cat_',''):null;
+  let best=null;
+  for(const tech of technicians){
+    const r=scoreForDate(tech,document.getElementById('s-city').value.trim(),catId,dateStr);
+    if(r&&(!best||r.score>best.score)){
+      const d=new Date(dateStr);
+      best={...r,date:{str:dateStr,d}};
+    }
+  }
+  if(!best){alert('אין זמינות בתאריך זה.');return;}
+  const idx=currentSlots.length;
+  currentSlots[idx]=best;
+  selectedDateIdx=idx;
+  document.querySelectorAll('.date-card').forEach(c=>c.classList.remove('selected'));
+  selectDate(idx);
+}
+
 function confirmAssign(){
+  if(selectedTimeSlot===null){alert('נא לבחור חלון זמן');return;}
   const s=currentSlots[selectedDateIdx];if(!s)return;
+  const slots=getAvailableTimeSlots(s.tech,s.date.str,getTotalTime());
+  const slot=slots[selectedTimeSlot];if(!slot||slot.busy)return;
   const city=document.getElementById('s-city').value.trim();
   const street=document.getElementById('s-street').value.trim();
   const client=document.getElementById('c-name').value||'לקוח';
   const phone=document.getElementById('c-phone').value||'';
   const notes=document.getElementById('c-notes').value||'';
   const assignId=document.getElementById('tr-assign-id').textContent;
-  const catName=selectedCat?
-    (selectedCat.startsWith('pkg_')?packages.find(p=>'pkg_'+p.id===selectedCat)?.name:categories.find(c=>'cat_'+c.id===selectedCat)?.name)||'—':'—';
-  const slotTime=s.slot.split(' — ')[0];
-  tasks.push({id:nextTaskId++,client,phone,city,street,cat:catName,pkg:selectedCat,qty:1,techId:s.tech.id,status:'assigned',time:slotTime,date:s.date.str,notes,assignId});
+  const catId=selectedCat?.startsWith('cat_')?selectedCat.replace('cat_',''):null;
+  const catName=catId?categories.find(c=>c.id===catId)?.name:packages.find(p=>'pkg_'+p.id===selectedCat)?.name||'—';
+
+  tasks.push({id:nextTaskId++,client,phone,city,street,cat:catName,catId,techId:s.tech.id,status:'assigned',time:slot.start,date:s.date.str,notes,assignId});
   save();updateStats();renderSchedule();
+
   document.getElementById('suc-id').textContent=assignId;
   document.getElementById('suc-details').innerHTML=`
     <div class="cr"><span class="ck">לקוח</span><span class="cv">${client}</span></div>
     <div class="cr"><span class="ck">כתובת</span><span class="cv">${street}, ${city}</span></div>
     <div class="cr"><span class="ck">קטגוריה</span><span class="cv">${catName}</span></div>
     <div class="cr"><span class="ck">תאריך</span><span class="cv">${s.date.d.toLocaleDateString('he-IL')}</span></div>
-    <div class="cr"><span class="ck">שעות</span><span class="cv">${s.slot}</span></div>
+    <div class="cr"><span class="ck">שעות</span><span class="cv">${slot.start} — ${slot.end}</span></div>
     <div class="cr"><span class="ck">טכנאי</span><span class="cv">${s.tech.name}</span></div>
   `;
-  const wm=encodeURIComponent(`שלום ${client}, קריאה שובצה ל${city} בתאריך ${s.date.d.toLocaleDateString('he-IL')} בין השעות ${s.slot}. מספר קריאה: ${assignId}. לפרטים: ${s.tech.phone}`);
+  const wm=encodeURIComponent(`שלום ${client}, קריאה שובצה ב${city} בתאריך ${s.date.d.toLocaleDateString('he-IL')} בין השעות ${slot.start}-${slot.end}. מספר קריאה: ${assignId}. לפרטים: ${s.tech.phone}`);
   const wp=phone.replace(/[^0-9]/g,'').replace(/^0/,'972');
   document.getElementById('wa-link').href=phone?`https://wa.me/${wp}?text=${wm}`:'#';
   document.getElementById('wa-link').style.display=phone?'inline-flex':'none';
   document.getElementById('dispatch-results').classList.add('hidden');
   document.getElementById('dispatch-success').classList.remove('hidden');
 }
+
 function clearDispatch(){
   document.getElementById('dispatch-search-card').style.opacity='1';
   document.getElementById('dispatch-search-card').style.pointerEvents='';
   document.getElementById('dispatch-results').classList.add('hidden');
   document.getElementById('tech-result').classList.add('hidden');
-  selectedDateIdx=null;
+  selectedDateIdx=null;selectedTimeSlot=null;
 }
 function resetDispatch(){
   clearDispatch();
@@ -1017,6 +1110,8 @@ function resetDispatch(){
   document.getElementById('dispatch-success').classList.add('hidden');
   document.getElementById('s-city').value='';
   document.getElementById('s-street').value='';
+  document.getElementById('dispatch-search-card').style.opacity='1';
+  document.getElementById('dispatch-search-card').style.pointerEvents='';
 }
 
 // ═══════════════════════════════════════════
@@ -1067,7 +1162,9 @@ function quickAssign(id){
   document.getElementById('s-city').value=t.city;
   document.getElementById('s-street').value=t.street||'';
   goPage('dispatch');
-  setTimeout(()=>{if(t.cat){const c=categories.find(x=>x.name===t.cat);if(c){selectedCat='cat_'+c.id;renderCatChips();renderPkgSection();}}},100);
+  setTimeout(()=>{
+    if(t.catId){selectedCat='cat_'+t.catId;renderCatChips();renderPkgSection();}
+  },100);
 }
 function openStatusModal(id){
   statusTaskId=id;
@@ -1076,7 +1173,7 @@ function openStatusModal(id){
   document.getElementById('status-info').innerHTML=`<div style="font-weight:700;">${t.client}</div><div style="font-size:0.8125rem;color:var(--ink-3);">${t.cat} • ${t.city}${t.assignId?' • '+t.assignId:''}</div>`;
   document.getElementById('status-opts').innerHTML=s.next.map(ns=>{
     const ni=STATUS_MAP[ns];
-    return`<button class="btn btn-outline btn-full" style="justify-content:flex-start;" onclick="setStatus('${ns}')"><span class="badge ${ni.badge}">${ni.label}</span> עדכן לסטטוס זה</button>`;
+    return`<button class="btn btn-outline btn-full" style="justify-content:flex-start;" onclick="setStatus('${ns}')"><span class="badge ${ni.badge}">${ni.label}</span> עדכן</button>`;
   }).join('')||'<div style="color:var(--ink-4);">אין פעולות</div>';
   document.getElementById('mo-status').classList.remove('hidden');
 }
@@ -1088,18 +1185,20 @@ function setStatus(ns){
 }
 
 // ═══════════════════════════════════════════
-// SCHEDULE
+// SCHEDULE — sorted, only assigned/completed
 // ═══════════════════════════════════════════
 function renderSchedule(){
   const container=document.getElementById('schedule-content');
   container.innerHTML=technicians.map((tech,ti)=>{
-    const tt=tasks.filter(t=>t.techId===tech.id&&t.status!=='pending').sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+    const tt=tasks
+      .filter(t=>t.techId===tech.id&&['assigned','en_route','arrived','completed'].includes(t.status)&&t.time)
+      .sort((a,b)=>a.time.localeCompare(b.time));
     const lp=Math.min(100,Math.round((tt.length/Math.max(tech.max,1))*100));
     const fc=lp>=90?'var(--red)':lp>=70?'var(--amber)':'var(--green)';
     const rows=tt.map(t=>{
       const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;
       return`<div class="sch-row">
-        <span class="sch-time">${t.time||'—'}</span>
+        <span class="sch-time">${t.time}</span>
         <div class="sch-chip" style="background:${CHIP_BG[ti%CHIP_BG.length]};color:${CHIP_FG[ti%CHIP_FG.length]};">${t.cat} — ${t.city}</div>
         <span class="badge ${s.badge}" style="font-size:0.65rem;">${s.label}</span>
         ${t.assignId?`<span class="assign-id-tag">${t.assignId}</span>`:''}
@@ -1123,9 +1222,9 @@ function renderSchedule(){
 }
 function sendSummary(techId){
   const tech=technicians.find(t=>t.id===techId);if(!tech)return;
-  const tt=tasks.filter(t=>t.techId===techId&&t.status!=='pending').sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const tt=tasks.filter(t=>t.techId===techId&&['assigned','en_route','arrived'].includes(t.status)&&t.time).sort((a,b)=>a.time.localeCompare(b.time));
   if(!tt.length){alert('אין קריאות');return;}
-  const lines=tt.map((t,i)=>`${i+1}. ${t.time||'?'} — ${t.cat}, ${t.street}, ${t.city} (${t.client}) [${t.assignId}]`).join('\n');
+  const lines=tt.map((t,i)=>`${i+1}. ${t.time} — ${t.cat}, ${t.street}, ${t.city} (${t.client}) [${t.assignId}]`).join('\n');
   const msg=encodeURIComponent(`שלום ${tech.name}, הקריאות שלך:\n\n${lines}`);
   const wp=tech.phone.replace(/[^0-9]/g,'').replace(/^0/,'972');
   window.open(`https://wa.me/${wp}?text=${msg}`,'_blank');
@@ -1137,12 +1236,12 @@ function sendSummary(techId){
 function renderTechView(){
   if(!currentTechView){document.getElementById('techview-content').innerHTML='<div class="empty"><div class="empty-icon">👤</div><div>בחר טכנאי</div></div>';return;}
   const tech=currentTechView;
-  const tt=tasks.filter(t=>t.techId===tech.id&&t.status!=='pending').sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const tt=tasks.filter(t=>t.techId===tech.id&&['assigned','en_route','arrived','completed'].includes(t.status)&&t.time).sort((a,b)=>a.time.localeCompare(b.time));
   const d=new Date();
   const jobs=tt.map(t=>{
     const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;
     return`<div class="tv-job">
-      <div class="tv-time"><div class="tv-hr">${t.time||'—'}</div></div>
+      <div class="tv-time"><div class="tv-hr">${t.time}</div></div>
       <div class="tv-sep"></div>
       <div class="tv-info">
         <div class="tv-svc">${t.cat}</div>
@@ -1156,7 +1255,7 @@ function renderTechView(){
         </div>
       </div>
     </div>`;
-  }).join('')||'<div class="empty"><div class="empty-icon">🎉</div><div>אין קריאות להיום</div></div>';
+  }).join('')||'<div class="empty"><div class="empty-icon">🎉</div><div>אין קריאות</div></div>';
   document.getElementById('techview-content').innerHTML=`
     <div class="page">
       <div style="text-align:center;padding:1.5rem 0 1rem;border-bottom:1px solid var(--line);margin-bottom:1rem;">
@@ -1178,6 +1277,7 @@ function renderTechs(){
     const lp=Math.min(100,Math.round((cnt/Math.max(tech.max,1))*100));
     const fc=lp>=90?'var(--red)':lp>=60?'var(--amber)':'var(--green)';
     const blocked=tech.blocked?tech.blocked.split(',').map(c=>`<span class="restrict-tag">🚫 ${c.trim()}</span>`).join(''):'';
+    const skills=(tech.skills||[]).map(sid=>{const c=categories.find(x=>x.id===sid);return c?`<span class="skill-tag">${c.name}</span>`:''}).join('');
     return`<div class="tech-card">
       <div class="tech-av" style="background:${tech.color};">${initials(tech.name)}</div>
       <div class="tech-name">${tech.name}</div>
@@ -1185,10 +1285,11 @@ function renderTechs(){
       <div class="tech-info">📞 ${tech.phone}</div>
       <div class="tech-info">🏠 ${tech.base}</div>
       <div class="tech-info">↕️ ${tech.north||'—'} — ${tech.south||'—'}</div>
-      <div class="tech-info">📊 ${tech.min}–${tech.max} קריאות / יום</div>
+      <div class="tech-info">📊 ${tech.min}–${tech.max} קריאות/יום</div>
+      ${skills?`<div style="margin-top:6px;">${skills}</div>`:''}
       <div class="load-bar" style="margin:8px 0 3px;"><div class="load-fill" style="width:${lp}%;background:${fc};"></div></div>
       <div style="font-size:0.7rem;color:var(--ink-4);">${cnt}/${tech.max} קריאות היום</div>
-      ${blocked?`<div style="margin-top:8px;">${blocked}</div>`:''}
+      ${blocked?`<div style="margin-top:6px;">${blocked}</div>`:''}
       <div style="display:flex;gap:6px;margin-top:10px;">
         <button class="btn btn-outline btn-sm" onclick="editTech(${tech.id})">עריכה</button>
         <button class="btn btn-ghost btn-sm" onclick="deleteTech(${tech.id})" style="color:var(--red);">הסר</button>
@@ -1196,20 +1297,58 @@ function renderTechs(){
     </div>`;
   }).join('')||'<div class="empty"><div class="empty-icon">👷</div><div>הוסף טכנאי ראשון</div></div>';
 }
+
+function buildTechModalUI(){
+  // skills checkboxes
+  const container=document.getElementById('ti-skills-container');
+  container.innerHTML=categories.map(c=>
+    `<label class="skill-check" id="skill-lbl-${c.id}" onclick="toggleSkill('${c.id}')">
+      <input type="checkbox" id="skill-${c.id}"> ${c.name}
+    </label>`
+  ).join('');
+  // cat limits
+  document.getElementById('ti-cat-limits').innerHTML=categories.map(c=>
+    `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <span style="font-size:0.875rem;flex:1;">${c.name}</span>
+      <input class="fc" id="catlim-${c.id}" type="number" min="0" placeholder="ללא הגבלה" style="width:130px;">
+    </div>`
+  ).join('');
+  // rotation
+  const rotDays=['א','ב','ג','ד','ה','ו','ש'];
+  document.getElementById('ti-rotation').innerHTML=rotDays.map((day,i)=>
+    `<div class="rotation-day">
+      <div class="day-name">${day}</div>
+      <select id="rot-${i}">${[{id:'',name:'—'},...zones].map(z=>`<option value="${z.id}">${z.id?z.name.split('—')[0].trim():z.name}</option>`).join('')}</select>
+    </div>`
+  ).join('');
+}
+
+function toggleSkill(catId){
+  const lbl=document.getElementById('skill-lbl-'+catId);
+  const inp=document.getElementById('skill-'+catId);
+  inp.checked=!inp.checked;
+  lbl.classList.toggle('checked',inp.checked);
+}
+
 function openAddTechModal(){
   editingTechId=null;
+  buildTechModalUI();
   document.getElementById('mo-tech-title').textContent='הוסף טכנאי';
   ['ti-name','ti-phone','ti-base','ti-area','ti-north','ti-south','ti-blocked'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ti-min').value='2';
   document.getElementById('ti-max').value='6';
-  if(document.getElementById('ti-start').options.length)document.getElementById('ti-start').value='07:00';
-  if(document.getElementById('ti-end').options.length)document.getElementById('ti-end').value='17:00';
+  if(document.getElementById('ti-start').options.length){document.getElementById('ti-start').value='07:00';document.getElementById('ti-end').value='17:00';}
   document.getElementById('ti-save-btn').textContent='הוסף';
+  // clear errors
+  document.querySelectorAll('.field-error').forEach(e=>e.classList.add('hidden'));
+  document.querySelectorAll('.fc.error').forEach(e=>e.classList.remove('error'));
   document.getElementById('mo-tech').classList.remove('hidden');
 }
+
 function editTech(id){
   const tech=technicians.find(t=>t.id===id);if(!tech)return;
   editingTechId=id;
+  buildTechModalUI();
   document.getElementById('mo-tech-title').textContent='עריכת טכנאי';
   document.getElementById('ti-name').value=tech.name;
   document.getElementById('ti-phone').value=tech.phone;
@@ -1221,17 +1360,74 @@ function editTech(id){
   document.getElementById('ti-max').value=tech.max;
   document.getElementById('ti-blocked').value=tech.blocked||'';
   if(document.getElementById('ti-start').options.length){document.getElementById('ti-start').value=tech.start||'07:00';document.getElementById('ti-end').value=tech.end||'17:00';}
+  // skills
+  (tech.skills||[]).forEach(sid=>{
+    const inp=document.getElementById('skill-'+sid);
+    const lbl=document.getElementById('skill-lbl-'+sid);
+    if(inp){inp.checked=true;lbl?.classList.add('checked');}
+  });
+  // cat limits
+  Object.entries(tech.catLimits||{}).forEach(([catId,val])=>{
+    const inp=document.getElementById('catlim-'+catId);
+    if(inp)inp.value=val;
+  });
+  // rotation
+  Object.entries(tech.rotation||{}).forEach(([day,zoneId])=>{
+    const sel=document.getElementById('rot-'+day);
+    if(sel)sel.value=zoneId||'';
+  });
   document.getElementById('ti-save-btn').textContent='שמור';
   document.getElementById('mo-tech').classList.remove('hidden');
 }
+
 function saveTech(){
-  const name=document.getElementById('ti-name').value.trim();
-  if(!name){alert('נא להזין שם');return;}
-  const data={name,phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),area:document.getElementById('ti-area').value.trim(),north:document.getElementById('ti-north').value.trim(),south:document.getElementById('ti-south').value.trim(),min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||6,start:document.getElementById('ti-start').value,end:document.getElementById('ti-end').value,blocked:document.getElementById('ti-blocked').value.trim()};
+  // VALIDATION — all required fields
+  const required={
+    'ti-name':'e-ti-name','ti-phone':'e-ti-phone',
+    'ti-base':'e-ti-base','ti-area':'e-ti-area',
+    'ti-north':'e-ti-north','ti-south':'e-ti-south'
+  };
+  let valid=true;
+  Object.entries(required).forEach(([field,errId])=>{
+    const el=document.getElementById(field);
+    const err=document.getElementById(errId);
+    if(!el.value.trim()){el.classList.add('error');err.classList.remove('hidden');valid=false;}
+    else{el.classList.remove('error');err.classList.add('hidden');}
+  });
+  // skills required
+  const selectedSkills=categories.filter(c=>document.getElementById('skill-'+c.id)?.checked).map(c=>c.id);
+  if(!selectedSkills.length){document.getElementById('e-ti-skills').classList.remove('hidden');valid=false;}
+  else{document.getElementById('e-ti-skills').classList.add('hidden');}
+  if(!valid)return;
+
+  const catLimits={};
+  categories.forEach(c=>{
+    const v=parseInt(document.getElementById('catlim-'+c.id)?.value);
+    if(v>0)catLimits[c.id]=v;
+  });
+  const rotation={};
+  for(let i=0;i<7;i++){rotation[i]=document.getElementById('rot-'+i)?.value||'';}
+
+  const data={
+    name:document.getElementById('ti-name').value.trim(),
+    phone:document.getElementById('ti-phone').value.trim(),
+    base:document.getElementById('ti-base').value.trim(),
+    area:document.getElementById('ti-area').value.trim(),
+    north:document.getElementById('ti-north').value.trim(),
+    south:document.getElementById('ti-south').value.trim(),
+    min:parseInt(document.getElementById('ti-min').value)||2,
+    max:parseInt(document.getElementById('ti-max').value)||6,
+    start:document.getElementById('ti-start').value,
+    end:document.getElementById('ti-end').value,
+    blocked:document.getElementById('ti-blocked').value.trim(),
+    skills:selectedSkills,
+    catLimits,rotation
+  };
   if(editingTechId){const tech=technicians.find(t=>t.id===editingTechId);if(tech)Object.assign(tech,data);}
   else technicians.push({id:nextTechId++,...data,color:COLORS[technicians.length%COLORS.length]});
   save();buildRoleSelect();closeMo('mo-tech');renderTechs();
 }
+
 function deleteTech(id){
   if(!confirm('למחוק?'))return;
   technicians=technicians.filter(t=>t.id!==id);
@@ -1240,46 +1436,42 @@ function deleteTech(id){
 }
 
 // ═══════════════════════════════════════════
-// ZONES
+// ZONES — bulk paste support
 // ═══════════════════════════════════════════
 function renderZones(){
   const container=document.getElementById('zones-list');
   container.innerHTML=zones.map((z,zi)=>`
     <div class="zone-card">
       <div class="zone-header">
-        <input class="fc" value="${z.name}" onchange="zones[${zi}].name=this.value;save();" style="font-weight:800;font-size:0.9375rem;border:none;padding:0;background:transparent;width:auto;flex:1;">
+        <input class="fc" value="${z.name}" onchange="zones[${zi}].name=this.value;save();" style="font-weight:800;font-size:0.9375rem;border:none;padding:0;background:transparent;flex:1;">
         <button class="btn btn-ghost btn-sm" onclick="deleteZone('${z.id}')" style="color:var(--red);">הסר</button>
       </div>
       <div class="zone-cities">
         ${z.cities.map((c,ci)=>`<span class="city-tag">${c}<button onclick="removeCity('${z.id}',${ci})">×</button></span>`).join('')}
       </div>
+      <div style="font-size:0.75rem;color:var(--ink-3);margin-bottom:6px;">הוסף עיר בודדת או הדבק רשימה (עיר בכל שורה)</div>
       <div class="zone-add">
-        <input class="fc" id="new-city-${z.id}" placeholder="הוסף עיר..." style="flex:1;">
-        <button class="btn btn-outline btn-sm" onclick="addCity('${z.id}')">+ הוסף</button>
+        <textarea class="fc" id="new-city-${z.id}" placeholder="עיר אחת או רשימה&#10;תל אביב&#10;חולון&#10;בת ים" style="flex:1;height:60px;resize:vertical;font-size:0.875rem;"></textarea>
+        <button class="btn btn-outline btn-sm" onclick="addCities('${z.id}')" style="align-self:flex-end;">+ הוסף</button>
       </div>
     </div>
   `).join('')||'<div class="empty"><div class="empty-icon">🗺️</div><div>הוסף אזור ראשון</div></div>';
 }
-function addZone(){
-  zones.push({id:'z'+Date.now(),name:'אזור חדש',cities:[]});
+function addZone(){zones.push({id:'z'+Date.now(),name:'אזור חדש',cities:[]});save();renderZones();populateCitiesDl();}
+function deleteZone(id){zones=zones.filter(z=>z.id!==id);save();renderZones();}
+function addCities(zoneId){
+  const inp=document.getElementById('new-city-'+zoneId);
+  const text=inp.value.trim();
+  if(!text)return;
+  const z=zones.find(x=>x.id===zoneId);
+  if(!z)return;
+  // support both comma-separated and newline-separated
+  const cities=text.split(/[\n,]+/).map(c=>c.trim()).filter(c=>c.length>0);
+  cities.forEach(c=>{if(!z.cities.includes(c))z.cities.push(c);});
+  inp.value='';
   save();renderZones();populateCitiesDl();
 }
-function deleteZone(id){
-  zones=zones.filter(z=>z.id!==id);save();renderZones();
-}
-function addCity(zoneId){
-  const inp=document.getElementById('new-city-'+zoneId);
-  const city=inp.value.trim();
-  if(!city)return;
-  const z=zones.find(x=>x.id===zoneId);
-  if(z&&!z.cities.includes(city))z.cities.push(city);
-  inp.value='';save();renderZones();populateCitiesDl();
-}
-function removeCity(zoneId,ci){
-  const z=zones.find(x=>x.id===zoneId);
-  if(z)z.cities.splice(ci,1);
-  save();renderZones();
-}
+function removeCity(zoneId,ci){const z=zones.find(x=>x.id===zoneId);if(z)z.cities.splice(ci,1);save();renderZones();}
 
 // ═══════════════════════════════════════════
 // CATEGORIES & PACKAGES
@@ -1291,7 +1483,7 @@ function renderCategories(){
   document.getElementById('pkgs-list').innerHTML=packages.map((p,i)=>{
     const items=p.items.map(item=>{const c=categories.find(x=>x.id===item.catId);return`${c?c.name:'?'} ×${item.qty}`;}).join(' + ');
     return`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-2);font-size:0.875rem;">
-      <div><strong>${p.name}</strong><span style="color:var(--ink-3);margin-right:8px;">${items}</span></div>
+      <div><strong>${p.name}</strong> <span style="color:var(--ink-3);">${items}</span></div>
       <button class="btn btn-ghost btn-sm" onclick="deletePkg(${i})" style="color:var(--red);">הסר</button>
     </div>`;
   }).join('')||'<div style="color:var(--ink-4);font-size:0.875rem;padding:1rem 0;">אין חבילות</div>';
@@ -1302,40 +1494,28 @@ function addCategory(){
   const time=parseInt(document.getElementById('new-cat-time').value)||60;
   if(!name)return;
   categories.push({id:'c'+Date.now(),name,time});
-  document.getElementById('new-cat-name').value='';
-  document.getElementById('new-cat-time').value='';
+  document.getElementById('new-cat-name').value='';document.getElementById('new-cat-time').value='';
   save();renderCategories();
 }
 function deleteCat(i){categories.splice(i,1);save();renderCategories();}
 function deletePkg(i){packages.splice(i,1);save();renderCategories();}
 let pkgRowCount=0;
 function openAddPkgModal(){
-  pkgRowCount=0;
-  document.getElementById('pkg-name').value='';
-  document.getElementById('pkg-cat-rows').innerHTML='';
-  addPkgRow();
-  document.getElementById('mo-pkg').classList.remove('hidden');
+  pkgRowCount=0;document.getElementById('pkg-name').value='';document.getElementById('pkg-cat-rows').innerHTML='';
+  addPkgRow();document.getElementById('mo-pkg').classList.remove('hidden');
 }
 function addPkgRow(){
   const id=pkgRowCount++;
-  const div=document.createElement('div');
-  div.className='fg-2';
-  div.id='pkg-row-'+id;
-  div.innerHTML=`
-    <div class="fg"><label class="fl">קטגוריה</label>
-      <select class="fc" id="pkg-cat-${id}">${categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select>
-    </div>
-    <div class="fg"><label class="fl">כמות</label><input class="fc" id="pkg-qty-${id}" type="number" min="1" value="1" style="width:90px;"></div>
-  `;
+  const div=document.createElement('div');div.className='fg-2';div.id='pkg-row-'+id;
+  div.innerHTML=`<div class="fg"><label class="fl">קטגוריה</label><select class="fc" id="pkg-cat-${id}">${categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">כמות</label><input class="fc" id="pkg-qty-${id}" type="number" min="1" value="1" style="width:90px;"></div>`;
   document.getElementById('pkg-cat-rows').appendChild(div);
 }
 function savePkg(){
-  const name=document.getElementById('pkg-name').value.trim();
-  if(!name){alert('נא להזין שם');return;}
+  const name=document.getElementById('pkg-name').value.trim();if(!name){alert('נא להזין שם');return;}
   const items=[];
   for(let i=0;i<pkgRowCount;i++){
-    const catEl=document.getElementById('pkg-cat-'+i);
-    const qtyEl=document.getElementById('pkg-qty-'+i);
+    const catEl=document.getElementById('pkg-cat-'+i),qtyEl=document.getElementById('pkg-qty-'+i);
     if(catEl&&qtyEl)items.push({catId:catEl.value,qty:parseInt(qtyEl.value)||1});
   }
   packages.push({id:'p'+Date.now(),name,items});
@@ -1348,8 +1528,7 @@ function savePkg(){
 function openDayoffModal(){
   const sel=document.getElementById('do-tech');
   sel.innerHTML=technicians.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
-  renderDayoffList();
-  document.getElementById('mo-dayoff').classList.remove('hidden');
+  renderDayoffList();document.getElementById('mo-dayoff').classList.remove('hidden');
 }
 function addDayoff(){
   const techId=parseInt(document.getElementById('do-tech').value);
