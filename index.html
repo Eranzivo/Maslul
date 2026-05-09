@@ -24,8 +24,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .content{margin-right:228px;flex:1;}
 .page{padding:2rem 2.5rem;max-width:1200px;animation:fi 0.18s ease;}
 @keyframes fi{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
-
-/* SIDEBAR */
 .sb-top{padding:1.5rem 1.25rem 1rem;}
 .sb-logo{font-size:1.5rem;font-weight:900;letter-spacing:-1px;}
 .sb-logo span{color:var(--blue);}
@@ -40,14 +38,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .role-box{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;}
 .role-lbl{font-size:0.6rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;}
 .role-sel{width:100%;border:none;background:transparent;font-size:0.875rem;font-family:'Heebo',sans-serif;font-weight:600;color:var(--ink);outline:none;cursor:pointer;}
-
-/* PAGE */
 .ph{margin-bottom:1.75rem;}
 .ph-row{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;}
 .ph-title{font-size:1.5rem;font-weight:900;letter-spacing:-0.8px;}
 .ph-sub{font-size:0.875rem;color:var(--ink-3);margin-top:3px;}
-
-/* BUTTONS */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r);font-size:0.875rem;font-weight:700;cursor:pointer;border:none;font-family:'Heebo',sans-serif;transition:all 0.12s;white-space:nowrap;}
 .btn-blue{background:var(--blue);color:white;}
 .btn-blue:hover{background:var(--blue-d);}
@@ -55,12 +49,11 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .btn-outline:hover{background:var(--bg);}
 .btn-ghost{background:transparent;color:var(--ink-3);border:none;padding:6px 10px;}
 .btn-ghost:hover{background:var(--line-2);color:var(--ink);}
-.btn-amber{background:var(--amber);color:white;}
+.btn-red{background:var(--red);color:white;}
+.btn-green{background:var(--green);color:white;}
 .btn-sm{padding:5px 10px;font-size:0.75rem;}
 .btn-lg{padding:12px 28px;font-size:1rem;border-radius:var(--r-lg);}
 .btn-full{width:100%;justify-content:center;}
-
-/* FORMS */
 .fg{margin-bottom:1rem;}
 .fl{display:block;font-size:0.8125rem;font-weight:700;color:var(--ink-2);margin-bottom:5px;}
 .fl .req{color:var(--red);}
@@ -71,26 +64,20 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .fg-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .fg-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
 .field-error{font-size:0.75rem;color:var(--red);margin-top:3px;}
-
-/* CARDS */
 .card{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:1.375rem 1.5rem;box-shadow:var(--sh);}
 .card+.card{margin-top:1rem;}
 .card-title{font-size:0.7rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:1rem;}
-
-/* BADGES */
 .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:0.7rem;font-weight:700;}
 .badge-blue{background:var(--blue-l);color:var(--blue-d);}
 .badge-green{background:var(--green-l);color:var(--green);}
 .badge-amber{background:var(--amber-l);color:var(--amber);}
 .badge-red{background:var(--red-l);color:var(--red);}
 .badge-gray{background:var(--line-2);color:var(--ink-3);}
-
-/* ALERTS */
 .alert{border-radius:var(--r);padding:10px 14px;font-size:0.8125rem;margin-bottom:12px;display:flex;gap:8px;}
 .alert-amber{background:var(--amber-l);color:var(--amber);}
 .alert-blue{background:var(--blue-l);color:var(--blue-d);}
 .alert-green{background:var(--green-l);color:var(--green);}
-
+.alert-red{background:var(--red-l);color:var(--red);}
 /* DISPATCH */
 .dispatch-search{background:var(--white);border:1.5px solid var(--line);border-radius:var(--r-xl);padding:1.75rem 2rem;box-shadow:var(--sh-md);margin-bottom:1.5rem;}
 .dispatch-search h2{font-size:1.125rem;font-weight:800;margin-bottom:1.25rem;}
@@ -107,18 +94,24 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .pkg-time{font-size:0.8125rem;color:var(--ink-3);}
 .find-btn{width:100%;padding:13px;background:var(--blue);color:white;border:none;border-radius:var(--r-lg);font-size:1.0625rem;font-weight:800;cursor:pointer;font-family:'Heebo',sans-serif;transition:all 0.15s;margin-top:4px;}
 .find-btn:hover{background:var(--blue-d);box-shadow:var(--sh-lg);transform:translateY(-1px);}
-
-/* SINGLE SUGGESTION CARD */
+/* SUGGESTION */
 .suggestion-result{background:var(--white);border:2px solid var(--blue);border-radius:var(--r-xl);padding:1.5rem 1.75rem;box-shadow:var(--sh-lg);animation:fi 0.25s ease;}
 .sr-header{display:flex;align-items:center;gap:14px;margin-bottom:1rem;}
 .sr-avatar{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.125rem;font-weight:800;color:white;flex-shrink:0;}
-.sr-name{font-size:1.25rem;font-weight:900;letter-spacing:-0.3px;}
+.sr-name{font-size:1.25rem;font-weight:900;}
 .sr-area{font-size:0.875rem;color:var(--ink-3);margin-top:2px;}
 .sr-date-box{background:var(--blue-l);border:1px solid var(--blue-m);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-bottom:1rem;}
 .sr-date-label{font-size:0.7rem;font-weight:800;color:var(--blue-d);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;}
 .sr-date-value{font-size:1.25rem;font-weight:900;color:var(--ink);letter-spacing:-0.5px;}
 .sr-reason{font-size:0.8125rem;color:var(--green);font-weight:600;margin-top:4px;}
-
+/* ROUTE PREVIEW */
+.route-preview{background:var(--line-2);border-radius:var(--r);padding:10px 14px;margin:10px 0;}
+.route-title{font-size:0.7rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;}
+.route-row{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:0.8125rem;}
+.route-time{font-weight:700;color:var(--ink-2);min-width:46px;}
+.route-city{color:var(--ink-3);flex:1;}
+.route-new{color:var(--blue);font-weight:700;}
+.route-arrow{color:var(--ink-4);font-size:0.75rem;}
 /* TIME SLOTS */
 .time-slots{display:flex;flex-direction:column;gap:6px;margin:1rem 0;}
 .time-slot{display:flex;align-items:center;justify-content:space-between;background:var(--green-l);border:1.5px solid #BBF7D0;border-radius:8px;padding:8px 12px;cursor:pointer;transition:all 0.12s;font-size:0.875rem;}
@@ -126,24 +119,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .time-slot.selected{background:var(--green);color:white;border-color:var(--green);}
 .time-slot.busy{background:var(--red-l);border-color:#FECACA;cursor:default;color:var(--red);}
 .time-slot-range{font-weight:700;}
-.time-slot-status{font-size:0.7rem;}
-
-/* EXISTING TASKS PREVIEW */
-.etp{background:var(--line-2);border-radius:var(--r);padding:10px 14px;margin-top:8px;}
-.etp-title{font-size:0.7rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
-.etp-row{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:0.8125rem;border-bottom:1px solid var(--line);}
-.etp-row:last-child{border:none;}
-.etp-time{font-weight:700;color:var(--ink-2);min-width:46px;}
-.etp-detail{color:var(--ink-3);flex:1;}
-
 /* CUSTOMER FORM */
 .customer-form{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--line);}
-.sr-actions{display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap;}
-
-/* ASSIGN ID */
-.assign-id-box{text-align:center;margin:8px 0;}
 .assign-id{font-family:monospace;font-size:1rem;font-weight:800;color:var(--blue);background:var(--blue-l);padding:5px 14px;border-radius:var(--r);display:inline-block;letter-spacing:1px;}
-
 /* SUCCESS */
 .success-card{background:var(--white);border:1px solid var(--line);border-radius:var(--r-xl);padding:2rem;text-align:center;box-shadow:var(--sh-lg);animation:fi 0.25s ease;}
 .success-icon{width:56px;height:56px;border-radius:50%;background:var(--green-l);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.5rem;}
@@ -153,7 +131,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .cr:last-child{border:none;}
 .ck{color:var(--ink-3);}
 .cv{font-weight:700;}
-
 /* TASKS */
 .task-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line-2);}
 .task-row:last-child{border:none;}
@@ -163,96 +140,85 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .task-actions{display:flex;gap:6px;align-items:center;flex-shrink:0;}
 .status-pill{padding:3px 10px;border-radius:20px;font-size:0.7rem;font-weight:700;cursor:pointer;}
 .assign-id-tag{font-family:monospace;font-size:0.65rem;font-weight:700;color:var(--ink-4);background:var(--line-2);padding:2px 6px;border-radius:4px;}
-
-/* HOME — TECH CARDS */
+/* HOME */
 .tech-home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-top:1rem;}
 .tech-home-card{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:1.25rem;box-shadow:var(--sh);cursor:pointer;transition:all 0.15s;text-align:center;}
 .tech-home-card:hover{border-color:var(--blue-m);box-shadow:var(--sh-md);transform:translateY(-2px);}
 .th-avatar{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.125rem;font-weight:800;color:white;margin:0 auto 10px;}
 .th-name{font-size:1rem;font-weight:800;margin-bottom:3px;}
 .th-area{font-size:0.75rem;color:var(--ink-3);}
-.th-load{font-size:0.75rem;font-weight:700;margin-top:6px;}
 .load-bar{height:4px;background:var(--line-2);border-radius:2px;overflow:hidden;margin-top:4px;}
 .load-fill{height:100%;border-radius:2px;}
-
 /* WEEKLY CALENDAR */
 .week-nav{display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;}
-.week-nav-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all 0.12s;}
-.week-nav-btn:hover{background:var(--blue-l);border-color:var(--blue);}
+.week-nav-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;}
+.week-nav-btn:hover{background:var(--blue-l);}
 .week-title{font-size:1rem;font-weight:700;flex:1;}
-.week-grid{display:grid;border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;background:var(--white);box-shadow:var(--sh);}
+.week-grid{border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;background:var(--white);box-shadow:var(--sh);}
 .week-header{display:grid;grid-template-columns:50px repeat(6,1fr);border-bottom:2px solid var(--line);}
-.wh-cell{padding:8px 6px;text-align:center;font-size:0.75rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.3px;background:var(--line-2);}
+.wh-cell{padding:8px 6px;text-align:center;font-size:0.75rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;background:var(--line-2);}
 .wh-cell.today{background:var(--blue-l);color:var(--blue-d);}
 .week-body{display:grid;grid-template-columns:50px repeat(6,1fr);}
 .time-col{display:flex;flex-direction:column;}
 .time-label{height:60px;display:flex;align-items:flex-start;justify-content:center;padding-top:6px;font-size:0.65rem;font-weight:700;color:var(--ink-4);border-bottom:1px solid var(--line-2);}
-.day-col{border-right:1px solid var(--line-2);position:relative;min-height:540px;}
+.day-col{border-right:1px solid var(--line-2);position:relative;}
 .day-col:first-of-type{border-right:none;}
-.day-cell{height:60px;border-bottom:1px solid var(--line-2);position:relative;}
+.day-cell{height:60px;border-bottom:1px solid var(--line-2);}
 .cal-task{position:absolute;right:2px;left:2px;border-radius:5px;padding:3px 5px;font-size:0.65rem;font-weight:600;cursor:pointer;overflow:hidden;z-index:1;line-height:1.3;}
 .cal-task:hover{z-index:10;box-shadow:var(--sh-md);}
-.cal-client{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.cal-city{color:rgba(0,0,0,0.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-
-/* TECH CARDS PAGE */
+/* TECH CARDS */
 .tech-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
 .tech-card{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:1.125rem;box-shadow:var(--sh);}
 .tech-av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:800;color:white;margin-bottom:10px;}
 .tech-name{font-size:0.9375rem;font-weight:800;}
-.tech-area{font-size:0.7rem;color:var(--ink-3);font-weight:700;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;}
 .tech-info{font-size:0.8125rem;color:var(--ink-2);margin-top:3px;}
 .skill-tag{display:inline-flex;align-items:center;background:var(--blue-l);border-radius:4px;padding:2px 7px;font-size:0.7rem;color:var(--blue-d);font-weight:600;margin:2px;}
-.restrict-tag{display:inline-flex;align-items:center;background:var(--line-2);border-radius:4px;padding:2px 7px;font-size:0.7rem;color:var(--ink-2);font-weight:500;margin:2px;}
-
 /* ZONES */
 .zone-card{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-bottom:10px;box-shadow:var(--sh);}
-.zone-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
-.zone-cities{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
-.city-tag{background:var(--blue-l);color:var(--blue-d);border-radius:20px;padding:3px 10px;font-size:0.8125rem;font-weight:600;display:inline-flex;align-items:center;gap:4px;}
-.city-tag button{background:none;border:none;cursor:pointer;color:var(--red);font-size:0.75rem;padding:0;line-height:1;}
-.zone-add{display:flex;gap:8px;margin-top:6px;}
-
-/* SKILL CHECKS */
+.city-tag{background:var(--blue-l);color:var(--blue-d);border-radius:20px;padding:3px 10px;font-size:0.8125rem;font-weight:600;display:inline-flex;align-items:center;gap:4px;margin:2px;}
+.city-tag button{background:none;border:none;cursor:pointer;color:var(--red);font-size:0.75rem;padding:0;}
+.zone-cities{display:flex;flex-wrap:wrap;margin-bottom:8px;}
+/* SKILLS */
 .skill-checks{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}
 .skill-check{display:flex;align-items:center;gap:6px;background:var(--bg);border:1.5px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;transition:all 0.1s;font-size:0.875rem;font-weight:500;}
 .skill-check.checked{background:var(--blue-l);border-color:var(--blue);color:var(--blue-d);font-weight:700;}
 .skill-check input{display:none;}
-
 /* ROTATION */
 .rotation-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:8px;}
 .rotation-day{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px;}
 .rotation-day .day-name{font-weight:700;color:var(--ink-3);margin-bottom:3px;font-size:0.7rem;text-align:center;}
 .rotation-day select{width:100%;border:none;background:transparent;font-size:0.65rem;font-family:'Heebo',sans-serif;outline:none;cursor:pointer;}
-
 /* MODALS */
 .mo{position:fixed;inset:0;background:rgba(0,0,0,0.42);display:flex;align-items:center;justify-content:center;z-index:1000;padding:1rem;}
 .mo-box{background:var(--white);border-radius:var(--r-xl);padding:1.75rem;width:100%;max-width:580px;box-shadow:0 25px 50px rgba(0,0,0,0.18);max-height:90vh;overflow-y:auto;}
 .mo-title{font-size:1.125rem;font-weight:900;margin-bottom:1.25rem;}
 .mo-actions{display:flex;gap:8px;margin-top:1.25rem;}
-
+/* CANCEL MODAL */
+.cancel-option{border:1.5px solid var(--line);border-radius:var(--r-lg);padding:1rem 1.25rem;cursor:pointer;margin-bottom:10px;transition:all 0.12s;}
+.cancel-option:hover{border-color:var(--blue);background:var(--blue-l);}
+.cancel-option h4{font-size:0.9375rem;font-weight:700;margin-bottom:3px;}
+.cancel-option p{font-size:0.8125rem;color:var(--ink-3);}
+/* SEARCH BAR HOME */
+.home-search{display:flex;gap:8px;margin-bottom:1.25rem;}
+.home-search input{flex:1;}
+.search-results{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-md);margin-bottom:1rem;overflow:hidden;}
+.search-result-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line-2);cursor:pointer;transition:background 0.1s;}
+.search-result-row:hover{background:var(--blue-l);}
+.search-result-row:last-child{border:none;}
 /* SETTINGS */
 .set-sec{margin-bottom:1.5rem;}
 .set-title{font-size:0.9375rem;font-weight:800;padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:1rem;}
-
-/* TAG MANAGER */
 .tag-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
 .tag-item{display:inline-flex;align-items:center;gap:6px;background:var(--line-2);border-radius:20px;padding:5px 12px;font-size:0.875rem;font-weight:500;}
 .tag-del{background:none;border:none;cursor:pointer;color:var(--red);font-size:0.875rem;line-height:1;padding:0;}
 .tag-add-row{display:flex;gap:8px;}
 .sb-bar{display:flex;gap:8px;margin-bottom:1rem;align-items:center;}
-.sb-bar input{flex:1;}
-
-/* MISC */
 .hidden{display:none!important;}
 .flex-between{display:flex;justify-content:space-between;align-items:center;}
 .flex-gap{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-.divider{height:1px;background:var(--line);margin:1rem 0;}
 .empty{text-align:center;padding:3rem;color:var(--ink-4);}
 .empty-icon{font-size:2.5rem;margin-bottom:10px;}
-
-@media(max-width:900px){.sidebar{display:none;}.content{margin-right:0;}.week-header,.week-body{grid-template-columns:40px repeat(3,1fr);}.page{padding:1rem;}}
-@media print{.sidebar,.btn,.mo{display:none!important;}.content{margin-right:0;}}
+@media(max-width:900px){.sidebar{display:none;}.content{margin-right:0;}.page{padding:1rem;}.week-header,.week-body{grid-template-columns:40px repeat(3,1fr);}}
 </style>
 </head>
 <body>
@@ -283,21 +249,24 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     </div>
   </div>
 </nav>
-
 <main class="content">
 
 <!-- HOME -->
 <div id="page-home" class="page">
   <div class="ph ph-row">
-    <div><div class="ph-title" id="home-title">דף הבית</div><div class="ph-sub" id="home-date"></div></div>
+    <div><div class="ph-title">דף הבית</div><div class="ph-sub" id="home-date"></div></div>
     <div class="flex-gap">
       <button class="btn btn-outline btn-sm" onclick="openDayoffModal()">📵 חופשות</button>
       <button class="btn btn-blue" onclick="goPage('dispatch')">+ שיבוץ קריאה</button>
     </div>
   </div>
+  <!-- CLIENT SEARCH -->
+  <div class="home-search">
+    <input class="fc" id="client-search" placeholder="🔍 חיפוש לקוח לפי שם..." oninput="searchClient()">
+    <button class="btn btn-outline btn-sm" onclick="clearClientSearch()">נקה</button>
+  </div>
+  <div id="client-search-results" class="hidden"></div>
   <div id="home-tech-grid" class="tech-home-grid"></div>
-
-  <!-- WEEKLY CALENDAR (shown when tech selected) -->
   <div id="weekly-cal" class="hidden" style="margin-top:1.5rem;">
     <div class="flex-between" style="margin-bottom:1rem;">
       <button class="btn btn-outline btn-sm" onclick="closeWeeklyCal()">← חזרה לכל הטכנאים</button>
@@ -318,7 +287,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div><div class="ph-title">שיבוץ קריאה</div><div class="ph-sub" id="dispatch-date"></div></div>
     <button class="btn btn-outline btn-sm" onclick="goPage('home')">← דף הבית</button>
   </div>
-
   <div id="dispatch-search-card" class="dispatch-search">
     <h2>קריאה חדשה</h2>
     <div class="fg">
@@ -327,18 +295,16 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     </div>
     <div id="pkg-section" class="hidden">
       <div class="pkg-builder">
-        <div style="font-size:0.75rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">פרטי הזמנה</div>
+        <div style="font-size:0.75rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;margin-bottom:10px;">פרטי הזמנה</div>
         <div id="pkg-rows"></div>
-        <div style="font-size:0.8125rem;color:var(--ink-3);margin-top:6px;">זמן כולל משוער: <strong id="total-time">0 דקות</strong></div>
+        <div style="font-size:0.8125rem;color:var(--ink-3);margin-top:6px;">זמן כולל: <strong id="total-time">0 דקות</strong></div>
       </div>
     </div>
     <div class="fg-2">
       <div class="fg">
         <label class="fl"><span class="req">*</span> עיר / יישוב</label>
-        <select class="fc" id="s-city">
-          <option value="">בחר עיר מהרשימה...</option>
-        </select>
-        <div style="font-size:0.75rem;color:var(--ink-4);margin-top:3px;">עיר לא מופיעה? <a onclick="goPage('zones')" style="color:var(--blue);cursor:pointer;font-weight:700;">הוסף אותה בהגדרות האזורים ←</a></div>
+        <select class="fc" id="s-city"><option value="">בחר עיר...</option></select>
+        <div style="font-size:0.75rem;color:var(--ink-4);margin-top:3px;">עיר לא מופיעה? <a onclick="goPage('zones')" style="color:var(--blue);cursor:pointer;font-weight:700;">הוסף בהגדרות האזורים ←</a></div>
       </div>
       <div class="fg">
         <label class="fl"><span class="req">*</span> רחוב ומספר</label>
@@ -347,21 +313,17 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     </div>
     <button class="find-btn" onclick="findBestSlot()">מצא שיבוץ אופטימלי ←</button>
   </div>
-
-  <!-- SINGLE SUGGESTION -->
   <div id="dispatch-result" class="hidden">
     <div id="d-alert" class="hidden"></div>
     <div id="suggestion-card"></div>
-    <!-- FIND OTHER DATE -->
-    <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;" id="alt-buttons">
+    <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
       <button class="btn btn-outline" onclick="findNextSlot()">🔄 מצא מועד אחר</button>
       <div style="display:flex;align-items:center;gap:8px;flex:1;">
-        <span style="font-size:0.875rem;color:var(--ink-3);white-space:nowrap;">בדוק תאריך ספציפי:</span>
+        <span style="font-size:0.875rem;color:var(--ink-3);white-space:nowrap;">בדוק תאריך:</span>
         <input type="date" class="fc" id="specific-date" style="flex:1;max-width:160px;" onchange="checkSpecificDate(this.value)">
       </div>
     </div>
   </div>
-
   <div id="dispatch-success" class="hidden">
     <div class="success-card">
       <div class="success-icon">✓</div>
@@ -384,6 +346,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <span class="badge badge-gray" id="tf-pending" onclick="filterTasks('pending')" style="cursor:pointer;padding:5px 12px;">ממתינות</span>
       <span class="badge badge-gray" id="tf-assigned" onclick="filterTasks('assigned')" style="cursor:pointer;padding:5px 12px;">משובצות</span>
       <span class="badge badge-gray" id="tf-completed" onclick="filterTasks('completed')" style="cursor:pointer;padding:5px 12px;">הושלמו</span>
+      <span class="badge badge-gray" id="tf-cancelled" onclick="filterTasks('cancelled')" style="cursor:pointer;padding:5px 12px;">בוטלו</span>
     </div>
   </div>
   <div class="card">
@@ -393,9 +356,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 </div>
 
 <!-- TECH VIEW -->
-<div id="page-techview" class="page hidden">
-  <div id="techview-content"></div>
-</div>
+<div id="page-techview" class="page hidden"><div id="techview-content"></div></div>
 
 <!-- TECHNICIANS -->
 <div id="page-technicians" class="page hidden">
@@ -426,7 +387,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <input class="fc" id="new-cat-time" type="number" placeholder="דקות" style="width:90px;">
       <button class="btn btn-blue" onclick="addCategory()">+ הוסף</button>
     </div>
-    <div style="font-size:0.75rem;color:var(--ink-4);margin-top:6px;">ברירת מחדל: קריאה רגילה = 30 דקות, חבילה = 45 דקות</div>
   </div>
   <div class="card">
     <div class="card-title">חבילות</div>
@@ -463,10 +423,18 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div class="set-sec">
       <div class="set-title">כללי שיבוץ</div>
       <div class="fg-3">
-        <div class="fg"><label class="fl">טווח הגעה ללקוח</label><select class="fc" id="set-window"><option value="2">2 שעות</option><option value="3" selected>3 שעות</option><option value="4">4 שעות</option></select></div>
-        <div class="fg"><label class="fl">מקסימום קריאות ליום</label><input class="fc" id="set-max" type="number" placeholder="9"></div>
-        <div class="fg"><label class="fl">ימי קדימה לחיפוש</label><input class="fc" id="set-lookahead" type="number" placeholder="30"></div>
+        <div class="fg"><label class="fl">טווח הגעה</label><select class="fc" id="set-window"><option value="2">2 שעות</option><option value="3" selected>3 שעות</option><option value="4">4 שעות</option></select></div>
+        <div class="fg"><label class="fl">מקס קריאות ליום</label><input class="fc" id="set-max" type="number" placeholder="9"></div>
+        <div class="fg"><label class="fl">ימי קדימה</label><input class="fc" id="set-lookahead" type="number" placeholder="30"></div>
       </div>
+    </div>
+    <div class="set-sec">
+      <div class="set-title">גיבוי הגדרות</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-outline" onclick="exportSettings()">📤 ייצא הגדרות</button>
+        <label class="btn btn-outline" style="cursor:pointer;">📥 ייבא הגדרות<input type="file" accept=".json" style="display:none;" onchange="importSettings(event)"></label>
+      </div>
+      <div style="font-size:0.75rem;color:var(--ink-4);margin-top:6px;">ייצוא מוריד קובץ JSON עם כל ההגדרות (ללא נתוני לקוחות)</div>
     </div>
     <button class="btn btn-blue btn-lg" onclick="saveSettings()">שמור הגדרות</button>
   </div>
@@ -483,10 +451,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div class="fg"><label class="fl"><span class="req">*</span> שם מלא</label><input class="fc" id="ti-name"><div class="field-error hidden" id="e-ti-name">שדה חובה</div></div>
       <div class="fg"><label class="fl"><span class="req">*</span> טלפון</label><input class="fc" id="ti-phone" placeholder="05X-XXXXXXX"><div class="field-error hidden" id="e-ti-phone">שדה חובה</div></div>
     </div>
-    <div class="fg"><label class="fl"><span class="req">*</span> כתובת בסיס / יציאה</label><input class="fc" id="ti-base" placeholder="עיר / כתובת"><div class="field-error hidden" id="e-ti-base">שדה חובה</div></div>
+    <div class="fg"><label class="fl"><span class="req">*</span> כתובת בסיס</label><input class="fc" id="ti-base"><div class="field-error hidden" id="e-ti-base">שדה חובה</div></div>
     <div class="fg-2">
-      <div class="fg"><label class="fl"><span class="req">*</span> מינימום קריאות ביום</label><input class="fc" id="ti-min" type="number" value="2"></div>
-      <div class="fg"><label class="fl"><span class="req">*</span> מקסימום קריאות ביום</label><input class="fc" id="ti-max" type="number" value="9"></div>
+      <div class="fg"><label class="fl"><span class="req">*</span> מינימום קריאות/יום</label><input class="fc" id="ti-min" type="number" value="2"></div>
+      <div class="fg"><label class="fl"><span class="req">*</span> מקסימום קריאות/יום</label><input class="fc" id="ti-max" type="number" value="9"></div>
     </div>
     <div class="fg-2">
       <div class="fg"><label class="fl"><span class="req">*</span> שעת התחלה</label><select class="fc" id="ti-start"></select></div>
@@ -497,16 +465,13 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div class="field-error hidden" id="e-ti-skills">יש לבחור לפחות מיומנות אחת</div>
       <div class="skill-checks" id="ti-skills-container"></div>
     </div>
-    <div class="fg">
-      <label class="fl">מקסימום קריאות לפי קטגוריה ביום</label>
-      <div id="ti-cat-limits"></div>
-    </div>
+    <div class="fg"><label class="fl">הגבלת קריאות לפי קטגוריה ביום</label><div id="ti-cat-limits"></div></div>
     <div class="fg">
       <label class="fl"><span class="req">*</span> רוטציה אזורים (ראשון–שישי)</label>
       <div class="field-error hidden" id="e-ti-rotation">יש להגדיר לפחות יום אחד</div>
       <div class="rotation-grid" id="ti-rotation"></div>
     </div>
-    <div class="fg"><label class="fl">ערים חסומות (מופרד בפסיק)</label><input class="fc" id="ti-blocked" placeholder="לדוגמה: אילת, דימונה"></div>
+    <div class="fg"><label class="fl">ערים חסומות (מופרד בפסיק)</label><input class="fc" id="ti-blocked"></div>
     <div class="mo-actions">
       <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-tech')">ביטול</button>
       <button class="btn btn-blue" style="flex:2;" id="ti-save-btn" onclick="saveTech()">הוסף</button>
@@ -521,6 +486,35 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div id="status-info" style="margin-bottom:1rem;"></div>
     <div style="display:grid;gap:8px;" id="status-opts"></div>
     <div class="mo-actions"><button class="btn btn-outline btn-full" onclick="closeMo('mo-status')">ביטול</button></div>
+  </div>
+</div>
+
+<!-- MODAL: CANCEL -->
+<div class="mo hidden" id="mo-cancel">
+  <div class="mo-box">
+    <div class="mo-title">ביטול קריאה</div>
+    <div id="cancel-task-info" style="margin-bottom:1rem;"></div>
+    <div class="cancel-option" onclick="cancelOnly()">
+      <h4>🚫 בטל בלבד</h4>
+      <p>הקריאה מבוטלת והמקום נשאר פנוי</p>
+    </div>
+    <div class="cancel-option" id="cancel-replace-opt" onclick="cancelAndReplace()">
+      <h4>🔄 בטל ומצא תחליף</h4>
+      <p>המערכת תחפש קריאה ממתינה מתאימה לאותו חריץ</p>
+    </div>
+    <div class="mo-actions"><button class="btn btn-outline btn-full" onclick="closeMo('mo-cancel')">ביטול</button></div>
+  </div>
+</div>
+
+<!-- MODAL: REPLACE SUGGESTION -->
+<div class="mo hidden" id="mo-replace">
+  <div class="mo-box">
+    <div class="mo-title">הצעת תחליף לחריץ הפנוי</div>
+    <div id="replace-suggestion"></div>
+    <div class="mo-actions">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-replace')">דלג</button>
+      <button class="btn btn-blue" style="flex:2;" onclick="confirmReplace()">שבץ תחליף ✓</button>
+    </div>
   </div>
 </div>
 
@@ -554,7 +548,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 <div class="mo hidden" id="mo-pkg">
   <div class="mo-box">
     <div class="mo-title">חבילה חדשה</div>
-    <div class="fg"><label class="fl">שם החבילה</label><input class="fc" id="pkg-name" placeholder="לדוגמה: טוחן + מערכת מים"></div>
+    <div class="fg"><label class="fl">שם החבילה</label><input class="fc" id="pkg-name"></div>
     <div id="pkg-cat-rows"></div>
     <button class="btn btn-outline btn-sm" onclick="addPkgRow()" style="margin-top:8px;">+ הוסף קטגוריה</button>
     <div class="mo-actions">
@@ -565,20 +559,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 </div>
 
 <script>
-// ═══════════════════════════════════════════
-// CONSTANTS
-// ═══════════════════════════════════════════
-const COLORS=['#2563EB','#7C3AED','#D97706','#DC2626','#059669','#DB2777','#0891B2','#65A30D'];
-const CAL_COLORS=[
-  {bg:'#FEF3C7',fg:'#92400E',border:'#FDE68A'},
-  {bg:'#DBEAFE',fg:'#1E40AF',border:'#BFDBFE'},
-  {bg:'#D1FAE5',fg:'#065F46',border:'#A7F3D0'},
-  {bg:'#EDE9FE',fg:'#4C1D95',border:'#DDD6FE'},
-  {bg:'#FCE7F3',fg:'#831843',border:'#FBCFE8'},
-  {bg:'#E0F2FE',fg:'#0C4A6E',border:'#BAE6FD'},
-];
-const DAYS_HE=['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
+// ═══ CONSTANTS ═══
+const COLORS=['#D97706','#2563EB','#7C3AED','#DC2626','#059669','#DB2777','#0891B2','#65A30D'];
+const CAL_COLORS=[{bg:'#FEF3C7',fg:'#92400E',border:'#FDE68A'},{bg:'#DBEAFE',fg:'#1E40AF',border:'#BFDBFE'},{bg:'#D1FAE5',fg:'#065F46',border:'#A7F3D0'},{bg:'#EDE9FE',fg:'#4C1D95',border:'#DDD6FE'},{bg:'#FCE7F3',fg:'#831843',border:'#FBCFE8'},{bg:'#E0F2FE',fg:'#0C4A6E',border:'#BAE6FD'}];
+const DAYS_HE=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAYS_SHORT=['א','ב','ג','ד','ה','ו'];
+const MONTHS_HE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 const STATUS_MAP={
   pending:{label:'ממתין',badge:'badge-amber',next:['assigned']},
   assigned:{label:'משובץ',badge:'badge-blue',next:['en_route','pending']},
@@ -586,63 +572,54 @@ const STATUS_MAP={
   arrived:{label:'הגיע',badge:'badge-green',next:['completed','issue']},
   completed:{label:'הושלם',badge:'badge-gray',next:[]},
   issue:{label:'בעיה',badge:'badge-red',next:['assigned']},
+  cancelled:{label:'בוטל',badge:'badge-red',next:[]},
 };
 
-// ═══════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════
-let technicians=[], tasks=[], dayoffs=[], zones=[], categories=[], packages=[];
-let nextTaskId=1, nextTechId=1, editingTechId=null;
-let selectedCat=null, currentFilter='all', statusTaskId=null;
-let currentRole='admin', currentTechView=null;
-let currentWeekOffset=0, selectedTechForCal=null;
-let allCandidates=[], currentCandidateIdx=0, selectedTimeSlot=null;
+// ═══ STATE ═══
+let technicians=[],tasks=[],dayoffs=[],zones=[],categories=[],packages=[];
+let nextTaskId=1,nextTechId=1,editingTechId=null;
+let selectedCat=null,currentFilter='all',statusTaskId=null,cancelTaskId=null;
+let currentRole='admin',currentTechView=null;
+let currentWeekOffset=0,selectedTechForCal=null;
+let allCandidates=[],currentCandidateIdx=0,selectedTimeSlot=null;
+let replaceSuggestion=null;
 let settings={company:'מסלול',startTime:'07:00',endTime:'18:00',window:3,maxDaily:9,lookahead:30,monthlyVolume:300,regularTime:30,packageTime:45};
 
-// ═══════════════════════════════════════════
-// STORAGE
-// ═══════════════════════════════════════════
+// ═══ STORAGE ═══
 function save(){
-  localStorage.setItem('ml7_techs',JSON.stringify(technicians));
-  localStorage.setItem('ml7_tasks',JSON.stringify(tasks));
-  localStorage.setItem('ml7_settings',JSON.stringify(settings));
-  localStorage.setItem('ml7_zones',JSON.stringify(zones));
-  localStorage.setItem('ml7_cats',JSON.stringify(categories));
-  localStorage.setItem('ml7_pkgs',JSON.stringify(packages));
-  localStorage.setItem('ml7_dayoffs',JSON.stringify(dayoffs));
-  localStorage.setItem('ml7_ids',JSON.stringify({nextTaskId,nextTechId}));
+  localStorage.setItem('ml8_techs',JSON.stringify(technicians));
+  localStorage.setItem('ml8_tasks',JSON.stringify(tasks));
+  localStorage.setItem('ml8_settings',JSON.stringify(settings));
+  localStorage.setItem('ml8_zones',JSON.stringify(zones));
+  localStorage.setItem('ml8_cats',JSON.stringify(categories));
+  localStorage.setItem('ml8_pkgs',JSON.stringify(packages));
+  localStorage.setItem('ml8_dayoffs',JSON.stringify(dayoffs));
+  localStorage.setItem('ml8_ids',JSON.stringify({nextTaskId,nextTechId}));
 }
 function load(){
   try{
-    const t=localStorage.getItem('ml7_techs'),k=localStorage.getItem('ml7_tasks'),
-          s=localStorage.getItem('ml7_settings'),z=localStorage.getItem('ml7_zones'),
-          c=localStorage.getItem('ml7_cats'),p=localStorage.getItem('ml7_pkgs'),
-          d=localStorage.getItem('ml7_dayoffs'),ids=localStorage.getItem('ml7_ids');
-    if(t)technicians=JSON.parse(t);
-    if(k)tasks=JSON.parse(k);
-    if(s)settings=Object.assign(settings,JSON.parse(s));
-    if(z)zones=JSON.parse(z);
-    if(c)categories=JSON.parse(c);
-    if(p)packages=JSON.parse(p);
-    if(d)dayoffs=JSON.parse(d);
-    if(ids){const i=JSON.parse(ids);nextTaskId=i.nextTaskId;nextTechId=i.nextTechId;}
+    ['techs','tasks','settings','zones','cats','pkgs','dayoffs','ids'].forEach(k=>{
+      const v=localStorage.getItem('ml8_'+k);if(!v)return;
+      const d=JSON.parse(v);
+      if(k==='techs')technicians=d;
+      else if(k==='tasks')tasks=d;
+      else if(k==='settings')settings=Object.assign(settings,d);
+      else if(k==='zones')zones=d;
+      else if(k==='cats')categories=d;
+      else if(k==='pkgs')packages=d;
+      else if(k==='dayoffs')dayoffs=d;
+      else if(k==='ids'){nextTaskId=d.nextTaskId;nextTechId=d.nextTechId;}
+    });
   }catch(e){}
   if(!technicians.length)seedData();
-  if(!categories.length)categories=[
-    {id:'c1',name:'טוחן אשפה',time:30},
-    {id:'c2',name:'מערכת מים',time:30},
-    {id:'c3',name:'מרכך אבנית',time:30},
-    {id:'c4',name:'קריאת שירות',time:30},
-  ];
+  if(!categories.length)categories=[{id:'c1',name:'טוחן אשפה',time:30},{id:'c2',name:'מערכת מים',time:30},{id:'c3',name:'מרכך אבנית',time:30},{id:'c4',name:'קריאת שירות',time:30}];
   if(!zones.length)zones=[
-    {id:'z1',name:'גוש דן',cities:['תל אביב','חולון','בת ים','ראשון לציון','רמת גן','גבעתיים','אור יהודה','יהוד','בני ברק']},
+    {id:'z1',name:'גוש דן',cities:['תל אביב','חולון','בת ים','ראשון לציון','רמת גן','גבעתיים','אור יהודה','יהוד','בני ברק','פתח תקווה']},
     {id:'z2',name:'שרון',cities:['נתניה','הרצליה','כפר סבא','רעננה','הוד השרון']},
     {id:'z3',name:'שפלה',cities:['רחובות','נס ציונה','לוד','רמלה','מודיעין']},
     {id:'z4',name:'דרום',cities:['אשדוד','אשקלון','באר שבע','קריית גת']},
   ];
-  if(!packages.length)packages=[
-    {id:'p1',name:'טוחן + מערכת מים',items:[{catId:'c1',qty:1},{catId:'c2',qty:1}]},
-  ];
+  if(!packages.length)packages=[{id:'p1',name:'טוחן + מערכת מים',items:[{catId:'c1',qty:1},{catId:'c2',qty:1}]}];
 }
 function seedData(){
   technicians=[
@@ -658,10 +635,9 @@ function seedData(){
     {id:3,client:'שרה גולן',phone:'052-0000003',city:'ראשון לציון',street:'הרצל 22',cat:'טוחן אשפה',catId:'c1',techId:1,status:'assigned',time:'10:00',date:today,notes:'',assignId:'MSL-00003'},
     {id:4,client:'חיים רוזן',phone:'054-0000004',city:'ראשון לציון',street:'ביאליק 5',cat:'קריאת שירות',catId:'c4',techId:1,status:'completed',time:'12:00',date:today,notes:'',assignId:'MSL-00004'},
     {id:5,client:'רחל אברהם',phone:'052-0000005',city:'נתניה',street:'הרצל 10',cat:'טוחן אשפה',catId:'c1',techId:2,status:'assigned',time:'07:30',date:today,notes:'',assignId:'MSL-00005'},
-    {id:6,client:'עסק טכנולוגיות',phone:'054-0000006',city:'הרצליה',street:'פיתוח 1',cat:'מערכת מים',catId:'c2',techId:2,status:'assigned',time:'09:30',date:today,notes:'',assignId:'MSL-00006'},
-    {id:7,client:'משפחת פרץ',phone:'055-0000007',city:'רמת גן',street:'ביאליק 20',cat:'טוחן אשפה',catId:'c1',techId:null,status:'pending',time:'',date:'',notes:'',assignId:''},
+    {id:6,client:'משפחת פרץ',phone:'055-0000006',city:'רמת גן',street:'ביאליק 20',cat:'טוחן אשפה',catId:'c1',techId:null,status:'pending',time:'',date:'',notes:'',assignId:''},
   ];
-  nextTaskId=8;nextTechId=5;
+  nextTaskId=7;nextTechId=5;
 }
 function todayStr(){return new Date().toISOString().split('T')[0];}
 function pad(n){return n<10?'0'+n:''+n;}
@@ -670,59 +646,39 @@ function genId(){return 'MSL-'+String(nextTaskId).padStart(5,'0');}
 function timeToMins(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m;}
 function minsToTime(m){return pad(Math.floor(m/60))+':'+pad(m%60);}
 
-// ═══════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════
+// ═══ INIT ═══
 document.addEventListener('DOMContentLoaded',()=>{
-  load();
-  buildRoleSelect();
-  populateTimeSels();
-  populateCitiesDl();
-  setDateLabel();
-  renderCatChips();
-  renderTasks();
-  renderHomeTechCards();
-  renderTechs();
-  renderZones();
-  renderCategories();
-  renderSettings();
+  load();buildRoleSelect();populateTimeSels();populateCitySelect();
+  setDateLabel();renderCatChips();renderTasks();renderHomeTechCards();
+  renderTechs();renderZones();renderCategories();renderSettings();
   document.getElementById('do-date').value=todayStr();
   document.getElementById('specific-date').value=todayStr();
 });
 function setDateLabel(){
-  const d=new Date(),days=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-  const label='יום '+days[d.getDay()]+' — '+d.toLocaleDateString('he-IL');
+  const d=new Date(),label='יום '+DAYS_HE[d.getDay()]+' — '+d.toLocaleDateString('he-IL');
   document.getElementById('dispatch-date').textContent=label;
   document.getElementById('home-date').textContent=label;
 }
 function populateTimeSels(){
-  const times=[];
-  for(let h=5;h<=22;h++){['00','30'].forEach(m=>times.push(pad(h)+':'+m));}
+  const times=[];for(let h=5;h<=22;h++){['00','30'].forEach(m=>times.push(pad(h)+':'+m));}
   ['set-start','set-end','ti-start','ti-end','do-from','do-to'].forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
-    times.forEach(t=>{const o=new Option(t,t);el.appendChild(o);});
+    times.forEach(t=>{el.appendChild(new Option(t,t));});
   });
   document.getElementById('set-start').value=settings.startTime;
   document.getElementById('set-end').value=settings.endTime;
 }
-function populateCitiesDl(){
-  const sel=document.getElementById('s-city');
-  if(!sel)return;
-  const prevVal=sel.value;
-  sel.innerHTML='<option value="">בחר עיר מהרשימה...</option>';
-  // Group by zone
+function populateCitySelect(){
+  const sel=document.getElementById('s-city');if(!sel)return;
+  const prev=sel.value;
+  sel.innerHTML='<option value="">בחר עיר...</option>';
   zones.forEach(z=>{
     if(!z.cities.length)return;
-    const grp=document.createElement('optgroup');
-    grp.label=z.name;
-    z.cities.forEach(c=>{
-      const o=document.createElement('option');
-      o.value=c;o.textContent=c;
-      grp.appendChild(o);
-    });
+    const grp=document.createElement('optgroup');grp.label=z.name;
+    z.cities.forEach(c=>{const o=new Option(c,c);grp.appendChild(o);});
     sel.appendChild(grp);
   });
-  if(prevVal)sel.value=prevVal;
+  if(prev)sel.value=prev;
 }
 function buildRoleSelect(){
   const sel=document.getElementById('role-sel');
@@ -738,9 +694,7 @@ function renderSettings(){
   document.getElementById('set-package-time').value=settings.packageTime||45;
 }
 
-// ═══════════════════════════════════════════
-// PAGES
-// ═══════════════════════════════════════════
+// ═══ PAGES ═══
 function goPage(page){
   ['home','dispatch','tasks','techview','technicians','zones','categories','settings'].forEach(p=>{
     document.getElementById('page-'+p).classList.toggle('hidden',p!==page);
@@ -749,7 +703,7 @@ function goPage(page){
   const map={home:0,dispatch:1,tasks:2,technicians:3,zones:4,categories:5,settings:6,techview:0};
   const btns=document.querySelectorAll('.ni-btn');
   if(btns[map[page]])btns[map[page]].classList.add('active');
-  if(page==='dispatch'){resetDispatch();}
+  if(page==='dispatch')resetDispatch();
   if(page==='technicians'){renderTechs();buildRoleSelect();}
   if(page==='techview')renderTechView();
   if(page==='zones')renderZones();
@@ -758,40 +712,63 @@ function goPage(page){
   if(page==='home')renderHomeTechCards();
 }
 function switchRole(){
-  const val=document.getElementById('role-sel').value;
-  currentRole=val;
-  if(val!=='admin'){
-    const techId=parseInt(val.replace('tech_',''));
-    currentTechView=technicians.find(t=>t.id===techId);
-    goPage('techview');
-  }else{goPage('home');}
+  const val=document.getElementById('role-sel').value;currentRole=val;
+  if(val!=='admin'){const techId=parseInt(val.replace('tech_',''));currentTechView=technicians.find(t=>t.id===techId);goPage('techview');}
+  else goPage('home');
 }
 
-// ═══════════════════════════════════════════
-// HOME — TECH CARDS + WEEKLY CALENDAR
-// ═══════════════════════════════════════════
+// ═══ CLIENT SEARCH ═══
+function searchClient(){
+  const q=document.getElementById('client-search').value.trim().toLowerCase();
+  const res=document.getElementById('client-search-results');
+  if(!q){res.classList.add('hidden');return;}
+  const matches=tasks.filter(t=>t.client&&t.client.toLowerCase().includes(q)&&t.status!=='cancelled')
+    .sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time)).slice(0,8);
+  if(!matches.length){res.innerHTML='<div style="padding:1rem;color:var(--ink-4);font-size:0.875rem;">לא נמצאו תוצאות</div>';res.classList.remove('hidden');return;}
+  res.className='search-results';
+  res.innerHTML=matches.map(t=>{
+    const tech=technicians.find(x=>x.id===t.techId);
+    const s=STATUS_MAP[t.status]||STATUS_MAP.pending;
+    return`<div class="search-result-row">
+      <div style="flex:1;">
+        <div style="font-weight:700;font-size:0.9375rem;">${t.client}</div>
+        <div style="font-size:0.8125rem;color:var(--ink-3);">${t.cat} • ${t.city}${t.date?' • '+new Date(t.date).toLocaleDateString('he-IL'):''} ${t.time||''} ${tech?' • '+tech.name:''}</div>
+      </div>
+      <span class="badge ${s.badge}">${s.label}</span>
+      ${t.assignId?`<span class="assign-id-tag">${t.assignId}</span>`:''}
+    </div>`;
+  }).join('');
+  res.classList.remove('hidden');
+}
+function clearClientSearch(){
+  document.getElementById('client-search').value='';
+  document.getElementById('client-search-results').classList.add('hidden');
+}
+
+// ═══ HOME ═══
 function renderHomeTechCards(){
   document.getElementById('weekly-cal').classList.add('hidden');
+  document.getElementById('home-tech-grid').classList.remove('hidden');
   const grid=document.getElementById('home-tech-grid');
   grid.innerHTML=technicians.map(tech=>{
-    const todayTasks=tasks.filter(t=>t.techId===tech.id&&['assigned','en_route','arrived'].includes(t.status)&&t.date===todayStr());
-    const lp=Math.min(100,Math.round((todayTasks.length/Math.max(tech.max,1))*100));
+    const cnt=getTechLoad(tech,todayStr());
+    const lp=Math.min(100,Math.round((cnt/Math.max(tech.max,1))*100));
     const fc=lp>=90?'var(--red)':lp>=60?'var(--amber)':'var(--green)';
+    const zone=getTechZoneForDate(tech,todayStr());
     return`<div class="tech-home-card" onclick="openTechWeekly(${tech.id})">
       <div class="th-avatar" style="background:${tech.color};">${initials(tech.name)}</div>
       <div class="th-name">${tech.name}</div>
-      <div class="th-area">${getTechTodayZone(tech)||'—'}</div>
-      <div class="th-load" style="color:${fc};">${todayTasks.length}/${tech.max} קריאות היום</div>
+      <div class="th-area">${zone?zone.name:'—'}</div>
+      <div style="font-size:0.75rem;font-weight:700;margin-top:6px;color:${fc};">${cnt}/${tech.max} קריאות היום</div>
       <div class="load-bar" style="margin-top:6px;"><div class="load-fill" style="width:${lp}%;background:${fc};"></div></div>
     </div>`;
-  }).join('')||'<div class="empty"><div class="empty-icon">👷</div><div>הוסף טכנאי ראשון בהגדרות</div></div>';
+  }).join('')||'<div class="empty"><div class="empty-icon">👷</div><div>הוסף טכנאי ראשון</div></div>';
 }
-function getTechTodayZone(tech){
-  const d=new Date().getDay();
-  const zoneId=tech.rotation?tech.rotation[d]:null;
-  if(!zoneId)return null;
-  const z=zones.find(x=>x.id===zoneId);
-  return z?z.name:null;
+function getTechZoneForDate(tech,dateStr){
+  const d=new Date(dateStr);const dow=d.getDay();
+  if(dow===6)return null;
+  const zid=tech.rotation?tech.rotation[dow]:null;
+  return zid?zones.find(z=>z.id===zid):null;
 }
 function openTechWeekly(techId){
   selectedTechForCal=technicians.find(t=>t.id===techId);
@@ -806,217 +783,171 @@ function closeWeeklyCal(){
   document.getElementById('home-tech-grid').classList.remove('hidden');
   selectedTechForCal=null;
 }
-function changeWeek(dir){
-  currentWeekOffset+=dir;
-  renderWeeklyCalendar();
-}
+function changeWeek(dir){currentWeekOffset+=dir;renderWeeklyCalendar();}
 function getWeekDates(offset){
-  const now=new Date();
-  const day=now.getDay();
-  // Sun = 0 in JS, we want Sunday as start
-  const sunday=new Date(now);
-  sunday.setDate(now.getDate()-day+(offset*7));
-  const dates=[];
-  for(let i=0;i<6;i++){
-    const d=new Date(sunday);
-    d.setDate(sunday.getDate()+i);
-    dates.push(d);
-  }
-  return dates;
+  const now=new Date();const sun=new Date(now);
+  sun.setDate(now.getDate()-now.getDay()+(offset*7));
+  return Array.from({length:6},(_,i)=>{const d=new Date(sun);d.setDate(sun.getDate()+i);return d;});
 }
 function renderWeeklyCalendar(){
   if(!selectedTechForCal)return;
   const tech=selectedTechForCal;
   const dates=getWeekDates(currentWeekOffset);
-  const todayStr2=todayStr();
-  // week title
-  const first=dates[0],last=dates[5];
-  document.getElementById('week-title').textContent=
-    tech.name+' — '+first.toLocaleDateString('he-IL')+' עד '+last.toLocaleDateString('he-IL');
-  // hours 7-18
-  const hours=[];
-  for(let h=7;h<=17;h++)hours.push(h);
-  const calColors=CAL_COLORS[technicians.indexOf(tech)%CAL_COLORS.length];
-  // build header
-  let headerHtml='<div class="wh-cell"></div>';
+  const today=todayStr();
+  document.getElementById('week-title').textContent=tech.name+' — '+dates[0].toLocaleDateString('he-IL')+' עד '+dates[5].toLocaleDateString('he-IL');
+  const hours=Array.from({length:11},(_,i)=>i+7); // 7-17
+  const cc=CAL_COLORS[technicians.indexOf(tech)%CAL_COLORS.length];
+  let hdr='<div class="wh-cell"></div>';
   dates.forEach((d,i)=>{
-    const isToday=d.toISOString().split('T')[0]===todayStr2;
-    headerHtml+=`<div class="wh-cell ${isToday?'today':''}">${DAYS_SHORT[i]}<br><span style="font-size:0.9rem;font-weight:900;">${d.getDate()}</span></div>`;
+    const isToday=d.toISOString().split('T')[0]===today;
+    hdr+=`<div class="wh-cell ${isToday?'today':''}">${DAYS_SHORT[i]}<br><span style="font-size:0.9rem;font-weight:900;">${d.getDate()}</span></div>`;
   });
-  // build body — time labels + day columns
-  let timeColHtml='';
-  hours.forEach(h=>{timeColHtml+=`<div class="time-label">${pad(h)}:00</div>`;});
-  // for each day, get tasks and position them
-  let dayCols='';
-  dates.forEach((d,di)=>{
+  let timeCol=hours.map(h=>`<div class="time-label">${pad(h)}:00</div>`).join('');
+  let dayCols=dates.map(d=>{
     const dStr=d.toISOString().split('T')[0];
     const dayTasks=tasks.filter(t=>t.techId===tech.id&&t.date===dStr&&['assigned','en_route','arrived','completed'].includes(t.status)&&t.time)
       .sort((a,b)=>a.time.localeCompare(b.time));
-    let tasksHtml='';
-    dayTasks.forEach(t=>{
+    const tasksHtml=dayTasks.map(t=>{
       const startMins=timeToMins(t.time);
-      const cat=categories.find(c=>c.id===t.catId);
-      const isPkg=packages.some(p=>p.items.some(i=>i.catId===t.catId));
-      const durMins=isPkg?(settings.packageTime||45):(settings.regularTime||30);
-      // position: top = (startMins - 7*60) / 60 * 60px
+      const durMins=packages.some(p=>p.items.some(i=>i.catId===t.catId))?(settings.packageTime||45):(settings.regularTime||30);
       const topPx=((startMins-7*60)/60)*60;
       const heightPx=Math.max((durMins/60)*60,20);
-      tasksHtml+=`<div class="cal-task" style="top:${topPx}px;height:${heightPx}px;background:${calColors.bg};color:${calColors.fg};border:1px solid ${calColors.border};" title="${t.client} — ${t.cat} — ${t.street}, ${t.city}">
-        <div class="cal-client">${t.client}</div>
-        <div class="cal-city">${t.city}</div>
-        <div style="font-size:0.6rem;opacity:0.7;">${t.time}</div>
+      const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;
+      return`<div class="cal-task" style="top:${topPx}px;height:${heightPx}px;background:${cc.bg};color:${cc.fg};border:1px solid ${cc.border};" title="${t.client} — ${t.cat}">
+        <div style="font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.client}</div>
+        <div style="opacity:0.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.city}</div>
+        <div style="opacity:0.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.cat}</div>
+        <div style="font-size:0.6rem;opacity:0.6;">${t.time} • ${s.label}</div>
       </div>`;
-    });
-    dayCols+=`<div class="day-col" style="position:relative;min-height:${hours.length*60}px;">${tasksHtml}</div>`;
-  });
-  // assemble
+    }).join('');
+    return`<div class="day-col" style="position:relative;min-height:${hours.length*60}px;">${tasksHtml}</div>`;
+  }).join('');
   document.getElementById('week-grid').innerHTML=`
-    <div class="week-header">${headerHtml}</div>
-    <div class="week-body">
-      <div class="time-col">${timeColHtml}</div>
-      ${dayCols}
-    </div>`;
+    <div class="week-header">${hdr}</div>
+    <div class="week-body"><div class="time-col">${timeCol}</div>${dayCols}</div>`;
 }
 
-// ═══════════════════════════════════════════
-// CATEGORY CHIPS
-// ═══════════════════════════════════════════
+// ═══ CATEGORY CHIPS ═══
 function renderCatChips(){
   const container=document.getElementById('cat-chips-container');
-  const allItems=[
-    ...categories.map(c=>({id:'cat_'+c.id,label:c.name,isPkg:false})),
-    ...packages.map(p=>({id:'pkg_'+p.id,label:p.name+' 📦',isPkg:true})),
-  ];
-  container.innerHTML=allItems.map(item=>
-    `<button class="cat-chip ${selectedCat===item.id?'selected':''}" onclick="selectCat('${item.id}')">${item.label}</button>`
-  ).join('')+`<button class="cat-add-btn" onclick="goPage('categories')">+ הוסף</button>`;
+  const items=[...categories.map(c=>({id:'cat_'+c.id,label:c.name})),...packages.map(p=>({id:'pkg_'+p.id,label:p.name+' 📦'}))];
+  container.innerHTML=items.map(item=>`<button class="cat-chip ${selectedCat===item.id?'selected':''}" onclick="selectCat('${item.id}')">${item.label}</button>`).join('')+
+    `<button class="cat-add-btn" onclick="goPage('categories')">+ הוסף</button>`;
 }
 function selectCat(id){selectedCat=id;renderCatChips();renderPkgSection();}
-function calcPkgTime(pkg){
-  return pkg.items.reduce((sum,item)=>{
-    const cat=categories.find(c=>c.id===item.catId);
-    return sum+(cat?cat.time*item.qty:0);
-  },0);
-}
 function renderPkgSection(){
   if(!selectedCat){document.getElementById('pkg-section').classList.add('hidden');return;}
   document.getElementById('pkg-section').classList.remove('hidden');
   const rows=document.getElementById('pkg-rows');
   if(selectedCat.startsWith('pkg_')){
-    const pkg=packages.find(p=>'pkg_'+p.id===selectedCat);
-    if(!pkg){rows.innerHTML='';return;}
-    rows.innerHTML=pkg.items.map(item=>{
-      const cat=categories.find(c=>c.id===item.catId);
-      return`<div class="pkg-row"><span class="pkg-name">${cat?cat.name:'?'}</span>
-        <input class="fc pkg-qty" type="number" min="1" max="10" value="${item.qty}" onchange="updateTotalTime()">
-        <span class="pkg-time">${cat?cat.time:0} דק' ליח'</span></div>`;
+    const pkg=packages.find(p=>'pkg_'+p.id===selectedCat);if(!pkg){rows.innerHTML='';return;}
+    rows.innerHTML=pkg.items.map(item=>{const cat=categories.find(c=>c.id===item.catId);
+      return`<div class="pkg-row"><span class="pkg-name">${cat?cat.name:'?'}</span><input class="fc pkg-qty" type="number" min="1" max="10" value="${item.qty}" onchange="updateTotalTime()"><span class="pkg-time">${cat?cat.time:0} דק'</span></div>`;
     }).join('');
   }else{
-    const catId=selectedCat.replace('cat_','');
-    const cat=categories.find(c=>c.id===catId);
-    if(!cat){rows.innerHTML='';return;}
-    rows.innerHTML=`<div class="pkg-row"><span class="pkg-name">${cat.name}</span>
-      <input class="fc pkg-qty" type="number" min="1" max="10" value="1" onchange="updateTotalTime()">
-      <span class="pkg-time">${cat.time} דק' ליח'</span></div>`;
+    const cat=categories.find(c=>'cat_'+c.id===selectedCat);if(!cat){rows.innerHTML='';return;}
+    rows.innerHTML=`<div class="pkg-row"><span class="pkg-name">${cat.name}</span><input class="fc pkg-qty" type="number" min="1" max="10" value="1" onchange="updateTotalTime()"><span class="pkg-time">${cat.time} דק'</span></div>`;
   }
   updateTotalTime();
 }
 function updateTotalTime(){
-  let total=0;
-  document.querySelectorAll('.pkg-row').forEach(row=>{
-    const te=row.querySelector('.pkg-time'),qe=row.querySelector('.pkg-qty');
-    if(te&&qe)total+=(parseInt(te.textContent)||0)*(parseInt(qe.value)||1);
-  });
+  let total=0;document.querySelectorAll('.pkg-row').forEach(row=>{const te=row.querySelector('.pkg-time'),qe=row.querySelector('.pkg-qty');if(te&&qe)total+=(parseInt(te.textContent)||0)*(parseInt(qe.value)||1);});
   document.getElementById('total-time').textContent=total+' דקות';
 }
-function getJobDuration(){
-  // package = 45min, regular = 30min
-  if(!selectedCat)return settings.regularTime||30;
-  if(selectedCat.startsWith('pkg_'))return settings.packageTime||45;
-  return settings.regularTime||30;
-}
-function getCatId(){
-  if(!selectedCat)return null;
-  if(selectedCat.startsWith('cat_'))return selectedCat.replace('cat_','');
-  return null;
-}
+function getJobDuration(){if(!selectedCat)return settings.regularTime||30;if(selectedCat.startsWith('pkg_'))return settings.packageTime||45;return settings.regularTime||30;}
+function getCatId(){if(!selectedCat||!selectedCat.startsWith('cat_'))return null;return selectedCat.replace('cat_','');}
 function getCatName(){
   if(!selectedCat)return '—';
-  if(selectedCat.startsWith('cat_')){
-    const c=categories.find(x=>'cat_'+x.id===selectedCat);
-    return c?c.name:'—';
-  }
-  const p=packages.find(x=>'pkg_'+x.id===selectedCat);
-  return p?p.name:'—';
+  if(selectedCat.startsWith('cat_')){const c=categories.find(x=>'cat_'+x.id===selectedCat);return c?c.name:'—';}
+  const p=packages.find(x=>'pkg_'+x.id===selectedCat);return p?p.name:'—';
 }
 
-// ═══════════════════════════════════════════
-// SMART SCHEDULING ENGINE
-// ═══════════════════════════════════════════
+// ═══ ENGINE ═══
 function getCityZone(city){return zones.find(z=>z.cities.includes(city))||null;}
-function isTechAvailable(tech,dateStr){
-  return !dayoffs.some(d=>d.techId===tech.id&&d.date===dateStr&&d.type==='full');
-}
+function isTechAvailable(tech,dateStr){return !dayoffs.some(d=>d.techId===tech.id&&d.date===dateStr&&d.type==='full');}
 function getTechDayTasks(tech,dateStr){
-  return tasks.filter(t=>t.techId===tech.id&&t.date===dateStr&&['assigned','en_route','arrived'].includes(t.status))
-    .sort((a,b)=>a.time.localeCompare(b.time));
+  return tasks.filter(t=>t.techId===tech.id&&t.date===dateStr&&['assigned','en_route','arrived'].includes(t.status)).sort((a,b)=>a.time.localeCompare(b.time));
 }
 function getTechLoad(tech,dateStr){return getTechDayTasks(tech,dateStr).length;}
-function isCityBlocked(tech,city){
-  if(!tech.blocked)return false;
-  return tech.blocked.split(',').map(c=>c.trim()).filter(Boolean).includes(city);
-}
-function techHasSkill(tech,catId){
-  if(!catId)return true;
-  return(tech.skills||[]).includes(catId);
-}
+function isCityBlocked(tech,city){if(!tech.blocked)return false;return tech.blocked.split(',').map(c=>c.trim()).filter(Boolean).includes(city);}
+function techHasSkill(tech,catId){if(!catId)return true;return(tech.skills||[]).includes(catId);}
+// FIXED: strict category limit check
 function getCatLimitOk(tech,catId,dateStr){
   if(!catId)return true;
   const limits=tech.catLimits||{};
   if(!limits[catId])return true;
   const count=tasks.filter(t=>t.techId===tech.id&&t.date===dateStr&&t.catId===catId&&['assigned','en_route','arrived'].includes(t.status)).length;
-  return count<limits[catId];
+  return count<parseInt(limits[catId]);
 }
-// KEY: tech can ONLY work in zone assigned to that day of week
-function getTechZoneForDate(tech,dateStr){
-  const d=new Date(dateStr);
-  const dayOfWeek=d.getDay(); // 0=Sun,1=Mon...5=Fri
-  if(dayOfWeek===6)return null; // Sat = no work
-  const zoneId=tech.rotation?tech.rotation[dayOfWeek]:null;
-  if(!zoneId)return null;
-  return zones.find(z=>z.id===zoneId)||null;
+function getTechZoneId(tech,dateStr){
+  const d=new Date(dateStr);const dow=d.getDay();if(dow===6)return null;
+  return tech.rotation?tech.rotation[dow]||null:null;
 }
 function isCityInTechZone(tech,city,dateStr){
-  const zone=getTechZoneForDate(tech,dateStr);
-  if(!zone)return false;
-  return zone.cities.includes(city);
+  const zid=getTechZoneId(tech,dateStr);if(!zid)return false;
+  const z=zones.find(x=>x.id===zid);return z?z.cities.includes(city):false;
 }
-// Find best time slot in a day
-function findBestTimeInDay(tech,dateStr,durMins){
-  const[sh]=tech.start.split(':').map(Number);
-  const[eh]=tech.end.split(':').map(Number);
+
+// ROUTE OPTIMIZATION: far-to-near (north-to-south or based on lat order)
+// We approximate geography by the order cities appear in the zone
+function getCityIndexInZone(city,zoneId){
+  const z=zones.find(x=>x.id===zoneId);if(!z)return 999;
+  return z.cities.indexOf(city);
+}
+// Calculate optimal time for new task using far-to-near logic
+function calcOptimalTime(tech,dateStr,city){
+  const zid=getTechZoneId(tech,dateStr);
   const dayTasks=getTechDayTasks(tech,dateStr);
-  const window=settings.window*60; // client arrival window in mins
-  // Try to fit after last existing task (fill day logic)
-  if(dayTasks.length>0){
-    const lastTask=dayTasks[dayTasks.length-1];
-    const lastEnd=timeToMins(lastTask.time)+(settings.regularTime||30);
-    const slotStart=lastEnd+10; // 10 min buffer
-    const slotEnd=slotStart+window;
-    if(Math.floor(slotEnd/60)<=eh){
-      return minsToTime(slotStart);
+  const[sh]=tech.start.split(':').map(Number);
+  const durMins=settings.regularTime||30;
+  const bufMins=10;
+  if(!dayTasks.length){
+    // First task of day — if city is "close" (low index = north), start later to leave room for far cities
+    const cityIdx=getCityIndexInZone(city,zid);
+    const totalCities=zones.find(x=>x.id===zid)?.cities.length||1;
+    if(cityIdx>totalCities*0.5){
+      // City is in the latter half of zone = nearby = schedule for afternoon
+      return minsToTime((sh+3)*60); // start 3 hours into day
+    }
+    return minsToTime(sh*60);
+  }
+  // Has existing tasks — schedule after last task with buffer
+  const lastTask=dayTasks[dayTasks.length-1];
+  const lastEnd=timeToMins(lastTask.time)+durMins+bufMins;
+  // Far-to-near: if new city has LOWER index (farther) than existing tasks, it should go BEFORE them
+  const newCityIdx=getCityIndexInZone(city,zid);
+  const existingIndices=dayTasks.map(t=>getCityIndexInZone(t.city,zid));
+  const minExisting=Math.min(...existingIndices);
+  if(newCityIdx<minExisting&&dayTasks.length<3){
+    // New city is farther — ideally slot it before existing ones
+    const firstTaskMins=timeToMins(dayTasks[0].time);
+    if(firstTaskMins-(durMins+bufMins)>=sh*60){
+      return minsToTime(firstTaskMins-(durMins+bufMins));
     }
   }
-  // Otherwise start of day
-  return tech.start;
+  // Otherwise append after last
+  const[eh]=tech.end.split(':').map(Number);
+  if(lastEnd+durMins<=eh*60)return minsToTime(lastEnd);
+  return null; // no room
 }
-// Build candidate list sorted by priority: fill existing days first
-function buildCandidates(city,catId,durMins){
-  const dates=getNextDates();
-  const candidates=[];
+// Validate no illogical back-and-forth (e.g. far-near-far)
+function isRouteLogical(tech,dateStr,newCity){
+  const zid=getTechZoneId(tech,dateStr);
+  const dayTasks=getTechDayTasks(tech,dateStr);
+  if(dayTasks.length<2)return true;
+  const cityIndices=dayTasks.map(t=>getCityIndexInZone(t.city,zid));
+  const newIdx=getCityIndexInZone(newCity,zid);
+  // Check for zigzag: if we'd go far-near-far
+  const last=cityIndices[cityIndices.length-1];
+  const secondLast=cityIndices[cityIndices.length-2];
+  // If last two were going near (increasing index) and new is far (low index) — illogical
+  if(secondLast<last&&newIdx<last-2)return false;
+  return true;
+}
+function buildCandidates(city,catId){
+  const dates=getNextDates();const candidates=[];
   for(const date of dates){
     for(const tech of technicians){
-      // STRICT: city must be in tech's zone for that day
       if(!isCityInTechZone(tech,city,date.str))continue;
       if(!isTechAvailable(tech,date.str))continue;
       if(isCityBlocked(tech,city))continue;
@@ -1024,51 +955,38 @@ function buildCandidates(city,catId,durMins){
       if(!getCatLimitOk(tech,catId,date.str))continue;
       const load=getTechLoad(tech,date.str);
       if(load>=tech.max)continue;
-      // MERGE SCORE: already has tasks in same zone today = higher priority
-      const existingInCity=tasks.filter(t=>t.techId===tech.id&&t.date===date.str&&getCityZone(t.city)?.id===getCityZone(city)?.id&&['assigned','en_route','arrived'].includes(t.status)).length;
-      const fillScore=existingInCity*100 + load; // more existing = better (fill day)
-      const dateScore=dates.indexOf(date); // earlier = better
-      const bestTime=findBestTimeInDay(tech,date.str,durMins);
-      candidates.push({tech,date,load,existingInCity,fillScore,dateScore,bestTime});
+      if(!isRouteLogical(tech,date.str,city))continue;
+      const optTime=calcOptimalTime(tech,date.str,city);
+      if(!optTime)continue; // no room in day
+      const existingInZone=tasks.filter(t=>t.techId===tech.id&&t.date===date.str&&getCityZone(t.city)?.id===getTechZoneId(tech,date.str)&&['assigned','en_route','arrived'].includes(t.status)).length;
+      const fillScore=existingInZone*100+load;
+      candidates.push({tech,date,load,existingInZone,fillScore,dateScore:dates.indexOf(date),optTime});
     }
   }
-  // Sort: fill existing days first (higher fillScore), then earlier date
-  candidates.sort((a,b)=>{
-    if(b.fillScore!==a.fillScore)return b.fillScore-a.fillScore;
-    return a.dateScore-b.dateScore;
-  });
+  candidates.sort((a,b)=>{if(b.fillScore!==a.fillScore)return b.fillScore-a.fillScore;return a.dateScore-b.dateScore;});
   return candidates;
 }
 function getNextDates(){
   const dates=[];const d=new Date();let i=1;
   while(dates.length<(settings.lookahead||30)&&i<90){
     const nd=new Date(d);nd.setDate(d.getDate()+i);
-    if(nd.getDay()!==6){
-      const ds=nd.toISOString().split('T')[0];
-      dates.push({str:ds,d:nd});
-    }
+    if(nd.getDay()!==6){const ds=nd.toISOString().split('T')[0];dates.push({str:ds,d:nd});}
     i++;
   }
   return dates;
 }
 
-// ═══════════════════════════════════════════
-// DISPATCH
-// ═══════════════════════════════════════════
+// ═══ DISPATCH ═══
 function findBestSlot(){
-  const city=document.getElementById('s-city').value.trim();
+  const city=document.getElementById('s-city').value;
   const street=document.getElementById('s-street').value.trim();
-  if(!city||!street){alert('נא למלא עיר ורחוב');return;}
+  if(!city){alert('נא לבחור עיר');return;}
+  if(!street){alert('נא למלא רחוב');return;}
   if(!selectedCat){alert('נא לבחור קטגוריה');return;}
   const catId=getCatId();
-  const durMins=getJobDuration();
-  allCandidates=buildCandidates(city,catId,durMins);
-  currentCandidateIdx=0;
-  selectedTimeSlot=null;
-  if(!allCandidates.length){
-    showNoResult();
-    return;
-  }
+  allCandidates=buildCandidates(city,catId);
+  currentCandidateIdx=0;selectedTimeSlot=null;
+  if(!allCandidates.length){showNoResult();return;}
   document.getElementById('dispatch-search-card').style.opacity='0.5';
   document.getElementById('dispatch-search-card').style.pointerEvents='none';
   document.getElementById('dispatch-result').classList.remove('hidden');
@@ -1076,36 +994,26 @@ function findBestSlot(){
   showCandidate(0);
 }
 function findNextSlot(){
-  currentCandidateIdx++;
-  selectedTimeSlot=null;
-  if(currentCandidateIdx>=allCandidates.length){
-    alert('אין עוד מועדים זמינים לפי החוקיות. בדוק הגדרות אזורים.');
-    currentCandidateIdx=allCandidates.length-1;
-    return;
-  }
+  currentCandidateIdx++;selectedTimeSlot=null;
+  if(currentCandidateIdx>=allCandidates.length){alert('אין עוד מועדים. בדוק הגדרות אזורים.');currentCandidateIdx=allCandidates.length-1;return;}
   showCandidate(currentCandidateIdx);
 }
 function checkSpecificDate(dateStr){
   if(!dateStr)return;
-  const city=document.getElementById('s-city').value.trim();
+  const city=document.getElementById('s-city').value;
   const catId=getCatId();
-  const durMins=getJobDuration();
-  // find candidate for this specific date
   for(const tech of technicians){
     if(!isCityInTechZone(tech,city,dateStr))continue;
     if(!isTechAvailable(tech,dateStr))continue;
     if(isCityBlocked(tech,city))continue;
     if(!techHasSkill(tech,catId))continue;
     if(!getCatLimitOk(tech,catId,dateStr))continue;
-    const load=getTechLoad(tech,dateStr);
-    if(load>=tech.max)continue;
+    if(getTechLoad(tech,dateStr)>=tech.max)continue;
+    if(!isRouteLogical(tech,dateStr,city))continue;
+    const optTime=calcOptimalTime(tech,dateStr,city);if(!optTime)continue;
     const d=new Date(dateStr);
-    const bestTime=findBestTimeInDay(tech,dateStr,durMins);
-    const c={tech,date:{str:dateStr,d},load,existingInCity:0,bestTime};
-    // inject at current position
-    allCandidates.splice(currentCandidateIdx,0,c);
-    showCandidate(currentCandidateIdx);
-    return;
+    allCandidates.splice(currentCandidateIdx,0,{tech,date:{str:dateStr,d},load:getTechLoad(tech,dateStr),existingInZone:0,fillScore:0,dateScore:0,optTime});
+    showCandidate(currentCandidateIdx);return;
   }
   document.getElementById('d-alert').className='alert alert-amber';
   document.getElementById('d-alert').textContent='⚠️ לא ניתן לשבץ בתאריך זה — אין טכנאי זמין באזור הנדרש.';
@@ -1123,46 +1031,35 @@ function showNoResult(){
 function showCandidate(idx){
   const c=allCandidates[idx];if(!c)return;
   document.getElementById('d-alert').classList.add('hidden');
-  const tech=c.tech;
-  const d=c.date.d;
-  const months=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
-  const dateLabel=`יום ${['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][d.getDay()]}, ${d.getDate()} ב${months[d.getMonth()]} ${d.getFullYear()}`;
-  const zone=getTechZoneForDate(tech,c.date.str);
-  const isMerge=c.existingInCity>0;
-  const reasonText=isMerge?`⚡ ממלא יום קיים — ${c.existingInCity} קריאות כבר קיימות באזור`:`📅 פתח יום חדש — טכנאי ראשון לאזור זה`;
-  // existing tasks for this tech/day
+  const tech=c.tech;const d=c.date.d;
+  const dateLabel=`יום ${DAYS_HE[d.getDay()]}, ${d.getDate()} ב${MONTHS_HE[d.getMonth()]} ${d.getFullYear()}`;
+  const zone=zones.find(z=>z.id===getTechZoneId(tech,c.date.str));
+  const isMerge=c.existingInZone>0;
+  const reasonText=isMerge?`⚡ ממלא יום קיים — ${c.existingInZone} קריאות באזור`:`📅 פותח יום חדש`;
   const dayTasks=getTechDayTasks(tech,c.date.str);
-  const etpHtml=dayTasks.length?`<div class="etp">
-    <div class="etp-title">משימות קיימות ביום זה</div>
-    ${dayTasks.map(t=>`<div class="etp-row"><span class="etp-time">${t.time}</span><span class="etp-detail">${t.cat} — ${t.city}</span></div>`).join('')}
-  </div>`:'';
-  // time slots
+  // Route preview
+  const city=document.getElementById('s-city').value;
+  const routeRows=dayTasks.length?[...dayTasks.map(t=>`<div class="route-row"><span class="route-time">${t.time}</span><span class="route-arrow">→</span><span class="route-city">${t.city}</span></div>`),`<div class="route-row"><span class="route-time">${c.optTime}</span><span class="route-arrow">→</span><span class="route-city route-new">✦ ${city} (חדש)</span></div>`].join(''):'';
+  const routeHtml=routeRows?`<div class="route-preview"><div class="route-title">מסלול יום מתוכנן (רחוק לקרוב)</div>${routeRows}</div>`:'';
+  // Time slots
   const[sh]=tech.start.split(':').map(Number);
   const[eh]=tech.end.split(':').map(Number);
-  const slotSizeH=settings.window;
+  const slotH=settings.window;
   const slots=[];
-  for(let h=sh;h<=eh-slotSizeH;h+=1){
-    const slotStart=pad(h)+':00';
-    const slotEnd=pad(h+slotSizeH)+':00';
-    const busy=dayTasks.some(t=>{const th=parseInt(t.time.split(':')[0]);return th>=h&&th<h+slotSizeH;});
-    slots.push({start:slotStart,end:slotEnd,busy});
+  for(let h=sh;h<=eh-slotH;h++){
+    const sStart=pad(h)+':00',sEnd=pad(h+slotH)+':00';
+    const busy=dayTasks.some(t=>{const th=parseInt(t.time.split(':')[0]);return th>=h&&th<h+slotH;});
+    slots.push({start:sStart,end:sEnd,busy});
   }
-  const slotsHtml=slots.map((s,si)=>`
-    <div class="time-slot ${s.busy?'busy':''} ${selectedTimeSlot===si&&!s.busy?'selected':''}" onclick="${s.busy?'':'selectTimeSlot('+si+')'}" id="ts-${si}">
-      <span class="time-slot-range">${s.start} — ${s.end}</span>
-      <span class="time-slot-status">${s.busy?'תפוס':'פנוי'}</span>
-    </div>`).join('');
   const assignId=genId();
+  window._currentSlots=slots;window._currentIdx=idx;
   document.getElementById('suggestion-card').innerHTML=`
     <div class="suggestion-result">
       <div class="sr-header">
         <div class="sr-avatar" style="background:${tech.color};">${initials(tech.name)}</div>
-        <div style="flex:1;">
-          <div class="sr-name">${tech.name}</div>
-          <div class="sr-area">${zone?zone.name:'—'} • ${tech.phone}</div>
-        </div>
+        <div style="flex:1;"><div class="sr-name">${tech.name}</div><div class="sr-area">${zone?zone.name:'—'} • ${tech.phone}</div></div>
         <div style="text-align:center;">
-          <div style="font-size:0.65rem;color:var(--ink-3);font-weight:700;text-transform:uppercase;margin-bottom:3px;">${currentCandidateIdx+1} מתוך ${allCandidates.length}</div>
+          <div style="font-size:0.65rem;color:var(--ink-3);font-weight:700;text-transform:uppercase;margin-bottom:3px;">${idx+1}/${allCandidates.length}</div>
           <div class="assign-id">${assignId}</div>
         </div>
       </div>
@@ -1170,53 +1067,48 @@ function showCandidate(idx){
         <div class="sr-date-label">תאריך מוצע</div>
         <div class="sr-date-value">${dateLabel}</div>
         <div class="sr-reason">${reasonText}</div>
-        <div style="font-size:0.8125rem;color:var(--ink-3);margin-top:3px;">${c.load}/${tech.max} קריאות באותו יום</div>
+        <div style="font-size:0.8125rem;color:var(--ink-3);margin-top:3px;">${c.load}/${tech.max} קריאות</div>
       </div>
-      ${etpHtml}
-      <div style="font-size:0.8rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 6px;">בחר חלון זמן</div>
-      <div class="time-slots" id="time-slots-container">${slotsHtml}</div>
-      <div class="customer-form" id="customer-form-${idx}" style="display:none;">
-        <div style="font-size:0.8rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">פרטי לקוח</div>
+      ${routeHtml}
+      <div style="font-size:0.8rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 6px;">בחר חלון זמן</div>
+      <div class="time-slots">${slots.map((s,si)=>`<div class="time-slot ${s.busy?'busy':''}" onclick="${s.busy?'':'selectTimeSlot('+si+')'}" id="ts-${si}"><span class="time-slot-range">${s.start} — ${s.end}</span><span style="font-size:0.7rem;">${s.busy?'תפוס':'פנוי'}</span></div>`).join('')}</div>
+      <div class="customer-form" id="cform-${idx}" style="display:none;">
+        <div style="font-size:0.8rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;margin-bottom:10px;">פרטי לקוח</div>
         <div class="fg-2">
-          <div class="fg"><label class="fl">שם לקוח</label><input class="fc" id="c-name" placeholder="שם מלא"></div>
+          <div class="fg"><label class="fl"><span class="req">*</span> שם לקוח</label><input class="fc" id="c-name" placeholder="שם מלא"></div>
           <div class="fg"><label class="fl">טלפון</label><input class="fc" id="c-phone" placeholder="05X-XXXXXXX"></div>
         </div>
-        <div class="fg"><label class="fl">הערות</label><input class="fc" id="c-notes" placeholder="הערות להתקנה..."></div>
-        <div class="sr-actions">
+        <div class="fg"><label class="fl">הערות</label><input class="fc" id="c-notes" placeholder="הערות..."></div>
+        <div style="display:flex;gap:8px;margin-top:4px;">
           <button class="btn btn-outline" onclick="clearDispatch()">← חזרה</button>
           <button class="btn btn-blue btn-lg" style="flex:1;" onclick="confirmAssign(${idx},'${assignId}')">אשר שיבוץ ✓</button>
         </div>
       </div>
     </div>`;
-  // store slots for selection
-  window._currentSlots=slots;
-  window._currentIdx=idx;
   selectedTimeSlot=null;
 }
 function selectTimeSlot(si){
-  if(window._currentSlots&&window._currentSlots[si]&&window._currentSlots[si].busy)return;
+  if(window._currentSlots&&window._currentSlots[si]?.busy)return;
   selectedTimeSlot=si;
   document.querySelectorAll('.time-slot:not(.busy)').forEach((el,i)=>el.classList.toggle('selected',i===si));
-  const idx=window._currentIdx;
-  const formEl=document.getElementById('customer-form-'+idx);
+  const formEl=document.getElementById('cform-'+window._currentIdx);
   if(formEl)formEl.style.display='block';
 }
 function confirmAssign(idx,assignId){
   if(selectedTimeSlot===null){alert('נא לבחור חלון זמן');return;}
-  const slots=window._currentSlots;
-  if(!slots||!slots[selectedTimeSlot]||slots[selectedTimeSlot].busy){alert('חלון זמן תפוס');return;}
+  const slots=window._currentSlots;if(!slots||slots[selectedTimeSlot]?.busy)return;
   const c=allCandidates[idx];if(!c)return;
-  const city=document.getElementById('s-city').value.trim();
+  const client=document.getElementById('c-name').value.trim();
+  if(!client){document.getElementById('c-name').classList.add('error');document.getElementById('c-name').focus();alert('שם לקוח הוא שדה חובה');return;}
+  document.getElementById('c-name').classList.remove('error');
+  const city=document.getElementById('s-city').value;
   const street=document.getElementById('s-street').value.trim();
-  const client=document.getElementById('c-name').value||'לקוח';
   const phone=document.getElementById('c-phone').value||'';
   const notes=document.getElementById('c-notes').value||'';
   const slot=slots[selectedTimeSlot];
-  const catId=getCatId();
-  const catName=getCatName();
+  const catId=getCatId();const catName=getCatName();
   tasks.push({id:nextTaskId++,client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:slot.start,date:c.date.str,notes,assignId});
   save();
-  // show success
   document.getElementById('dispatch-result').classList.add('hidden');
   document.getElementById('suc-id').textContent=assignId;
   document.getElementById('suc-details').innerHTML=`
@@ -1225,42 +1117,90 @@ function confirmAssign(idx,assignId){
     <div class="cr"><span class="ck">קטגוריה</span><span class="cv">${catName}</span></div>
     <div class="cr"><span class="ck">תאריך</span><span class="cv">${c.date.d.toLocaleDateString('he-IL')}</span></div>
     <div class="cr"><span class="ck">שעות</span><span class="cv">${slot.start} — ${slot.end}</span></div>
-    <div class="cr"><span class="ck">טכנאי</span><span class="cv">${c.tech.name}</span></div>
-  `;
+    <div class="cr"><span class="ck">טכנאי</span><span class="cv">${c.tech.name}</span></div>`;
   const wm=encodeURIComponent(`שלום ${client}, קריאה שובצה ב${city} בתאריך ${c.date.d.toLocaleDateString('he-IL')} בין השעות ${slot.start}-${slot.end}. מספר קריאה: ${assignId}. לפרטים: ${c.tech.phone}`);
   const wp=phone.replace(/[^0-9]/g,'').replace(/^0/,'972');
   document.getElementById('wa-link').href=phone?`https://wa.me/${wp}?text=${wm}`:'#';
   document.getElementById('wa-link').style.display=phone?'inline-flex':'none';
   document.getElementById('dispatch-success').classList.remove('hidden');
-  // AUTO RETURN after 3 seconds
-  setTimeout(()=>{goPage('home');},3000);
+  setTimeout(()=>goPage('home'),3000);
 }
 function clearDispatch(){
   document.getElementById('dispatch-search-card').style.opacity='1';
   document.getElementById('dispatch-search-card').style.pointerEvents='';
   document.getElementById('dispatch-result').classList.add('hidden');
-  selectedTimeSlot=null;
-  allCandidates=[];currentCandidateIdx=0;
+  selectedTimeSlot=null;allCandidates=[];currentCandidateIdx=0;
 }
 function resetDispatch(){
-  clearDispatch();
-  selectedCat=null;
-  renderCatChips();
+  clearDispatch();selectedCat=null;renderCatChips();
   document.getElementById('pkg-section').classList.add('hidden');
   document.getElementById('dispatch-success').classList.add('hidden');
   document.getElementById('s-city').value='';
   document.getElementById('s-street').value='';
-  document.getElementById('dispatch-search-card').style.opacity='1';
-  document.getElementById('dispatch-search-card').style.pointerEvents='';
 }
 
-// ═══════════════════════════════════════════
-// TASKS
-// ═══════════════════════════════════════════
+// ═══ CANCEL & REPLACE ═══
+function openCancelModal(taskId){
+  cancelTaskId=taskId;
+  const t=tasks.find(x=>x.id===taskId);if(!t)return;
+  document.getElementById('cancel-task-info').innerHTML=`<div style="font-weight:700;">${t.client}</div><div style="font-size:0.8125rem;color:var(--ink-3);">${t.cat} • ${t.city} • ${t.time||'—'} • ${t.assignId}</div>`;
+  // check if there are pending tasks in same zone
+  const cityZone=getCityZone(t.city);
+  const pendingInZone=tasks.filter(x=>x.status==='pending'&&getCityZone(x.city)?.id===cityZone?.id);
+  const replaceOpt=document.getElementById('cancel-replace-opt');
+  replaceOpt.style.opacity=pendingInZone.length?'1':'0.4';
+  replaceOpt.style.pointerEvents=pendingInZone.length?'auto':'none';
+  if(!pendingInZone.length)replaceOpt.querySelector('p').textContent='אין קריאות ממתינות באזור זה';
+  document.getElementById('mo-cancel').classList.remove('hidden');
+}
+function cancelOnly(){
+  const t=tasks.find(x=>x.id===cancelTaskId);
+  if(t){t.status='cancelled';t.cancelledAt=new Date().toISOString();}
+  save();renderTasks();renderHomeTechCards();closeMo('mo-cancel');
+}
+function cancelAndReplace(){
+  const t=tasks.find(x=>x.id===cancelTaskId);if(!t)return;
+  const cityZone=getCityZone(t.city);
+  // find best pending task in same zone
+  const pending=tasks.filter(x=>x.status==='pending'&&getCityZone(x.city)?.id===cityZone?.id);
+  if(!pending.length){cancelOnly();return;}
+  // prefer same city, then same zone
+  const best=pending.sort((a,b)=>(a.city===t.city?-1:1))[0];
+  replaceSuggestion={cancelledTask:t,replacement:best,freedSlot:{time:t.time,date:t.date}};
+  // cancel original
+  t.status='cancelled';t.cancelledAt=new Date().toISOString();
+  save();closeMo('mo-cancel');
+  // show replacement suggestion
+  document.getElementById('replace-suggestion').innerHTML=`
+    <div class="alert alert-green">הקריאה בוטלה. נמצאה קריאה ממתינה מתאימה:</div>
+    <div class="confirm-box">
+      <div class="cr"><span class="ck">לקוח</span><span class="cv">${best.client}</span></div>
+      <div class="cr"><span class="ck">עיר</span><span class="cv">${best.city}</span></div>
+      <div class="cr"><span class="ck">קטגוריה</span><span class="cv">${best.cat}</span></div>
+      <div class="cr"><span class="ck">חריץ פנוי</span><span class="cv">${t.time} — ${new Date(t.date).toLocaleDateString('he-IL')}</span></div>
+      <div class="cr"><span class="ck">טכנאי</span><span class="cv">${technicians.find(x=>x.id===t.techId)?.name||'—'}</span></div>
+    </div>`;
+  document.getElementById('mo-replace').classList.remove('hidden');
+  renderTasks();renderHomeTechCards();
+}
+function confirmReplace(){
+  if(!replaceSuggestion)return;
+  const{replacement,freedSlot,cancelledTask}=replaceSuggestion;
+  replacement.status='assigned';
+  replacement.techId=cancelledTask.techId;
+  replacement.time=freedSlot.time;
+  replacement.date=freedSlot.date;
+  replacement.assignId=genId();
+  nextTaskId++;
+  save();renderTasks();renderHomeTechCards();closeMo('mo-replace');
+  replaceSuggestion=null;
+}
+
+// ═══ TASKS ═══
 function filterTasks(f){
   currentFilter=f;
-  const map={all:'badge-blue',pending:'badge-amber',assigned:'badge-blue',completed:'badge-gray'};
-  ['all','pending','assigned','completed'].forEach(x=>{
+  const map={all:'badge-blue',pending:'badge-amber',assigned:'badge-blue',completed:'badge-gray',cancelled:'badge-red'};
+  ['all','pending','assigned','completed','cancelled'].forEach(x=>{
     const el=document.getElementById('tf-'+x);if(!el)return;
     el.className='badge '+(x===f?map[x]:'badge-gray');
     el.style.cssText='cursor:pointer;padding:5px 12px;';
@@ -1269,10 +1209,11 @@ function filterTasks(f){
 }
 function renderTasks(){
   const q=(document.getElementById('task-search').value||'').toLowerCase();
-  const fMap={all:null,pending:'pending',assigned:'assigned',completed:'completed'};
+  const fMap={all:null,pending:'pending',assigned:'assigned',completed:'completed',cancelled:'cancelled'};
   const fs=fMap[currentFilter];
   let filtered=tasks.filter(t=>{
     if(fs&&t.status!==fs)return false;
+    if(!fs&&t.status==='cancelled')return false; // hide cancelled in "all"
     if(q)return(t.client+t.city+t.cat).toLowerCase().includes(q);
     return true;
   }).sort((a,b)=>{
@@ -1285,28 +1226,29 @@ function renderTasks(){
   list.innerHTML=filtered.map(t=>{
     const tech=technicians.find(x=>x.id===t.techId);
     const s=STATUS_MAP[t.status]||STATUS_MAP.pending;
+    const canCancel=['assigned','en_route','arrived'].includes(t.status);
     return`<div class="task-row">
       <div class="task-main">
         <div class="task-client">${t.client} ${t.assignId?`<span class="assign-id-tag">${t.assignId}</span>`:''}</div>
-        <div class="task-detail">${t.cat} • ${t.street}, ${t.city}${t.time?' • '+t.time:''}${tech?' • '+tech.name:''}</div>
+        <div class="task-detail">${t.cat} • ${t.street?t.street+', ':''}${t.city}${t.time?' • '+t.time:''}${tech?' • '+tech.name:''}</div>
       </div>
       <div class="task-actions">
         <span class="badge ${s.badge} status-pill" onclick="openStatusModal(${t.id})">${s.label}</span>
         ${t.status==='pending'?`<button class="btn btn-blue btn-sm" onclick="quickAssign(${t.id})">שבץ</button>`:''}
+        ${canCancel?`<button class="btn btn-sm" style="background:var(--red-l);color:var(--red);border:1px solid #FECACA;" onclick="openCancelModal(${t.id})">בטל</button>`:''}
       </div>
     </div>`;
   }).join('');
 }
 function quickAssign(id){
   const t=tasks.find(x=>x.id===id);if(!t)return;
-  document.getElementById('s-city').value=t.city;
+  document.getElementById('s-city').value=t.city||'';
   document.getElementById('s-street').value=t.street||'';
   goPage('dispatch');
   setTimeout(()=>{if(t.catId){selectedCat='cat_'+t.catId;renderCatChips();renderPkgSection();}},100);
 }
 function openStatusModal(id){
-  statusTaskId=id;
-  const t=tasks.find(x=>x.id===id);if(!t)return;
+  statusTaskId=id;const t=tasks.find(x=>x.id===id);if(!t)return;
   const s=STATUS_MAP[t.status];
   document.getElementById('status-info').innerHTML=`<div style="font-weight:700;">${t.client}</div><div style="font-size:0.8125rem;color:var(--ink-3);">${t.cat} • ${t.city}${t.assignId?' • '+t.assignId:''}</div>`;
   document.getElementById('status-opts').innerHTML=s.next.map(ns=>{
@@ -1316,52 +1258,36 @@ function openStatusModal(id){
   document.getElementById('mo-status').classList.remove('hidden');
 }
 function setStatus(ns){
-  const t=tasks.find(x=>x.id===statusTaskId);
-  if(t)t.status=ns;
-  save();renderTasks();renderHomeTechCards();
-  closeMo('mo-status');
+  const t=tasks.find(x=>x.id===statusTaskId);if(t)t.status=ns;
+  save();renderTasks();renderHomeTechCards();closeMo('mo-status');
 }
 
-// ═══════════════════════════════════════════
-// TECH VIEW
-// ═══════════════════════════════════════════
+// ═══ TECH VIEW ═══
 function renderTechView(){
-  if(!currentTechView){document.getElementById('techview-content').innerHTML='<div class="empty"><div class="empty-icon">👤</div><div>בחר טכנאי</div></div>';return;}
+  if(!currentTechView){document.getElementById('techview-content').innerHTML='<div class="empty"><div class="empty-icon">👤</div></div>';return;}
   const tech=currentTechView;
   const tt=tasks.filter(t=>t.techId===tech.id&&['assigned','en_route','arrived','completed'].includes(t.status)&&t.time).sort((a,b)=>a.time.localeCompare(b.time));
   const d=new Date();
-  const jobs=tt.map(t=>{
-    const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;
-    return`<div style="background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-bottom:10px;box-shadow:var(--sh);display:flex;gap:14px;">
+  document.getElementById('techview-content').innerHTML=`<div class="page">
+    <div style="text-align:center;padding:1.5rem 0 1rem;border-bottom:1px solid var(--line);margin-bottom:1rem;">
+      <div style="width:52px;height:52px;border-radius:50%;background:${tech.color};color:white;font-size:1.125rem;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">${initials(tech.name)}</div>
+      <div style="font-size:1.25rem;font-weight:900;">${tech.name}</div>
+      <div style="font-size:0.875rem;color:var(--ink-3);">יום ${DAYS_HE[d.getDay()]} · ${d.toLocaleDateString('he-IL')} · ${tt.length} קריאות</div>
+    </div>
+    ${tt.map(t=>{const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;return`<div style="background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-bottom:10px;box-shadow:var(--sh);display:flex;gap:14px;">
       <div style="min-width:56px;text-align:center;"><div style="font-size:1.25rem;font-weight:900;">${t.time}</div></div>
       <div style="width:1px;background:var(--line);margin:0 4px;"></div>
       <div style="flex:1;">
-        <div style="font-size:0.9375rem;font-weight:700;">${t.cat}</div>
+        <div style="font-weight:700;">${t.cat}</div>
         <div style="font-size:0.8125rem;color:var(--ink-2);margin-top:2px;">${t.client}${t.phone?` · <a href="tel:${t.phone}" style="color:var(--blue);text-decoration:none;">${t.phone}</a>`:''}</div>
         <div style="font-size:0.75rem;color:var(--ink-4);margin-top:2px;">📍 ${t.street}, ${t.city}</div>
-        <div style="font-size:0.65rem;font-family:monospace;color:var(--ink-4);margin-top:3px;">${t.assignId}</div>
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <span class="badge ${s.badge}">${s.label}</span>
-          <a class="btn btn-outline btn-sm" href="https://waze.com/ul?q=${encodeURIComponent(t.street+', '+t.city)}" target="_blank">🗺️ נווט</a>
-          ${t.phone?`<a class="btn btn-blue btn-sm" href="tel:${t.phone}">📞</a>`:''}
-        </div>
-      </div>
-    </div>`;
-  }).join('')||'<div class="empty"><div class="empty-icon">🎉</div><div>אין קריאות</div></div>';
-  document.getElementById('techview-content').innerHTML=`
-    <div class="page">
-      <div style="text-align:center;padding:1.5rem 0 1rem;border-bottom:1px solid var(--line);margin-bottom:1rem;">
-        <div style="width:52px;height:52px;border-radius:50%;background:${tech.color};color:white;font-size:1.125rem;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">${initials(tech.name)}</div>
-        <div style="font-size:1.25rem;font-weight:900;">${tech.name}</div>
-        <div style="font-size:0.875rem;color:var(--ink-3);">יום ${['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][d.getDay()]} · ${d.toLocaleDateString('he-IL')} · ${tt.length} קריאות</div>
-      </div>
-      ${jobs}
-    </div>`;
+        <div style="font-size:0.65rem;font-family:monospace;color:var(--ink-4);">${t.assignId}</div>
+        <div style="display:flex;gap:8px;margin-top:10px;"><span class="badge ${s.badge}">${s.label}</span><a class="btn btn-outline btn-sm" href="https://waze.com/ul?q=${encodeURIComponent(t.street+', '+t.city)}" target="_blank">🗺️</a>${t.phone?`<a class="btn btn-blue btn-sm" href="tel:${t.phone}">📞</a>`:''}</div>
+      </div></div>`;}).join('')||'<div class="empty"><div class="empty-icon">🎉</div><div>אין קריאות</div></div>'}
+  </div>`;
 }
 
-// ═══════════════════════════════════════════
-// TECHNICIANS
-// ═══════════════════════════════════════════
+// ═══ TECHNICIANS ═══
 function renderTechs(){
   document.getElementById('tech-count-sub').textContent=technicians.length+' טכנאים';
   document.getElementById('tech-grid').innerHTML=technicians.map(tech=>{
@@ -1369,7 +1295,6 @@ function renderTechs(){
     const lp=Math.min(100,Math.round((cnt/Math.max(tech.max,1))*100));
     const fc=lp>=90?'var(--red)':lp>=60?'var(--amber)':'var(--green)';
     const skills=(tech.skills||[]).map(sid=>{const c=categories.find(x=>x.id===sid);return c?`<span class="skill-tag">${c.name}</span>`:''}).join('');
-    const blocked=tech.blocked?tech.blocked.split(',').map(c=>`<span class="restrict-tag">🚫 ${c.trim()}</span>`).join(''):'';
     return`<div class="tech-card">
       <div class="tech-av" style="background:${tech.color};">${initials(tech.name)}</div>
       <div class="tech-name">${tech.name}</div>
@@ -1379,7 +1304,6 @@ function renderTechs(){
       ${skills?`<div style="margin-top:6px;">${skills}</div>`:''}
       <div class="load-bar" style="margin:8px 0 3px;"><div class="load-fill" style="width:${lp}%;background:${fc};"></div></div>
       <div style="font-size:0.7rem;color:var(--ink-4);">${cnt}/${tech.max} היום</div>
-      ${blocked?`<div style="margin-top:6px;">${blocked}</div>`:''}
       <div style="display:flex;gap:6px;margin-top:10px;">
         <button class="btn btn-outline btn-sm" onclick="editTech(${tech.id})">עריכה</button>
         <button class="btn btn-ghost btn-sm" onclick="deleteTech(${tech.id})" style="color:var(--red);">הסר</button>
@@ -1388,40 +1312,26 @@ function renderTechs(){
   }).join('')||'<div class="empty"><div class="empty-icon">👷</div><div>הוסף טכנאי ראשון</div></div>';
 }
 function buildTechModalUI(){
-  const container=document.getElementById('ti-skills-container');
-  container.innerHTML=categories.map(c=>
-    `<label class="skill-check" id="skill-lbl-${c.id}" onclick="toggleSkill('${c.id}')">
-      <input type="checkbox" id="skill-${c.id}"> ${c.name}
-    </label>`
+  document.getElementById('ti-skills-container').innerHTML=categories.map(c=>
+    `<label class="skill-check" id="skill-lbl-${c.id}" onclick="toggleSkill('${c.id}')"><input type="checkbox" id="skill-${c.id}"> ${c.name}</label>`
   ).join('');
   document.getElementById('ti-cat-limits').innerHTML=categories.map(c=>
-    `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-      <span style="font-size:0.875rem;flex:1;">${c.name}</span>
-      <input class="fc" id="catlim-${c.id}" type="number" min="0" placeholder="ללא הגבלה" style="width:130px;">
-    </div>`
+    `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:0.875rem;flex:1;">${c.name}</span><input class="fc" id="catlim-${c.id}" type="number" min="0" placeholder="ללא הגבלה" style="width:130px;"></div>`
   ).join('');
-  // rotation Sun-Fri (6 days, no Sat)
   const rotDays=['א׳','ב׳','ג׳','ד׳','ה׳','ו׳'];
   document.getElementById('ti-rotation').innerHTML=rotDays.map((day,i)=>
-    `<div class="rotation-day">
-      <div class="day-name">${day}</div>
-      <select id="rot-${i}">${[{id:'',name:'—'},...zones].map(z=>`<option value="${z.id}">${z.id?z.name:z.name}</option>`).join('')}</select>
-    </div>`
+    `<div class="rotation-day"><div class="day-name">${day}</div><select id="rot-${i}">${[{id:'',name:'—'},...zones].map(z=>`<option value="${z.id}">${z.name||'—'}</option>`).join('')}</select></div>`
   ).join('');
 }
 function toggleSkill(catId){
-  const inp=document.getElementById('skill-'+catId);
-  const lbl=document.getElementById('skill-lbl-'+catId);
-  inp.checked=!inp.checked;
-  lbl.classList.toggle('checked',inp.checked);
+  const inp=document.getElementById('skill-'+catId),lbl=document.getElementById('skill-lbl-'+catId);
+  inp.checked=!inp.checked;lbl.classList.toggle('checked',inp.checked);
 }
 function openAddTechModal(){
-  editingTechId=null;
-  buildTechModalUI();
+  editingTechId=null;buildTechModalUI();
   document.getElementById('mo-tech-title').textContent='הוסף טכנאי';
   ['ti-name','ti-phone','ti-base','ti-blocked'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('ti-min').value='2';
-  document.getElementById('ti-max').value='9';
+  document.getElementById('ti-min').value='2';document.getElementById('ti-max').value='9';
   if(document.getElementById('ti-start').options.length){document.getElementById('ti-start').value='07:00';document.getElementById('ti-end').value='17:00';}
   document.getElementById('ti-save-btn').textContent='הוסף';
   document.querySelectorAll('.field-error').forEach(e=>e.classList.add('hidden'));
@@ -1429,50 +1339,36 @@ function openAddTechModal(){
 }
 function editTech(id){
   const tech=technicians.find(t=>t.id===id);if(!tech)return;
-  editingTechId=id;
-  buildTechModalUI();
+  editingTechId=id;buildTechModalUI();
   document.getElementById('mo-tech-title').textContent='עריכת טכנאי';
-  document.getElementById('ti-name').value=tech.name;
-  document.getElementById('ti-phone').value=tech.phone;
-  document.getElementById('ti-base').value=tech.base;
-  document.getElementById('ti-min').value=tech.min;
-  document.getElementById('ti-max').value=tech.max;
-  document.getElementById('ti-blocked').value=tech.blocked||'';
+  document.getElementById('ti-name').value=tech.name;document.getElementById('ti-phone').value=tech.phone;
+  document.getElementById('ti-base').value=tech.base;document.getElementById('ti-min').value=tech.min;
+  document.getElementById('ti-max').value=tech.max;document.getElementById('ti-blocked').value=tech.blocked||'';
   if(document.getElementById('ti-start').options.length){document.getElementById('ti-start').value=tech.start||'07:00';document.getElementById('ti-end').value=tech.end||'17:00';}
-  (tech.skills||[]).forEach(sid=>{
-    const inp=document.getElementById('skill-'+sid);
-    const lbl=document.getElementById('skill-lbl-'+sid);
-    if(inp){inp.checked=true;lbl?.classList.add('checked');}
-  });
-  Object.entries(tech.catLimits||{}).forEach(([catId,val])=>{
-    const inp=document.getElementById('catlim-'+catId);if(inp)inp.value=val;
-  });
-  Object.entries(tech.rotation||{}).forEach(([day,zoneId])=>{
-    const sel=document.getElementById('rot-'+day);if(sel)sel.value=zoneId||'';
-  });
+  (tech.skills||[]).forEach(sid=>{const inp=document.getElementById('skill-'+sid),lbl=document.getElementById('skill-lbl-'+sid);if(inp){inp.checked=true;lbl?.classList.add('checked');}});
+  Object.entries(tech.catLimits||{}).forEach(([catId,val])=>{const inp=document.getElementById('catlim-'+catId);if(inp)inp.value=val;});
+  Object.entries(tech.rotation||{}).forEach(([day,zid])=>{const sel=document.getElementById('rot-'+day);if(sel)sel.value=zid||'';});
   document.getElementById('ti-save-btn').textContent='שמור';
   document.getElementById('mo-tech').classList.remove('hidden');
 }
 function saveTech(){
-  const required={'ti-name':'e-ti-name','ti-phone':'e-ti-phone','ti-base':'e-ti-base'};
   let valid=true;
-  Object.entries(required).forEach(([field,errId])=>{
-    const el=document.getElementById(field),err=document.getElementById(errId);
+  [['ti-name','e-ti-name'],['ti-phone','e-ti-phone'],['ti-base','e-ti-base']].forEach(([f,e])=>{
+    const el=document.getElementById(f),err=document.getElementById(e);
     if(!el.value.trim()){el.classList.add('error');err.classList.remove('hidden');valid=false;}
     else{el.classList.remove('error');err.classList.add('hidden');}
   });
-  const selectedSkills=categories.filter(c=>document.getElementById('skill-'+c.id)?.checked).map(c=>c.id);
-  if(!selectedSkills.length){document.getElementById('e-ti-skills').classList.remove('hidden');valid=false;}
+  const skills=categories.filter(c=>document.getElementById('skill-'+c.id)?.checked).map(c=>c.id);
+  if(!skills.length){document.getElementById('e-ti-skills').classList.remove('hidden');valid=false;}
   else document.getElementById('e-ti-skills').classList.add('hidden');
-  const rotation={};
-  let hasRotation=false;
-  for(let i=0;i<6;i++){rotation[i]=document.getElementById('rot-'+i)?.value||'';if(rotation[i])hasRotation=true;}
-  if(!hasRotation){document.getElementById('e-ti-rotation').classList.remove('hidden');valid=false;}
+  const rotation={};let hasRot=false;
+  for(let i=0;i<6;i++){rotation[i]=document.getElementById('rot-'+i)?.value||'';if(rotation[i])hasRot=true;}
+  if(!hasRot){document.getElementById('e-ti-rotation').classList.remove('hidden');valid=false;}
   else document.getElementById('e-ti-rotation').classList.add('hidden');
   if(!valid)return;
   const catLimits={};
   categories.forEach(c=>{const v=parseInt(document.getElementById('catlim-'+c.id)?.value);if(v>0)catLimits[c.id]=v;});
-  const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:document.getElementById('ti-start').value,end:document.getElementById('ti-end').value,blocked:document.getElementById('ti-blocked').value.trim(),skills:selectedSkills,catLimits,rotation};
+  const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:document.getElementById('ti-start').value,end:document.getElementById('ti-end').value,blocked:document.getElementById('ti-blocked').value.trim(),skills,catLimits,rotation};
   if(editingTechId){const tech=technicians.find(t=>t.id===editingTechId);if(tech)Object.assign(tech,data);}
   else technicians.push({id:nextTechId++,...data,color:COLORS[technicians.length%COLORS.length]});
   save();buildRoleSelect();closeMo('mo-tech');renderTechs();renderHomeTechCards();
@@ -1484,41 +1380,33 @@ function deleteTech(id){
   save();buildRoleSelect();renderTechs();renderTasks();renderHomeTechCards();
 }
 
-// ═══════════════════════════════════════════
-// ZONES
-// ═══════════════════════════════════════════
+// ═══ ZONES ═══
 function renderZones(){
   document.getElementById('zones-list').innerHTML=zones.map((z,zi)=>`
     <div class="zone-card">
-      <div class="zone-header">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
         <input class="fc" value="${z.name}" onchange="zones[${zi}].name=this.value;save();" style="font-weight:800;font-size:0.9375rem;border:none;padding:0;background:transparent;flex:1;">
         <button class="btn btn-ghost btn-sm" onclick="deleteZone('${z.id}')" style="color:var(--red);">הסר</button>
       </div>
-      <div class="zone-cities">
-        ${z.cities.map((c,ci)=>`<span class="city-tag">${c}<button onclick="removeCity('${z.id}',${ci})">×</button></span>`).join('')}
-      </div>
-      <div style="font-size:0.75rem;color:var(--ink-3);margin-bottom:6px;">הדבק ערים (שורה לכל עיר) או פסיקים</div>
-      <div class="zone-add">
+      <div class="zone-cities">${z.cities.map((c,ci)=>`<span class="city-tag">${c}<button onclick="removeCity('${z.id}',${ci})">×</button></span>`).join('')}</div>
+      <div style="font-size:0.75rem;color:var(--ink-3);margin-bottom:6px;">הדבק ערים (שורה לכל עיר או פסיקים)</div>
+      <div style="display:flex;gap:8px;">
         <textarea class="fc" id="new-city-${z.id}" placeholder="תל אביב&#10;חולון&#10;בת ים" style="flex:1;height:60px;resize:vertical;font-size:0.875rem;"></textarea>
         <button class="btn btn-outline btn-sm" onclick="addCities('${z.id}')" style="align-self:flex-end;">+ הוסף</button>
       </div>
-    </div>`
-  ).join('')||'<div class="empty"><div class="empty-icon">🗺️</div><div>הוסף אזור ראשון</div></div>';
+    </div>`).join('')||'<div class="empty"><div class="empty-icon">🗺️</div><div>הוסף אזור ראשון</div></div>';
 }
-function addZone(){zones.push({id:'z'+Date.now(),name:'אזור חדש',cities:[]});save();renderZones();populateCitiesDl();}
-function deleteZone(id){zones=zones.filter(z=>z.id!==id);save();renderZones();}
+function addZone(){zones.push({id:'z'+Date.now(),name:'אזור חדש',cities:[]});save();renderZones();populateCitySelect();}
+function deleteZone(id){zones=zones.filter(z=>z.id!==id);save();renderZones();populateCitySelect();}
 function addCities(zoneId){
-  const inp=document.getElementById('new-city-'+zoneId);
-  const text=inp.value.trim();if(!text)return;
+  const inp=document.getElementById('new-city-'+zoneId);const text=inp.value.trim();if(!text)return;
   const z=zones.find(x=>x.id===zoneId);if(!z)return;
   text.split(/[\n,]+/).map(c=>c.trim()).filter(c=>c).forEach(c=>{if(!z.cities.includes(c))z.cities.push(c);});
-  inp.value='';save();renderZones();populateCitiesDl();
+  inp.value='';save();renderZones();populateCitySelect();
 }
-function removeCity(zoneId,ci){const z=zones.find(x=>x.id===zoneId);if(z)z.cities.splice(ci,1);save();renderZones();}
+function removeCity(zoneId,ci){const z=zones.find(x=>x.id===zoneId);if(z)z.cities.splice(ci,1);save();renderZones();populateCitySelect();}
 
-// ═══════════════════════════════════════════
-// CATEGORIES
-// ═══════════════════════════════════════════
+// ═══ CATEGORIES ═══
 function renderCategories(){
   document.getElementById('cats-list').innerHTML=categories.map((c,i)=>
     `<div class="tag-item">${c.name} <span style="font-size:0.75rem;color:var(--ink-3);">(${c.time} דק')</span><button class="tag-del" onclick="deleteCat(${i})">×</button></div>`
@@ -1527,8 +1415,7 @@ function renderCategories(){
     const items=p.items.map(item=>{const c=categories.find(x=>x.id===item.catId);return`${c?c.name:'?'} ×${item.qty}`;}).join(' + ');
     return`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-2);font-size:0.875rem;">
       <div><strong>${p.name}</strong> <span style="color:var(--ink-3);">${items}</span></div>
-      <button class="btn btn-ghost btn-sm" onclick="deletePkg(${i})" style="color:var(--red);">הסר</button>
-    </div>`;
+      <button class="btn btn-ghost btn-sm" onclick="deletePkg(${i})" style="color:var(--red);">הסר</button></div>`;
   }).join('')||'<div style="color:var(--ink-4);font-size:0.875rem;padding:1rem 0;">אין חבילות</div>';
   renderCatChips();
 }
@@ -1543,13 +1430,9 @@ function addCategory(){
 function deleteCat(i){categories.splice(i,1);save();renderCategories();}
 function deletePkg(i){packages.splice(i,1);save();renderCategories();}
 let pkgRowCount=0;
-function openAddPkgModal(){
-  pkgRowCount=0;document.getElementById('pkg-name').value='';document.getElementById('pkg-cat-rows').innerHTML='';
-  addPkgRow();document.getElementById('mo-pkg').classList.remove('hidden');
-}
+function openAddPkgModal(){pkgRowCount=0;document.getElementById('pkg-name').value='';document.getElementById('pkg-cat-rows').innerHTML='';addPkgRow();document.getElementById('mo-pkg').classList.remove('hidden');}
 function addPkgRow(){
-  const id=pkgRowCount++;
-  const div=document.createElement('div');div.className='fg-2';
+  const id=pkgRowCount++;const div=document.createElement('div');div.className='fg-2';
   div.innerHTML=`<div class="fg"><label class="fl">קטגוריה</label><select class="fc" id="pkg-cat-${id}">${categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
     <div class="fg"><label class="fl">כמות</label><input class="fc" id="pkg-qty-${id}" type="number" min="1" value="1" style="width:90px;"></div>`;
   document.getElementById('pkg-cat-rows').appendChild(div);
@@ -1557,50 +1440,33 @@ function addPkgRow(){
 function savePkg(){
   const name=document.getElementById('pkg-name').value.trim();if(!name){alert('נא להזין שם');return;}
   const items=[];
-  for(let i=0;i<pkgRowCount;i++){
-    const catEl=document.getElementById('pkg-cat-'+i),qtyEl=document.getElementById('pkg-qty-'+i);
-    if(catEl&&qtyEl)items.push({catId:catEl.value,qty:parseInt(qtyEl.value)||1});
-  }
-  packages.push({id:'p'+Date.now(),name,items});
-  save();closeMo('mo-pkg');renderCategories();
+  for(let i=0;i<pkgRowCount;i++){const catEl=document.getElementById('pkg-cat-'+i),qtyEl=document.getElementById('pkg-qty-'+i);if(catEl&&qtyEl)items.push({catId:catEl.value,qty:parseInt(qtyEl.value)||1});}
+  packages.push({id:'p'+Date.now(),name,items});save();closeMo('mo-pkg');renderCategories();
 }
 
-// ═══════════════════════════════════════════
-// DAY OFF
-// ═══════════════════════════════════════════
+// ═══ DAY OFF ═══
 function openDayoffModal(){
-  const sel=document.getElementById('do-tech');
-  sel.innerHTML=technicians.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+  document.getElementById('do-tech').innerHTML=technicians.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
   renderDayoffList();document.getElementById('mo-dayoff').classList.remove('hidden');
 }
 function addDayoff(){
   const techId=parseInt(document.getElementById('do-tech').value);
-  const date=document.getElementById('do-date').value;
-  const type=document.getElementById('do-type').value;
-  const from=document.getElementById('do-from').value;
-  const to=document.getElementById('do-to').value;
-  const reason=document.getElementById('do-reason').value;
-  if(!date){alert('נא לבחור תאריך');return;}
-  dayoffs.push({techId,date,type,from,to,reason});
+  const date=document.getElementById('do-date').value;if(!date){alert('נא לבחור תאריך');return;}
+  dayoffs.push({techId,date,type:document.getElementById('do-type').value,from:document.getElementById('do-from').value,to:document.getElementById('do-to').value,reason:document.getElementById('do-reason').value});
   save();renderDayoffList();
 }
 function renderDayoffList(){
-  const list=document.getElementById('do-list');
-  if(!dayoffs.length){list.innerHTML='';return;}
-  list.innerHTML='<div style="font-size:0.75rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">היעדרויות קיימות</div>'+
-    dayoffs.map((d,i)=>{
-      const tech=technicians.find(t=>t.id===d.techId);
+  const list=document.getElementById('do-list');if(!dayoffs.length){list.innerHTML='';return;}
+  list.innerHTML='<div style="font-size:0.75rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;margin-bottom:8px;">היעדרויות קיימות</div>'+
+    dayoffs.map((d,i)=>{const tech=technicians.find(t=>t.id===d.techId);
       return`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line-2);font-size:0.875rem;">
         <div><strong>${tech?tech.name:'?'}</strong> · ${d.date} · ${d.type==='full'?'כל היום':d.from+'–'+d.to}${d.reason?' · '+d.reason:''}</div>
-        <button class="btn btn-ghost btn-sm" onclick="removeDayoff(${i})" style="color:var(--red);">×</button>
-      </div>`;
+        <button class="btn btn-ghost btn-sm" onclick="removeDayoff(${i})" style="color:var(--red);">×</button></div>`;
     }).join('');
 }
 function removeDayoff(i){dayoffs.splice(i,1);save();renderDayoffList();}
 
-// ═══════════════════════════════════════════
-// SETTINGS
-// ═══════════════════════════════════════════
+// ═══ SETTINGS + EXPORT/IMPORT ═══
 function saveSettings(){
   settings.company=document.getElementById('set-company').value||'מסלול';
   settings.startTime=document.getElementById('set-start').value;
@@ -1613,10 +1479,32 @@ function saveSettings(){
   settings.packageTime=parseInt(document.getElementById('set-package-time').value)||45;
   save();alert('נשמר ✓');
 }
+function exportSettings(){
+  const data={settings,zones,categories,packages,exportedAt:new Date().toISOString(),version:'ml8'};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='maslul-settings-'+new Date().toISOString().split('T')[0]+'.json';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+function importSettings(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(data.settings)settings=Object.assign(settings,data.settings);
+      if(data.zones)zones=data.zones;
+      if(data.categories)categories=data.categories;
+      if(data.packages)packages=data.packages;
+      save();renderSettings();renderZones();renderCategories();populateCitySelect();populateTimeSels();
+      alert('ההגדרות יובאו בהצלחה ✓');
+    }catch(err){alert('שגיאה בקריאת הקובץ. ודא שזה קובץ הגדרות תקני.');}
+  };
+  reader.readAsText(file);
+  event.target.value='';
+}
 
-// ═══════════════════════════════════════════
-// UTILS
-// ═══════════════════════════════════════════
+// ═══ UTILS ═══
 function closeMo(id){document.getElementById(id).classList.add('hidden');}
 </script>
 </body>
