@@ -485,7 +485,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div class="fg"><label class="fl"><span class="req">*</span> שם מלא</label><input class="fc" id="ti-name"><div class="field-error hidden" id="e-ti-name">שדה חובה</div></div>
       <div class="fg"><label class="fl"><span class="req">*</span> טלפון</label><input class="fc" id="ti-phone" placeholder="05X-XXXXXXX"><div class="field-error hidden" id="e-ti-phone">שדה חובה</div></div>
     </div>
-    <div class="fg"><label class="fl"><span class="req">*</span> כתובת בסיס</label><input class="fc" id="ti-base"><div class="field-error hidden" id="e-ti-base">שדה חובה</div></div>
+    <div class="fg-2">
+      <div class="fg"><label class="fl"><span class="req">*</span> עיר מגורים</label><input class="fc" id="ti-base" placeholder="תל אביב"><div class="field-error hidden" id="e-ti-base">שדה חובה</div></div>
+      <div class="fg"><label class="fl">רחוב ומספר</label><input class="fc" id="ti-address" placeholder="הרצל 14"></div>
+    </div>
     <div class="fg-2">
       <div class="fg"><label class="fl"><span class="req">*</span> מינימום קריאות/יום</label><input class="fc" id="ti-min" type="number" value="2"></div>
       <div class="fg"><label class="fl"><span class="req">*</span> מקסימום קריאות/יום</label><input class="fc" id="ti-max" type="number" value="9"></div>
@@ -620,6 +623,7 @@ const DEFAULT_LABELS = {
   zone:'אזור', zones:'אזורים', zones_title:'אזורי פעילות',
   task:'קריאה', tasks:'קריאות',
   dispatch:'שיבוץ קריאה',
+  categories:'קטגוריות',
 };
 let tenantLabels = {...DEFAULT_LABELS};
 function L(key){ return tenantLabels[key] ?? DEFAULT_LABELS[key] ?? key; }
@@ -818,6 +822,7 @@ async function loadFromSupabase() {
     // Map Supabase format → app format
     technicians = (techRes.data || []).map(t => ({
       id: t.id, name: t.name, phone: t.phone, base: t.base_city,
+      address: t.base_address || '',
       color: t.color, min: t.min_daily, max: t.max_daily,
       start: t.start_time, end: t.end_time,
       blocked: (t.blocked_cities || []).join(','),
@@ -923,6 +928,7 @@ async function saveTechToSupabase(tech) {
   const row = {
     tenant_id: currentTenantId,
     name: tech.name, phone: tech.phone, base_city: tech.base,
+    base_address: tech.address || '',
     color: tech.color, min_daily: tech.min, max_daily: tech.max,
     start_time: tech.start, end_time: tech.end,
     blocked_cities: tech.blocked ? tech.blocked.split(',').map(c=>c.trim()).filter(c=>c) : [],
@@ -1789,7 +1795,7 @@ function renderTechs(){
       <div class="tech-av" style="background:${tech.color};">${initials(tech.name)}</div>
       <div class="tech-name">${tech.name}</div>
       <div class="tech-info">📞 ${tech.phone}</div>
-      <div class="tech-info">🏠 ${tech.base}</div>
+      <div class="tech-info">🏠 ${tech.base}${tech.address?', '+tech.address:''}</div>
       <div class="tech-info">📊 ${tech.min}–${tech.max} ${L('tasks')}/יום</div>
       ${skills?`<div style="margin-top:6px;">${skills}</div>`:''}
       <div class="load-bar" style="margin:8px 0 3px;"><div class="load-fill" style="width:${lp}%;background:${fc};"></div></div>
@@ -1820,7 +1826,7 @@ function toggleSkill(catId){
 function openAddTechModal(){
   editingTechId=null;buildTechModalUI();
   document.getElementById('mo-tech-title').textContent='הוסף '+L('worker');
-  ['ti-name','ti-phone','ti-base','ti-blocked'].forEach(id=>document.getElementById(id).value='');
+  ['ti-name','ti-phone','ti-base','ti-address','ti-blocked'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ti-min').value='2';document.getElementById('ti-max').value='9';
   if(document.getElementById('ti-start').options.length){document.getElementById('ti-start').value='07:00';document.getElementById('ti-end').value='17:00';}
   document.getElementById('ti-save-btn').textContent='הוסף';
@@ -1832,7 +1838,7 @@ function editTech(id){
   editingTechId=id;buildTechModalUI();
   document.getElementById('mo-tech-title').textContent='עריכת '+L('worker');
   document.getElementById('ti-name').value=tech.name;document.getElementById('ti-phone').value=tech.phone;
-  document.getElementById('ti-base').value=tech.base;document.getElementById('ti-min').value=tech.min;
+  document.getElementById('ti-base').value=tech.base;document.getElementById('ti-address').value=tech.address||'';document.getElementById('ti-min').value=tech.min;
   document.getElementById('ti-max').value=tech.max;document.getElementById('ti-blocked').value=tech.blocked||'';
   if(document.getElementById('ti-start').options.length){document.getElementById('ti-start').value=tech.start||'07:00';document.getElementById('ti-end').value=tech.end||'17:00';}
   (tech.skills||[]).forEach(sid=>{const inp=document.getElementById('skill-'+sid),lbl=document.getElementById('skill-lbl-'+sid);if(inp){inp.checked=true;lbl?.classList.add('checked');}});
@@ -1858,7 +1864,7 @@ function saveTech(){
   if(!valid)return;
   const catLimits={};
   categories.forEach(c=>{const v=parseInt(document.getElementById('catlim-'+c.id)?.value);if(v>0)catLimits[c.id]=v;});
-  const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:document.getElementById('ti-start').value,end:document.getElementById('ti-end').value,blocked:document.getElementById('ti-blocked').value.trim(),skills,catLimits,rotation};
+  const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),address:document.getElementById('ti-address').value.trim(),min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:document.getElementById('ti-start').value,end:document.getElementById('ti-end').value,blocked:document.getElementById('ti-blocked').value.trim(),skills,catLimits,rotation};
   if(editingTechId){const tech=technicians.find(t=>t.id===editingTechId);if(tech){Object.assign(tech,data);saveTechToSupabase(tech);}}
   else{const tech={id:nextTechId++,...data,color:COLORS[technicians.length%COLORS.length]};technicians.push(tech);saveTechToSupabase(tech);}
   save();buildRoleSelect();closeMo('mo-tech');renderTechs();renderHomeTechCards();showToast('נשמר ✓');
@@ -1942,7 +1948,7 @@ function openDayoffModal(){
   renderDayoffList();document.getElementById('mo-dayoff').classList.remove('hidden');
 }
 function addDayoff(){
-  const techId=parseInt(document.getElementById('do-tech').value);
+  const techId=document.getElementById('do-tech').value;
   const date=document.getElementById('do-date').value;if(!date){alert('נא לבחור תאריך');return;}
   const dayoff={techId,date,type:document.getElementById('do-type').value,from:document.getElementById('do-from').value,to:document.getElementById('do-to').value,reason:document.getElementById('do-reason').value};
   dayoffs.push(dayoff);saveDayoffToSupabase(dayoff);save();renderDayoffList();
