@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>מסלול</title>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
   --ink:#0F1117;--ink-2:#3D4152;--ink-3:#6B7280;--ink-4:#9CA3AF;
@@ -222,6 +223,23 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 </style>
 </head>
 <body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);">
+  <div style="background:var(--white);border:1px solid var(--line);border-radius:var(--r-xl);padding:2.5rem 2rem;width:100%;max-width:380px;box-shadow:var(--sh-lg);">
+    <div style="text-align:center;margin-bottom:2rem;">
+      <div style="font-size:2rem;font-weight:900;letter-spacing:-1px;"><span style="color:var(--blue);">מס</span>לול</div>
+      <div style="font-size:0.8rem;color:var(--ink-4);margin-top:4px;">מנוע שיבוץ חכם</div>
+    </div>
+    <div class="fg"><label class="fl">אימייל</label><input class="fc" id="login-email" type="email" placeholder="your@email.com" dir="ltr"></div>
+    <div class="fg"><label class="fl">סיסמה</label><input class="fc" id="login-password" type="password" placeholder="••••••••" dir="ltr" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div id="login-error" style="color:var(--red);font-size:0.8rem;margin-bottom:10px;min-height:18px;"></div>
+    <button id="login-btn" class="btn btn-blue btn-full btn-lg" onclick="doLogin()">כניסה</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-shell" class="hidden">
 <div class="shell">
 <nav class="sidebar">
   <div class="sb-top">
@@ -241,12 +259,17 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <button class="ni-btn" onclick="goPage('settings')"><span>⚙️</span> הגדרות</button>
   </div>
   <div class="sb-bot">
+    <div class="role-box" style="margin-bottom:8px;">
+      <div class="role-lbl" id="current-user-role">מנהל</div>
+      <div style="font-size:0.875rem;font-weight:600;color:var(--ink)" id="current-user-name"></div>
+    </div>
     <div class="role-box">
       <div class="role-lbl">תצוגה</div>
       <select class="role-sel" id="role-sel" onchange="switchRole()">
         <option value="admin">מתאמת / מנהל</option>
       </select>
     </div>
+    <button id="logout-btn" class="btn btn-ghost btn-full" style="margin-top:8px;font-size:0.8rem;" onclick="doLogout()">🚪 התנתק</button>
   </div>
 </nav>
 <main class="content">
@@ -559,6 +582,207 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 </div>
 
 <script>
+// ═══════════════════════════════════════════
+// MASLUL CONFIG
+// One URL for all tenants — auth handles isolation
+// To add a new client: create user in Supabase Auth
+//   + insert into users (tenant_id, role, name)
+//   + seed their tenant data
+// ═══════════════════════════════════════════
+const CONFIG = {
+  SUPABASE_URL: 'https://pxpqcdfxogaajwstwdtk.supabase.co',
+  SUPABASE_KEY: 'sb_publishable_YIRTlesCnITRu4lu2dyfPQ_r-ztt6JI',
+};
+
+// ═══ SUPABASE CLIENT ═══
+const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+let currentUser = null;
+let currentTenantId = null;
+
+// ═══ AUTH ═══
+async function initAuth() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    await loadTenantFromUser();
+    showApp();
+  } else {
+    showLogin();
+  }
+  sb.auth.onAuthStateChange(async (_event, session) => {
+    if (session) {
+      currentUser = session.user;
+      await loadTenantFromUser();
+      showApp();
+    } else {
+      currentUser = null;
+      currentTenantId = null;
+      showLogin();
+    }
+  });
+}
+
+async function loadTenantFromUser() {
+  const { data, error } = await sb.from('users')
+    .select('tenant_id, role, name')
+    .eq('id', currentUser.id)
+    .single();
+  if (data) {
+    currentTenantId = data.tenant_id;
+    document.getElementById('current-user-name').textContent = data.name;
+    document.getElementById('current-user-role').textContent =
+      data.role === 'admin' ? 'מנהל' : data.role === 'coordinator' ? 'מתאם' : 'טכנאי';
+  } else {
+    // User exists in Auth but not in our users table yet
+    document.getElementById('login-error').textContent = 'המשתמש לא מוגדר במערכת. פנה למנהל.';
+    await sb.auth.signOut();
+  }
+}
+
+function showLogin() {
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('app-shell').classList.add('hidden');
+}
+
+function showApp() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app-shell').classList.remove('hidden');
+  initApp();
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  document.getElementById('login-btn').textContent = 'מתחבר...';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  document.getElementById('login-btn').textContent = 'כניסה';
+  if (error) errEl.textContent = 'אימייל או סיסמה שגויים';
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+}
+
+// ═══ SUPABASE DATA LAYER ═══
+async function loadFromSupabase() {
+  if (!currentTenantId) return false;
+  try {
+    const [techRes, taskRes, zoneRes, catRes, pkgRes, dayoffRes, tenantRes] = await Promise.all([
+      sb.from('technicians').select('*').eq('tenant_id', currentTenantId),
+      sb.from('tasks').select('*').eq('tenant_id', currentTenantId),
+      sb.from('zones').select('*').eq('tenant_id', currentTenantId),
+      sb.from('categories').select('*').eq('tenant_id', currentTenantId),
+      sb.from('packages').select('*').eq('tenant_id', currentTenantId),
+      sb.from('day_offs').select('*').eq('tenant_id', currentTenantId),
+      sb.from('tenants').select('*').eq('id', currentTenantId).single(),
+    ]);
+
+    // Check for auth errors
+    if (techRes.error || taskRes.error) {
+      console.error('Supabase error:', techRes.error || taskRes.error);
+      return false;
+    }
+
+    // Map Supabase format → app format
+    technicians = (techRes.data || []).map(t => ({
+      id: t.id, name: t.name, phone: t.phone, base: t.base_city,
+      color: t.color, min: t.min_daily, max: t.max_daily,
+      start: t.start_time, end: t.end_time,
+      blocked: (t.blocked_cities || []).join(','),
+      skills: t.skills || [],
+      catLimits: t.cat_limits || {},
+      rotation: t.rotation || {},
+      _dbId: t.id
+    }));
+
+    tasks = (taskRes.data || []).map(t => ({
+      id: t.id, client: t.client_name, phone: t.client_phone,
+      city: t.city, street: t.street,
+      cat: t.category_name, catId: t.category_id,
+      techId: t.technician_id, status: t.status,
+      time: t.scheduled_time || '', date: t.scheduled_date || '',
+      notes: t.notes || '', assignId: t.assign_id || '',
+      _dbId: t.id
+    }));
+
+    zones = (zoneRes.data || []).map(z => ({
+      id: z.id, name: z.name, cities: z.cities || [], _dbId: z.id
+    }));
+
+    categories = (catRes.data || []).map(c => ({
+      id: c.id, name: c.name, time: c.duration_minutes, _dbId: c.id
+    }));
+
+    packages = (pkgRes.data || []).map(p => ({
+      id: p.id, name: p.name, items: p.items || [], _dbId: p.id
+    }));
+
+    dayoffs = (dayoffRes.data || []).map(d => ({
+      id: d.id, techId: d.technician_id, date: d.date, _dbId: d.id
+    }));
+
+    if (tenantRes.data) {
+      const s = tenantRes.data.settings || {};
+      settings = Object.assign(settings, {
+        company: tenantRes.data.name,
+        startTime: s.startTime || '07:00',
+        endTime: s.endTime || '18:00',
+        window: s.window || 3,
+        maxDaily: s.maxDaily || 9,
+        lookahead: s.lookahead || 30,
+        regularTime: s.regularTime || 30,
+        packageTime: s.packageTime || 45,
+      });
+    }
+
+    // Sync task counter
+    if (tasks.length) {
+      const maxNum = tasks.reduce((max, t) => {
+        const n = parseInt((t.assignId || '').replace('MSL-', '')) || 0;
+        return Math.max(max, n);
+      }, 0);
+      nextTaskId = maxNum + 1;
+    }
+
+    return true;
+  } catch(e) {
+    console.error('Supabase load error:', e);
+    return false;
+  }
+}
+
+async function saveTaskToSupabase(task) {
+  const row = {
+    tenant_id: currentTenantId,
+    assign_id: task.assignId,
+    client_name: task.client,
+    client_phone: task.phone,
+    city: task.city,
+    street: task.street,
+    category_id: task.catId,
+    category_name: task.cat,
+    technician_id: task.techId || null,
+    status: task.status,
+    scheduled_date: task.date || null,
+    scheduled_time: task.time || null,
+    notes: task.notes || '',
+  };
+  if (task._dbId) {
+    const { error } = await sb.from('tasks').update(row).eq('id', task._dbId);
+    if (error) console.error('update task error:', error);
+  } else {
+    const { data, error } = await sb.from('tasks').insert(row).select().single();
+    if (error) console.error('insert task error:', error);
+    else task._dbId = data.id;
+  }
+}
+
+async function deleteTaskFromSupabase(taskId) {
+  await sb.from('tasks').delete().eq('id', taskId);
+}
+
 // ═══ CONSTANTS ═══
 const COLORS=['#D97706','#2563EB','#7C3AED','#DC2626','#059669','#DB2777','#0891B2','#65A30D'];
 const CAL_COLORS=[{bg:'#FEF3C7',fg:'#92400E',border:'#FDE68A'},{bg:'#DBEAFE',fg:'#1E40AF',border:'#BFDBFE'},{bg:'#D1FAE5',fg:'#065F46',border:'#A7F3D0'},{bg:'#EDE9FE',fg:'#4C1D95',border:'#DDD6FE'},{bg:'#FCE7F3',fg:'#831843',border:'#FBCFE8'},{bg:'#E0F2FE',fg:'#0C4A6E',border:'#BAE6FD'}];
@@ -647,13 +871,19 @@ function timeToMins(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return
 function minsToTime(m){return pad(Math.floor(m/60))+':'+pad(m%60);}
 
 // ═══ INIT ═══
-document.addEventListener('DOMContentLoaded',()=>{
-  load();buildRoleSelect();populateTimeSels();populateCitySelect();
-  setDateLabel();renderCatChips();renderTasks();renderHomeTechCards();
-  renderTechs();renderZones();renderCategories();renderSettings();
-  document.getElementById('do-date').value=todayStr();
-  document.getElementById('specific-date').value=todayStr();
+document.addEventListener('DOMContentLoaded', () => {
+  initAuth();
 });
+
+async function initApp() {
+  const loaded = await loadFromSupabase();
+  if (!loaded) load(); // fallback to localStorage if Supabase unreachable
+  buildRoleSelect(); populateTimeSels(); populateCitySelect();
+  setDateLabel(); renderCatChips(); renderTasks(); renderHomeTechCards();
+  renderTechs(); renderZones(); renderCategories(); renderSettings();
+  document.getElementById('do-date').value = todayStr();
+  document.getElementById('specific-date').value = todayStr();
+}
 function setDateLabel(){
   const d=new Date(),label='יום '+DAYS_HE[d.getDay()]+' — '+d.toLocaleDateString('he-IL');
   document.getElementById('dispatch-date').textContent=label;
@@ -1107,8 +1337,10 @@ function confirmAssign(idx,assignId){
   const notes=document.getElementById('c-notes').value||'';
   const slot=slots[selectedTimeSlot];
   const catId=getCatId();const catName=getCatName();
-  tasks.push({id:nextTaskId++,client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:slot.start,date:c.date.str,notes,assignId});
+  const newTask={id:nextTaskId++,client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:slot.start,date:c.date.str,notes,assignId};
+  tasks.push(newTask);
   save();
+  saveTaskToSupabase(newTask);
   document.getElementById('dispatch-result').classList.add('hidden');
   document.getElementById('suc-id').textContent=assignId;
   document.getElementById('suc-details').innerHTML=`
@@ -1258,7 +1490,8 @@ function openStatusModal(id){
   document.getElementById('mo-status').classList.remove('hidden');
 }
 function setStatus(ns){
-  const t=tasks.find(x=>x.id===statusTaskId);if(t)t.status=ns;
+  const t=tasks.find(x=>x.id===statusTaskId);
+  if(t){t.status=ns;saveTaskToSupabase(t);}
   save();renderTasks();renderHomeTechCards();closeMo('mo-status');
 }
 
@@ -1507,5 +1740,6 @@ function importSettings(event){
 // ═══ UTILS ═══
 function closeMo(id){document.getElementById(id).classList.add('hidden');}
 </script>
+</div><!-- /app-shell -->
 </body>
 </html>
