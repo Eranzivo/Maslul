@@ -220,6 +220,13 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .empty{text-align:center;padding:3rem;color:var(--ink-4);}
 .empty-icon{font-size:2.5rem;margin-bottom:10px;}
 @media(max-width:900px){.sidebar{display:none;}.content{margin-right:0;}.page{padding:1rem;}.week-header,.week-body{grid-template-columns:40px repeat(3,1fr);}}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:white;padding:10px 22px;border-radius:var(--r-lg);font-size:0.875rem;font-weight:600;z-index:9999;opacity:0;transition:all 0.25s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.success{background:var(--green);}
+.toast.error{background:var(--red);}
+.app-loading{position:fixed;inset:0;background:rgba(249,250,251,0.92);display:flex;align-items:center;justify-content:center;z-index:500;flex-direction:column;gap:14px;}
+.loading-spinner{width:36px;height:36px;border:3px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
@@ -240,6 +247,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 
 <!-- APP -->
 <div id="app-shell" class="hidden">
+<div id="app-loading" class="app-loading hidden">
+  <div class="loading-spinner"></div>
+  <div style="font-size:0.875rem;color:var(--ink-3);font-weight:600;">טוען נתונים...</div>
+</div>
 <div class="shell">
 <nav class="sidebar">
   <div class="sb-top">
@@ -846,6 +857,7 @@ async function loadFromSupabase() {
 
     if (tenantRes.data) {
       const cfg = tenantRes.data.config || {};
+      tenantConfig = cfg;
       const s = cfg.defaults || tenantRes.data.settings || {};
       if (cfg.labels) tenantLabels = Object.assign({}, DEFAULT_LABELS, cfg.labels);
       settings = Object.assign(settings, {
@@ -918,10 +930,10 @@ async function saveTechToSupabase(tech) {
   };
   if (tech._dbId) {
     const { error } = await sb.from('technicians').update(row).eq('id', tech._dbId);
-    if (error) console.error('update tech error:', error);
+    if (error) { console.error('update tech error:', error); showToast('שגיאה בשמירה', 'error'); }
   } else {
     const { data, error } = await sb.from('technicians').insert(row).select().single();
-    if (error) console.error('insert tech error:', error);
+    if (error) { console.error('insert tech error:', error); showToast('שגיאה בשמירה', 'error'); }
     else {
       const oldId = tech.id;
       tech._dbId = data.id;
@@ -938,10 +950,10 @@ async function saveZoneToSupabase(zone) {
   const row = { tenant_id: currentTenantId, name: zone.name, cities: zone.cities };
   if (zone._dbId) {
     const { error } = await sb.from('zones').update(row).eq('id', zone._dbId);
-    if (error) console.error('update zone error:', error);
+    if (error) { console.error('update zone error:', error); showToast('שגיאה בשמירה', 'error'); }
   } else {
     const { data, error } = await sb.from('zones').insert(row).select().single();
-    if (error) console.error('insert zone error:', error);
+    if (error) { console.error('insert zone error:', error); showToast('שגיאה בשמירה', 'error'); }
     else zone._dbId = data.id;
   }
 }
@@ -953,10 +965,10 @@ async function saveCatToSupabase(cat) {
   const row = { tenant_id: currentTenantId, name: cat.name, duration_minutes: cat.time };
   if (cat._dbId) {
     const { error } = await sb.from('categories').update(row).eq('id', cat._dbId);
-    if (error) console.error('update cat error:', error);
+    if (error) { console.error('update cat error:', error); showToast('שגיאה בשמירה', 'error'); }
   } else {
     const { data, error } = await sb.from('categories').insert(row).select().single();
-    if (error) console.error('insert cat error:', error);
+    if (error) { console.error('insert cat error:', error); showToast('שגיאה בשמירה', 'error'); }
     else cat._dbId = data.id;
   }
 }
@@ -968,10 +980,10 @@ async function savePkgToSupabase(pkg) {
   const row = { tenant_id: currentTenantId, name: pkg.name, items: pkg.items };
   if (pkg._dbId) {
     const { error } = await sb.from('packages').update(row).eq('id', pkg._dbId);
-    if (error) console.error('update pkg error:', error);
+    if (error) { console.error('update pkg error:', error); showToast('שגיאה בשמירה', 'error'); }
   } else {
     const { data, error } = await sb.from('packages').insert(row).select().single();
-    if (error) console.error('insert pkg error:', error);
+    if (error) { console.error('insert pkg error:', error); showToast('שגיאה בשמירה', 'error'); }
     else pkg._dbId = data.id;
   }
 }
@@ -987,10 +999,10 @@ async function saveDayoffToSupabase(dayoff) {
   };
   if (dayoff._dbId) {
     const { error } = await sb.from('day_offs').update(row).eq('id', dayoff._dbId);
-    if (error) console.error('update dayoff error:', error);
+    if (error) { console.error('update dayoff error:', error); showToast('שגיאה בשמירה', 'error'); }
   } else {
     const { data, error } = await sb.from('day_offs').insert(row).select().single();
-    if (error) console.error('insert dayoff error:', error);
+    if (error) { console.error('insert dayoff error:', error); showToast('שגיאה בשמירה', 'error'); }
     else dayoff._dbId = data.id;
   }
 }
@@ -1001,11 +1013,16 @@ async function deleteDayoffFromSupabase(dbId) {
 async function saveSettingsToSupabase() {
   if (!currentTenantId) return;
   const { startTime, endTime, window, maxDaily, lookahead, monthlyVolume, regularTime, packageTime } = settings;
+  const updatedConfig = {
+    ...tenantConfig,
+    defaults: { startTime, endTime, window, maxDaily, lookahead, monthlyVolume, regularTime, packageTime },
+  };
   const { error } = await sb.from('tenants').update({
     name: settings.company,
-    settings: { startTime, endTime, window, maxDaily, lookahead, monthlyVolume, regularTime, packageTime },
+    config: updatedConfig,
   }).eq('id', currentTenantId);
-  if (error) console.error('update settings error:', error);
+  if (error) { console.error('update settings error:', error); showToast('שגיאה בשמירת הגדרות', 'error'); }
+  else tenantConfig = updatedConfig;
 }
 
 // ═══ CONSTANTS ═══
@@ -1026,6 +1043,7 @@ const STATUS_MAP={
 
 // ═══ STATE ═══
 let technicians=[],tasks=[],dayoffs=[],zones=[],categories=[],packages=[];
+let tenantConfig={};
 let nextTaskId=1,nextTechId=1,editingTechId=null;
 let selectedCat=null,currentFilter='all',statusTaskId=null,cancelTaskId=null;
 let currentRole='admin',currentTechView=null;
@@ -1061,7 +1079,6 @@ function load(){
       else if(k==='ids'){nextTaskId=d.nextTaskId;nextTechId=d.nextTechId;}
     });
   }catch(e){}
-  if(!technicians.length)seedData();
   if(!categories.length)categories=[{id:'c1',name:'טוחן אשפה',time:30},{id:'c2',name:'מערכת מים',time:30},{id:'c3',name:'מרכך אבנית',time:30},{id:'c4',name:'קריאת שירות',time:30}];
   if(!zones.length)zones=[
     {id:'z1',name:'גוש דן',cities:['תל אביב','חולון','בת ים','ראשון לציון','רמת גן','גבעתיים','אור יהודה','יהוד','בני ברק','פתח תקווה']},
@@ -1106,8 +1123,13 @@ async function initApp() {
     loadDemoData(CONFIG.DEMO_TYPE);
     showDemoBanner();
   } else {
+    document.getElementById('app-loading').classList.remove('hidden');
     const loaded = await loadFromSupabase();
-    if (!loaded) load();
+    document.getElementById('app-loading').classList.add('hidden');
+    if (!loaded) {
+      load();
+      if (!technicians.length) showToast('לא ניתן לטעון נתונים — בדוק חיבור לרשת', 'error');
+    }
   }
   applyLabels();
   buildRoleSelect(); populateTimeSels(); populateCitySelect();
@@ -1839,7 +1861,7 @@ function saveTech(){
   const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:document.getElementById('ti-start').value,end:document.getElementById('ti-end').value,blocked:document.getElementById('ti-blocked').value.trim(),skills,catLimits,rotation};
   if(editingTechId){const tech=technicians.find(t=>t.id===editingTechId);if(tech){Object.assign(tech,data);saveTechToSupabase(tech);}}
   else{const tech={id:nextTechId++,...data,color:COLORS[technicians.length%COLORS.length]};technicians.push(tech);saveTechToSupabase(tech);}
-  save();buildRoleSelect();closeMo('mo-tech');renderTechs();renderHomeTechCards();
+  save();buildRoleSelect();closeMo('mo-tech');renderTechs();renderHomeTechCards();showToast('נשמר ✓');
 }
 function deleteTech(id){
   if(!confirm('למחוק?'))return;
@@ -1895,7 +1917,7 @@ function addCategory(){
   if(!name)return;
   const cat={id:'c'+Date.now(),name,time};categories.push(cat);saveCatToSupabase(cat);
   document.getElementById('new-cat-name').value='';document.getElementById('new-cat-time').value='';
-  save();renderCategories();
+  save();renderCategories();showToast('נשמר ✓');
 }
 function deleteCat(i){const cat=categories[i];if(cat&&cat._dbId)deleteCatFromSupabase(cat._dbId);categories.splice(i,1);save();renderCategories();}
 function deletePkg(i){const pkg=packages[i];if(pkg&&pkg._dbId)deletePkgFromSupabase(pkg._dbId);packages.splice(i,1);save();renderCategories();}
@@ -1911,7 +1933,7 @@ function savePkg(){
   const name=document.getElementById('pkg-name').value.trim();if(!name){alert('נא להזין שם');return;}
   const items=[];
   for(let i=0;i<pkgRowCount;i++){const catEl=document.getElementById('pkg-cat-'+i),qtyEl=document.getElementById('pkg-qty-'+i);if(catEl&&qtyEl)items.push({catId:catEl.value,qty:parseInt(qtyEl.value)||1});}
-  const pkg={id:'p'+Date.now(),name,items};packages.push(pkg);savePkgToSupabase(pkg);save();closeMo('mo-pkg');renderCategories();
+  const pkg={id:'p'+Date.now(),name,items};packages.push(pkg);savePkgToSupabase(pkg);save();closeMo('mo-pkg');renderCategories();showToast('נשמר ✓');
 }
 
 // ═══ DAY OFF ═══
@@ -1947,7 +1969,7 @@ function saveSettings(){
   settings.monthlyVolume=parseInt(document.getElementById('set-monthly').value)||300;
   settings.regularTime=parseInt(document.getElementById('set-regular-time').value)||30;
   settings.packageTime=parseInt(document.getElementById('set-package-time').value)||45;
-  save();saveSettingsToSupabase();alert('נשמר ✓');
+  save();saveSettingsToSupabase();showToast('הגדרות נשמרו ✓');
 }
 function exportSettings(){
   const data={settings,zones,categories,packages,exportedAt:new Date().toISOString(),version:'ml8'};
@@ -1983,7 +2005,13 @@ function importSettings(event){
 
 // ═══ UTILS ═══
 function closeMo(id){document.getElementById(id).classList.add('hidden');}
+function showToast(msg, type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast '+type;t.classList.add('show');
+  clearTimeout(t._tid);t._tid=setTimeout(()=>t.classList.remove('show'),2500);
+}
 </script>
 </div><!-- /app-shell -->
+<div id="toast" class="toast"></div>
 </body>
 </html>
