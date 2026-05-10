@@ -916,7 +916,7 @@ async function saveTaskToSupabase(task) {
   } else {
     const { data, error } = await sb.from('tasks').insert(row).select().single();
     if (error) console.error('insert task error:', error);
-    else task._dbId = data.id;
+    else { task._dbId = data.id; task.id = data.id; }
   }
 }
 
@@ -1636,7 +1636,7 @@ function resetDispatch(){
 // ═══ CANCEL & REPLACE ═══
 function openCancelModal(taskId){
   cancelTaskId=taskId;
-  const t=tasks.find(x=>x.id===taskId);if(!t)return;
+  const t=tasks.find(x=>String(x.id)===String(taskId));if(!t)return;
   document.getElementById('cancel-task-info').innerHTML=`<div style="font-weight:700;">${t.client}</div><div style="font-size:0.8125rem;color:var(--ink-3);">${t.cat} • ${t.city} • ${t.time||'—'} • ${t.assignId}</div>`;
   // check if there are pending tasks in same zone
   const cityZone=getCityZone(t.city);
@@ -1648,12 +1648,12 @@ function openCancelModal(taskId){
   document.getElementById('mo-cancel').classList.remove('hidden');
 }
 function cancelOnly(){
-  const t=tasks.find(x=>x.id===cancelTaskId);
+  const t=tasks.find(x=>String(x.id)===String(cancelTaskId));
   if(t){t.status='cancelled';t.cancelledAt=new Date().toISOString();saveTaskToSupabase(t);}
   save();renderTasks();renderHomeTechCards();closeMo('mo-cancel');
 }
 function cancelAndReplace(){
-  const t=tasks.find(x=>x.id===cancelTaskId);if(!t)return;
+  const t=tasks.find(x=>String(x.id)===String(cancelTaskId));if(!t)return;
   const cityZone=getCityZone(t.city);
   // find best pending task in same zone
   const pending=tasks.filter(x=>x.status==='pending'&&getCityZone(x.city)?.id===cityZone?.id);
@@ -1728,22 +1728,22 @@ function renderTasks(){
         <div class="task-detail">${t.cat} • ${t.street?t.street+', ':''}${t.city}${t.time?' • '+t.time:''}${tech?' • '+tech.name:''}</div>
       </div>
       <div class="task-actions">
-        <span class="badge ${s.badge} status-pill" onclick="openStatusModal(${t.id})">${s.label}</span>
-        ${t.status==='pending'?`<button class="btn btn-blue btn-sm" onclick="quickAssign(${t.id})">שבץ</button>`:''}
-        ${canCancel?`<button class="btn btn-sm" style="background:var(--red-l);color:var(--red);border:1px solid #FECACA;" onclick="openCancelModal(${t.id})">בטל</button>`:''}
+        <span class="badge ${s.badge} status-pill" onclick="openStatusModal('${t.id}')">${s.label}</span>
+        ${t.status==='pending'?`<button class="btn btn-blue btn-sm" onclick="quickAssign('${t.id}')">שבץ</button>`:''}
+        ${canCancel?`<button class="btn btn-sm" style="background:var(--red-l);color:var(--red);border:1px solid #FECACA;" onclick="openCancelModal('${t.id}')">בטל</button>`:''}
       </div>
     </div>`;
   }).join('');
 }
 function quickAssign(id){
-  const t=tasks.find(x=>x.id===id);if(!t)return;
+  const t=tasks.find(x=>String(x.id)===String(id));if(!t)return;
   document.getElementById('s-city').value=t.city||'';
   document.getElementById('s-street').value=t.street||'';
   goPage('dispatch');
   setTimeout(()=>{if(t.catId){selectedCat='cat_'+t.catId;renderCatChips();renderPkgSection();}},100);
 }
 function openStatusModal(id){
-  statusTaskId=id;const t=tasks.find(x=>x.id===id);if(!t)return;
+  statusTaskId=id;const t=tasks.find(x=>String(x.id)===String(id));if(!t)return;
   const s=STATUS_MAP[t.status];
   document.getElementById('status-info').innerHTML=`<div style="font-weight:700;">${t.client}</div><div style="font-size:0.8125rem;color:var(--ink-3);">${t.cat} • ${t.city}${t.assignId?' • '+t.assignId:''}</div>`;
   document.getElementById('status-opts').innerHTML=s.next.map(ns=>{
@@ -1753,7 +1753,7 @@ function openStatusModal(id){
   document.getElementById('mo-status').classList.remove('hidden');
 }
 function setStatus(ns){
-  const t=tasks.find(x=>x.id===statusTaskId);
+  const t=tasks.find(x=>String(x.id)===String(statusTaskId));
   if(t){t.status=ns;saveTaskToSupabase(t);}
   save();renderTasks();renderHomeTechCards();closeMo('mo-status');
 }
