@@ -250,12 +250,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div class="sb-nav">
     <div class="sb-sec">תפעול</div>
     <button class="ni-btn active" onclick="goPage('home')"><span>🏠</span> דף הבית</button>
-    <button class="ni-btn" onclick="goPage('dispatch')"><span>🎯</span> שיבוץ קריאה</button>
-    <button class="ni-btn" onclick="goPage('tasks')"><span>📋</span> קריאות</button>
+    <button class="ni-btn" onclick="goPage('dispatch')"><span>🎯</span> <span data-label="dispatch">שיבוץ קריאה</span></button>
+    <button class="ni-btn" onclick="goPage('tasks')"><span>📋</span> <span data-label="tasks">קריאות</span></button>
     <div class="sb-sec">הגדרות</div>
-    <button class="ni-btn" onclick="goPage('technicians')"><span>👷</span> טכנאים</button>
-    <button class="ni-btn" onclick="goPage('zones')"><span>🗺️</span> אזורים</button>
-    <button class="ni-btn" onclick="goPage('categories')"><span>📦</span> קטגוריות</button>
+    <button class="ni-btn" onclick="goPage('technicians')"><span>👷</span> <span data-label="workers">טכנאים</span></button>
+    <button class="ni-btn" onclick="goPage('zones')"><span>🗺️</span> <span data-label="zones">אזורים</span></button>
+    <button class="ni-btn" onclick="goPage('categories')"><span>📦</span> <span data-label="categories">קטגוריות</span></button>
     <button class="ni-btn" onclick="goPage('settings')"><span>⚙️</span> הגדרות</button>
   </div>
   <div class="sb-bot">
@@ -307,7 +307,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 <!-- DISPATCH -->
 <div id="page-dispatch" class="page hidden">
   <div class="ph ph-row">
-    <div><div class="ph-title">שיבוץ קריאה</div><div class="ph-sub" id="dispatch-date"></div></div>
+    <div><div class="ph-title" data-label="dispatch">שיבוץ קריאה</div><div class="ph-sub" id="dispatch-date"></div></div>
     <button class="btn btn-outline btn-sm" onclick="goPage('home')">← דף הבית</button>
   </div>
   <div id="dispatch-search-card" class="dispatch-search">
@@ -363,7 +363,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 <!-- TASKS -->
 <div id="page-tasks" class="page hidden">
   <div class="ph-row ph">
-    <div><div class="ph-title">קריאות</div></div>
+    <div><div class="ph-title" data-label="tasks">קריאות</div></div>
     <div class="flex-gap">
       <span class="badge badge-blue" id="tf-all" onclick="filterTasks('all')" style="cursor:pointer;padding:5px 12px;">הכל</span>
       <span class="badge badge-gray" id="tf-pending" onclick="filterTasks('pending')" style="cursor:pointer;padding:5px 12px;">ממתינות</span>
@@ -384,7 +384,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 <!-- TECHNICIANS -->
 <div id="page-technicians" class="page hidden">
   <div class="ph-row ph">
-    <div><div class="ph-title">טכנאים</div><div class="ph-sub" id="tech-count-sub"></div></div>
+    <div><div class="ph-title" data-label="workers">טכנאים</div><div class="ph-sub" id="tech-count-sub"></div></div>
     <button class="btn btn-blue" onclick="openAddTechModal()">+ הוסף</button>
   </div>
   <div class="tech-grid" id="tech-grid"></div>
@@ -393,7 +393,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 <!-- ZONES -->
 <div id="page-zones" class="page hidden">
   <div class="ph-row ph">
-    <div><div class="ph-title">אזורי פעילות</div></div>
+    <div><div class="ph-title" data-label="zones_title">אזורי פעילות</div></div>
     <button class="btn btn-blue" onclick="addZone()">+ אזור חדש</button>
   </div>
   <div id="zones-list"></div>
@@ -546,7 +546,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div class="mo-box">
     <div class="mo-title">חופשות וזמינות</div>
     <div class="fg-2">
-      <div class="fg"><label class="fl">טכנאי</label><select class="fc" id="do-tech"></select></div>
+      <div class="fg"><label class="fl" data-label="worker">טכנאי</label><select class="fc" id="do-tech"></select></div>
       <div class="fg"><label class="fl">תאריך</label><input class="fc" type="date" id="do-date"></div>
     </div>
     <div class="fg"><label class="fl">סוג</label>
@@ -592,6 +592,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 const CONFIG = {
   SUPABASE_URL: 'https://pxpqcdfxogaajwstwdtk.supabase.co',
   SUPABASE_KEY: 'sb_publishable_YIRTlesCnITRu4lu2dyfPQ_r-ztt6JI',
+  DEMO_MODE: false,      // true = bypass auth, load pre-seeded demo data
+  DEMO_TYPE: 'general',  // 'general' | 'cleaning' | 'delivery'
 };
 
 // ═══ SUPABASE CLIENT ═══
@@ -599,8 +601,125 @@ const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
 let currentUser = null;
 let currentTenantId = null;
 
+// ═══ TERMINOLOGY / LABELS ═══
+// All UI strings that differ by tenant come from here.
+// Tenants override via config.labels in Supabase. Israel uses the defaults below.
+const DEFAULT_LABELS = {
+  worker:'טכנאי', workers:'טכנאים',
+  zone:'אזור', zones:'אזורים', zones_title:'אזורי פעילות',
+  task:'קריאה', tasks:'קריאות',
+  dispatch:'שיבוץ קריאה',
+};
+let tenantLabels = {...DEFAULT_LABELS};
+function L(key){ return tenantLabels[key] ?? DEFAULT_LABELS[key] ?? key; }
+function applyLabels(){
+  document.querySelectorAll('[data-label]').forEach(el=>{
+    const v=L(el.dataset.label);if(v)el.textContent=v;
+  });
+}
+
+// ═══ DEMO MODE ═══
+// Pre-seeded data for each business type. No Supabase calls when DEMO_MODE=true.
+const DEMO_PRESETS = {
+  general:{
+    labels:{},
+    settings:{company:'מסלול דמו',regularTime:30,packageTime:45,maxDaily:9,window:3,lookahead:30},
+    categories:[{id:'c1',name:'טוחן אשפה',time:30},{id:'c2',name:'מערכת מים',time:30},{id:'c3',name:'מרכך אבנית',time:30},{id:'c4',name:'קריאת שירות',time:30}],
+    zones:[
+      {id:'z1',name:'גוש דן',cities:['תל אביב','חולון','בת ים','ראשון לציון','רמת גן','גבעתיים','פתח תקווה']},
+      {id:'z2',name:'שרון',cities:['נתניה','הרצליה','כפר סבא','רעננה']},
+      {id:'z3',name:'שפלה',cities:['רחובות','נס ציונה','לוד','רמלה']},
+      {id:'z4',name:'דרום',cities:['אשדוד','אשקלון','באר שבע']},
+    ],
+    packages:[{id:'p1',name:'טוחן + מים',items:[{catId:'c1',qty:1},{catId:'c2',qty:1}]}],
+    technicians:[
+      {id:1,name:'אלירן כהן',phone:'052-1111111',base:'ראשון לציון',min:2,max:9,start:'07:00',end:'17:00',blocked:'',color:'#D97706',skills:['c1','c2','c3','c4'],catLimits:{c4:2},rotation:{0:'z1',1:'z2',2:'z1',3:'z3',4:'z1',5:''}},
+      {id:2,name:'יוסי מזרחי',phone:'054-2222222',base:'פתח תקווה',min:2,max:9,start:'07:00',end:'17:00',blocked:'',color:'#2563EB',skills:['c1','c2','c4'],catLimits:{},rotation:{0:'z2',1:'z1',2:'z2',3:'z1',4:'z2',5:''}},
+      {id:3,name:'רון אביבי',phone:'050-3333333',base:'נתניה',min:2,max:8,start:'08:00',end:'16:00',blocked:'',color:'#7C3AED',skills:['c1','c3','c4'],catLimits:{},rotation:{0:'z2',1:'z3',2:'z2',3:'z4',4:'z2',5:''}},
+      {id:4,name:'דני שמש',phone:'053-4444444',base:'רחובות',min:2,max:9,start:'07:00',end:'17:00',blocked:'',color:'#059669',skills:['c1','c2','c3','c4'],catLimits:{},rotation:{0:'z3',1:'z1',2:'z3',3:'z1',4:'z3',5:''}},
+    ],
+    makeTasks(td){return[
+      {id:1,client:'משפחת לוי',phone:'052-0000001',city:'חולון',street:'הרצל 12',cat:'טוחן אשפה',catId:'c1',techId:1,status:'assigned',time:'07:30',date:td,notes:'',assignId:'MSL-00001'},
+      {id:2,client:'דוד כהן',phone:'053-0000002',city:'חולון',street:'סוקולוב 3',cat:'מערכת מים',catId:'c2',techId:1,status:'en_route',time:'09:00',date:td,notes:'',assignId:'MSL-00002'},
+      {id:3,client:'שרה גולן',phone:'052-0000003',city:'ראשון לציון',street:'הרצל 22',cat:'טוחן אשפה',catId:'c1',techId:2,status:'assigned',time:'08:00',date:td,notes:'',assignId:'MSL-00003'},
+      {id:4,client:'חיים רוזן',phone:'054-0000004',city:'נתניה',street:'ביאליק 5',cat:'קריאת שירות',catId:'c4',techId:3,status:'completed',time:'08:00',date:td,notes:'',assignId:'MSL-00004'},
+      {id:5,client:'רחל אברהם',phone:'052-0000005',city:'רחובות',street:'הרצל 10',cat:'טוחן אשפה',catId:'c1',techId:4,status:'assigned',time:'08:00',date:td,notes:'',assignId:'MSL-00005'},
+      {id:6,client:'משפחת פרץ',phone:'055-0000006',city:'רמת גן',street:'ביאליק 20',cat:'טוחן אשפה',catId:'c1',techId:null,status:'pending',time:'',date:'',notes:'',assignId:''},
+    ];}
+  },
+  cleaning:{
+    labels:{worker:'מנקה',workers:'מנקים',task:'עבודה',tasks:'עבודות',dispatch:'עבודה חדשה',zones_title:'אזורי פעילות'},
+    settings:{company:'ניקיון פרו',regularTime:120,packageTime:180,maxDaily:5,window:3,lookahead:14},
+    categories:[{id:'c1',name:'ניקיון בית',time:120},{id:'c2',name:'ניקיון משרד',time:90},{id:'c3',name:'אחרי שיפוץ',time:180},{id:'c4',name:'ניקיון מעמיק',time:150}],
+    zones:[
+      {id:'z1',name:'מרכז',cities:['תל אביב','רמת גן','גבעתיים','פתח תקווה']},
+      {id:'z2',name:'צפון',cities:['הרצליה','רעננה','כפר סבא','נתניה']},
+      {id:'z3',name:'דרום',cities:['חולון','בת ים','ראשון לציון','רחובות']},
+    ],
+    packages:[],
+    technicians:[
+      {id:1,name:'מיכל לוי',phone:'052-1111111',base:'תל אביב',min:2,max:5,start:'08:00',end:'18:00',blocked:'',color:'#D97706',skills:['c1','c2','c3','c4'],catLimits:{},rotation:{0:'z1',1:'z2',2:'z1',3:'z3',4:'z1',5:''}},
+      {id:2,name:'שרה כהן',phone:'054-2222222',base:'רמת גן',min:2,max:4,start:'08:00',end:'17:00',blocked:'',color:'#2563EB',skills:['c1','c2','c4'],catLimits:{},rotation:{0:'z2',1:'z1',2:'z2',3:'z1',4:'z2',5:''}},
+      {id:3,name:'רחל אברהם',phone:'050-3333333',base:'הרצליה',min:1,max:4,start:'09:00',end:'17:00',blocked:'',color:'#7C3AED',skills:['c1','c3','c4'],catLimits:{},rotation:{0:'z2',1:'z3',2:'z2',3:'z1',4:'z2',5:''}},
+    ],
+    makeTasks(td){return[
+      {id:1,client:'משפחת ברנר',phone:'052-1110000',city:'תל אביב',street:'דיזנגוף 50',cat:'ניקיון בית',catId:'c1',techId:1,status:'assigned',time:'08:00',date:td,notes:'',assignId:'CLN-00001'},
+      {id:2,client:'עו"ד רוזנברג',phone:'054-2220000',city:'תל אביב',street:'אבן גבירול 30',cat:'ניקיון משרד',catId:'c2',techId:1,status:'completed',time:'12:00',date:td,notes:'',assignId:'CLN-00002'},
+      {id:3,client:'משפחת שפירא',phone:'052-3330000',city:'הרצליה',street:'סוקולוב 12',cat:'ניקיון מעמיק',catId:'c4',techId:2,status:'assigned',time:'09:00',date:td,notes:'',assignId:'CLN-00003'},
+      {id:4,client:'חברת אלפא',phone:'055-4440000',city:'רמת גן',street:'ביאליק 8',cat:'ניקיון משרד',catId:'c2',techId:null,status:'pending',time:'',date:'',notes:'',assignId:''},
+    ];}
+  },
+  delivery:{
+    labels:{worker:'שליח',workers:'שליחים',task:'משלוח',tasks:'משלוחים',dispatch:'משלוח חדש',zone:'מסלול',zones:'מסלולים',zones_title:'מסלולי פעילות'},
+    settings:{company:'ספרינט משלוחים',regularTime:15,packageTime:25,maxDaily:20,window:2,lookahead:7},
+    categories:[{id:'c1',name:'משלוח ביתי',time:15},{id:'c2',name:'משלוח עסקי',time:20},{id:'c3',name:'איסוף',time:10},{id:'c4',name:'חבילה גדולה',time:25}],
+    zones:[
+      {id:'z1',name:'מסלול מרכז',cities:['תל אביב','רמת גן','גבעתיים','בני ברק']},
+      {id:'z2',name:'מסלול שרון',cities:['הרצליה','רעננה','כפר סבא','נתניה']},
+      {id:'z3',name:'מסלול דרום',cities:['חולון','בת ים','ראשון לציון','אשדוד']},
+    ],
+    packages:[],
+    technicians:[
+      {id:1,name:'עמיר בן דוד',phone:'052-1111111',base:'תל אביב',min:5,max:20,start:'07:00',end:'18:00',blocked:'',color:'#D97706',skills:['c1','c2','c3','c4'],catLimits:{},rotation:{0:'z1',1:'z2',2:'z1',3:'z3',4:'z1',5:''}},
+      {id:2,name:'נדב שמיר',phone:'054-2222222',base:'חולון',min:5,max:18,start:'07:00',end:'17:00',blocked:'',color:'#2563EB',skills:['c1','c2','c4'],catLimits:{},rotation:{0:'z2',1:'z1',2:'z2',3:'z1',4:'z2',5:''}},
+      {id:3,name:'אורן פרץ',phone:'050-3333333',base:'הרצליה',min:5,max:20,start:'07:30',end:'18:00',blocked:'',color:'#7C3AED',skills:['c1','c3','c4'],catLimits:{},rotation:{0:'z2',1:'z3',2:'z2',3:'z3',4:'z2',5:''}},
+      {id:4,name:'יואב גל',phone:'053-4444444',base:'ראשון לציון',min:5,max:18,start:'07:00',end:'17:00',blocked:'',color:'#059669',skills:['c1','c2','c3','c4'],catLimits:{},rotation:{0:'z3',1:'z1',2:'z3',3:'z1',4:'z3',5:''}},
+    ],
+    makeTasks(td){return[
+      {id:1,client:'סופרפארם סניף תל אביב',phone:'03-1111111',city:'תל אביב',street:'דיזנגוף 50',cat:'משלוח עסקי',catId:'c2',techId:1,status:'en_route',time:'07:30',date:td,notes:'',assignId:'DLV-00001'},
+      {id:2,client:'ישראל ישראלי',phone:'052-2222222',city:'רמת גן',street:'ביאליק 5',cat:'משלוח ביתי',catId:'c1',techId:1,status:'assigned',time:'08:00',date:td,notes:'',assignId:'DLV-00002'},
+      {id:3,client:'קפה פריז',phone:'03-3333333',city:'תל אביב',street:'אבן גבירול 20',cat:'איסוף',catId:'c3',techId:2,status:'assigned',time:'07:30',date:td,notes:'',assignId:'DLV-00003'},
+      {id:4,client:'רבקה לוי',phone:'052-4444444',city:'חולון',street:'הרצל 15',cat:'חבילה גדולה',catId:'c4',techId:2,status:'completed',time:'09:00',date:td,notes:'',assignId:'DLV-00004'},
+      {id:5,client:'עו"ד שפירא',phone:'054-5555555',city:'הרצליה',street:'סוקולוב 30',cat:'משלוח עסקי',catId:'c2',techId:3,status:'assigned',time:'08:00',date:td,notes:'',assignId:'DLV-00005'},
+      {id:6,client:'רחל כהן',phone:'050-6666666',city:'נתניה',street:'הרצל 8',cat:'משלוח ביתי',catId:'c1',techId:null,status:'pending',time:'',date:'',notes:'',assignId:''},
+    ];}
+  },
+};
+function loadDemoData(type){
+  const p=DEMO_PRESETS[type]||DEMO_PRESETS.general;
+  tenantLabels=Object.assign({},DEFAULT_LABELS,p.labels||{});
+  categories=p.categories.map(c=>({...c}));
+  technicians=p.technicians.map(t=>({...t}));
+  zones=p.zones.map(z=>({...z}));
+  packages=(p.packages||[]).map(k=>({...k}));
+  dayoffs=[];
+  settings=Object.assign({},settings,p.settings||{});
+  const td=new Date().toISOString().split('T')[0];
+  tasks=p.makeTasks(td);
+  nextTaskId=tasks.length+1;nextTechId=technicians.length+1;
+}
+function showDemoBanner(){
+  if(document.getElementById('demo-banner'))return;
+  const b=document.createElement('div');b.id='demo-banner';
+  b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--purple);color:white;text-align:center;padding:6px 16px;font-size:0.8125rem;font-weight:700;letter-spacing:0.3px;';
+  b.textContent='🎭 מצב הדגמה — הנתונים לצורכי הדגמה בלבד, לא נשמרים';
+  document.body.prepend(b);
+  document.getElementById('app-shell').style.paddingTop='34px';
+}
+
 // ═══ AUTH ═══
 async function initAuth() {
+  if (CONFIG.DEMO_MODE) { showApp(); return; }
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     currentUser = session.user;
@@ -720,11 +839,15 @@ async function loadFromSupabase() {
     }));
 
     dayoffs = (dayoffRes.data || []).map(d => ({
-      id: d.id, techId: d.technician_id, date: d.date, _dbId: d.id
+      id: d.id, techId: d.technician_id, date: d.date,
+      type: d.type || 'full', from: d.from_time || '', to: d.to_time || '',
+      reason: d.reason || '', _dbId: d.id
     }));
 
     if (tenantRes.data) {
-      const s = tenantRes.data.settings || {};
+      const cfg = tenantRes.data.config || {};
+      const s = cfg.defaults || tenantRes.data.settings || {};
+      if (cfg.labels) tenantLabels = Object.assign({}, DEFAULT_LABELS, cfg.labels);
       settings = Object.assign(settings, {
         company: tenantRes.data.name,
         startTime: s.startTime || '07:00',
@@ -732,6 +855,7 @@ async function loadFromSupabase() {
         window: s.window || 3,
         maxDaily: s.maxDaily || 9,
         lookahead: s.lookahead || 30,
+        monthlyVolume: s.monthlyVolume || 300,
         regularTime: s.regularTime || 30,
         packageTime: s.packageTime || 45,
       });
@@ -783,6 +907,107 @@ async function deleteTaskFromSupabase(taskId) {
   await sb.from('tasks').delete().eq('id', taskId);
 }
 
+async function saveTechToSupabase(tech) {
+  const row = {
+    tenant_id: currentTenantId,
+    name: tech.name, phone: tech.phone, base_city: tech.base,
+    color: tech.color, min_daily: tech.min, max_daily: tech.max,
+    start_time: tech.start, end_time: tech.end,
+    blocked_cities: tech.blocked ? tech.blocked.split(',').map(c=>c.trim()).filter(c=>c) : [],
+    skills: tech.skills || [], cat_limits: tech.catLimits || {}, rotation: tech.rotation || {},
+  };
+  if (tech._dbId) {
+    const { error } = await sb.from('technicians').update(row).eq('id', tech._dbId);
+    if (error) console.error('update tech error:', error);
+  } else {
+    const { data, error } = await sb.from('technicians').insert(row).select().single();
+    if (error) console.error('insert tech error:', error);
+    else {
+      const oldId = tech.id;
+      tech._dbId = data.id;
+      tech.id = data.id;
+      tasks.forEach(t => { if (t.techId === oldId) t.techId = data.id; });
+    }
+  }
+}
+async function deleteTechFromSupabase(dbId) {
+  await sb.from('technicians').delete().eq('id', dbId);
+}
+
+async function saveZoneToSupabase(zone) {
+  const row = { tenant_id: currentTenantId, name: zone.name, cities: zone.cities };
+  if (zone._dbId) {
+    const { error } = await sb.from('zones').update(row).eq('id', zone._dbId);
+    if (error) console.error('update zone error:', error);
+  } else {
+    const { data, error } = await sb.from('zones').insert(row).select().single();
+    if (error) console.error('insert zone error:', error);
+    else zone._dbId = data.id;
+  }
+}
+async function deleteZoneFromSupabase(dbId) {
+  await sb.from('zones').delete().eq('id', dbId);
+}
+
+async function saveCatToSupabase(cat) {
+  const row = { tenant_id: currentTenantId, name: cat.name, duration_minutes: cat.time };
+  if (cat._dbId) {
+    const { error } = await sb.from('categories').update(row).eq('id', cat._dbId);
+    if (error) console.error('update cat error:', error);
+  } else {
+    const { data, error } = await sb.from('categories').insert(row).select().single();
+    if (error) console.error('insert cat error:', error);
+    else cat._dbId = data.id;
+  }
+}
+async function deleteCatFromSupabase(dbId) {
+  await sb.from('categories').delete().eq('id', dbId);
+}
+
+async function savePkgToSupabase(pkg) {
+  const row = { tenant_id: currentTenantId, name: pkg.name, items: pkg.items };
+  if (pkg._dbId) {
+    const { error } = await sb.from('packages').update(row).eq('id', pkg._dbId);
+    if (error) console.error('update pkg error:', error);
+  } else {
+    const { data, error } = await sb.from('packages').insert(row).select().single();
+    if (error) console.error('insert pkg error:', error);
+    else pkg._dbId = data.id;
+  }
+}
+async function deletePkgFromSupabase(dbId) {
+  await sb.from('packages').delete().eq('id', dbId);
+}
+
+async function saveDayoffToSupabase(dayoff) {
+  const row = {
+    tenant_id: currentTenantId, technician_id: dayoff.techId, date: dayoff.date,
+    type: dayoff.type || 'full', from_time: dayoff.from || null,
+    to_time: dayoff.to || null, reason: dayoff.reason || '',
+  };
+  if (dayoff._dbId) {
+    const { error } = await sb.from('day_offs').update(row).eq('id', dayoff._dbId);
+    if (error) console.error('update dayoff error:', error);
+  } else {
+    const { data, error } = await sb.from('day_offs').insert(row).select().single();
+    if (error) console.error('insert dayoff error:', error);
+    else dayoff._dbId = data.id;
+  }
+}
+async function deleteDayoffFromSupabase(dbId) {
+  await sb.from('day_offs').delete().eq('id', dbId);
+}
+
+async function saveSettingsToSupabase() {
+  if (!currentTenantId) return;
+  const { startTime, endTime, window, maxDaily, lookahead, monthlyVolume, regularTime, packageTime } = settings;
+  const { error } = await sb.from('tenants').update({
+    name: settings.company,
+    settings: { startTime, endTime, window, maxDaily, lookahead, monthlyVolume, regularTime, packageTime },
+  }).eq('id', currentTenantId);
+  if (error) console.error('update settings error:', error);
+}
+
 // ═══ CONSTANTS ═══
 const COLORS=['#D97706','#2563EB','#7C3AED','#DC2626','#059669','#DB2777','#0891B2','#65A30D'];
 const CAL_COLORS=[{bg:'#FEF3C7',fg:'#92400E',border:'#FDE68A'},{bg:'#DBEAFE',fg:'#1E40AF',border:'#BFDBFE'},{bg:'#D1FAE5',fg:'#065F46',border:'#A7F3D0'},{bg:'#EDE9FE',fg:'#4C1D95',border:'#DDD6FE'},{bg:'#FCE7F3',fg:'#831843',border:'#FBCFE8'},{bg:'#E0F2FE',fg:'#0C4A6E',border:'#BAE6FD'}];
@@ -811,6 +1036,7 @@ let settings={company:'מסלול',startTime:'07:00',endTime:'18:00',window:3,ma
 
 // ═══ STORAGE ═══
 function save(){
+  if (CONFIG.DEMO_MODE) return;
   localStorage.setItem('ml8_techs',JSON.stringify(technicians));
   localStorage.setItem('ml8_tasks',JSON.stringify(tasks));
   localStorage.setItem('ml8_settings',JSON.stringify(settings));
@@ -876,8 +1102,14 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function initApp() {
-  const loaded = await loadFromSupabase();
-  if (!loaded) load(); // fallback to localStorage if Supabase unreachable
+  if (CONFIG.DEMO_MODE) {
+    loadDemoData(CONFIG.DEMO_TYPE);
+    showDemoBanner();
+  } else {
+    const loaded = await loadFromSupabase();
+    if (!loaded) load();
+  }
+  applyLabels();
   buildRoleSelect(); populateTimeSels(); populateCitySelect();
   setDateLabel(); renderCatChips(); renderTasks(); renderHomeTechCards();
   renderTechs(); renderZones(); renderCategories(); renderSettings();
@@ -943,7 +1175,7 @@ function goPage(page){
 }
 function switchRole(){
   const val=document.getElementById('role-sel').value;currentRole=val;
-  if(val!=='admin'){const techId=parseInt(val.replace('tech_',''));currentTechView=technicians.find(t=>t.id===techId);goPage('techview');}
+  if(val!=='admin'){const techId=val.replace('tech_','');currentTechView=technicians.find(t=>String(t.id)===techId);goPage('techview');}
   else goPage('home');
 }
 
@@ -989,10 +1221,10 @@ function renderHomeTechCards(){
       <div class="th-avatar" style="background:${tech.color};">${initials(tech.name)}</div>
       <div class="th-name">${tech.name}</div>
       <div class="th-area">${zone?zone.name:'—'}</div>
-      <div style="font-size:0.75rem;font-weight:700;margin-top:6px;color:${fc};">${cnt}/${tech.max} קריאות היום</div>
+      <div style="font-size:0.75rem;font-weight:700;margin-top:6px;color:${fc};">${cnt}/${tech.max} ${L('tasks')} היום</div>
       <div class="load-bar" style="margin-top:6px;"><div class="load-fill" style="width:${lp}%;background:${fc};"></div></div>
     </div>`;
-  }).join('')||'<div class="empty"><div class="empty-icon">👷</div><div>הוסף טכנאי ראשון</div></div>';
+  }).join('')||`<div class="empty"><div class="empty-icon">👷</div><div>הוסף ${L('worker')} ראשון</div></div>`;
 }
 function getTechZoneForDate(tech,dateStr){
   const d=new Date(dateStr);const dow=d.getDay();
@@ -1025,7 +1257,9 @@ function renderWeeklyCalendar(){
   const dates=getWeekDates(currentWeekOffset);
   const today=todayStr();
   document.getElementById('week-title').textContent=tech.name+' — '+dates[0].toLocaleDateString('he-IL')+' עד '+dates[5].toLocaleDateString('he-IL');
-  const hours=Array.from({length:11},(_,i)=>i+7); // 7-17
+  const calStartH=parseInt((settings.startTime||'07:00').split(':')[0]);
+  const calEndH=parseInt((settings.endTime||'18:00').split(':')[0]);
+  const hours=Array.from({length:calEndH-calStartH},(_,i)=>i+calStartH);
   const cc=CAL_COLORS[technicians.indexOf(tech)%CAL_COLORS.length];
   let hdr='<div class="wh-cell"></div>';
   dates.forEach((d,i)=>{
@@ -1040,7 +1274,7 @@ function renderWeeklyCalendar(){
     const tasksHtml=dayTasks.map(t=>{
       const startMins=timeToMins(t.time);
       const durMins=packages.some(p=>p.items.some(i=>i.catId===t.catId))?(settings.packageTime||45):(settings.regularTime||30);
-      const topPx=((startMins-7*60)/60)*60;
+      const topPx=((startMins-calStartH*60)/60)*60;
       const heightPx=Math.max((durMins/60)*60,20);
       const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;
       return`<div class="cal-task" style="top:${topPx}px;height:${heightPx}px;background:${cc.bg};color:${cc.fg};border:1px solid ${cc.border};" title="${t.client} — ${t.cat}">
@@ -1246,7 +1480,7 @@ function checkSpecificDate(dateStr){
     showCandidate(currentCandidateIdx);return;
   }
   document.getElementById('d-alert').className='alert alert-amber';
-  document.getElementById('d-alert').textContent='⚠️ לא ניתן לשבץ בתאריך זה — אין טכנאי זמין באזור הנדרש.';
+  document.getElementById('d-alert').textContent=`⚠️ לא ניתן לשבץ בתאריך זה — אין ${L('worker')} זמין באזור הנדרש.`;
   document.getElementById('d-alert').classList.remove('hidden');
 }
 function showNoResult(){
@@ -1254,7 +1488,7 @@ function showNoResult(){
   document.getElementById('dispatch-search-card').style.pointerEvents='none';
   document.getElementById('dispatch-result').classList.remove('hidden');
   document.getElementById('d-alert').className='alert alert-amber';
-  document.getElementById('d-alert').textContent='⚠️ לא נמצא שיבוץ אפשרי. בדוק שהעיר משויכת לאזור עם טכנאי זמין.';
+  document.getElementById('d-alert').textContent=`⚠️ לא נמצא שיבוץ אפשרי. בדוק שהעיר משויכת לאזור עם ${L('worker')} זמין.`;
   document.getElementById('d-alert').classList.remove('hidden');
   document.getElementById('suggestion-card').innerHTML='';
 }
@@ -1387,7 +1621,7 @@ function openCancelModal(taskId){
 }
 function cancelOnly(){
   const t=tasks.find(x=>x.id===cancelTaskId);
-  if(t){t.status='cancelled';t.cancelledAt=new Date().toISOString();}
+  if(t){t.status='cancelled';t.cancelledAt=new Date().toISOString();saveTaskToSupabase(t);}
   save();renderTasks();renderHomeTechCards();closeMo('mo-cancel');
 }
 function cancelAndReplace(){
@@ -1424,6 +1658,7 @@ function confirmReplace(){
   replacement.date=freedSlot.date;
   replacement.assignId=genId();
   nextTaskId++;
+  saveTaskToSupabase(replacement);
   save();renderTasks();renderHomeTechCards();closeMo('mo-replace');
   replaceSuggestion=null;
 }
@@ -1522,7 +1757,7 @@ function renderTechView(){
 
 // ═══ TECHNICIANS ═══
 function renderTechs(){
-  document.getElementById('tech-count-sub').textContent=technicians.length+' טכנאים';
+  document.getElementById('tech-count-sub').textContent=technicians.length+' '+L('workers');
   document.getElementById('tech-grid').innerHTML=technicians.map(tech=>{
     const cnt=getTechLoad(tech,todayStr());
     const lp=Math.min(100,Math.round((cnt/Math.max(tech.max,1))*100));
@@ -1533,7 +1768,7 @@ function renderTechs(){
       <div class="tech-name">${tech.name}</div>
       <div class="tech-info">📞 ${tech.phone}</div>
       <div class="tech-info">🏠 ${tech.base}</div>
-      <div class="tech-info">📊 ${tech.min}–${tech.max} קריאות/יום</div>
+      <div class="tech-info">📊 ${tech.min}–${tech.max} ${L('tasks')}/יום</div>
       ${skills?`<div style="margin-top:6px;">${skills}</div>`:''}
       <div class="load-bar" style="margin:8px 0 3px;"><div class="load-fill" style="width:${lp}%;background:${fc};"></div></div>
       <div style="font-size:0.7rem;color:var(--ink-4);">${cnt}/${tech.max} היום</div>
@@ -1542,7 +1777,7 @@ function renderTechs(){
         <button class="btn btn-ghost btn-sm" onclick="deleteTech(${tech.id})" style="color:var(--red);">הסר</button>
       </div>
     </div>`;
-  }).join('')||'<div class="empty"><div class="empty-icon">👷</div><div>הוסף טכנאי ראשון</div></div>';
+  }).join('')||`<div class="empty"><div class="empty-icon">👷</div><div>הוסף ${L('worker')} ראשון</div></div>`;
 }
 function buildTechModalUI(){
   document.getElementById('ti-skills-container').innerHTML=categories.map(c=>
@@ -1562,7 +1797,7 @@ function toggleSkill(catId){
 }
 function openAddTechModal(){
   editingTechId=null;buildTechModalUI();
-  document.getElementById('mo-tech-title').textContent='הוסף טכנאי';
+  document.getElementById('mo-tech-title').textContent='הוסף '+L('worker');
   ['ti-name','ti-phone','ti-base','ti-blocked'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ti-min').value='2';document.getElementById('ti-max').value='9';
   if(document.getElementById('ti-start').options.length){document.getElementById('ti-start').value='07:00';document.getElementById('ti-end').value='17:00';}
@@ -1573,7 +1808,7 @@ function openAddTechModal(){
 function editTech(id){
   const tech=technicians.find(t=>t.id===id);if(!tech)return;
   editingTechId=id;buildTechModalUI();
-  document.getElementById('mo-tech-title').textContent='עריכת טכנאי';
+  document.getElementById('mo-tech-title').textContent='עריכת '+L('worker');
   document.getElementById('ti-name').value=tech.name;document.getElementById('ti-phone').value=tech.phone;
   document.getElementById('ti-base').value=tech.base;document.getElementById('ti-min').value=tech.min;
   document.getElementById('ti-max').value=tech.max;document.getElementById('ti-blocked').value=tech.blocked||'';
@@ -1602,14 +1837,16 @@ function saveTech(){
   const catLimits={};
   categories.forEach(c=>{const v=parseInt(document.getElementById('catlim-'+c.id)?.value);if(v>0)catLimits[c.id]=v;});
   const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:document.getElementById('ti-start').value,end:document.getElementById('ti-end').value,blocked:document.getElementById('ti-blocked').value.trim(),skills,catLimits,rotation};
-  if(editingTechId){const tech=technicians.find(t=>t.id===editingTechId);if(tech)Object.assign(tech,data);}
-  else technicians.push({id:nextTechId++,...data,color:COLORS[technicians.length%COLORS.length]});
+  if(editingTechId){const tech=technicians.find(t=>t.id===editingTechId);if(tech){Object.assign(tech,data);saveTechToSupabase(tech);}}
+  else{const tech={id:nextTechId++,...data,color:COLORS[technicians.length%COLORS.length]};technicians.push(tech);saveTechToSupabase(tech);}
   save();buildRoleSelect();closeMo('mo-tech');renderTechs();renderHomeTechCards();
 }
 function deleteTech(id){
   if(!confirm('למחוק?'))return;
+  const tech=technicians.find(t=>t.id===id);
+  if(tech&&tech._dbId)deleteTechFromSupabase(tech._dbId);
   technicians=technicians.filter(t=>t.id!==id);
-  tasks.forEach(t=>{if(t.techId===id){t.techId=null;t.status='pending';t.time='';}});
+  tasks.forEach(t=>{if(t.techId===id){t.techId=null;t.status='pending';t.time='';saveTaskToSupabase(t);}});
   save();buildRoleSelect();renderTechs();renderTasks();renderHomeTechCards();
 }
 
@@ -1618,7 +1855,7 @@ function renderZones(){
   document.getElementById('zones-list').innerHTML=zones.map((z,zi)=>`
     <div class="zone-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <input class="fc" value="${z.name}" onchange="zones[${zi}].name=this.value;save();" style="font-weight:800;font-size:0.9375rem;border:none;padding:0;background:transparent;flex:1;">
+        <input class="fc" value="${z.name}" onchange="zones[${zi}].name=this.value;saveZoneToSupabase(zones[${zi}]);save();" style="font-weight:800;font-size:0.9375rem;border:none;padding:0;background:transparent;flex:1;">
         <button class="btn btn-ghost btn-sm" onclick="deleteZone('${z.id}')" style="color:var(--red);">הסר</button>
       </div>
       <div class="zone-cities">${z.cities.map((c,ci)=>`<span class="city-tag">${c}<button onclick="removeCity('${z.id}',${ci})">×</button></span>`).join('')}</div>
@@ -1629,15 +1866,15 @@ function renderZones(){
       </div>
     </div>`).join('')||'<div class="empty"><div class="empty-icon">🗺️</div><div>הוסף אזור ראשון</div></div>';
 }
-function addZone(){zones.push({id:'z'+Date.now(),name:'אזור חדש',cities:[]});save();renderZones();populateCitySelect();}
-function deleteZone(id){zones=zones.filter(z=>z.id!==id);save();renderZones();populateCitySelect();}
+function addZone(){const z={id:'z'+Date.now(),name:'אזור חדש',cities:[]};zones.push(z);saveZoneToSupabase(z);save();renderZones();populateCitySelect();}
+function deleteZone(id){const z=zones.find(x=>x.id===id);if(z&&z._dbId)deleteZoneFromSupabase(z._dbId);zones=zones.filter(x=>x.id!==id);save();renderZones();populateCitySelect();}
 function addCities(zoneId){
   const inp=document.getElementById('new-city-'+zoneId);const text=inp.value.trim();if(!text)return;
   const z=zones.find(x=>x.id===zoneId);if(!z)return;
   text.split(/[\n,]+/).map(c=>c.trim()).filter(c=>c).forEach(c=>{if(!z.cities.includes(c))z.cities.push(c);});
-  inp.value='';save();renderZones();populateCitySelect();
+  inp.value='';saveZoneToSupabase(z);save();renderZones();populateCitySelect();
 }
-function removeCity(zoneId,ci){const z=zones.find(x=>x.id===zoneId);if(z)z.cities.splice(ci,1);save();renderZones();populateCitySelect();}
+function removeCity(zoneId,ci){const z=zones.find(x=>x.id===zoneId);if(z){z.cities.splice(ci,1);saveZoneToSupabase(z);}save();renderZones();populateCitySelect();}
 
 // ═══ CATEGORIES ═══
 function renderCategories(){
@@ -1656,12 +1893,12 @@ function addCategory(){
   const name=document.getElementById('new-cat-name').value.trim();
   const time=parseInt(document.getElementById('new-cat-time').value)||settings.regularTime||30;
   if(!name)return;
-  categories.push({id:'c'+Date.now(),name,time});
+  const cat={id:'c'+Date.now(),name,time};categories.push(cat);saveCatToSupabase(cat);
   document.getElementById('new-cat-name').value='';document.getElementById('new-cat-time').value='';
   save();renderCategories();
 }
-function deleteCat(i){categories.splice(i,1);save();renderCategories();}
-function deletePkg(i){packages.splice(i,1);save();renderCategories();}
+function deleteCat(i){const cat=categories[i];if(cat&&cat._dbId)deleteCatFromSupabase(cat._dbId);categories.splice(i,1);save();renderCategories();}
+function deletePkg(i){const pkg=packages[i];if(pkg&&pkg._dbId)deletePkgFromSupabase(pkg._dbId);packages.splice(i,1);save();renderCategories();}
 let pkgRowCount=0;
 function openAddPkgModal(){pkgRowCount=0;document.getElementById('pkg-name').value='';document.getElementById('pkg-cat-rows').innerHTML='';addPkgRow();document.getElementById('mo-pkg').classList.remove('hidden');}
 function addPkgRow(){
@@ -1674,7 +1911,7 @@ function savePkg(){
   const name=document.getElementById('pkg-name').value.trim();if(!name){alert('נא להזין שם');return;}
   const items=[];
   for(let i=0;i<pkgRowCount;i++){const catEl=document.getElementById('pkg-cat-'+i),qtyEl=document.getElementById('pkg-qty-'+i);if(catEl&&qtyEl)items.push({catId:catEl.value,qty:parseInt(qtyEl.value)||1});}
-  packages.push({id:'p'+Date.now(),name,items});save();closeMo('mo-pkg');renderCategories();
+  const pkg={id:'p'+Date.now(),name,items};packages.push(pkg);savePkgToSupabase(pkg);save();closeMo('mo-pkg');renderCategories();
 }
 
 // ═══ DAY OFF ═══
@@ -1685,8 +1922,8 @@ function openDayoffModal(){
 function addDayoff(){
   const techId=parseInt(document.getElementById('do-tech').value);
   const date=document.getElementById('do-date').value;if(!date){alert('נא לבחור תאריך');return;}
-  dayoffs.push({techId,date,type:document.getElementById('do-type').value,from:document.getElementById('do-from').value,to:document.getElementById('do-to').value,reason:document.getElementById('do-reason').value});
-  save();renderDayoffList();
+  const dayoff={techId,date,type:document.getElementById('do-type').value,from:document.getElementById('do-from').value,to:document.getElementById('do-to').value,reason:document.getElementById('do-reason').value};
+  dayoffs.push(dayoff);saveDayoffToSupabase(dayoff);save();renderDayoffList();
 }
 function renderDayoffList(){
   const list=document.getElementById('do-list');if(!dayoffs.length){list.innerHTML='';return;}
@@ -1697,7 +1934,7 @@ function renderDayoffList(){
         <button class="btn btn-ghost btn-sm" onclick="removeDayoff(${i})" style="color:var(--red);">×</button></div>`;
     }).join('');
 }
-function removeDayoff(i){dayoffs.splice(i,1);save();renderDayoffList();}
+function removeDayoff(i){const d=dayoffs[i];if(d&&d._dbId)deleteDayoffFromSupabase(d._dbId);dayoffs.splice(i,1);save();renderDayoffList();}
 
 // ═══ SETTINGS + EXPORT/IMPORT ═══
 function saveSettings(){
@@ -1710,7 +1947,7 @@ function saveSettings(){
   settings.monthlyVolume=parseInt(document.getElementById('set-monthly').value)||300;
   settings.regularTime=parseInt(document.getElementById('set-regular-time').value)||30;
   settings.packageTime=parseInt(document.getElementById('set-package-time').value)||45;
-  save();alert('נשמר ✓');
+  save();saveSettingsToSupabase();alert('נשמר ✓');
 }
 function exportSettings(){
   const data={settings,zones,categories,packages,exportedAt:new Date().toISOString(),version:'ml8'};
@@ -1726,10 +1963,17 @@ function importSettings(event){
     try{
       const data=JSON.parse(e.target.result);
       if(data.settings)settings=Object.assign(settings,data.settings);
-      if(data.zones)zones=data.zones;
-      if(data.categories)categories=data.categories;
-      if(data.packages)packages=data.packages;
-      save();renderSettings();renderZones();renderCategories();populateCitySelect();populateTimeSels();
+      if(data.zones)zones=data.zones.map(z=>({...z,_dbId:undefined}));
+      if(data.categories)categories=data.categories.map(c=>({...c,_dbId:undefined}));
+      if(data.packages)packages=data.packages.map(p=>({...p,_dbId:undefined}));
+      save();
+      if(currentTenantId){
+        zones.forEach(z=>saveZoneToSupabase(z));
+        categories.forEach(c=>saveCatToSupabase(c));
+        packages.forEach(p=>savePkgToSupabase(p));
+        saveSettingsToSupabase();
+      }
+      renderSettings();renderZones();renderCategories();populateCitySelect();populateTimeSels();
       alert('ההגדרות יובאו בהצלחה ✓');
     }catch(err){alert('שגיאה בקריאת הקובץ. ודא שזה קובץ הגדרות תקני.');}
   };
