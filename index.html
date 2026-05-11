@@ -287,6 +287,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <button id="nav-zones" class="ni-btn" onclick="goPage('zones')"><span>🗺️</span> <span data-label="zones">אזורים</span></button>
     <button id="nav-categories" class="ni-btn" onclick="goPage('categories')"><span>📦</span> <span data-label="categories">קטגוריות</span></button>
     <button id="nav-settings" class="ni-btn" onclick="goPage('settings')"><span>⚙️</span> הגדרות</button>
+    <div id="nav-sec-admin" class="sb-sec hidden" style="color:var(--purple);">MASLUL ADMIN</div>
+    <button id="nav-admin" class="ni-btn hidden" onclick="goPage('admin')" style="color:var(--purple);"><span>🔧</span> מנהל מאסטר</button>
   </div>
   <div class="sb-bot">
     <div class="role-box" style="margin-bottom:8px;">
@@ -523,10 +525,28 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div class="ph">
     <div class="ph-row">
       <div><div class="ph-title">לקוחות</div><div class="ph-sub" id="client-count-sub"></div></div>
-      <button class="btn btn-blue" onclick="openAddClientModal()">+ לקוח חדש</button>
+      <button class="btn btn-blue" onclick="openAddClientModal()" id="btn-add-client">+ לקוח חדש</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:14px;">
+      <button id="tab-clients-active" class="btn btn-blue btn-sm" onclick="setClientView(false)">פעילים</button>
+      <button id="tab-clients-archive" class="btn btn-outline btn-sm" onclick="setClientView(true)">🗄️ ארכיון</button>
     </div>
   </div>
   <div id="client-grid" class="client-grid"></div>
+</div>
+
+<!-- MASTER ADMIN -->
+<div id="page-admin" class="page hidden">
+  <div class="ph">
+    <div class="ph-row">
+      <div>
+        <div class="ph-title">🔧 מנהל מאסטר</div>
+        <div class="ph-sub">Maslul — גלוי לך בלבד</div>
+      </div>
+      <button class="btn btn-blue" onclick="openNewTenantModal()">+ לקוח חדש</button>
+    </div>
+  </div>
+  <div id="admin-tenant-list"></div>
 </div>
 
 </main>
@@ -646,6 +666,72 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div class="mo-actions">
       <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-pkg')">ביטול</button>
       <button class="btn btn-blue" style="flex:2;" onclick="savePkg()">שמור</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NEW TENANT (admin only) -->
+<div class="mo hidden" id="mo-tenant">
+  <div class="mo-box">
+    <div class="mo-title">➕ לקוח חדש — Maslul</div>
+    <div class="fg"><label class="fl">שם החברה</label><input class="fc" id="tn-name" placeholder="לדוגמה: PureWater"></div>
+    <div class="fg-2">
+      <div class="fg"><label class="fl">פלאן</label>
+        <select class="fc" id="tn-plan">
+          <option value="pilot">Pilot</option>
+          <option value="starter">Starter</option>
+          <option value="pro">Pro</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">סוג עסק</label>
+        <select class="fc" id="tn-type">
+          <option value="field_service">שירות שטח</option>
+          <option value="cleaning">ניקיון</option>
+          <option value="delivery">משלוחים</option>
+        </select>
+      </div>
+    </div>
+    <div style="background:var(--amber-l);border:1px solid #FDE68A;border-radius:var(--r);padding:10px 12px;font-size:0.8rem;margin:10px 0;line-height:1.6;">
+      <strong>לאחר יצירת הלקוח:</strong><br>
+      1. Supabase → Authentication → Users → Add user → אימייל הלקוח<br>
+      2. העתק את ה-UUID שמוצג → הדבק למטה
+    </div>
+    <div class="fg"><label class="fl">Supabase Auth UUID של מנהל הלקוח</label><input class="fc" id="tn-user-uuid" dir="ltr" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+    <div class="fg"><label class="fl">שם המנהל</label><input class="fc" id="tn-user-name"></div>
+    <div class="mo-actions">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-tenant')">ביטול</button>
+      <button class="btn btn-blue" style="flex:2;" onclick="createTenant()">צור לקוח</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EDIT TENANT FEATURES (admin only) -->
+<div class="mo hidden" id="mo-tenant-feat">
+  <div class="mo-box">
+    <div class="mo-title" id="mo-tenant-feat-title">תכונות לקוח</div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">👥 ניהול לקוחות (CRM)</div></div>
+      <label class="toggle-switch"><input type="checkbox" id="tf-crm"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">📎 קבצים ותמונות</div></div>
+      <label class="toggle-switch"><input type="checkbox" id="tf-files"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">✅ צ'קליסטים</div></div>
+      <label class="toggle-switch"><input type="checkbox" id="tf-checklists"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">📊 דוחות</div></div>
+      <label class="toggle-switch"><input type="checkbox" id="tf-reports"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">💬 WhatsApp</div></div>
+      <label class="toggle-switch"><input type="checkbox" id="tf-whatsapp"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="mo-actions">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-tenant-feat')">ביטול</button>
+      <button class="btn btn-blue" style="flex:2;" onclick="saveTenantFeatures()">שמור</button>
     </div>
   </div>
 </div>
@@ -834,12 +920,13 @@ async function initAuth() {
 
 async function loadTenantFromUser() {
   const { data, error } = await sb.from('users')
-    .select('tenant_id, role, name')
+    .select('tenant_id, role, name, super_admin')
     .eq('id', currentUser.id)
     .single();
   if (data) {
     currentTenantId = data.tenant_id;
     currentUserRole = data.role;
+    currentUserSuperAdmin = data.super_admin || false;
     document.getElementById('current-user-name').textContent = data.name;
     document.getElementById('current-user-role').textContent =
       data.role === 'admin' ? 'מנהל' : data.role === 'coordinator' ? 'מתאם' : 'טכנאי';
@@ -1136,6 +1223,9 @@ const STATUS_MAP={
 let technicians=[],tasks=[],dayoffs=[],zones=[],categories=[],packages=[],clients=[];
 let tenantConfig={};
 let currentUserRole='coordinator';
+let currentUserSuperAdmin=false;
+let clientArchiveView=false;
+let adminTenants=[],adminUsers=[];
 let nextTaskId=1,nextTechId=1,editingTechId=null;
 let selectedCat=null,currentFilter='all',statusTaskId=null,cancelTaskId=null;
 let currentRole='admin',currentTechView=null;
@@ -1272,8 +1362,8 @@ function renderSettings(){
   const f=tenantConfig.features||{};
   const sec=document.getElementById('sec-features');
   if(sec){
-    sec.classList.toggle('hidden',currentUserRole!=='admin');
-    if(currentUserRole==='admin'){
+    sec.classList.toggle('hidden',!currentUserSuperAdmin);
+    if(currentUserSuperAdmin){
       document.getElementById('feat-crm').checked=!!f.crm_enabled;
       document.getElementById('feat-files').checked=!!f.files_enabled;
       document.getElementById('feat-checklists').checked=!!f.checklists_enabled;
@@ -1285,7 +1375,7 @@ function renderSettings(){
 
 // ═══ PAGES ═══
 function goPage(page){
-  ['home','dispatch','tasks','clients','techview','technicians','zones','categories','settings'].forEach(p=>{
+  ['home','dispatch','tasks','clients','admin','techview','technicians','zones','categories','settings'].forEach(p=>{
     document.getElementById('page-'+p).classList.toggle('hidden',p!==page);
   });
   document.querySelectorAll('.ni-btn').forEach(b=>b.classList.remove('active'));
@@ -1298,7 +1388,8 @@ function goPage(page){
   if(page==='categories')renderCategories();
   if(page==='tasks')renderTasks();
   if(page==='home')renderHomeTechCards();
-  if(page==='clients')renderClients();
+  if(page==='clients'){clientArchiveView=false;renderClients();}
+  if(page==='admin')renderAdminPanel();
 }
 function switchRole(){
   const val=document.getElementById('role-sel').value;currentRole=val;
@@ -1314,6 +1405,10 @@ function applyFeatureVisibility(){
   const navClients=document.getElementById('nav-clients');
   if(secCrm)secCrm.classList.toggle('hidden',!crmOn);
   if(navClients)navClients.classList.toggle('hidden',!crmOn);
+  const secAdmin=document.getElementById('nav-sec-admin');
+  const navAdmin=document.getElementById('nav-admin');
+  if(secAdmin)secAdmin.classList.toggle('hidden',!currentUserSuperAdmin);
+  if(navAdmin)navAdmin.classList.toggle('hidden',!currentUserSuperAdmin);
 }
 async function saveFeatureFlags(){
   if(!currentTenantId)return;
@@ -1331,6 +1426,100 @@ async function saveFeatureFlags(){
   tenantConfig=updatedConfig;
   applyFeatureVisibility();
   showToast('תכונות עודכנו ✓');
+}
+
+// ═══ MASTER ADMIN PANEL ═══
+let editingTenantFeatId=null;
+async function renderAdminPanel(){
+  const list=document.getElementById('admin-tenant-list');
+  if(!list)return;
+  list.innerHTML='<div style="text-align:center;padding:2rem;color:var(--ink-4);">טוען...</div>';
+  const[tenantRes,userRes]=await Promise.all([
+    sb.from('tenants').select('*'),
+    sb.from('users').select('id,tenant_id,role,name,super_admin'),
+  ]);
+  if(tenantRes.error){list.innerHTML='<div class="empty">שגיאה — ודא שה-super_admin מוגדר כראוי</div>';return;}
+  adminTenants=tenantRes.data||[];
+  adminUsers=userRes.data||[];
+  const planColor={pilot:'var(--amber)',starter:'var(--blue)',pro:'var(--purple)'};
+  list.innerHTML=adminTenants.map(t=>{
+    const tUsers=adminUsers.filter(u=>u.tenant_id===t.id);
+    const f=t.config?.features||{};
+    const feats=[f.crm_enabled&&'CRM',f.files_enabled&&'קבצים',f.checklists_enabled&&'צ\'ק',f.reports_enabled&&'דוחות',f.whatsapp_enabled&&'WhatsApp'].filter(Boolean).join(' · ')||'ללא תכונות';
+    return`<div class="card" style="margin-bottom:1rem;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+            <div style="font-size:1.125rem;font-weight:800;">${t.name}</div>
+            <span style="background:${planColor[t.plan]||'var(--ink-3)'};color:white;padding:2px 8px;border-radius:10px;font-size:0.65rem;font-weight:800;">${t.plan.toUpperCase()}</span>
+          </div>
+          <div style="font-size:0.8125rem;color:var(--ink-3);margin-bottom:6px;">🔑 ${t.id}</div>
+          <div style="font-size:0.8125rem;color:var(--ink-2);margin-bottom:6px;">תכונות: ${feats}</div>
+          <div>${tUsers.map(u=>`<span style="display:inline-block;background:var(--line-2);border-radius:6px;padding:2px 8px;font-size:0.75rem;margin:2px;">👤 ${u.name} (${u.role})${u.super_admin?' ⭐':''}</span>`).join('')}</div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="openTenantFeatModal('${t.id}')">עריכת תכונות</button>
+      </div>
+    </div>`;
+  }).join('')||'<div class="empty"><div class="empty-icon">🏢</div><div>אין לקוחות עדיין</div></div>';
+}
+function openTenantFeatModal(tenantId){
+  const t=adminTenants.find(x=>x.id===tenantId);if(!t)return;
+  editingTenantFeatId=tenantId;
+  document.getElementById('mo-tenant-feat-title').textContent='תכונות — '+t.name;
+  const f=t.config?.features||{};
+  document.getElementById('tf-crm').checked=!!f.crm_enabled;
+  document.getElementById('tf-files').checked=!!f.files_enabled;
+  document.getElementById('tf-checklists').checked=!!f.checklists_enabled;
+  document.getElementById('tf-reports').checked=!!f.reports_enabled;
+  document.getElementById('tf-whatsapp').checked=!!f.whatsapp_enabled;
+  document.getElementById('mo-tenant-feat').classList.remove('hidden');
+}
+async function saveTenantFeatures(){
+  const t=adminTenants.find(x=>x.id===editingTenantFeatId);if(!t)return;
+  const features={...(t.config?.features||{}),
+    crm_enabled:document.getElementById('tf-crm').checked,
+    files_enabled:document.getElementById('tf-files').checked,
+    checklists_enabled:document.getElementById('tf-checklists').checked,
+    reports_enabled:document.getElementById('tf-reports').checked,
+    whatsapp_enabled:document.getElementById('tf-whatsapp').checked,
+  };
+  const updatedConfig={...(t.config||{}),features};
+  const{error}=await sb.from('tenants').update({config:updatedConfig}).eq('id',editingTenantFeatId);
+  if(error){showToast('שגיאה','error');return;}
+  t.config=updatedConfig;
+  // If editing own tenant, sync local tenantConfig too
+  if(editingTenantFeatId===currentTenantId){tenantConfig=updatedConfig;applyFeatureVisibility();}
+  closeMo('mo-tenant-feat');
+  showToast('תכונות עודכנו ✓');
+  renderAdminPanel();
+}
+function openNewTenantModal(){
+  ['tn-name','tn-user-uuid','tn-user-name'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('tn-plan').value='pilot';
+  document.getElementById('mo-tenant').classList.remove('hidden');
+}
+async function createTenant(){
+  const name=document.getElementById('tn-name').value.trim();
+  const userUuid=document.getElementById('tn-user-uuid').value.trim();
+  const userName=document.getElementById('tn-user-name').value.trim();
+  const plan=document.getElementById('tn-plan').value;
+  if(!name){showToast('שם חברה חובה','error');return;}
+  const defaultConfig={
+    labels:{worker:'טכנאי',workers:'טכנאים',task:'קריאה',tasks:'קריאות',zone:'אזור',zones:'אזורים',dispatch:'שיבוץ קריאה'},
+    defaults:{regularTime:30,packageTime:45,window:3,maxDaily:9,lookahead:30,monthlyVolume:300,startTime:'07:00',endTime:'18:00'},
+    features:{whatsapp_enabled:false,crm_enabled:false,files_enabled:false,checklists_enabled:false,reports_enabled:false,demo_mode:false,google_maps_enabled:false}
+  };
+  const{data:tenant,error:te}=await sb.from('tenants').insert({name,plan,config:defaultConfig}).select().single();
+  if(te){showToast('שגיאה ביצירת לקוח','error');console.error(te);return;}
+  if(userUuid&&userName){
+    const{error:ue}=await sb.from('users').insert({id:userUuid,tenant_id:tenant.id,role:'admin',name:userName,super_admin:false});
+    if(ue){showToast(`לקוח נוצר (${tenant.id}) אך שגיאה בקישור משתמש — הדבק UUID ב-SQL ידנית`,'error');console.error(ue);}
+    else showToast(`לקוח "${name}" נוצר ✓`);
+  }else{
+    showToast(`לקוח "${name}" נוצר — UUID: ${tenant.id}`);
+  }
+  closeMo('mo-tenant');
+  renderAdminPanel();
 }
 
 // ═══ CLIENTS (CRM) ═══
@@ -1351,17 +1540,42 @@ async function deleteClientFromSupabase(dbId){
   if(!currentTenantId||!dbId)return;
   await sb.from('clients').delete().eq('id',dbId);
 }
+function setClientView(archived){
+  clientArchiveView=archived;
+  document.getElementById('tab-clients-active').className='btn btn-sm'+(archived?' btn-outline':' btn-blue');
+  document.getElementById('tab-clients-archive').className='btn btn-sm'+(archived?' btn-blue':' btn-outline');
+  const addBtn=document.getElementById('btn-add-client');
+  if(addBtn)addBtn.style.display=archived?'none':'';
+  renderClients();
+}
 function renderClients(){
   const grid=document.getElementById('client-grid');
   if(!grid)return;
+  const visible=clients.filter(c=>!!c.archived===clientArchiveView);
+  const activeCount=clients.filter(c=>!c.archived).length;
+  const archiveCount=clients.filter(c=>!!c.archived).length;
   const sub=document.getElementById('client-count-sub');
-  if(sub)sub.textContent=clients.length+' לקוחות';
-  if(!clients.length){
-    grid.innerHTML='<div class="empty"><div class="empty-icon">👥</div><div>אין לקוחות עדיין — לחץ על "+ לקוח חדש" להוספה</div></div>';
+  if(sub)sub.textContent=clientArchiveView?`${archiveCount} בארכיון`:`${activeCount} לקוחות פעילים`;
+  if(!visible.length){
+    grid.innerHTML=clientArchiveView
+      ?'<div class="empty"><div class="empty-icon">🗄️</div><div>הארכיון ריק</div></div>'
+      :'<div class="empty"><div class="empty-icon">👥</div><div>אין לקוחות עדיין — לחץ על "+ לקוח חדש" להוספה</div></div>';
     return;
   }
-  grid.innerHTML=clients.map(c=>{
+  grid.innerHTML=visible.map(c=>{
     const taskCount=tasks.filter(t=>t.clientId===c.id||t.client===c.name).length;
+    if(clientArchiveView){
+      return`<div class="client-card" style="opacity:0.75;">
+        <div class="client-name">${c.name}</div>
+        ${c.phone?`<div class="client-meta">📞 ${c.phone}</div>`:''}
+        ${c.city?`<div class="client-meta">📍 ${c.city}</div>`:''}
+        <div style="font-size:0.75rem;color:var(--ink-4);margin-top:8px;">${taskCount} קריאות בהיסטוריה</div>
+        <div style="display:flex;gap:6px;margin-top:10px;">
+          <button class="btn btn-outline btn-sm" onclick="restoreClient('${c.id}')">↩️ שחזר</button>
+          <button class="btn btn-sm" style="background:var(--red-l);color:var(--red);border:1px solid #FECACA;" onclick="permanentDeleteClient('${c.id}')">מחק לצמיתות</button>
+        </div>
+      </div>`;
+    }
     return`<div class="client-card">
       <div class="client-name">${c.name}</div>
       ${c.phone?`<div class="client-meta">📞 <a href="tel:${c.phone}" style="color:var(--blue);text-decoration:none;">${c.phone}</a></div>`:''}
@@ -1371,7 +1585,7 @@ function renderClients(){
       <div style="font-size:0.75rem;color:var(--ink-4);margin-top:8px;">${taskCount} קריאות בהיסטוריה</div>
       <div style="display:flex;gap:6px;margin-top:10px;">
         <button class="btn btn-outline btn-sm" onclick="editClient('${c.id}')">עריכה</button>
-        <button class="btn btn-sm" style="background:var(--red-l);color:var(--red);border:1px solid #FECACA;" onclick="deleteClient('${c.id}')">הסר</button>
+        <button class="btn btn-sm" style="background:var(--amber-l);color:var(--amber);border:1px solid #FDE68A;" onclick="deleteClient('${c.id}')">🗄️ ארכיון</button>
       </div>
     </div>`;
   }).join('');
@@ -1412,14 +1626,34 @@ async function saveClient(){
   renderClients();
 }
 async function deleteClient(id){
-  if(!confirm('למחוק לקוח זה?'))return;
+  const c=clients.find(x=>String(x.id)===String(id));
+  if(!c)return;
+  c.archived=true;c.archived_at=new Date().toISOString();
+  if(c._dbId){
+    await sb.from('clients').update({archived:true,archived_at:c.archived_at}).eq('id',c._dbId);
+  }
+  renderClients();
+  showToast('לקוח הועבר לארכיון');
+}
+async function restoreClient(id){
+  const c=clients.find(x=>String(x.id)===String(id));
+  if(!c)return;
+  c.archived=false;c.archived_at=null;
+  if(c._dbId){
+    await sb.from('clients').update({archived:false,archived_at:null}).eq('id',c._dbId);
+  }
+  renderClients();
+  showToast('לקוח שוחזר ✓');
+}
+async function permanentDeleteClient(id){
+  if(!confirm('מחיקה לצמיתות? פעולה זו בלתי הפיכה.'))return;
   const idx=clients.findIndex(x=>String(x.id)===String(id));
   if(idx===-1)return;
   const c=clients[idx];
   if(c._dbId)await deleteClientFromSupabase(c._dbId);
   clients.splice(idx,1);
   renderClients();
-  showToast('לקוח הוסר');
+  showToast('לקוח נמחק לצמיתות');
 }
 
 // ═══ CLIENT SEARCH ═══
