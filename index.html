@@ -1028,7 +1028,9 @@ async function loadFromSupabase() {
     if (!clientRes.error && clientRes.data) {
       clients = clientRes.data.map(c => ({
         id: c.id, name: c.name, phone: c.phone || '', email: c.email || '',
-        city: c.city || '', address: c.address || '', notes: c.notes || '', _dbId: c.id
+        city: c.city || '', address: c.address || '', notes: c.notes || '',
+        archived: c.archived || false, archived_at: c.archived_at || null,
+        _dbId: c.id
       }));
     }
 
