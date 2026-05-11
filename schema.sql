@@ -133,6 +133,20 @@ CREATE TABLE IF NOT EXISTS day_offs (
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- ─── CLIENTS ─────────────────────────────────────────────────────
+-- CRM: one row per end-customer. Tasks reference clients optionally.
+CREATE TABLE IF NOT EXISTS clients (
+  id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  tenant_id  UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
+  phone      TEXT DEFAULT '',
+  email      TEXT DEFAULT '',
+  city       TEXT DEFAULT '',
+  address    TEXT DEFAULT '',
+  notes      TEXT DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ═══════════════════════════════════════════════════════════════
 -- ROW LEVEL SECURITY
 -- Every table is fully isolated by tenant_id.
@@ -146,6 +160,7 @@ ALTER TABLE categories  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE packages    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tasks       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE day_offs    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clients     ENABLE ROW LEVEL SECURITY;
 
 -- Helper function: resolves the current auth user's tenant_id.
 -- SECURITY DEFINER so it runs with elevated rights to read the users table.
@@ -168,6 +183,7 @@ DROP POLICY IF EXISTS "cats_all"    ON categories;  CREATE POLICY "cats_all"    
 DROP POLICY IF EXISTS "pkgs_all"    ON packages;    CREATE POLICY "pkgs_all"    ON packages    USING (tenant_id = get_tenant_id());
 DROP POLICY IF EXISTS "tasks_all"   ON tasks;       CREATE POLICY "tasks_all"   ON tasks       USING (tenant_id = get_tenant_id());
 DROP POLICY IF EXISTS "dayoffs_all" ON day_offs;    CREATE POLICY "dayoffs_all" ON day_offs    USING (tenant_id = get_tenant_id());
+DROP POLICY IF EXISTS "clients_all" ON clients;    CREATE POLICY "clients_all" ON clients    USING (tenant_id = get_tenant_id());
 
 -- ═══════════════════════════════════════════════════════════════
 -- MIGRATION: if tables already exist (upgrade from settings → config)

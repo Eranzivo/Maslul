@@ -227,6 +227,23 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .app-loading{position:fixed;inset:0;background:rgba(249,250,251,0.92);display:flex;align-items:center;justify-content:center;z-index:500;flex-direction:column;gap:14px;}
 .loading-spinner{width:36px;height:36px;border:3px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:spin 0.7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
+/* ─── FEATURE TOGGLES ─── */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line-2);}
+.toggle-row:last-child{border-bottom:none;}
+.toggle-label{font-size:0.875rem;font-weight:600;}
+.toggle-sub{font-size:0.75rem;color:var(--ink-3);margin-top:1px;}
+.toggle-switch{position:relative;width:44px;height:24px;flex-shrink:0;}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute;}
+.toggle-slider{position:absolute;cursor:pointer;inset:0;background:var(--line);border-radius:24px;transition:0.2s;}
+.toggle-slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background:white;border-radius:50%;transition:0.2s;}
+.toggle-switch input:checked+.toggle-slider{background:var(--blue);}
+.toggle-switch input:checked+.toggle-slider:before{transform:translateX(20px);}
+/* ─── CLIENTS PAGE ─── */
+.client-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;}
+.client-card{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:1.25rem;box-shadow:var(--sh);transition:box-shadow 0.15s;}
+.client-card:hover{box-shadow:var(--sh-md);}
+.client-name{font-size:1rem;font-weight:800;margin-bottom:4px;}
+.client-meta{font-size:0.8125rem;color:var(--ink-3);margin-bottom:2px;}
 </style>
 </head>
 <body>
@@ -260,14 +277,16 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div class="sb-div"></div>
   <div class="sb-nav">
     <div class="sb-sec">תפעול</div>
-    <button class="ni-btn active" onclick="goPage('home')"><span>🏠</span> דף הבית</button>
-    <button class="ni-btn" onclick="goPage('dispatch')"><span>🎯</span> <span data-label="dispatch">שיבוץ קריאה</span></button>
-    <button class="ni-btn" onclick="goPage('tasks')"><span>📋</span> <span data-label="tasks">קריאות</span></button>
+    <button id="nav-home" class="ni-btn active" onclick="goPage('home')"><span>🏠</span> דף הבית</button>
+    <button id="nav-dispatch" class="ni-btn" onclick="goPage('dispatch')"><span>🎯</span> <span data-label="dispatch">שיבוץ קריאה</span></button>
+    <button id="nav-tasks" class="ni-btn" onclick="goPage('tasks')"><span>📋</span> <span data-label="tasks">קריאות</span></button>
+    <div id="nav-sec-crm" class="sb-sec hidden">CRM</div>
+    <button id="nav-clients" class="ni-btn hidden" onclick="goPage('clients')"><span>👥</span> לקוחות</button>
     <div class="sb-sec">הגדרות</div>
-    <button class="ni-btn" onclick="goPage('technicians')"><span>👷</span> <span data-label="workers">טכנאים</span></button>
-    <button class="ni-btn" onclick="goPage('zones')"><span>🗺️</span> <span data-label="zones">אזורים</span></button>
-    <button class="ni-btn" onclick="goPage('categories')"><span>📦</span> <span data-label="categories">קטגוריות</span></button>
-    <button class="ni-btn" onclick="goPage('settings')"><span>⚙️</span> הגדרות</button>
+    <button id="nav-technicians" class="ni-btn" onclick="goPage('technicians')"><span>👷</span> <span data-label="workers">טכנאים</span></button>
+    <button id="nav-zones" class="ni-btn" onclick="goPage('zones')"><span>🗺️</span> <span data-label="zones">אזורים</span></button>
+    <button id="nav-categories" class="ni-btn" onclick="goPage('categories')"><span>📦</span> <span data-label="categories">קטגוריות</span></button>
+    <button id="nav-settings" class="ni-btn" onclick="goPage('settings')"><span>⚙️</span> הגדרות</button>
   </div>
   <div class="sb-bot">
     <div class="role-box" style="margin-bottom:8px;">
@@ -470,8 +489,44 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       </div>
       <div style="font-size:0.75rem;color:var(--ink-4);margin-top:6px;">ייצוא מוריד קובץ JSON עם כל ההגדרות (ללא נתוני לקוחות)</div>
     </div>
+    <div id="sec-features" class="set-sec hidden">
+      <div class="set-title">🔐 תכונות מופעלות</div>
+      <div style="font-size:0.75rem;color:var(--ink-4);margin-bottom:12px;">גלוי למנהל בלבד. שינויים משפיעים על כל המשתמשים בחשבון.</div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">👥 ניהול לקוחות (CRM)</div><div class="toggle-sub">דף לקוחות, היסטוריית קריאות, הערות</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="feat-crm"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">📎 קבצים ותמונות</div><div class="toggle-sub">צירוף תמונות ומסמכים לקריאה</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="feat-files"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">✅ צ'קליסטים</div><div class="toggle-sub">רשימות ביקורת לכל קריאה</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="feat-checklists"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">📊 דוחות</div><div class="toggle-sub">ניתוח ביצועים, קריאות לפי טכנאי</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="feat-reports"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">💬 WhatsApp</div><div class="toggle-sub">הודעות ללקוחות ולטכנאים</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="feat-whatsapp"><span class="toggle-slider"></span></label>
+      </div>
+      <button class="btn btn-outline" style="margin-top:14px;" onclick="saveFeatureFlags()">שמור תכונות</button>
+    </div>
     <button class="btn btn-blue btn-lg" onclick="saveSettings()">שמור הגדרות</button>
   </div>
+</div>
+
+<!-- CLIENTS -->
+<div id="page-clients" class="page hidden">
+  <div class="ph">
+    <div class="ph-row">
+      <div><div class="ph-title">לקוחות</div><div class="ph-sub" id="client-count-sub"></div></div>
+      <button class="btn btn-blue" onclick="openAddClientModal()">+ לקוח חדש</button>
+    </div>
+  </div>
+  <div id="client-grid" class="client-grid"></div>
 </div>
 
 </main>
@@ -591,6 +646,27 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div class="mo-actions">
       <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-pkg')">ביטול</button>
       <button class="btn btn-blue" style="flex:2;" onclick="savePkg()">שמור</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD/EDIT CLIENT -->
+<div class="mo hidden" id="mo-client">
+  <div class="mo-box">
+    <div class="mo-title" id="mo-client-title">לקוח חדש</div>
+    <div class="fg-2">
+      <div class="fg"><label class="fl">שם <span style="color:var(--red)">*</span></label><input class="fc" id="ci-name" placeholder="שם מלא"></div>
+      <div class="fg"><label class="fl">טלפון</label><input class="fc" id="ci-phone" type="tel" dir="ltr"></div>
+    </div>
+    <div class="fg-2">
+      <div class="fg"><label class="fl">אימייל</label><input class="fc" id="ci-email" type="email" dir="ltr"></div>
+      <div class="fg"><label class="fl">עיר</label><input class="fc" id="ci-city"></div>
+    </div>
+    <div class="fg"><label class="fl">כתובת</label><input class="fc" id="ci-address" placeholder="רחוב ומספר"></div>
+    <div class="fg"><label class="fl">הערות</label><textarea class="fc" id="ci-notes" rows="2" style="resize:vertical;"></textarea></div>
+    <div class="mo-actions">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-client')">ביטול</button>
+      <button class="btn btn-blue" style="flex:2;" onclick="saveClient()">שמור</button>
     </div>
   </div>
 </div>
@@ -763,6 +839,7 @@ async function loadTenantFromUser() {
     .single();
   if (data) {
     currentTenantId = data.tenant_id;
+    currentUserRole = data.role;
     document.getElementById('current-user-name').textContent = data.name;
     document.getElementById('current-user-role').textContent =
       data.role === 'admin' ? 'מנהל' : data.role === 'coordinator' ? 'מתאם' : 'טכנאי';
@@ -803,7 +880,7 @@ async function doLogout() {
 async function loadFromSupabase() {
   if (!currentTenantId) return false;
   try {
-    const [techRes, taskRes, zoneRes, catRes, pkgRes, dayoffRes, tenantRes] = await Promise.all([
+    const [techRes, taskRes, zoneRes, catRes, pkgRes, dayoffRes, tenantRes, clientRes] = await Promise.all([
       sb.from('technicians').select('*').eq('tenant_id', currentTenantId),
       sb.from('tasks').select('*').eq('tenant_id', currentTenantId),
       sb.from('zones').select('*').eq('tenant_id', currentTenantId),
@@ -811,6 +888,7 @@ async function loadFromSupabase() {
       sb.from('packages').select('*').eq('tenant_id', currentTenantId),
       sb.from('day_offs').select('*').eq('tenant_id', currentTenantId),
       sb.from('tenants').select('*').eq('id', currentTenantId).single(),
+      sb.from('clients').select('*').eq('tenant_id', currentTenantId),
     ]);
 
     // Check for auth errors
@@ -859,6 +937,13 @@ async function loadFromSupabase() {
       type: d.type || 'full', from: d.from_time || '', to: d.to_time || '',
       reason: d.reason || '', _dbId: d.id
     }));
+
+    if (!clientRes.error && clientRes.data) {
+      clients = clientRes.data.map(c => ({
+        id: c.id, name: c.name, phone: c.phone || '', email: c.email || '',
+        city: c.city || '', address: c.address || '', notes: c.notes || '', _dbId: c.id
+      }));
+    }
 
     if (tenantRes.data) {
       const cfg = tenantRes.data.config || {};
@@ -1048,8 +1133,9 @@ const STATUS_MAP={
 };
 
 // ═══ STATE ═══
-let technicians=[],tasks=[],dayoffs=[],zones=[],categories=[],packages=[];
+let technicians=[],tasks=[],dayoffs=[],zones=[],categories=[],packages=[],clients=[];
 let tenantConfig={};
+let currentUserRole='coordinator';
 let nextTaskId=1,nextTechId=1,editingTechId=null;
 let selectedCat=null,currentFilter='all',statusTaskId=null,cancelTaskId=null;
 let currentRole='admin',currentTechView=null;
@@ -1141,6 +1227,7 @@ async function initApp() {
   buildRoleSelect(); populateTimeSels(); populateCitySelect();
   setDateLabel(); renderCatChips(); renderTasks(); renderHomeTechCards();
   renderTechs(); renderZones(); renderCategories(); renderSettings();
+  applyFeatureVisibility();
   document.getElementById('do-date').value = todayStr();
   document.getElementById('specific-date').value = todayStr();
 }
@@ -1182,17 +1269,28 @@ function renderSettings(){
   document.getElementById('set-lookahead').value=settings.lookahead;
   document.getElementById('set-regular-time').value=settings.regularTime||30;
   document.getElementById('set-package-time').value=settings.packageTime||45;
+  const f=tenantConfig.features||{};
+  const sec=document.getElementById('sec-features');
+  if(sec){
+    sec.classList.toggle('hidden',currentUserRole!=='admin');
+    if(currentUserRole==='admin'){
+      document.getElementById('feat-crm').checked=!!f.crm_enabled;
+      document.getElementById('feat-files').checked=!!f.files_enabled;
+      document.getElementById('feat-checklists').checked=!!f.checklists_enabled;
+      document.getElementById('feat-reports').checked=!!f.reports_enabled;
+      document.getElementById('feat-whatsapp').checked=!!f.whatsapp_enabled;
+    }
+  }
 }
 
 // ═══ PAGES ═══
 function goPage(page){
-  ['home','dispatch','tasks','techview','technicians','zones','categories','settings'].forEach(p=>{
+  ['home','dispatch','tasks','clients','techview','technicians','zones','categories','settings'].forEach(p=>{
     document.getElementById('page-'+p).classList.toggle('hidden',p!==page);
   });
   document.querySelectorAll('.ni-btn').forEach(b=>b.classList.remove('active'));
-  const map={home:0,dispatch:1,tasks:2,technicians:3,zones:4,categories:5,settings:6,techview:0};
-  const btns=document.querySelectorAll('.ni-btn');
-  if(btns[map[page]])btns[map[page]].classList.add('active');
+  const navBtn=document.getElementById('nav-'+page);
+  if(navBtn)navBtn.classList.add('active');
   if(page==='dispatch')resetDispatch();
   if(page==='technicians'){renderTechs();buildRoleSelect();}
   if(page==='techview')renderTechView();
@@ -1200,11 +1298,128 @@ function goPage(page){
   if(page==='categories')renderCategories();
   if(page==='tasks')renderTasks();
   if(page==='home')renderHomeTechCards();
+  if(page==='clients')renderClients();
 }
 function switchRole(){
   const val=document.getElementById('role-sel').value;currentRole=val;
   if(val!=='admin'){const techId=val.replace('tech_','');currentTechView=technicians.find(t=>String(t.id)===techId);goPage('techview');}
   else goPage('home');
+}
+
+// ═══ FEATURE FLAGS ═══
+function applyFeatureVisibility(){
+  const f=tenantConfig.features||{};
+  const crmOn=!!f.crm_enabled;
+  const secCrm=document.getElementById('nav-sec-crm');
+  const navClients=document.getElementById('nav-clients');
+  if(secCrm)secCrm.classList.toggle('hidden',!crmOn);
+  if(navClients)navClients.classList.toggle('hidden',!crmOn);
+}
+async function saveFeatureFlags(){
+  if(!currentTenantId)return;
+  const features={
+    ...(tenantConfig.features||{}),
+    crm_enabled:document.getElementById('feat-crm').checked,
+    files_enabled:document.getElementById('feat-files').checked,
+    checklists_enabled:document.getElementById('feat-checklists').checked,
+    reports_enabled:document.getElementById('feat-reports').checked,
+    whatsapp_enabled:document.getElementById('feat-whatsapp').checked,
+  };
+  const updatedConfig={...tenantConfig,features};
+  const{error}=await sb.from('tenants').update({config:updatedConfig}).eq('id',currentTenantId);
+  if(error){console.error(error);showToast('שגיאה בשמירת תכונות','error');return;}
+  tenantConfig=updatedConfig;
+  applyFeatureVisibility();
+  showToast('תכונות עודכנו ✓');
+}
+
+// ═══ CLIENTS (CRM) ═══
+let editingClientId=null;
+async function saveClientToSupabase(client){
+  if(!currentTenantId)return;
+  const row={tenant_id:currentTenantId,name:client.name,phone:client.phone,email:client.email,city:client.city,address:client.address,notes:client.notes};
+  if(client._dbId){
+    const{error}=await sb.from('clients').update(row).eq('id',client._dbId);
+    if(error){console.error(error);showToast('שגיאה בשמירה','error');}
+  }else{
+    const{data,error}=await sb.from('clients').insert(row).select().single();
+    if(error){console.error(error);showToast('שגיאה בשמירה','error');}
+    else{client._dbId=data.id;client.id=data.id;}
+  }
+}
+async function deleteClientFromSupabase(dbId){
+  if(!currentTenantId||!dbId)return;
+  await sb.from('clients').delete().eq('id',dbId);
+}
+function renderClients(){
+  const grid=document.getElementById('client-grid');
+  if(!grid)return;
+  const sub=document.getElementById('client-count-sub');
+  if(sub)sub.textContent=clients.length+' לקוחות';
+  if(!clients.length){
+    grid.innerHTML='<div class="empty"><div class="empty-icon">👥</div><div>אין לקוחות עדיין — לחץ על "+ לקוח חדש" להוספה</div></div>';
+    return;
+  }
+  grid.innerHTML=clients.map(c=>{
+    const taskCount=tasks.filter(t=>t.clientId===c.id||t.client===c.name).length;
+    return`<div class="client-card">
+      <div class="client-name">${c.name}</div>
+      ${c.phone?`<div class="client-meta">📞 <a href="tel:${c.phone}" style="color:var(--blue);text-decoration:none;">${c.phone}</a></div>`:''}
+      ${c.city?`<div class="client-meta">📍 ${c.city}${c.address?', '+c.address:''}</div>`:''}
+      ${c.email?`<div class="client-meta">✉️ ${c.email}</div>`:''}
+      ${c.notes?`<div class="client-meta" style="margin-top:6px;font-style:italic;color:var(--ink-4);">${c.notes}</div>`:''}
+      <div style="font-size:0.75rem;color:var(--ink-4);margin-top:8px;">${taskCount} קריאות בהיסטוריה</div>
+      <div style="display:flex;gap:6px;margin-top:10px;">
+        <button class="btn btn-outline btn-sm" onclick="editClient('${c.id}')">עריכה</button>
+        <button class="btn btn-sm" style="background:var(--red-l);color:var(--red);border:1px solid #FECACA;" onclick="deleteClient('${c.id}')">הסר</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function openAddClientModal(){
+  editingClientId=null;
+  document.getElementById('mo-client-title').textContent='לקוח חדש';
+  ['ci-name','ci-phone','ci-email','ci-city','ci-address','ci-notes'].forEach(id=>{document.getElementById(id).value='';});
+  document.getElementById('mo-client').classList.remove('hidden');
+}
+function editClient(id){
+  const c=clients.find(x=>String(x.id)===String(id));
+  if(!c)return;
+  editingClientId=id;
+  document.getElementById('mo-client-title').textContent='עריכת לקוח';
+  document.getElementById('ci-name').value=c.name;
+  document.getElementById('ci-phone').value=c.phone||'';
+  document.getElementById('ci-email').value=c.email||'';
+  document.getElementById('ci-city').value=c.city||'';
+  document.getElementById('ci-address').value=c.address||'';
+  document.getElementById('ci-notes').value=c.notes||'';
+  document.getElementById('mo-client').classList.remove('hidden');
+}
+async function saveClient(){
+  const name=document.getElementById('ci-name').value.trim();
+  if(!name){showToast('שם לקוח חובה','error');return;}
+  const data={name,phone:document.getElementById('ci-phone').value.trim(),email:document.getElementById('ci-email').value.trim(),city:document.getElementById('ci-city').value.trim(),address:document.getElementById('ci-address').value.trim(),notes:document.getElementById('ci-notes').value.trim()};
+  if(editingClientId){
+    const c=clients.find(x=>String(x.id)===String(editingClientId));
+    if(c){Object.assign(c,data);await saveClientToSupabase(c);showToast('לקוח עודכן ✓');}
+  }else{
+    const c={id:Date.now(),...data};
+    clients.push(c);
+    await saveClientToSupabase(c);
+    showToast('לקוח נוסף ✓');
+  }
+  closeMo('mo-client');
+  renderClients();
+}
+async function deleteClient(id){
+  if(!confirm('למחוק לקוח זה?'))return;
+  const idx=clients.findIndex(x=>String(x.id)===String(id));
+  if(idx===-1)return;
+  const c=clients[idx];
+  if(c._dbId)await deleteClientFromSupabase(c._dbId);
+  clients.splice(idx,1);
+  renderClients();
+  showToast('לקוח הוסר');
 }
 
 // ═══ CLIENT SEARCH ═══
