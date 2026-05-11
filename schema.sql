@@ -1,13 +1,12 @@
 -- ═══════════════════════════════════════════════════════════════
--- MASLUL — Complete Database Schema
--- Run this in the Supabase SQL editor for fresh setup.
--- For existing databases, see the ALTER / MIGRATION section at bottom.
+-- MASLUL — Complete Database Schema (authoritative, as of May 2026)
+-- Run on a FRESH Supabase project for new deployments.
+-- For existing DBs, see the MIGRATION section at the bottom.
 -- ═══════════════════════════════════════════════════════════════
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ─── TENANTS ─────────────────────────────────────────────────────
--- One row per business. config drives all labels and defaults.
 CREATE TABLE IF NOT EXISTS tenants (
   id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name       TEXT NOT NULL,
@@ -15,38 +14,27 @@ CREATE TABLE IF NOT EXISTS tenants (
   config     JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
--- config JSONB shape:
+-- config shape:
 -- {
---   "labels": {
---     "worker": "טכנאי",   "workers": "טכנאים",
---     "task":   "קריאה",   "tasks":   "קריאות",
---     "zone":   "אזור",    "zones":   "אזורים",
---     "dispatch": "שיבוץ קריאה"
---   },
---   "defaults": {
---     "regular_job_minutes": 30,  "package_job_minutes": 45,
---     "arrival_window_hours": 3,  "max_daily_jobs": 9,
---     "lookahead_days": 30,       "monthly_volume": 300,
---     "work_start": "07:00",      "work_end": "18:00"
---   },
---   "features": {
---     "whatsapp_enabled": true,   "demo_mode": false,
---     "google_maps_enabled": false, "odoo_integration": false
---   }
+--   "labels":   { "worker","workers","task","tasks","zone","zones","dispatch" },
+--   "defaults": { "regularTime","packageTime","window","maxDaily","lookahead",
+--                 "monthlyVolume","startTime","endTime" },
+--   "features": { "whatsapp_enabled","crm_enabled","files_enabled",
+--                 "checklists_enabled","reports_enabled",
+--                 "demo_mode","google_maps_enabled","odoo_integration" }
 -- }
 
 -- ─── USERS ───────────────────────────────────────────────────────
--- One row per human who logs in. id matches Supabase Auth uid.
 CREATE TABLE IF NOT EXISTS users (
-  id         UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  tenant_id  UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-  role       TEXT NOT NULL DEFAULT 'coordinator', -- 'admin' | 'coordinator' | 'worker'
-  name       TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  role        TEXT NOT NULL DEFAULT 'coordinator',  -- 'admin'|'coordinator'|'worker'
+  name        TEXT NOT NULL,
+  super_admin BOOLEAN NOT NULL DEFAULT false,        -- Maslul product owner only
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ─── TECHNICIANS ─────────────────────────────────────────────────
--- Field workers (technicians, drivers, cleaners, etc.)
 CREATE TABLE IF NOT EXISTS technicians (
   id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   tenant_id      UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
@@ -57,17 +45,16 @@ CREATE TABLE IF NOT EXISTS technicians (
   color          TEXT DEFAULT '#2563EB',
   min_daily      INTEGER NOT NULL DEFAULT 2,
   max_daily      INTEGER NOT NULL DEFAULT 9,
-  start_time     TEXT NOT NULL DEFAULT '07:00',  -- HH:MM
-  end_time       TEXT NOT NULL DEFAULT '17:00',  -- HH:MM
+  start_time     TEXT NOT NULL DEFAULT '07:00',
+  end_time       TEXT NOT NULL DEFAULT '17:00',
   blocked_cities TEXT[] NOT NULL DEFAULT '{}',
-  skills         TEXT[] NOT NULL DEFAULT '{}',   -- array of category UUIDs
+  skills         TEXT[] NOT NULL DEFAULT '{}',      -- array of category UUIDs
   cat_limits     JSONB NOT NULL DEFAULT '{}'::jsonb, -- { "cat_uuid": max_per_day }
-  rotation       JSONB NOT NULL DEFAULT '{}'::jsonb, -- { "0": zone_uuid, ..., "5": zone_uuid }
+  rotation       JSONB NOT NULL DEFAULT '{}'::jsonb, -- { "0": zone_uuid, ... "5": zone_uuid }
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ─── ZONES ───────────────────────────────────────────────────────
--- Geographic service areas. Each technician has one zone per weekday via rotation.
 CREATE TABLE IF NOT EXISTS zones (
   id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   tenant_id  UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
@@ -77,7 +64,6 @@ CREATE TABLE IF NOT EXISTS zones (
 );
 
 -- ─── CATEGORIES ──────────────────────────────────────────────────
--- Types of work / service types.
 CREATE TABLE IF NOT EXISTS categories (
   id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   tenant_id        UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
@@ -87,7 +73,6 @@ CREATE TABLE IF NOT EXISTS categories (
 );
 
 -- ─── PACKAGES ────────────────────────────────────────────────────
--- Bundles of multiple categories in one job (e.g. "garbage disposal + water system").
 CREATE TABLE IF NOT EXISTS packages (
   id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   tenant_id  UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
@@ -97,59 +82,55 @@ CREATE TABLE IF NOT EXISTS packages (
 );
 
 -- ─── TASKS ───────────────────────────────────────────────────────
--- Individual work orders / jobs / deliveries.
--- category_id and technician_id are stored as TEXT to support both UUID and legacy formats.
 CREATE TABLE IF NOT EXISTS tasks (
   id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   tenant_id      UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-  assign_id      TEXT,                          -- MSL-XXXXX display ID
+  assign_id      TEXT,
   client_name    TEXT NOT NULL,
   client_phone   TEXT DEFAULT '',
   city           TEXT,
   street         TEXT,
-  category_id    TEXT,                          -- category UUID
-  category_name  TEXT,                          -- denormalized for display speed
-  technician_id  TEXT,                          -- technician UUID (null = unassigned)
+  category_id    TEXT,
+  category_name  TEXT,
+  technician_id  TEXT,
   status         TEXT NOT NULL DEFAULT 'pending',
-  -- pending | assigned | en_route | arrived | completed | issue | cancelled
   scheduled_date DATE,
-  scheduled_time TEXT,                          -- HH:MM
+  scheduled_time TEXT,
   notes          TEXT DEFAULT '',
   cancelled_at   TIMESTAMPTZ,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ─── DAY OFFS ────────────────────────────────────────────────────
--- Technician unavailability (full day or partial hours).
 CREATE TABLE IF NOT EXISTS day_offs (
   id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   tenant_id     UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-  technician_id TEXT NOT NULL,   -- technician UUID
+  technician_id TEXT NOT NULL,
   date          DATE NOT NULL,
   type          TEXT NOT NULL DEFAULT 'full',  -- 'full' | 'partial'
-  from_time     TEXT,            -- HH:MM, only when type='partial'
-  to_time       TEXT,            -- HH:MM, only when type='partial'
+  from_time     TEXT,
+  to_time       TEXT,
   reason        TEXT DEFAULT '',
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- ─── CLIENTS ─────────────────────────────────────────────────────
--- CRM: one row per end-customer. Tasks reference clients optionally.
+-- ─── CLIENTS (CRM) ───────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS clients (
-  id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  tenant_id  UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-  name       TEXT NOT NULL,
-  phone      TEXT DEFAULT '',
-  email      TEXT DEFAULT '',
-  city       TEXT DEFAULT '',
-  address    TEXT DEFAULT '',
-  notes      TEXT DEFAULT '',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  name        TEXT NOT NULL,
+  phone       TEXT DEFAULT '',
+  email       TEXT DEFAULT '',
+  city        TEXT DEFAULT '',
+  address     TEXT DEFAULT '',
+  notes       TEXT DEFAULT '',
+  archived    BOOLEAN NOT NULL DEFAULT false,
+  archived_at TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ═══════════════════════════════════════════════════════════════
 -- ROW LEVEL SECURITY
--- Every table is fully isolated by tenant_id.
 -- ═══════════════════════════════════════════════════════════════
 
 ALTER TABLE tenants     ENABLE ROW LEVEL SECURITY;
@@ -162,129 +143,68 @@ ALTER TABLE tasks       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE day_offs    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clients     ENABLE ROW LEVEL SECURITY;
 
--- Helper function: resolves the current auth user's tenant_id.
--- SECURITY DEFINER so it runs with elevated rights to read the users table.
+-- Resolves the calling user's tenant_id (SECURITY DEFINER bypasses RLS on users table)
 CREATE OR REPLACE FUNCTION get_tenant_id()
-RETURNS UUID
-LANGUAGE sql SECURITY DEFINER STABLE AS $$
+RETURNS UUID LANGUAGE sql SECURITY DEFINER STABLE AS $$
   SELECT tenant_id FROM users WHERE id = auth.uid();
 $$;
 
--- Tenants: users can only read their own tenant row.
+-- Returns true if the calling user has super_admin = true
+CREATE OR REPLACE FUNCTION is_super_admin()
+RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER STABLE AS $$
+  SELECT COALESCE((SELECT super_admin FROM users WHERE id = auth.uid()), false);
+$$;
+
+-- Tenants: own row only, OR super_admin sees all
 DROP POLICY IF EXISTS "tenant_select" ON tenants;
 CREATE POLICY "tenant_select" ON tenants
-  FOR SELECT USING (id = get_tenant_id());
+  FOR SELECT USING (id = get_tenant_id() OR is_super_admin());
 
--- All other tables: full CRUD scoped to the authenticated user's tenant.
-DROP POLICY IF EXISTS "users_all"   ON users;       CREATE POLICY "users_all"   ON users       USING (tenant_id = get_tenant_id());
-DROP POLICY IF EXISTS "techs_all"   ON technicians; CREATE POLICY "techs_all"   ON technicians USING (tenant_id = get_tenant_id());
-DROP POLICY IF EXISTS "zones_all"   ON zones;       CREATE POLICY "zones_all"   ON zones       USING (tenant_id = get_tenant_id());
-DROP POLICY IF EXISTS "cats_all"    ON categories;  CREATE POLICY "cats_all"    ON categories  USING (tenant_id = get_tenant_id());
-DROP POLICY IF EXISTS "pkgs_all"    ON packages;    CREATE POLICY "pkgs_all"    ON packages    USING (tenant_id = get_tenant_id());
-DROP POLICY IF EXISTS "tasks_all"   ON tasks;       CREATE POLICY "tasks_all"   ON tasks       USING (tenant_id = get_tenant_id());
-DROP POLICY IF EXISTS "dayoffs_all" ON day_offs;    CREATE POLICY "dayoffs_all" ON day_offs    USING (tenant_id = get_tenant_id());
-DROP POLICY IF EXISTS "clients_all" ON clients;    CREATE POLICY "clients_all" ON clients    USING (tenant_id = get_tenant_id());
+DROP POLICY IF EXISTS "tenant_update" ON tenants;
+CREATE POLICY "tenant_update" ON tenants
+  FOR UPDATE USING (id = get_tenant_id() OR is_super_admin());
 
--- ═══════════════════════════════════════════════════════════════
--- MIGRATION: if tables already exist (upgrade from settings → config)
--- Run only once on existing databases.
--- ═══════════════════════════════════════════════════════════════
+DROP POLICY IF EXISTS "tenant_insert" ON tenants;
+CREATE POLICY "tenant_insert" ON tenants
+  FOR INSERT WITH CHECK (is_super_admin());
 
--- Add missing columns if upgrading from earlier schema
-ALTER TABLE tenants ADD COLUMN IF NOT EXISTS plan TEXT NOT NULL DEFAULT 'pilot';
-ALTER TABLE tenants ADD COLUMN IF NOT EXISTS config JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE tenants ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Users: own tenant, OR super_admin sees all
+DROP POLICY IF EXISTS "users_all" ON users;
+CREATE POLICY "users_all" ON users
+  USING  (tenant_id = get_tenant_id() OR is_super_admin())
+  WITH CHECK (tenant_id = get_tenant_id() OR is_super_admin());
 
-ALTER TABLE technicians ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE technicians ADD COLUMN IF NOT EXISTS base_address TEXT;
-ALTER TABLE zones       ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE categories  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE packages    ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE tasks       ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE tasks       ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ;
-ALTER TABLE day_offs    ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE users       ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- All business tables: strictly own tenant (read + write)
+DROP POLICY IF EXISTS "techs_all"   ON technicians;
+CREATE POLICY "techs_all"   ON technicians
+  USING (tenant_id = get_tenant_id()) WITH CHECK (tenant_id = get_tenant_id());
 
--- Migrate existing `settings` JSONB into the new `config` structure
--- (only affects rows where config is still empty)
-UPDATE tenants
-SET config = jsonb_build_object(
-  'labels', jsonb_build_object(
-    'worker', 'טכנאי', 'workers', 'טכנאים',
-    'task',   'קריאה', 'tasks',   'קריאות',
-    'zone',   'אזור',  'zones',   'אזורים',
-    'dispatch', 'שיבוץ קריאה'
-  ),
-  'defaults', COALESCE(settings, '{}'::jsonb),
-  'features', jsonb_build_object(
-    'whatsapp_enabled', true,
-    'demo_mode', false,
-    'google_maps_enabled', false,
-    'odoo_integration', false
-  )
-)
-WHERE config = '{}'::jsonb;
+DROP POLICY IF EXISTS "zones_all"   ON zones;
+CREATE POLICY "zones_all"   ON zones
+  USING (tenant_id = get_tenant_id()) WITH CHECK (tenant_id = get_tenant_id());
+
+DROP POLICY IF EXISTS "cats_all"    ON categories;
+CREATE POLICY "cats_all"    ON categories
+  USING (tenant_id = get_tenant_id()) WITH CHECK (tenant_id = get_tenant_id());
+
+DROP POLICY IF EXISTS "pkgs_all"    ON packages;
+CREATE POLICY "pkgs_all"    ON packages
+  USING (tenant_id = get_tenant_id()) WITH CHECK (tenant_id = get_tenant_id());
+
+DROP POLICY IF EXISTS "tasks_all"   ON tasks;
+CREATE POLICY "tasks_all"   ON tasks
+  USING (tenant_id = get_tenant_id()) WITH CHECK (tenant_id = get_tenant_id());
+
+DROP POLICY IF EXISTS "dayoffs_all" ON day_offs;
+CREATE POLICY "dayoffs_all" ON day_offs
+  USING (tenant_id = get_tenant_id()) WITH CHECK (tenant_id = get_tenant_id());
+
+DROP POLICY IF EXISTS "clients_all" ON clients;
+CREATE POLICY "clients_all" ON clients
+  USING (tenant_id = get_tenant_id()) WITH CHECK (tenant_id = get_tenant_id());
 
 -- ═══════════════════════════════════════════════════════════════
--- ONBOARD A NEW TENANT
--- Copy this block, fill in the values, run once per client.
--- ═══════════════════════════════════════════════════════════════
-
-/*
--- STEP 1: Create the tenant row
-INSERT INTO tenants (id, name, plan, config) VALUES (
-  uuid_generate_v4(),       -- or a fixed UUID for easy reference
-  'Company Name Here',
-  'pilot',
-  '{
-    "labels": {
-      "worker": "טכנאי", "workers": "טכנאים",
-      "task":   "קריאה", "tasks":   "קריאות",
-      "zone":   "אזור",  "zones":   "אזורים",
-      "dispatch": "שיבוץ קריאה"
-    },
-    "defaults": {
-      "regular_job_minutes": 30,  "package_job_minutes": 45,
-      "arrival_window_hours": 3,  "max_daily_jobs": 9,
-      "lookahead_days": 30,       "monthly_volume": 300,
-      "work_start": "07:00",      "work_end": "18:00"
-    },
-    "features": {
-      "whatsapp_enabled": true,   "demo_mode": false,
-      "google_maps_enabled": false, "odoo_integration": false
-    }
-  }'::jsonb
-) RETURNING id;  -- copy this UUID for steps below
-
--- STEP 2: Create a Supabase Auth user
--- Use the Supabase dashboard → Authentication → Users → Add user
--- OR via API: POST /auth/v1/admin/users with email + password
-
--- STEP 3: Link the Auth user to the tenant
-INSERT INTO users (id, tenant_id, role, name) VALUES (
-  '<paste-auth-user-uuid-from-step-2>',
-  '<paste-tenant-uuid-from-step-1>',
-  'admin',
-  'Name Here'
-);
-
--- STEP 4: Seed zones (example for field service in Israel)
-INSERT INTO zones (tenant_id, name, cities) VALUES
-  ('<tenant_id>', 'גוש דן', ARRAY['תל אביב','חולון','בת ים','ראשון לציון','רמת גן','גבעתיים','פתח תקווה','בני ברק']),
-  ('<tenant_id>', 'שרון',   ARRAY['נתניה','הרצליה','כפר סבא','רעננה','הוד השרון']),
-  ('<tenant_id>', 'שפלה',   ARRAY['רחובות','נס ציונה','לוד','רמלה','מודיעין']),
-  ('<tenant_id>', 'דרום',   ARRAY['אשדוד','אשקלון','באר שבע','קריית גת']);
-
--- STEP 5: Seed categories (customize per business type)
-INSERT INTO categories (tenant_id, name, duration_minutes) VALUES
-  ('<tenant_id>', 'טוחן אשפה',   30),
-  ('<tenant_id>', 'מערכת מים',   30),
-  ('<tenant_id>', 'מרכך אבנית',  30),
-  ('<tenant_id>', 'קריאת שירות', 30);
-*/
-
--- ═══════════════════════════════════════════════════════════════
--- USEFUL INDEXES (add after data grows)
+-- INDEXES
 -- ═══════════════════════════════════════════════════════════════
 
 CREATE INDEX IF NOT EXISTS idx_tasks_tenant_date     ON tasks(tenant_id, scheduled_date);
@@ -292,3 +212,65 @@ CREATE INDEX IF NOT EXISTS idx_tasks_tenant_status   ON tasks(tenant_id, status)
 CREATE INDEX IF NOT EXISTS idx_tasks_technician      ON tasks(technician_id);
 CREATE INDEX IF NOT EXISTS idx_dayoffs_tech_date     ON day_offs(technician_id, date);
 CREATE INDEX IF NOT EXISTS idx_technicians_tenant    ON technicians(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_clients_tenant        ON clients(tenant_id, archived);
+
+-- ═══════════════════════════════════════════════════════════════
+-- MIGRATION: run on existing databases to bring them up to date
+-- All statements are idempotent (safe to re-run)
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE tenants     ADD COLUMN IF NOT EXISTS plan        TEXT NOT NULL DEFAULT 'pilot';
+ALTER TABLE tenants     ADD COLUMN IF NOT EXISTS config      JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE users       ADD COLUMN IF NOT EXISTS super_admin BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE users       ADD COLUMN IF NOT EXISTS created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE technicians ADD COLUMN IF NOT EXISTS base_address   TEXT;
+ALTER TABLE technicians ADD COLUMN IF NOT EXISTS cat_limits     JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE technicians ADD COLUMN IF NOT EXISTS rotation       JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE technicians ADD COLUMN IF NOT EXISTS skills         TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE technicians ADD COLUMN IF NOT EXISTS blocked_cities TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE tasks       ADD COLUMN IF NOT EXISTS assign_id    TEXT;
+ALTER TABLE tasks       ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ;
+ALTER TABLE tasks       ADD COLUMN IF NOT EXISTS client_phone TEXT DEFAULT '';
+ALTER TABLE clients     ADD COLUMN IF NOT EXISTS archived     BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE clients     ADD COLUMN IF NOT EXISTS archived_at  TIMESTAMPTZ;
+
+-- ═══════════════════════════════════════════════════════════════
+-- ONBOARD A NEW CLIENT (use the Master Admin panel in-app,
+-- or run this SQL manually)
+-- ═══════════════════════════════════════════════════════════════
+
+/*
+-- STEP 1: Create tenant row (app does this via Master Admin panel)
+INSERT INTO tenants (name, plan, config) VALUES (
+  'Company Name',
+  'pilot',
+  '{
+    "labels":   { "worker":"טכנאי","workers":"טכנאים","task":"קריאה","tasks":"קריאות",
+                  "zone":"אזור","zones":"אזורים","dispatch":"שיבוץ קריאה" },
+    "defaults": { "regularTime":30,"packageTime":45,"window":3,"maxDaily":9,
+                  "lookahead":30,"monthlyVolume":300,"startTime":"07:00","endTime":"18:00" },
+    "features": { "whatsapp_enabled":false,"crm_enabled":false,"files_enabled":false,
+                  "checklists_enabled":false,"reports_enabled":false,
+                  "demo_mode":false,"google_maps_enabled":false,"odoo_integration":false }
+  }'::jsonb
+) RETURNING id;
+
+-- STEP 2: Create Auth user in Supabase Dashboard → Authentication → Users → Add user
+-- Copy the UUID shown after creation.
+
+-- STEP 3: Link auth user to tenant
+INSERT INTO users (id, tenant_id, role, name, super_admin) VALUES (
+  '<auth-user-uuid>',
+  '<tenant-uuid-from-step-1>',
+  'admin',
+  'Contact Name',
+  false
+);
+*/
+
+-- ═══════════════════════════════════════════════════════════════
+-- CLIENTS (existing deployments)
+-- Israel / PureWater — tenant_id: 00000000-0000-0000-0000-000000000001
+-- Eran Zivo (super_admin) — auth UID: 9659f0bd-c8ad-4241-b8f7-a3d5e5375de6
+-- Israel        (admin)   — auth UID: 285c6497-37ad-4ec9-84b8-1f51df285956
+-- ═══════════════════════════════════════════════════════════════
