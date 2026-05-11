@@ -21,7 +21,7 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direction:rtl;min-height:100vh;-webkit-font-smoothing:antialiased;}
 .shell{display:flex;min-height:100vh;}
-.sidebar{width:228px;background:var(--white);border-left:1px solid var(--line);position:fixed;right:0;top:0;height:100vh;display:flex;flex-direction:column;z-index:100;}
+.sidebar{width:228px;background:#F8FAFC;border-left:1px solid var(--line);position:fixed;right:0;top:0;height:100vh;display:flex;flex-direction:column;z-index:100;}
 .content{margin-right:228px;flex:1;}
 .page{padding:2rem 2.5rem;max-width:1200px;animation:fi 0.18s ease;}
 @keyframes fi{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
@@ -32,9 +32,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .sb-div{height:1px;background:var(--line);margin:0 1.25rem;}
 .sb-nav{padding:0.75rem;flex:1;overflow-y:auto;}
 .sb-sec{font-size:0.6rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:1px;padding:0.75rem 0.75rem 0.375rem;}
-.ni-btn{display:flex;align-items:center;gap:9px;width:100%;padding:8px 12px;border-radius:var(--r);font-size:0.875rem;font-weight:500;color:var(--ink-2);background:none;border:none;cursor:pointer;font-family:'Heebo',sans-serif;transition:all 0.1s;text-align:right;margin-bottom:1px;}
-.ni-btn:hover{background:var(--bg);color:var(--ink);}
-.ni-btn.active{background:var(--blue-l);color:var(--blue-d);font-weight:700;}
+.ni-btn{display:flex;align-items:center;gap:9px;width:100%;padding:8px 12px 8px 9px;border-radius:var(--r);font-size:0.875rem;font-weight:500;color:var(--ink-2);background:none;border:none;border-left:3px solid transparent;cursor:pointer;font-family:'Heebo',sans-serif;transition:all 0.12s;text-align:right;margin-bottom:1px;}
+.ni-btn:hover{background:var(--white);color:var(--ink);box-shadow:var(--sh);}
+.ni-btn.active{background:var(--white);color:var(--blue-d);font-weight:700;border-left-color:var(--blue);box-shadow:var(--sh);}
 .sb-bot{padding:1rem 1.25rem;border-top:1px solid var(--line);}
 .role-box{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;}
 .role-lbl{font-size:0.6rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;}
@@ -244,6 +244,18 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .client-card:hover{box-shadow:var(--sh-md);}
 .client-name{font-size:1rem;font-weight:800;margin-bottom:4px;}
 .client-meta{font-size:0.8125rem;color:var(--ink-3);margin-bottom:2px;}
+/* ─── PLANNER ─── */
+.tech-pill{display:inline-flex;align-items:center;gap:7px;padding:6px 14px;border-radius:30px;border:2px solid var(--line);background:var(--white);cursor:pointer;font-size:0.8125rem;font-weight:600;transition:all 0.15s;user-select:none;}
+.tech-pill.on{background:var(--white);box-shadow:0 2px 8px rgba(0,0,0,0.12);}
+.planner-task-chip{display:block;padding:5px 8px;border-radius:7px;font-size:0.7rem;cursor:pointer;margin-bottom:3px;line-height:1.45;border:1px solid transparent;transition:filter 0.1s;}
+.planner-task-chip:hover{filter:brightness(0.93);}
+.planner-empty-cell{height:44px;}
+.planner-day-off{font-size:0.7rem;color:var(--ink-4);text-align:center;padding:10px 0;}
+/* ─── TASK DETAIL MODAL ─── */
+.td-field{display:flex;justify-content:space-between;font-size:0.875rem;padding:7px 0;border-bottom:1px solid var(--line-2);}
+.td-field:last-child{border:none;}
+.td-key{color:var(--ink-3);font-weight:500;}
+.td-val{font-weight:700;text-align:left;}
 </style>
 </head>
 <body>
@@ -280,6 +292,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <button id="nav-home" class="ni-btn active" onclick="goPage('home')"><span>🏠</span> דף הבית</button>
     <button id="nav-dispatch" class="ni-btn" onclick="goPage('dispatch')"><span>🎯</span> <span data-label="dispatch">שיבוץ קריאה</span></button>
     <button id="nav-tasks" class="ni-btn" onclick="goPage('tasks')"><span>📋</span> <span data-label="tasks">קריאות</span></button>
+    <button id="nav-planner" class="ni-btn" onclick="goPage('planner')"><span>📅</span> לוח תכנון</button>
     <button id="nav-reports" class="ni-btn hidden" onclick="goPage('reports')"><span>📊</span> דוחות</button>
     <div id="nav-sec-crm" class="sb-sec hidden">CRM</div>
     <button id="nav-clients" class="ni-btn hidden" onclick="goPage('clients')"><span>👥</span> לקוחות</button>
@@ -409,6 +422,26 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div class="sb-bar"><span style="color:var(--ink-4);">🔍</span><input class="fc" id="task-search" placeholder="חיפוש..." oninput="renderTasks()" style="border:none;padding:6px 0;font-size:0.875rem;"></div>
     <div id="tasks-list"></div>
   </div>
+</div>
+
+<!-- PLANNER -->
+<div id="page-planner" class="page hidden">
+  <div class="ph">
+    <div class="ph-row">
+      <div><div class="ph-title">📅 לוח תכנון</div><div class="ph-sub" id="planner-sub"></div></div>
+      <div class="flex-gap">
+        <button id="pm-weekly" class="btn btn-blue btn-sm" onclick="setPlannerMode('weekly')">שבועי</button>
+        <button id="pm-daily" class="btn btn-outline btn-sm" onclick="setPlannerMode('daily')">יומי</button>
+      </div>
+    </div>
+    <div id="planner-tech-pills" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;padding-bottom:4px;"></div>
+    <div class="week-nav" style="margin-top:12px;">
+      <button class="week-nav-btn" onclick="changePlannerWeek(-1)">›</button>
+      <div class="week-title" id="planner-week-label" style="font-size:0.9375rem;"></div>
+      <button class="week-nav-btn" onclick="changePlannerWeek(1)">‹</button>
+    </div>
+  </div>
+  <div id="planner-content" style="overflow-x:auto;padding-bottom:2rem;"></div>
 </div>
 
 <!-- TECH VIEW -->
@@ -749,6 +782,29 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div class="mo-actions">
       <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-tenant-feat')">ביטול</button>
       <button class="btn btn-blue" style="flex:2;" onclick="saveTenantFeatures()">שמור</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: TASK DETAIL -->
+<div class="mo hidden" id="mo-task-detail">
+  <div class="mo-box" style="max-width:500px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
+      <div>
+        <div style="font-size:1.125rem;font-weight:900;" id="td-client"></div>
+        <div style="margin-top:4px;" id="td-assignid"></div>
+      </div>
+      <span id="td-status-badge" class="badge" style="font-size:0.75rem;padding:4px 10px;"></span>
+    </div>
+    <div id="td-details" style="background:var(--bg);border-radius:var(--r);padding:12px 14px;margin-bottom:1rem;"></div>
+    <div class="fg">
+      <label class="fl">הערות</label>
+      <textarea class="fc" id="td-notes" rows="3" style="resize:vertical;" placeholder="הוסף הערה..."></textarea>
+    </div>
+    <div class="mo-actions" style="flex-wrap:wrap;gap:8px;">
+      <button class="btn btn-outline" onclick="closeMo('mo-task-detail')">סגור</button>
+      <div id="td-status-opts" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+      <button class="btn btn-blue" style="margin-right:auto;" onclick="saveTaskDetail()">שמור הערה ✓</button>
     </div>
   </div>
 </div>
@@ -1251,6 +1307,7 @@ let nextTaskId=1,nextTechId=1,editingTechId=null;
 let selectedCat=null,currentFilter='all',statusTaskId=null,cancelTaskId=null;
 let currentRole='admin',currentTechView=null;
 let currentWeekOffset=0,selectedTechForCal=null;
+let plannerMode='weekly',plannerWeekOffset=0,plannerSelectedTechs=[],plannerDayIdx=0,detailTaskId=null;
 let allCandidates=[],currentCandidateIdx=0,selectedTimeSlot=null;
 let replaceSuggestion=null;
 let settings={company:'מסלול',startTime:'07:00',endTime:'18:00',window:3,maxDaily:9,lookahead:30,monthlyVolume:300,regularTime:30,packageTime:45};
@@ -1396,7 +1453,7 @@ function renderSettings(){
 
 // ═══ PAGES ═══
 function goPage(page){
-  ['home','dispatch','tasks','reports','clients','admin','techview','technicians','zones','categories','settings'].forEach(p=>{
+  ['home','dispatch','tasks','planner','reports','clients','admin','techview','technicians','zones','categories','settings'].forEach(p=>{
     document.getElementById('page-'+p).classList.toggle('hidden',p!==page);
   });
   document.querySelectorAll('.ni-btn').forEach(b=>b.classList.remove('active'));
@@ -1412,6 +1469,7 @@ function goPage(page){
   if(page==='clients'){clientArchiveView=false;renderClients();}
   if(page==='admin')renderAdminPanel();
   if(page==='reports')renderReports();
+  if(page==='planner')renderPlannerView();
 }
 function switchRole(){
   const val=document.getElementById('role-sel').value;currentRole=val;
@@ -2629,6 +2687,214 @@ function showToast(msg, type='success'){
   const t=document.getElementById('toast');
   t.textContent=msg;t.className='toast '+type;t.classList.add('show');
   clearTimeout(t._tid);t._tid=setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ═══ PLANNER ═══
+function renderPlannerView(){
+  if(!plannerSelectedTechs.length) plannerSelectedTechs=technicians.map(t=>t.id);
+  const today=new Date();
+  const todayDay=today.getDay();
+  plannerDayIdx=Math.min(todayDay,5);
+  renderPlannerTechPills();
+  renderPlannerContent();
+}
+
+function renderPlannerTechPills(){
+  const container=document.getElementById('planner-tech-pills');
+  if(!container)return;
+  container.innerHTML=technicians.map(t=>{
+    const on=plannerSelectedTechs.includes(t.id);
+    const c=t.color||'#2563EB';
+    return`<div class="tech-pill${on?' on':''}" style="${on?'border-color:'+c+';color:'+c+';':''}" onclick="togglePlannerTech('${t.id}')">
+      <span style="width:10px;height:10px;border-radius:50%;background:${c};display:inline-block;flex-shrink:0;"></span>${t.name}
+    </div>`;
+  }).join('');
+}
+
+function togglePlannerTech(id){
+  const idx=plannerSelectedTechs.indexOf(id);
+  if(idx>=0) plannerSelectedTechs.splice(idx,1);
+  else plannerSelectedTechs.push(id);
+  renderPlannerTechPills();
+  renderPlannerContent();
+}
+
+function setPlannerMode(mode){
+  plannerMode=mode;
+  document.getElementById('pm-weekly').className='btn btn-sm'+(mode==='weekly'?' btn-blue':' btn-outline');
+  document.getElementById('pm-daily').className='btn btn-sm'+(mode==='daily'?' btn-blue':' btn-outline');
+  renderPlannerContent();
+}
+
+function changePlannerWeek(dir){
+  plannerWeekOffset+=dir;
+  renderPlannerContent();
+}
+
+function renderPlannerContent(){
+  const today=new Date();
+  const dayOfWeek=today.getDay();
+  const sunday=new Date(today);
+  sunday.setDate(today.getDate()-dayOfWeek+plannerWeekOffset*7);
+  const days=Array.from({length:6},(_,i)=>{const d=new Date(sunday);d.setDate(sunday.getDate()+i);return d;});
+  const lbl=document.getElementById('planner-week-label');
+  if(lbl) lbl.textContent=days[0].toLocaleDateString('he-IL')+' – '+days[5].toLocaleDateString('he-IL');
+  const sub=document.getElementById('planner-sub');
+  if(sub) sub.textContent=plannerSelectedTechs.length+' טכנאים מוצגים';
+  if(plannerMode==='weekly') renderPlannerWeekly(days);
+  else renderPlannerDaily(days);
+}
+
+function _plannerTaskChip(t){
+  const statusColors={
+    completed:{bg:'#F0FDF4',fg:'#16A34A'},
+    cancelled:{bg:'#FEF2F2',fg:'#DC2626'},
+    pending:{bg:'#FFFBEB',fg:'#D97706'},
+    issue:{bg:'#FEF2F2',fg:'#DC2626'},
+  };
+  const col=statusColors[t.status]||{bg:'#EFF6FF',fg:'#1D4ED8'};
+  return`<div class="planner-task-chip" style="background:${col.bg};color:${col.fg};border-color:${col.fg}22;" onclick="openTaskDetail('${t.id}')">
+    <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.client||''}</div>
+    <div style="opacity:0.75;font-size:0.65rem;">${t.time||''} ${t.city||''}</div>
+  </div>`;
+}
+
+function renderPlannerWeekly(days){
+  const content=document.getElementById('planner-content');
+  const selTechs=technicians.filter(t=>plannerSelectedTechs.includes(t.id));
+  if(!selTechs.length){content.innerHTML='<div class="empty"><div class="empty-icon">👆</div><div>בחר לפחות טכנאי אחד למעלה</div></div>';return;}
+  const todayStr=new Date().toISOString().split('T')[0];
+  const dayHeaders=days.map(d=>{
+    const ds=d.toISOString().split('T')[0];
+    const isToday=ds===todayStr;
+    return`<th style="text-align:center;padding:8px 4px;font-size:0.75rem;font-weight:800;color:${isToday?'var(--blue-d)':'var(--ink-3)'};background:${isToday?'var(--blue-l)':'var(--line-2)'};white-space:nowrap;min-width:130px;">
+      ${DAYS_SHORT[d.getDay()]}׳<br><span style="font-size:0.7rem;font-weight:600;opacity:0.8;">${d.getDate()}/${d.getMonth()+1}</span></th>`;
+  }).join('');
+  const rows=selTechs.map(tech=>{
+    const cells=days.map(day=>{
+      const ds=day.toISOString().split('T')[0];
+      const isDayOff=dayoffs.some(d=>String(d.techId)===String(tech.id)&&d.date===ds&&d.type==='full');
+      const techTasks=tasks.filter(t=>String(t.techId)===String(tech.id)&&t.date===ds&&t.status!=='cancelled');
+      if(isDayOff) return`<td style="background:var(--line-2);vertical-align:top;padding:6px;border-right:1px solid var(--line-2);"><div class="planner-day-off">יום חופש</div></td>`;
+      const chips=techTasks.sort((a,b)=>(a.time||'').localeCompare(b.time||'')).map(_plannerTaskChip).join('');
+      return`<td style="vertical-align:top;padding:6px;border-right:1px solid var(--line-2);">${chips||'<div style="height:28px;"></div>'}</td>`;
+    }).join('');
+    return`<tr>
+      <td style="padding:8px 12px;border-bottom:1px solid var(--line-2);border-left:2px solid var(--line);white-space:nowrap;vertical-align:middle;background:var(--white);">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="width:10px;height:10px;border-radius:50%;background:${tech.color||'#2563EB'};display:inline-block;flex-shrink:0;"></span>
+          <span style="font-size:0.875rem;font-weight:700;">${tech.name}</span>
+        </div>
+      </td>${cells}</tr>`;
+  }).join('');
+  content.innerHTML=`<table style="border-collapse:collapse;width:100%;background:var(--white);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh);border:1px solid var(--line);">
+    <thead><tr>
+      <th style="background:var(--line-2);padding:8px 12px;font-size:0.75rem;font-weight:800;color:var(--ink-3);text-align:right;white-space:nowrap;border-left:2px solid var(--line);min-width:110px;">טכנאי</th>
+      ${dayHeaders}
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderPlannerDaily(days){
+  const content=document.getElementById('planner-content');
+  const selTechs=technicians.filter(t=>plannerSelectedTechs.includes(t.id));
+  if(!selTechs.length){content.innerHTML='<div class="empty"><div class="empty-icon">👆</div><div>בחר לפחות טכנאי אחד למעלה</div></div>';return;}
+  const dayTabs=days.map((d,i)=>{
+    const isToday=d.toDateString()===new Date().toDateString();
+    const active=i===plannerDayIdx;
+    return`<button onclick="setPlannerDay(${i})" style="padding:5px 12px;border:1px solid var(--line);background:${active?'var(--blue)':'var(--white)'};color:${active?'white':'var(--ink-2)'};border-radius:6px;font-family:'Heebo',sans-serif;font-size:0.8rem;font-weight:${active?700:500};cursor:pointer;${isToday&&!active?'border-color:var(--blue);color:var(--blue);':''}">
+      ${DAYS_SHORT[d.getDay()]}׳ ${d.getDate()}/${d.getMonth()+1}</button>`;
+  }).join('');
+  const day=days[plannerDayIdx];
+  const ds=day.toISOString().split('T')[0];
+  const startH=parseInt((settings.startTime||'07:00').split(':')[0]);
+  const endH=parseInt((settings.endTime||'18:00').split(':')[0]);
+  const hours=Array.from({length:endH-startH},(_,i)=>startH+i);
+  const techHeaders=selTechs.map(t=>`<th style="text-align:center;padding:8px 6px;font-size:0.8rem;font-weight:700;background:var(--line-2);min-width:140px;">
+    <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+      <span style="width:9px;height:9px;border-radius:50%;background:${t.color||'#2563EB'};display:inline-block;"></span>${t.name}
+    </div></th>`).join('');
+  const bodyRows=hours.map(h=>{
+    const hStr=String(h).padStart(2,'0')+':00';
+    const cells=selTechs.map(tech=>{
+      const slotTasks=tasks.filter(t=>String(t.techId)===String(tech.id)&&t.date===ds&&t.status!=='cancelled'&&t.time&&parseInt(t.time.split(':')[0])===h);
+      const isDayOff=dayoffs.some(d=>String(d.techId)===String(tech.id)&&d.date===ds&&d.type==='full');
+      if(isDayOff&&h===startH) return`<td style="vertical-align:top;padding:4px;border-right:1px solid var(--line-2);background:var(--line-2);" rowspan="${endH-startH}"><div class="planner-day-off" style="padding-top:20px;">יום חופש</div></td>`;
+      if(isDayOff) return '';
+      const chips=slotTasks.map(_plannerTaskChip).join('');
+      return`<td style="vertical-align:top;padding:4px;border-right:1px solid var(--line-2);height:52px;">${chips}</td>`;
+    }).join('');
+    return`<tr>
+      <td style="padding:4px 8px;font-size:0.7rem;font-weight:700;color:var(--ink-4);border-bottom:1px solid var(--line-2);border-left:1px solid var(--line);white-space:nowrap;background:var(--line-2);vertical-align:top;">${hStr}</td>
+      ${cells}
+    </tr>`;
+  }).join('');
+  content.innerHTML=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">${dayTabs}</div>
+  <table style="border-collapse:collapse;width:100%;background:var(--white);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh);border:1px solid var(--line);">
+    <thead><tr>
+      <th style="background:var(--line-2);padding:8px;font-size:0.7rem;color:var(--ink-3);text-align:center;border-left:1px solid var(--line);min-width:52px;">שעה</th>
+      ${techHeaders}
+    </tr></thead>
+    <tbody>${bodyRows}</tbody>
+  </table>`;
+}
+
+function setPlannerDay(idx){
+  plannerDayIdx=idx;
+  const today=new Date();
+  const sunday=new Date(today);
+  sunday.setDate(today.getDate()-today.getDay()+plannerWeekOffset*7);
+  const days=Array.from({length:6},(_,i)=>{const d=new Date(sunday);d.setDate(sunday.getDate()+i);return d;});
+  renderPlannerDaily(days);
+}
+
+// ═══ TASK DETAIL MODAL ═══
+function openTaskDetail(id){
+  const t=tasks.find(x=>String(x.id)===String(id));
+  if(!t)return;
+  detailTaskId=id;
+  const tech=technicians.find(x=>String(x.id)===String(t.techId));
+  document.getElementById('td-client').textContent=t.client||'';
+  document.getElementById('td-assignid').innerHTML=t.assignId?`<span class="assign-id-tag">${t.assignId}</span>`:'';
+  const s=STATUS_MAP[t.status]||STATUS_MAP.pending;
+  const sb=document.getElementById('td-status-badge');
+  sb.textContent=s.label;sb.className='badge '+s.badge;
+  document.getElementById('td-details').innerHTML=[
+    t.date?['תאריך',new Date(t.date).toLocaleDateString('he-IL')]:'',
+    t.time?['שעה',t.time]:'',
+    tech?['טכנאי',tech.name]:'',
+    t.city?['עיר',t.city+(t.street?' — '+t.street:'')]:'',
+    t.cat?['קטגוריה',t.cat]:'',
+    t.phone?['טלפון',t.phone]:'',
+  ].filter(Boolean).map(([k,v])=>`<div class="td-field"><span class="td-key">${k}</span><span class="td-val">${v}</span></div>`).join('');
+  document.getElementById('td-notes').value=t.notes||'';
+  document.getElementById('td-status-opts').innerHTML=s.next.map(ns=>{
+    const ni=STATUS_MAP[ns];
+    return`<button class="btn btn-outline btn-sm" onclick="setDetailStatus('${ns}')"><span class="badge ${ni.badge}">${ni.label}</span></button>`;
+  }).join('');
+  document.getElementById('mo-task-detail').classList.remove('hidden');
+}
+
+async function setDetailStatus(ns){
+  const t=tasks.find(x=>String(x.id)===String(detailTaskId));
+  if(!t)return;
+  t.status=ns;
+  await saveTaskToSupabase(t);
+  save();
+  openTaskDetail(detailTaskId);
+  if(document.getElementById('page-planner')&&!document.getElementById('page-planner').classList.contains('hidden')) renderPlannerContent();
+  showToast('סטטוס עודכן ✓');
+}
+
+async function saveTaskDetail(){
+  const t=tasks.find(x=>String(x.id)===String(detailTaskId));
+  if(!t)return;
+  t.notes=document.getElementById('td-notes').value;
+  await saveTaskToSupabase(t);
+  save();
+  closeMo('mo-task-detail');
+  showToast('נשמר ✓');
 }
 </script>
 </div><!-- /app-shell -->
