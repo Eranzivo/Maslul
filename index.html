@@ -280,6 +280,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <button id="nav-home" class="ni-btn active" onclick="goPage('home')"><span>🏠</span> דף הבית</button>
     <button id="nav-dispatch" class="ni-btn" onclick="goPage('dispatch')"><span>🎯</span> <span data-label="dispatch">שיבוץ קריאה</span></button>
     <button id="nav-tasks" class="ni-btn" onclick="goPage('tasks')"><span>📋</span> <span data-label="tasks">קריאות</span></button>
+    <button id="nav-reports" class="ni-btn hidden" onclick="goPage('reports')"><span>📊</span> דוחות</button>
     <div id="nav-sec-crm" class="sb-sec hidden">CRM</div>
     <button id="nav-clients" class="ni-btn hidden" onclick="goPage('clients')"><span>👥</span> לקוחות</button>
     <div class="sb-sec">הגדרות</div>
@@ -535,6 +536,21 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div id="client-grid" class="client-grid"></div>
 </div>
 
+<!-- REPORTS -->
+<div id="page-reports" class="page hidden">
+  <div class="ph">
+    <div class="ph-row">
+      <div><div class="ph-title">📊 דוחות ביצועים</div><div class="ph-sub" id="reports-sub"></div></div>
+      <div class="flex-gap">
+        <button id="rp-week" class="btn btn-outline btn-sm" onclick="setReportPeriod('week')">שבוע זה</button>
+        <button id="rp-month" class="btn btn-blue btn-sm" onclick="setReportPeriod('month')">חודש זה</button>
+        <button id="rp-all" class="btn btn-outline btn-sm" onclick="setReportPeriod('all')">הכל</button>
+      </div>
+    </div>
+  </div>
+  <div id="reports-content"></div>
+</div>
+
 <!-- MASTER ADMIN -->
 <div id="page-admin" class="page hidden">
   <div class="ph">
@@ -596,6 +612,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div class="mo-box">
     <div class="mo-title">עדכון סטטוס</div>
     <div id="status-info" style="margin-bottom:1rem;"></div>
+    <div id="status-checklist" class="hidden"></div>
     <div style="display:grid;gap:8px;" id="status-opts"></div>
     <div class="mo-actions"><button class="btn btn-outline btn-full" onclick="closeMo('mo-status')">ביטול</button></div>
   </div>
@@ -1004,6 +1021,7 @@ async function loadFromSupabase() {
       techId: t.technician_id, status: t.status,
       time: t.scheduled_time || '', date: t.scheduled_date || '',
       notes: t.notes || '', assignId: t.assign_id || '',
+      checklistDone: t.checklist_done || {},
       _dbId: t.id
     }));
 
@@ -1012,7 +1030,7 @@ async function loadFromSupabase() {
     }));
 
     categories = (catRes.data || []).map(c => ({
-      id: c.id, name: c.name, time: c.duration_minutes, _dbId: c.id
+      id: c.id, name: c.name, time: c.duration_minutes, checklist: c.checklist || [], _dbId: c.id
     }));
 
     packages = (pkgRes.data || []).map(p => ({
@@ -1227,6 +1245,7 @@ let tenantConfig={};
 let currentUserRole='coordinator';
 let currentUserSuperAdmin=false;
 let clientArchiveView=false;
+let reportPeriod='month';
 let adminTenants=[],adminUsers=[];
 let nextTaskId=1,nextTechId=1,editingTechId=null;
 let selectedCat=null,currentFilter='all',statusTaskId=null,cancelTaskId=null;
@@ -1377,7 +1396,7 @@ function renderSettings(){
 
 // ═══ PAGES ═══
 function goPage(page){
-  ['home','dispatch','tasks','clients','admin','techview','technicians','zones','categories','settings'].forEach(p=>{
+  ['home','dispatch','tasks','reports','clients','admin','techview','technicians','zones','categories','settings'].forEach(p=>{
     document.getElementById('page-'+p).classList.toggle('hidden',p!==page);
   });
   document.querySelectorAll('.ni-btn').forEach(b=>b.classList.remove('active'));
@@ -1392,6 +1411,7 @@ function goPage(page){
   if(page==='home')renderHomeTechCards();
   if(page==='clients'){clientArchiveView=false;renderClients();}
   if(page==='admin')renderAdminPanel();
+  if(page==='reports')renderReports();
 }
 function switchRole(){
   const val=document.getElementById('role-sel').value;currentRole=val;
@@ -1407,6 +1427,8 @@ function applyFeatureVisibility(){
   const navClients=document.getElementById('nav-clients');
   if(secCrm)secCrm.classList.toggle('hidden',!crmOn);
   if(navClients)navClients.classList.toggle('hidden',!crmOn);
+  const navReports=document.getElementById('nav-reports');
+  if(navReports)navReports.classList.toggle('hidden',!f.reports_enabled);
   const secAdmin=document.getElementById('nav-sec-admin');
   const navAdmin=document.getElementById('nav-admin');
   if(secAdmin)secAdmin.classList.toggle('hidden',!currentUserSuperAdmin);
@@ -1436,33 +1458,53 @@ async function renderAdminPanel(){
   const list=document.getElementById('admin-tenant-list');
   if(!list)return;
   list.innerHTML='<div style="text-align:center;padding:2rem;color:var(--ink-4);">טוען...</div>';
-  const[tenantRes,userRes]=await Promise.all([
-    sb.from('tenants').select('*'),
-    sb.from('users').select('id,tenant_id,role,name,super_admin'),
-  ]);
-  if(tenantRes.error){list.innerHTML='<div class="empty">שגיאה — ודא שה-super_admin מוגדר כראוי</div>';return;}
-  adminTenants=tenantRes.data||[];
-  adminUsers=userRes.data||[];
-  const planColor={pilot:'var(--amber)',starter:'var(--blue)',pro:'var(--purple)'};
-  list.innerHTML=adminTenants.map(t=>{
-    const tUsers=adminUsers.filter(u=>u.tenant_id===t.id);
-    const f=t.config?.features||{};
-    const feats=[f.crm_enabled&&'CRM',f.files_enabled&&'קבצים',f.checklists_enabled&&'צ\'ק',f.reports_enabled&&'דוחות',f.whatsapp_enabled&&'WhatsApp'].filter(Boolean).join(' · ')||'ללא תכונות';
-    return`<div class="card" style="margin-bottom:1rem;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
-        <div style="flex:1;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-            <div style="font-size:1.125rem;font-weight:800;">${t.name}</div>
-            <span style="background:${planColor[t.plan]||'var(--ink-3)'};color:white;padding:2px 8px;border-radius:10px;font-size:0.65rem;font-weight:800;">${t.plan.toUpperCase()}</span>
+  try{
+    const[tenantRes,userRes]=await Promise.all([
+      sb.from('tenants').select('*'),
+      sb.from('users').select('id,tenant_id,role,name,super_admin'),
+    ]);
+    if(tenantRes.error){
+      list.innerHTML=`<div class="empty"><div style="color:var(--red);font-weight:700;margin-bottom:6px;">שגיאה בטעינה</div><div style="font-size:0.8125rem;color:var(--ink-3);">${tenantRes.error.message||'בדוק שפונקציות RLS הותקנו בסופבייס'}</div></div>`;
+      console.error('admin panel tenants error:',tenantRes.error);
+      return;
+    }
+    adminTenants=tenantRes.data||[];
+    adminUsers=userRes.data||[];
+    if(!adminTenants.length){
+      list.innerHTML='<div class="empty"><div class="empty-icon">🏢</div><div>אין לקוחות נגישים — ודא שפוליסות RLS מאפשרות גישת super_admin</div></div>';
+      return;
+    }
+    const planColor={pilot:'var(--amber)',starter:'var(--blue)',pro:'var(--purple)'};
+    list.innerHTML=adminTenants.map(t=>{
+      const tUsers=adminUsers.filter(u=>u.tenant_id===t.id);
+      const f=(t.config&&t.config.features)||{};
+      const plan=t.plan||'pilot';
+      const feats=[f.crm_enabled&&'CRM',f.files_enabled&&'קבצים',f.checklists_enabled&&'צ\'ק',f.reports_enabled&&'דוחות',f.whatsapp_enabled&&'WhatsApp'].filter(Boolean).join(' · ')||'ללא תכונות';
+      const isOwn=t.id===currentTenantId;
+      return`<div class="card" style="margin-bottom:1rem;${isOwn?'border-color:var(--blue-m);':''}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+              <div style="font-size:1.125rem;font-weight:900;">${t.name}</div>
+              <span style="background:${planColor[plan]||'var(--ink-3)'};color:white;padding:2px 8px;border-radius:10px;font-size:0.65rem;font-weight:800;">${plan.toUpperCase()}</span>
+              ${isOwn?'<span style="background:var(--blue-l);color:var(--blue-d);padding:2px 8px;border-radius:10px;font-size:0.65rem;font-weight:700;">הסשן שלך</span>':''}
+            </div>
+            <div style="font-size:0.7rem;color:var(--ink-4);font-family:monospace;margin-bottom:6px;">${t.id}</div>
+            <div style="font-size:0.8125rem;margin-bottom:8px;">תכונות: <span style="font-weight:600;color:${feats==='ללא תכונות'?'var(--ink-4)':'var(--green)'};">${feats}</span></div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;">${tUsers.map(u=>`<span style="background:var(--line-2);border-radius:6px;padding:2px 8px;font-size:0.75rem;">👤 ${u.name} <span style="color:var(--ink-4);">(${u.role})</span>${u.super_admin?' ⭐':''}</span>`).join('')||'<span style="font-size:0.75rem;color:var(--ink-4);">אין משתמשים מקושרים</span>'}</div>
           </div>
-          <div style="font-size:0.8125rem;color:var(--ink-3);margin-bottom:6px;">🔑 ${t.id}</div>
-          <div style="font-size:0.8125rem;color:var(--ink-2);margin-bottom:6px;">תכונות: ${feats}</div>
-          <div>${tUsers.map(u=>`<span style="display:inline-block;background:var(--line-2);border-radius:6px;padding:2px 8px;font-size:0.75rem;margin:2px;">👤 ${u.name} (${u.role})${u.super_admin?' ⭐':''}</span>`).join('')}</div>
+          <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+            <button class="btn btn-blue btn-sm" onclick="enterTenantSession('${t.id}','${t.name}')">🔍 כנס לסשן</button>
+            <button class="btn btn-outline btn-sm" onclick="openTenantFeatModal('${t.id}')">⚙️ תכונות</button>
+            <button class="btn btn-sm" style="background:var(--green-l);color:var(--green);border:1px solid #BBF7D0;font-weight:700;" onclick="enableAllFeatures('${t.id}')">✅ הפעל הכל</button>
+          </div>
         </div>
-        <button class="btn btn-outline btn-sm" onclick="openTenantFeatModal('${t.id}')">עריכת תכונות</button>
-      </div>
-    </div>`;
-  }).join('')||'<div class="empty"><div class="empty-icon">🏢</div><div>אין לקוחות עדיין</div></div>';
+      </div>`;
+    }).join('');
+  }catch(err){
+    list.innerHTML=`<div class="empty"><div style="color:var(--red);font-weight:700;">שגיאת JavaScript</div><div style="font-size:0.8125rem;color:var(--ink-3);margin-top:4px;">${err.message}</div></div>`;
+    console.error('renderAdminPanel JS error:',err);
+  }
 }
 function openTenantFeatModal(tenantId){
   const t=adminTenants.find(x=>x.id===tenantId);if(!t)return;
@@ -1495,6 +1537,59 @@ async function saveTenantFeatures(){
   showToast('תכונות עודכנו ✓');
   renderAdminPanel();
 }
+async function enableAllFeatures(tenantId){
+  const t=adminTenants.find(x=>x.id===tenantId);if(!t)return;
+  const features={crm_enabled:true,files_enabled:true,checklists_enabled:true,reports_enabled:true,whatsapp_enabled:false,demo_mode:false,google_maps_enabled:false,odoo_integration:false};
+  const updatedConfig={...(t.config||{}),features};
+  const{error}=await sb.from('tenants').update({config:updatedConfig}).eq('id',tenantId);
+  if(error){showToast('שגיאה','error');console.error(error);return;}
+  t.config=updatedConfig;
+  if(tenantId===currentTenantId){tenantConfig=updatedConfig;applyFeatureVisibility();}
+  showToast('כל התכונות הופעלו ✓');
+  renderAdminPanel();
+}
+
+function enterTenantSession(tenantId,tenantName){
+  const origTenantId=currentTenantId;
+  currentTenantId=tenantId;
+  // Show impersonation banner
+  const existing=document.getElementById('session-banner');if(existing)existing.remove();
+  const b=document.createElement('div');b.id='session-banner';
+  b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9998;background:#0F172A;color:white;text-align:center;padding:6px 16px;font-size:0.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:16px;';
+  b.innerHTML=`<span>🔍 מצב תצוגה: ${tenantName}</span><button onclick="exitTenantSession('${origTenantId}')" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);border-radius:6px;padding:3px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;">← יציאה לניהול</button>`;
+  document.body.prepend(b);
+  const shell=document.getElementById('app-shell');if(shell)shell.style.paddingTop='34px';
+  // Apply that tenant's feature flags from cached data
+  const t=adminTenants.find(x=>x.id===tenantId);
+  if(t){tenantConfig={...(t.config||{})};applyFeatureVisibility();}
+  // Hide super_admin UI for this view
+  ['nav-sec-admin','nav-admin'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('hidden');});
+  document.getElementById('sec-features')?.classList.add('hidden');
+  // Reload data scoped to new tenant
+  document.getElementById('app-loading').classList.remove('hidden');
+  loadFromSupabase().then(()=>{
+    document.getElementById('app-loading').classList.add('hidden');
+    applyLabels();buildRoleSelect();populateCitySelect();
+    setDateLabel();renderCatChips();renderTasks();renderHomeTechCards();
+    renderTechs();renderZones();renderCategories();renderSettings();
+    goPage('home');
+  });
+}
+
+async function exitTenantSession(origTenantId){
+  document.getElementById('session-banner')?.remove();
+  const shell=document.getElementById('app-shell');if(shell)shell.style.paddingTop='';
+  currentTenantId=origTenantId;
+  document.getElementById('app-loading').classList.remove('hidden');
+  await loadFromSupabase();
+  document.getElementById('app-loading').classList.add('hidden');
+  applyLabels();buildRoleSelect();populateCitySelect();
+  setDateLabel();renderCatChips();renderTasks();renderHomeTechCards();
+  renderTechs();renderZones();renderCategories();renderSettings();
+  applyFeatureVisibility();
+  goPage('admin');
+}
+
 function openNewTenantModal(){
   ['tn-name','tn-user-uuid','tn-user-name'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('tn-plan').value='pilot';
@@ -1522,6 +1617,74 @@ async function createTenant(){
   }
   closeMo('mo-tenant');
   renderAdminPanel();
+}
+
+// ═══ REPORTS ═══
+function setReportPeriod(p){
+  reportPeriod=p;
+  ['week','month','all'].forEach(x=>{
+    const el=document.getElementById('rp-'+x);
+    if(el)el.className='btn btn-sm'+(x===p?' btn-blue':' btn-outline');
+  });
+  renderReports();
+}
+function getReportTasks(){
+  const now=new Date();const today=now.toISOString().split('T')[0];
+  if(reportPeriod==='week'){
+    const sun=new Date(now);sun.setDate(now.getDate()-now.getDay());
+    const sunStr=sun.toISOString().split('T')[0];
+    return tasks.filter(t=>t.date&&t.date>=sunStr&&t.date<=today);
+  }
+  if(reportPeriod==='month'){
+    const ms=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-01';
+    return tasks.filter(t=>t.date&&t.date>=ms&&t.date<=today);
+  }
+  return tasks.filter(t=>t.date);
+}
+function renderReports(){
+  const el=document.getElementById('reports-content');if(!el)return;
+  const filtered=getReportTasks();
+  const completed=filtered.filter(t=>t.status==='completed').length;
+  const total=filtered.length;
+  const pending=tasks.filter(t=>t.status==='pending').length;
+  const rate=total?Math.round((completed/total)*100):0;
+  const techStats=technicians.map(tech=>{
+    const tt=filtered.filter(t=>t.techId===tech.id);
+    return{tech,total:tt.length,done:tt.filter(t=>t.status==='completed').length};
+  }).sort((a,b)=>b.total-a.total);
+  const zoneStats=zones.map(zone=>{
+    const zt=filtered.filter(t=>zone.cities.includes(t.city));
+    return{zone,total:zt.length,done:zt.filter(t=>t.status==='completed').length};
+  }).sort((a,b)=>b.total-a.total).filter(x=>x.total>0);
+  const catStats=categories.map(cat=>{
+    return{cat,total:filtered.filter(t=>t.catId===cat.id).length};
+  }).sort((a,b)=>b.total-a.total).filter(x=>x.total>0);
+  const periodLabel=reportPeriod==='week'?'השבוע':reportPeriod==='month'?'החודש':'בסך הכל';
+  const sub=document.getElementById('reports-sub');
+  if(sub)sub.textContent=`${total} קריאות ${periodLabel}`;
+  const maxTech=Math.max(1,...techStats.map(x=>x.total));
+  const rateColor=rate>=70?'var(--green)':rate>=40?'var(--amber)':'var(--red)';
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:1rem;margin-bottom:1.5rem;">
+      <div class="card" style="text-align:center;"><div style="font-size:2.25rem;font-weight:900;color:var(--blue);">${total}</div><div style="font-size:0.8rem;color:var(--ink-3);margin-top:3px;">קריאות ${periodLabel}</div></div>
+      <div class="card" style="text-align:center;"><div style="font-size:2.25rem;font-weight:900;color:var(--green);">${completed}</div><div style="font-size:0.8rem;color:var(--ink-3);margin-top:3px;">הושלמו</div></div>
+      <div class="card" style="text-align:center;"><div style="font-size:2.25rem;font-weight:900;color:${rateColor};">${rate}%</div><div style="font-size:0.8rem;color:var(--ink-3);margin-top:3px;">שיעור השלמה</div></div>
+      <div class="card" style="text-align:center;"><div style="font-size:2.25rem;font-weight:900;color:var(--amber);">${pending}</div><div style="font-size:0.8rem;color:var(--ink-3);margin-top:3px;">ממתינות כעת</div></div>
+    </div>
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-title">${L('workers')} — ביצועים</div>
+      ${techStats.length?techStats.map(({tech,total:t,done})=>{
+        const pct=maxTech?Math.round((t/maxTech)*100):0;
+        return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line-2);">
+          <div style="width:32px;height:32px;border-radius:50%;background:${tech.color};display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:white;flex-shrink:0;">${initials(tech.name)}</div>
+          <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:0.875rem;">${tech.name}</div><div style="background:var(--line-2);border-radius:4px;height:7px;margin-top:5px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${tech.color};border-radius:4px;"></div></div></div>
+          <div style="text-align:left;flex-shrink:0;"><div style="font-size:1.125rem;font-weight:900;">${t}</div><div style="font-size:0.7rem;color:var(--ink-3);">${done} הושלמו</div></div>
+        </div>`;
+      }).join(''):'<div style="color:var(--ink-4);font-size:0.875rem;padding:1rem 0;text-align:center;">אין נתונים לתקופה זו</div>'}
+    </div>
+    ${zoneStats.length?`<div class="card" style="margin-bottom:1rem;"><div class="card-title">${L('zones')} — חלוקה גיאוגרפית</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:8px;">${zoneStats.map(({zone,total:t,done})=>`<div style="background:var(--blue-l);border-radius:var(--r);padding:12px;"><div style="font-weight:700;font-size:0.9rem;">${zone.name}</div><div style="font-size:1.75rem;font-weight:900;color:var(--blue-d);margin-top:4px;">${t}</div><div style="font-size:0.7rem;color:var(--ink-3);">${done} הושלמו</div></div>`).join('')}</div></div>`:''}
+    ${catStats.length?`<div class="card"><div class="card-title">קטגוריות — נפח קריאות</div>${catStats.map(({cat,total:t})=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-2);"><div style="font-size:0.875rem;font-weight:600;">${cat.name}</div><span class="badge badge-blue">${t}</span></div>`).join('')}</div>`:''}
+  `;
 }
 
 // ═══ CLIENTS (CRM) ═══
