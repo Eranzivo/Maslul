@@ -2033,8 +2033,9 @@ async function renderUsersPage(){
       <td style="padding:10px 16px;color:var(--ink-3);">${u.email||'—'}</td>
       <td style="padding:10px 16px;"><span style="background:${u.role==='admin'?'var(--blue)':u.role==='tech'?'var(--green)':'var(--ink-4)'};color:#fff;border-radius:4px;padding:2px 8px;font-size:0.75rem;">${roleLabel[u.role]||u.role}</span></td>
       <td style="padding:10px 16px;font-size:0.8125rem;color:var(--ink-3);">${viewsText}</td>
-      <td style="padding:10px 16px;text-align:left;">
+      <td style="padding:10px 16px;text-align:left;white-space:nowrap;">
         <button class="btn btn-outline btn-sm" onclick="openAddUserModal('${u.id}')">✏️ ערוך</button>
+        ${u.email?`<button class="btn btn-outline btn-sm" style="margin-right:4px;" title="שלח איפוס סיסמה" onclick="resetUserPassword('${u.email}','${u.name}')">🔑</button>`:''}
         ${!isSelf?`<button class="btn btn-outline btn-sm" style="color:var(--red);margin-right:4px;" onclick="deleteUserRow('${u.id}','${u.name}')">🗑️</button>`:''}
       </td>
     </tr>`;
@@ -2155,7 +2156,7 @@ async function saveUser(){
     }
     closeAddUserModal();
     renderUsersPage();
-    showToast(isNew?'משתמש נוצר ✓ — נשלח אימייל אימות':'משתמש עודכן ✓');
+    showToast(isNew?`נוצר ✓ — ${email} קיבל מייל אימות, יש לאשר לפני הכניסה הראשונה`:'משתמש עודכן ✓');
   }catch(e){
     errEl.textContent=e.message||'שגיאה בשמירה';
     errEl.style.display='block';
@@ -2170,6 +2171,12 @@ async function deleteUserRow(userId,name){
   if(error){showToast('שגיאה במחיקה','error');return;}
   renderUsersPage();
   showToast(name+' הוסר ✓');
+}
+async function resetUserPassword(email,name){
+  if(!email){showToast('לא שמור אימייל למשתמש זה','error');return;}
+  const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.href});
+  if(error){showToast('שגיאה בשליחת איפוס','error');return;}
+  showToast('קישור איפוס סיסמה נשלח ל'+name+' ✓');
 }
 
 async function saveFeatureFlags(){
@@ -2605,12 +2612,15 @@ function renderHomeTechCards(){
     const lp=Math.min(100,Math.round((cnt/Math.max(tech.max,1))*100));
     const fc=lp>=90?'var(--red)':lp>=60?'var(--amber)':'var(--green)';
     const zone=getTechZoneForDate(tech,todayStr());
+    const optBtn=CONFIG.OPTIMIZER_URL&&cnt>=2
+      ?`<button id="opt-btn-${tech.id}" class="btn btn-outline btn-sm" style="width:100%;margin-top:8px;font-size:0.72rem;" onclick="event.stopPropagation();runOptimize('${tech.id}')">🔀 מסלול מיטבי</button>`:'';
     return`<div class="tech-home-card" onclick="openTechWeekly('${tech.id}')">
       <div class="th-avatar" style="background:${tech.color};">${initials(tech.name)}</div>
       <div class="th-name">${tech.name}</div>
       <div class="th-area">${zone?zone.name:'—'}</div>
       <div style="font-size:0.75rem;font-weight:700;margin-top:6px;color:${fc};">${cnt}/${tech.max} ${L('tasks')} היום</div>
       <div class="load-bar" style="margin-top:6px;"><div class="load-fill" style="width:${lp}%;background:${fc};"></div></div>
+      ${optBtn}
     </div>`;
   }).join('')||`<div class="empty"><div class="empty-icon">👷</div><div>הוסף ${L('worker')} ראשון</div></div>`;
 }
@@ -2837,7 +2847,7 @@ async function optimizeDay(techId, date) {
   if (!tech) return null;
   const dayTasks = tasks.filter(t =>
     String(t.techId) === String(techId) &&
-    t.scheduledDate === date &&
+    t.date === date &&
     t.status !== 'cancelled'
   );
   if (dayTasks.length < 2) return null;
@@ -2847,16 +2857,19 @@ async function optimizeDay(techId, date) {
       technicians: [{
         id: String(tech.id),
         name: tech.name,
-        base_city: tech.baseCity || tech.base_city || '',
-        start_time: tech.startTime || '07:00',
-        end_time: tech.endTime || '18:00',
-        tasks: dayTasks.map(t => ({
-          id: String(t.id),
-          city: t.city,
-          address: t.street || null,
-          duration_minutes: t.durationMinutes || 30,
-          scheduled_time: t.scheduledTime || null,
-        })),
+        base_city: tech.base || '',
+        start_time: tech.start || '07:00',
+        end_time: tech.end || '18:00',
+        tasks: dayTasks.map(t => {
+          const cat = categories.find(c => c.id === t.catId);
+          return {
+            id: String(t.id),
+            city: t.city,
+            address: t.street || null,
+            duration_minutes: cat ? cat.time : 30,
+            scheduled_time: t.time || null,
+          };
+        }),
       }],
     };
     const res = await fetch(`${CONFIG.OPTIMIZER_URL}/optimize`, {
@@ -2871,6 +2884,20 @@ async function optimizeDay(techId, date) {
     console.warn('Optimizer unavailable, using local scheduling', e);
     return null;
   }
+}
+async function runOptimize(techId){
+  const btn=document.getElementById('opt-btn-'+techId);
+  if(btn){btn.disabled=true;btn.textContent='מחשב...';}
+  const result=await optimizeDay(techId,todayStr());
+  if(btn){btn.disabled=false;btn.textContent='🔀 מסלול מיטבי';}
+  if(!result){showToast('לא ניתן לבצע אופטימיזציה — בדוק חיבור לשרת','error');return;}
+  result.ordered_tasks.forEach(taskId=>{
+    const t=tasks.find(x=>String(x.id)===taskId||String(x._dbId)===taskId);
+    const arrival=result.estimated_times?.[taskId];
+    if(t&&arrival){t.time=arrival;saveTaskToSupabase(t);}
+  });
+  save();renderHomeTechCards();renderTasks();
+  showToast(`מסלול מיטבי ${result.mode==='gmaps'?'(Google Maps)':'(הערכה)'}  ✓ — ${result.total_drive_minutes} דק׳ נסיעה`);
 }
 
 // ═══ DISPATCH ═══
