@@ -31,8 +31,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .content{margin-right:232px;flex:1;}
 .page{padding:2rem 2.5rem;max-width:1200px;animation:fi 0.2s ease;}
 @keyframes fi{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
-.sb-top{padding:1.25rem 1.25rem 1rem;border-bottom:1px solid var(--line-2);}
-.sb-logo img{width:140px;height:auto;display:block;}
+.sb-top{padding:0;border-bottom:1px solid var(--line-2);}
+.sb-logo{width:100%;height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.sb-logo img{width:100%;height:80px;object-fit:contain;display:block;}
 .sb-tag{font-size:0.6rem;color:var(--ink-4);font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-top:2px;}
 .sb-div{height:1px;background:var(--line-2);margin:4px 1rem;}
 .sb-nav{padding:0.5rem 0.625rem;flex:1;overflow-y:auto;}
