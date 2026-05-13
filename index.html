@@ -41,7 +41,14 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .ni-btn{display:flex;align-items:center;gap:9px;width:100%;padding:9px 12px;border-radius:var(--r);font-size:0.875rem;font-weight:500;color:var(--ink-3);background:none;border:none;border-left:3px solid transparent;cursor:pointer;font-family:'Heebo',sans-serif;transition:all 0.12s;text-align:right;margin-bottom:2px;}
 .ni-btn:hover{background:var(--line-2);color:var(--ink);}
 .ni-btn.active{background:var(--blue-l);color:var(--blue-d);font-weight:700;border-left-color:var(--blue);}
-.sb-bot{padding:0.875rem 1.125rem;border-top:1px solid var(--line-2);}
+.sb-bot{padding:0.75rem 1rem;border-top:1px solid var(--line-2);}
+.sb-view-sel{width:100%;border:1px solid var(--line);border-radius:var(--r);padding:5px 8px;font-size:0.8rem;font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);margin-bottom:8px;outline:none;cursor:pointer;}
+.sb-user{display:flex;align-items:center;gap:8px;}
+.sb-user-av{width:30px;height:30px;border-radius:50%;background:var(--blue);color:white;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0;}
+.sb-user-name{font-size:0.8rem;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sb-user-role{font-size:0.68rem;color:var(--ink-4);margin-top:1px;}
+.sb-logout{background:none;border:none;cursor:pointer;color:var(--ink-4);font-size:0.9rem;padding:5px;border-radius:var(--r);flex-shrink:0;}
+.sb-logout:hover{background:var(--red-l);color:var(--red);}
 .role-box{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;}
 .role-lbl{font-size:0.6rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;}
 .role-sel{width:100%;border:none;background:transparent;font-size:0.875rem;font-family:'Heebo',sans-serif;font-weight:600;color:var(--ink);outline:none;cursor:pointer;}
@@ -354,17 +361,17 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <button id="nav-admin" class="ni-btn hidden" onclick="goPage('admin')" style="color:var(--purple);"><span>🔧</span> מנהל מאסטר</button>
   </div>
   <div class="sb-bot">
-    <div class="role-box" style="margin-bottom:8px;">
-      <div class="role-lbl" id="current-user-role">מנהל</div>
-      <div style="font-size:0.875rem;font-weight:600;color:var(--ink)" id="current-user-name"></div>
+    <select class="sb-view-sel" id="role-sel" onchange="switchRole()">
+      <option value="admin">מתאמת / מנהל</option>
+    </select>
+    <div class="sb-user">
+      <div class="sb-user-av" id="user-av-sb">?</div>
+      <div style="flex:1;min-width:0;">
+        <div id="current-user-name" class="sb-user-name"></div>
+        <div id="current-user-role" class="sb-user-role">מנהל</div>
+      </div>
+      <button id="logout-btn" class="sb-logout" onclick="doLogout()" title="התנתק">↩</button>
     </div>
-    <div class="role-box">
-      <div class="role-lbl">תצוגה</div>
-      <select class="role-sel" id="role-sel" onchange="switchRole()">
-        <option value="admin">מתאמת / מנהל</option>
-      </select>
-    </div>
-    <button id="logout-btn" class="btn btn-ghost btn-full" style="margin-top:8px;font-size:0.8rem;" onclick="doLogout()">🚪 התנתק</button>
   </div>
 </nav>
 <main class="content">
@@ -1247,6 +1254,8 @@ async function loadTenantFromUser() {
     document.getElementById('current-user-name').textContent = data.name;
     document.getElementById('current-user-role').textContent =
       data.role === 'admin' ? 'מנהל' : data.role === 'coordinator' ? 'מתאם' : 'טכנאי';
+    const av=document.getElementById('user-av-sb');
+    if(av)av.textContent=initials(data.name);
   } else {
     // User exists in Auth but not in our users table yet
     document.getElementById('login-error').textContent = 'המשתמש לא מוגדר במערכת. פנה למנהל.';
