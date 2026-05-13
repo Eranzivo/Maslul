@@ -1577,6 +1577,7 @@ function renderSettings(){
 
 // ═══ PAGES ═══
 function goPage(page){
+  if(page==='wizard'&&!currentUserSuperAdmin){goPage('home');return;}
   ['home','dispatch','tasks','planner','reports','clients','admin','techview','technicians','zones','categories','settings','wizard'].forEach(p=>{
     document.getElementById('page-'+p).classList.toggle('hidden',p!==page);
   });
@@ -1716,18 +1717,34 @@ async function createWizardTenant(){
   const{data:tenant,error:te}=await sb.from('tenants').insert({name,plan,config}).select().single();
   if(te){showToast('שגיאה ביצירת הלקוח','error');console.error(te);btn.disabled=false;btn.textContent='🚀 צור לקוח';return;}
   const tid=tenant.id;
+  // Admin user
   const{error:ue}=await sb.from('users').insert({id:uuid,tenant_id:tid,role:'admin',name:uname,super_admin:false});
   if(ue){showToast(`שגיאה בקישור המנהל — הלקוח נוצר (${tid})`,'error');console.error(ue);}
-  for(const t of techs){
-    await sb.from('technicians').insert({tenant_id:tid,name:t.name,phone:t.phone||null,base_city:t.city,min_daily:2,max_daily:t.max,start_time:start,end_time:end,color:'#2563EB'});
-  }
+  // Zones — capture IDs for tech rotation
+  const zoneIds=[];
   for(const z of zones){
-    await sb.from('zones').insert({tenant_id:tid,name:z.name,cities:z.cities});
+    const{data:zd}=await sb.from('zones').insert({tenant_id:tid,name:z.name,cities:z.cities}).select().single();
+    if(zd)zoneIds.push(zd.id);
   }
+  // Categories — capture IDs for tech skills
+  const catIds=[];
   for(const c of cats){
-    await sb.from('categories').insert({tenant_id:tid,name:c.name,duration_minutes:c.dur});
+    const{data:cd}=await sb.from('categories').insert({tenant_id:tid,name:c.name,duration_minutes:c.dur}).select().single();
+    if(cd)catIds.push(cd.id);
   }
-  showToast(`לקוח "${name}" נוצר — ${techs.length} טכנאים, ${zones.length} אזורים, ${cats.length} שירותים ✓`);
+  // Technicians — auto-rotate zones, enable all skills
+  const techColors=['#2563EB','#D97706','#7C3AED','#059669','#DC2626','#0891B2'];
+  for(let i=0;i<techs.length;i++){
+    const t=techs[i];
+    const rotation={};
+    if(zoneIds.length>0){for(let d=0;d<6;d++)rotation[String(d)]=zoneIds[(i+d)%zoneIds.length];}
+    await sb.from('technicians').insert({
+      tenant_id:tid,name:t.name,phone:t.phone||null,base_city:t.city,
+      min_daily:2,max_daily:t.max,start_time:start,end_time:end,
+      color:techColors[i%techColors.length],rotation,skills:catIds,cat_limits:{}
+    });
+  }
+  showToast(`לקוח "${name}" נוצר — ${techs.length} טכנאים, ${zoneIds.length} אזורים, ${catIds.length} שירותים ✓`);
   btn.disabled=false;btn.textContent='🚀 צור לקוח';
   setTimeout(()=>goPage('admin'),1800);
 }
