@@ -219,8 +219,26 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .flex-gap{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .empty{text-align:center;padding:3rem;color:var(--ink-4);}
 .empty-icon{font-size:2.5rem;margin-bottom:10px;}
-@media(max-width:900px){.sidebar{display:none;}.content{margin-right:0;}.page{padding:1rem;}.week-header,.week-body{grid-template-columns:40px repeat(3,1fr);}}
+.mob-bar{display:none;}
+.mob-sheet-overlay{display:none;}
+.mob-sheet{display:none;}
+@media(max-width:900px){
+  .sidebar{display:none;}.content{margin-right:0;}.page{padding:1rem;}.week-header,.week-body{grid-template-columns:40px repeat(3,1fr);}
+  .content{padding-bottom:64px;}
+  .mob-bar{display:flex;position:fixed;bottom:0;left:0;right:0;height:60px;background:var(--white);border-top:1px solid var(--line);z-index:200;align-items:stretch;box-shadow:0 -2px 10px rgba(0,0,0,0.07);}
+  .mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;border-top:2px solid transparent;font-family:'Heebo',sans-serif;font-size:0.6rem;font-weight:700;color:var(--ink-3);cursor:pointer;padding:0;transition:color 0.12s,border-color 0.12s;}
+  .mob-tab .mi{font-size:1.35rem;line-height:1;}
+  .mob-tab.active{color:var(--blue-d);border-top-color:var(--blue);}
+  .mob-sheet-overlay{display:block;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:300;}
+  .mob-sheet{display:block;position:fixed;bottom:60px;left:0;right:0;background:var(--white);border-radius:var(--r-xl) var(--r-xl) 0 0;padding:0.75rem;z-index:301;box-shadow:var(--sh-lg);}
+  .mob-sheet-item{display:flex;align-items:center;gap:12px;width:100%;padding:13px 10px;background:none;border:none;font-family:'Heebo',sans-serif;font-size:1rem;font-weight:500;color:var(--ink-2);cursor:pointer;border-radius:var(--r);text-align:right;}
+  .mob-sheet-item:active{background:var(--bg);}
+  .mob-sheet-sep{height:1px;background:var(--line);margin:4px 0;}
+  @keyframes slideup{from{transform:translateY(100%);}to{transform:translateY(0);}}
+  .mob-sheet.open{animation:slideup 0.2s ease;}
+}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:white;padding:10px 22px;border-radius:var(--r-lg);font-size:0.875rem;font-weight:600;z-index:9999;opacity:0;transition:all 0.25s;pointer-events:none;white-space:nowrap;}
+@media(max-width:900px){.toast{bottom:72px;}}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 .toast.success{background:var(--green);}
 .toast.error{background:var(--red);}
@@ -1459,6 +1477,13 @@ function goPage(page){
   document.querySelectorAll('.ni-btn').forEach(b=>b.classList.remove('active'));
   const navBtn=document.getElementById('nav-'+page);
   if(navBtn)navBtn.classList.add('active');
+  // sync mobile bottom tabs
+  const primaryTabs=['home','dispatch','tasks','planner'];
+  const morePages=['technicians','zones','categories','settings','admin','clients','reports','techview'];
+  document.querySelectorAll('.mob-tab').forEach(b=>b.classList.remove('active'));
+  const mTabId='mtab-'+(morePages.includes(page)?'more':page);
+  const mTab=document.getElementById(mTabId);
+  if(mTab)mTab.classList.add('active');
   if(page==='dispatch')resetDispatch();
   if(page==='technicians'){renderTechs();buildRoleSelect();}
   if(page==='techview')renderTechView();
@@ -1470,6 +1495,16 @@ function goPage(page){
   if(page==='admin')renderAdminPanel();
   if(page==='reports')renderReports();
   if(page==='planner')renderPlannerView();
+}
+function openMobMore(){
+  document.getElementById('mob-overlay').classList.remove('hidden');
+  const sh=document.getElementById('mob-sheet');
+  sh.classList.remove('hidden');
+  sh.classList.add('open');
+}
+function closeMobMore(){
+  document.getElementById('mob-overlay').classList.add('hidden');
+  document.getElementById('mob-sheet').classList.add('hidden');
 }
 function switchRole(){
   const val=document.getElementById('role-sel').value;currentRole=val;
@@ -2897,6 +2932,24 @@ async function saveTaskDetail(){
   showToast('נשמר ✓');
 }
 </script>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mob-bar" id="mob-bar">
+  <button class="mob-tab active" id="mtab-home" onclick="goPage('home')"><span class="mi">🏠</span>בית</button>
+  <button class="mob-tab" id="mtab-dispatch" onclick="goPage('dispatch')"><span class="mi">🎯</span>שיבוץ</button>
+  <button class="mob-tab" id="mtab-tasks" onclick="goPage('tasks')"><span class="mi">📋</span><span data-label="tasks">קריאות</span></button>
+  <button class="mob-tab" id="mtab-planner" onclick="goPage('planner')"><span class="mi">📅</span>תכנון</button>
+  <button class="mob-tab" id="mtab-more" onclick="openMobMore()"><span class="mi">☰</span>עוד</button>
+</nav>
+<div id="mob-overlay" class="mob-sheet-overlay hidden" onclick="closeMobMore()"></div>
+<div id="mob-sheet" class="mob-sheet hidden">
+  <button class="mob-sheet-item" onclick="closeMobMore();goPage('technicians')"><span>👷</span><span data-label="workers">טכנאים</span></button>
+  <button class="mob-sheet-item" onclick="closeMobMore();goPage('zones')"><span>🗺️</span><span data-label="zones">אזורים</span></button>
+  <button class="mob-sheet-item" onclick="closeMobMore();goPage('categories')"><span>📦</span><span data-label="categories">קטגוריות</span></button>
+  <button class="mob-sheet-item" onclick="closeMobMore();goPage('settings')"><span>⚙️</span>הגדרות</button>
+  <div class="mob-sheet-sep"></div>
+  <button class="mob-sheet-item" onclick="closeMobMore();doLogout()" style="color:var(--red);">🚪 התנתק</button>
+</div>
 </div><!-- /app-shell -->
 <div id="toast" class="toast"></div>
 </body>
