@@ -6,16 +6,22 @@
   "scope": "/Maslul/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#F9FAFB",
+  "background_color": "#ffffff",
   "theme_color": "#2563EB",
   "lang": "he",
   "dir": "rtl",
   "icons": [
     {
-      "src": "icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "logo.png",
+      "sizes": "1080x1080",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "logo.png",
+      "sizes": "1080x1080",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
