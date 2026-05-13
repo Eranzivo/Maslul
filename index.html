@@ -661,9 +661,25 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div class="fg">
       <label class="fl">סוג עסק <span class="req">*</span></label>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
-        <label class="wiz-type-opt"><input type="radio" name="wc-type" value="field" checked><span>🔧 שירות שטח</span></label>
-        <label class="wiz-type-opt"><input type="radio" name="wc-type" value="cleaning"><span>🧹 ניקיון</span></label>
-        <label class="wiz-type-opt"><input type="radio" name="wc-type" value="delivery"><span>📦 שליחויות</span></label>
+        <label class="wiz-type-opt"><input type="radio" name="wc-type" value="field" checked onchange="wOnTypeChange()"><span>🔧 שירות שטח</span></label>
+        <label class="wiz-type-opt"><input type="radio" name="wc-type" value="cleaning" onchange="wOnTypeChange()"><span>🧹 ניקיון</span></label>
+        <label class="wiz-type-opt"><input type="radio" name="wc-type" value="delivery" onchange="wOnTypeChange()"><span>📦 שליחויות</span></label>
+        <label class="wiz-type-opt"><input type="radio" name="wc-type" value="custom" onchange="wOnTypeChange()"><span>✏️ אחר</span></label>
+      </div>
+    </div>
+    <div id="wiz-custom-labels" class="hidden" style="background:var(--line-2);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-top:-0.5rem;margin-bottom:1rem;">
+      <div style="font-size:0.8125rem;font-weight:700;color:var(--ink-2);margin-bottom:0.75rem;">הגדר את השמות המתאימים לעסק שלך</div>
+      <div class="fg-2">
+        <div class="fg"><label class="fl">שם עובד (יחיד)</label><input class="fc" id="wc-lbl-worker" placeholder='לדוגמה: נהג, אינסטלטור, מטפל'></div>
+        <div class="fg"><label class="fl">שם עובדים (רבים)</label><input class="fc" id="wc-lbl-workers" placeholder='לדוגמה: נהגים, אינסטלטורים'></div>
+      </div>
+      <div class="fg-2">
+        <div class="fg"><label class="fl">שם משימה (יחיד)</label><input class="fc" id="wc-lbl-task" placeholder='לדוגמה: ביקור, הסעה, טיפול'></div>
+        <div class="fg"><label class="fl">שם משימות (רבים)</label><input class="fc" id="wc-lbl-tasks" placeholder='לדוגמה: ביקורים, הסעות'></div>
+      </div>
+      <div class="fg-2">
+        <div class="fg"><label class="fl">שם אזור (יחיד)</label><input class="fc" id="wc-lbl-zone" placeholder='לדוגמה: מסלול, אזור, מחוז'></div>
+        <div class="fg"><label class="fl">כינוי שיבוץ</label><input class="fc" id="wc-lbl-dispatch" placeholder='לדוגמה: שיבוץ חדש, פתח קריאה'></div>
       </div>
     </div>
     <div class="fg-2">
@@ -1611,15 +1627,20 @@ const WIZ_LABELS={
 };
 function initWizard(){
   wGoStep(1);
-  ['wc-name','wc-uuid','wc-uname'].forEach(id=>document.getElementById(id).value='');
+  ['wc-name','wc-uuid','wc-uname','wc-lbl-worker','wc-lbl-workers','wc-lbl-task','wc-lbl-tasks','wc-lbl-zone','wc-lbl-dispatch'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('wc-start').value='07:00';
   document.getElementById('wc-end').value='18:00';
   document.getElementById('wc-plan').value='pilot';
   document.querySelector('input[name="wc-type"][value="field"]').checked=true;
+  document.getElementById('wiz-custom-labels').classList.add('hidden');
   document.getElementById('wiz-techs').innerHTML='';
   document.getElementById('wiz-zones').innerHTML='';
   document.getElementById('wiz-cats').innerHTML='';
   wAddTech();wAddZone();wAddCat();
+}
+function wOnTypeChange(){
+  const type=document.querySelector('input[name="wc-type"]:checked').value;
+  document.getElementById('wiz-custom-labels').classList.toggle('hidden',type!=='custom');
 }
 function wGoStep(n){
   for(let i=1;i<=5;i++){
@@ -1639,6 +1660,12 @@ function wNext(from){
     const uuid=document.getElementById('wc-uuid').value.trim();
     const uname=document.getElementById('wc-uname').value.trim();
     if(!name||!uuid||!uname){showToast('נא למלא את כל השדות החובה','error');return;}
+    const type=document.querySelector('input[name="wc-type"]:checked').value;
+    if(type==='custom'){
+      const worker=document.getElementById('wc-lbl-worker').value.trim();
+      const task=document.getElementById('wc-lbl-task').value.trim();
+      if(!worker||!task){showToast('נא למלא לפחות שם עובד ושם משימה','error');return;}
+    }
   }
   if(from===2){
     const rows=document.querySelectorAll('.wiz-tech-row');
@@ -1687,7 +1714,7 @@ function wBuildReview(){
   const techs=[...document.querySelectorAll('.wiz-tech-row')].map(r=>({name:r.querySelector('.wt-name').value,city:r.querySelector('.wt-city').value,max:r.querySelector('.wt-max').value}));
   const zones=[...document.querySelectorAll('.wiz-zone-row')].map(r=>({name:r.querySelector('.wz-name').value,cities:r.querySelector('.wz-cities').value}));
   const cats=[...document.querySelectorAll('.wiz-cat-row')].map(r=>({name:r.querySelector('.wc-cname').value,dur:r.querySelector('.wc-cdur').value}));
-  const typeLabel={field:'שירות שטח',cleaning:'ניקיון',delivery:'שליחויות'}[type];
+  const typeLabel={field:'שירות שטח',cleaning:'ניקיון',delivery:'שליחויות',custom:'מותאם אישית'}[type]||type;
   document.getElementById('wiz-review').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
       <div class="card" style="margin:0;"><div class="card-title">החברה</div><div style="font-size:1rem;font-weight:800;margin-bottom:4px;">${name}</div><div style="font-size:0.8125rem;color:var(--ink-3);">סוג: ${typeLabel} · תוכנית: ${plan.toUpperCase()}</div><div style="font-size:0.8125rem;color:var(--ink-3);">שעות: ${start}–${end} · מנהל: ${uname}</div></div>
@@ -1709,8 +1736,26 @@ async function createWizardTenant(){
   const techs=[...document.querySelectorAll('.wiz-tech-row')].map(r=>({name:r.querySelector('.wt-name').value.trim(),phone:r.querySelector('.wt-phone').value.trim(),city:r.querySelector('.wt-city').value.trim(),max:parseInt(r.querySelector('.wt-max').value)||9}));
   const zones=[...document.querySelectorAll('.wiz-zone-row')].map(r=>({name:r.querySelector('.wz-name').value.trim(),cities:r.querySelector('.wz-cities').value.split(',').map(c=>c.trim()).filter(Boolean)}));
   const cats=[...document.querySelectorAll('.wiz-cat-row')].map(r=>({name:r.querySelector('.wc-cname').value.trim(),dur:parseInt(r.querySelector('.wc-cdur').value)||30}));
+  let labels;
+  if(type==='custom'){
+    const w=document.getElementById('wc-lbl-worker').value.trim();
+    const ws=document.getElementById('wc-lbl-workers').value.trim();
+    const t=document.getElementById('wc-lbl-task').value.trim();
+    const ts=document.getElementById('wc-lbl-tasks').value.trim();
+    const z=document.getElementById('wc-lbl-zone').value.trim();
+    const d=document.getElementById('wc-lbl-dispatch').value.trim();
+    labels={
+      worker:w, workers:ws||w+'ים',
+      task:t, tasks:ts||t+'ים',
+      zone:z||'אזור', zones:(z||'אזור')+'ות',
+      dispatch:d||'שיבוץ חדש', zones_title:'אזורי פעילות'
+    };
+  } else {
+    labels=WIZ_LABELS[type];
+  }
   const config={
-    labels:WIZ_LABELS[type],
+    labels,
+    business_type:type,
     defaults:{regular_job_minutes:30,package_job_minutes:45,arrival_window_hours:3,max_daily_jobs:9,lookahead_days:30,work_start:start,work_end:end},
     features:{crm_enabled:false,reports_enabled:false,files_enabled:false,checklists_enabled:false,whatsapp_enabled:false,demo_mode:false,google_maps_enabled:false}
   };
