@@ -37,8 +37,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .sb-tag{font-size:0.6rem;color:var(--ink-4);font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-top:2px;}
 .sb-div{height:1px;background:var(--line-2);margin:4px 1rem;}
 .sb-nav{padding:0.5rem 0.625rem;flex:1;overflow-y:auto;}
-.sb-sec{font-size:0.6rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:1px;padding:1rem 0.625rem 0.375rem;}
-.ni-btn{display:flex;align-items:center;gap:9px;width:100%;padding:9px 12px;border-radius:var(--r);font-size:0.875rem;font-weight:500;color:var(--ink-3);background:none;border:none;border-left:3px solid transparent;cursor:pointer;font-family:'Heebo',sans-serif;transition:all 0.12s;text-align:right;margin-bottom:2px;}
+.sb-sec{font-size:0.6rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:1px;padding:0.65rem 0.625rem 0.3rem;}
+.ni-btn{display:flex;align-items:center;gap:9px;width:100%;padding:6px 12px;border-radius:var(--r);font-size:0.875rem;font-weight:500;color:var(--ink-3);background:none;border:none;border-left:3px solid transparent;cursor:pointer;font-family:'Heebo',sans-serif;transition:all 0.12s;text-align:right;margin-bottom:2px;}
 .ni-btn:hover{background:var(--line-2);color:var(--ink);}
 .ni-btn.active{background:var(--blue-l);color:var(--blue-d);font-weight:700;border-left-color:var(--blue);}
 .sb-bot{padding:0.75rem 1rem;border-top:1px solid var(--line-2);}
@@ -1652,6 +1652,7 @@ async function initApp() {
   setDateLabel(); renderCatChips(); renderTasks(); renderHomeTechCards();
   renderTechs(); renderZones(); renderCategories(); renderSettings();
   applyFeatureVisibility();
+  _DDFIELDS.forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener(id==='s-city'?'change':'input',saveDispatchDraft);});
   document.getElementById('do-date').value = todayStr();
   document.getElementById('specific-date').value = todayStr();
   if(currentUserRole==='tech') routeTechLogin();
@@ -3077,6 +3078,7 @@ function confirmAssign(idx,assignId){
   tasks.push(newTask);
   save();
   saveTaskToSupabase(newTask);
+  clearDispatchDraft();
   document.getElementById('dispatch-result').classList.add('hidden');
   document.getElementById('suc-id').textContent=assignId;
   document.getElementById('suc-details').innerHTML=`
@@ -3106,9 +3108,25 @@ function resetDispatch(){
   clearDispatch();selectedCat=null;renderCatChips();
   document.getElementById('pkg-section').classList.add('hidden');
   document.getElementById('dispatch-success').classList.add('hidden');
-  document.getElementById('s-city').value='';
-  document.getElementById('s-street').value='';
+  restoreDispatchDraft();
 }
+const _DDKEY='dispatch_draft';
+const _DDFIELDS=['s-city','s-street','c-name','c-phone','c-notes'];
+function saveDispatchDraft(){
+  if(CONFIG.DEMO_MODE||!currentTenantId)return;
+  const d={};
+  _DDFIELDS.forEach(id=>{const el=document.getElementById(id);if(el)d[id]=el.value;});
+  localStorage.setItem(_DDKEY,JSON.stringify(d));
+}
+function restoreDispatchDraft(){
+  _DDFIELDS.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  try{
+    const raw=localStorage.getItem(_DDKEY);if(!raw)return;
+    const d=JSON.parse(raw);
+    _DDFIELDS.forEach(id=>{const el=document.getElementById(id);if(el&&d[id])el.value=d[id];});
+  }catch(e){}
+}
+function clearDispatchDraft(){localStorage.removeItem(_DDKEY);}
 
 // ═══ CANCEL & REPLACE ═══
 function openCancelModal(taskId){
