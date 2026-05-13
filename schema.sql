@@ -226,6 +226,7 @@ ALTER TABLE users       ADD COLUMN IF NOT EXISTS created_at    TIMESTAMPTZ NOT N
 ALTER TABLE users       ADD COLUMN IF NOT EXISTS email         TEXT NOT NULL DEFAULT '';
 ALTER TABLE users       ADD COLUMN IF NOT EXISTS permissions   JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE technicians ADD COLUMN IF NOT EXISTS base_address   TEXT;
+ALTER TABLE technicians ADD COLUMN IF NOT EXISTS user_id        UUID REFERENCES auth.users(id);
 ALTER TABLE technicians ADD COLUMN IF NOT EXISTS cat_limits     JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE technicians ADD COLUMN IF NOT EXISTS rotation       JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE technicians ADD COLUMN IF NOT EXISTS skills         TEXT[] NOT NULL DEFAULT '{}';

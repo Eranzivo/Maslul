@@ -651,6 +651,13 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
           <option value="tech">טכנאי — תצוגת טכנאי בלבד</option>
         </select>
       </div>
+      <div id="user-tech-link-row" class="fg" style="display:none;">
+        <label class="fl">קשר לטכנאי</label>
+        <select class="fc" id="user-tech-link">
+          <option value="">— בחר טכנאי —</option>
+        </select>
+        <div style="font-size:0.75rem;color:var(--ink-4);margin-top:4px;">הטכנאי יראה את לוח הזמנים שלו בכניסה</div>
+      </div>
       <div id="user-perms-section" style="border:1px solid var(--border);border-radius:8px;padding:12px;">
         <div style="font-size:0.75rem;font-weight:700;color:var(--ink-3);margin-bottom:10px;">עמודים נגישים</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
@@ -1290,6 +1297,7 @@ async function loadFromSupabase() {
       skills: t.skills || [],
       catLimits: t.cat_limits || {},
       rotation: t.rotation || {},
+      userId: t.user_id || null,
       _dbId: t.id
     }));
 
@@ -1745,12 +1753,14 @@ function createRecurring(){
 function routeTechLogin(){
   // Hide all admin nav — tech sees only their view
   ['nav-home','nav-dispatch','nav-tasks','nav-planner','nav-reports','nav-clients',
-   'nav-sec-crm','nav-technicians','nav-zones','nav-categories','nav-settings',
+   'nav-sec-crm','nav-technicians','nav-zones','nav-categories','nav-settings','nav-users',
    'nav-sec-admin','nav-admin'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('hidden');});
   document.getElementById('role-sel').closest('.role-box')?.classList.add('hidden');
-  // Match tech by name
-  const userName=document.getElementById('current-user-name').textContent.trim();
-  const matched=technicians.find(t=>t.name===userName)||technicians[0];
+  // Match tech by user_id first, then fall back to name
+  const uid=currentUser?.id;
+  const matched=technicians.find(t=>t.userId&&t.userId===uid)
+    ||technicians.find(t=>t.name===document.getElementById('current-user-name').textContent.trim())
+    ||technicians[0];
   if(matched){currentTechView=matched;renderTechView();goPage('techview');}
   // Simplified mobile nav
   const mob=document.getElementById('mob-bar');
@@ -2029,6 +2039,17 @@ async function renderUsersPage(){
 function onUserRoleChange(){
   const role=document.getElementById('user-role').value;
   document.getElementById('user-perms-section').style.display=role==='coordinator'?'block':'none';
+  const techRow=document.getElementById('user-tech-link-row');
+  if(techRow){
+    techRow.style.display=role==='tech'?'flex':'none';
+    if(role==='tech'){
+      const sel=document.getElementById('user-tech-link');
+      const cur=sel.value;
+      sel.innerHTML='<option value="">— בחר טכנאי —</option>'+
+        technicians.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+      if(cur)sel.value=cur;
+    }
+  }
 }
 
 function openAddUserModal(userId){
@@ -2057,6 +2078,11 @@ function openAddUserModal(userId){
         if(el)el.checked=views.includes(v);
       });
       onUserRoleChange();
+      // Pre-select linked technician
+      if(data.role==='tech'){
+        const linked=technicians.find(t=>t.userId===userId);
+        if(linked){const sel=document.getElementById('user-tech-link');if(sel)sel.value=linked.id;}
+      }
     });
   }
   document.getElementById('modal-add-user').classList.remove('hidden');
@@ -2077,23 +2103,35 @@ async function saveUser(){
   if(isNew&&password.length<6){errEl.textContent='סיסמה חייבת להכיל לפחות 6 תווים';errEl.style.display='block';return;}
   const views=['home','dispatch','tasks','planner','clients','reports'].filter(v=>document.getElementById('perm-'+v)?.checked);
   const permissions=role==='coordinator'?{views}:{};
+  const linkedTechId=role==='tech'?(document.getElementById('user-tech-link')?.value||''):null;
   const btn=document.getElementById('user-save-btn');
   btn.disabled=true;btn.textContent='שומר...';
   try{
+    let resolvedUserId=_editingUserId;
     if(isNew){
       // Capture current admin session before signUp replaces it
       const{data:{session:adminSession}}=await sb.auth.getSession();
       const{data:signUpData,error:signUpErr}=await sb.auth.signUp({email,password,options:{data:{name}}});
       if(signUpErr)throw signUpErr;
-      const newUserId=signUpData.user?.id;
-      if(!newUserId)throw new Error('לא נוצר משתמש');
+      resolvedUserId=signUpData.user?.id;
+      if(!resolvedUserId)throw new Error('לא נוצר משתמש');
       // Restore admin session in case signUp replaced it
       if(adminSession)await sb.auth.setSession({access_token:adminSession.access_token,refresh_token:adminSession.refresh_token});
-      const{error:insErr}=await sb.from('users').insert({id:newUserId,tenant_id:currentTenantId,name,email,role,permissions});
+      const{error:insErr}=await sb.from('users').insert({id:resolvedUserId,tenant_id:currentTenantId,name,email,role,permissions});
       if(insErr)throw insErr;
     } else {
       const{error:updErr}=await sb.from('users').update({name,role,permissions}).eq('id',_editingUserId);
       if(updErr)throw updErr;
+    }
+    // Link or unlink technician
+    if(role==='tech'&&linkedTechId){
+      await sb.from('technicians').update({user_id:resolvedUserId}).eq('id',linkedTechId);
+      const t=technicians.find(x=>x.id===linkedTechId);
+      if(t)t.userId=resolvedUserId;
+    } else if(role!=='tech'){
+      // Clear any old link this user had
+      await sb.from('technicians').update({user_id:null}).eq('user_id',resolvedUserId);
+      technicians.forEach(t=>{if(t.userId===resolvedUserId)t.userId=null;});
     }
     closeAddUserModal();
     renderUsersPage();
