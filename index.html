@@ -3161,7 +3161,7 @@ function renderTasks(){
     return`<div class="task-row">
       <div class="task-main">
         <div class="task-client">${t.client} ${t.assignId?`<span class="assign-id-tag">${t.assignId}</span>`:''}</div>
-        <div class="task-detail">${t.cat} • ${t.street?t.street+', ':''}${t.city}${t.time?' • '+t.time:''}${tech?' • '+tech.name:''}</div>
+        <div class="task-detail">${t.cat} • ${t.street?t.street+', ':''}${t.city}${t.date?' • '+new Date(t.date+'T12:00:00').toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'}):''}${t.time?' '+t.time:''}${tech?' • '+tech.name:''}</div>
       </div>
       <div class="task-actions">
         <span class="badge ${s.badge} status-pill" onclick="openStatusModal('${t.id}')">${s.label}</span>
@@ -3176,6 +3176,9 @@ function quickAssign(id){
   const t=tasks.find(x=>String(x.id)===String(id));if(!t)return;
   document.getElementById('s-city').value=t.city||'';
   document.getElementById('s-street').value=t.street||'';
+  document.getElementById('c-name').value=t.client||'';
+  document.getElementById('c-phone').value=t.phone||'';
+  document.getElementById('c-notes').value=t.notes||'';
   goPage('dispatch');
   setTimeout(()=>{if(t.catId){selectedCat='cat_'+t.catId;renderCatChips();renderPkgSection();}},100);
 }
