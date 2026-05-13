@@ -219,6 +219,23 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .flex-gap{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .empty{text-align:center;padding:3rem;color:var(--ink-4);}
 .empty-icon{font-size:2.5rem;margin-bottom:10px;}
+/* WIZARD */
+.wiz-steps{display:flex;margin-bottom:1.5rem;background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;}
+.wiz-step{flex:1;display:flex;flex-direction:column;align-items:center;padding:12px 6px;font-size:0.65rem;font-weight:700;color:var(--ink-4);gap:4px;border-right:1px solid var(--line);transition:background 0.15s,color 0.15s;}
+.wiz-step:last-child{border-right:none;}
+.wiz-step span{width:22px;height:22px;border-radius:50%;background:var(--line-2);color:var(--ink-3);display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;}
+.wiz-step.active{background:var(--blue-l);color:var(--blue-d);}
+.wiz-step.active span{background:var(--blue);color:white;}
+.wiz-step.done{color:var(--green);}
+.wiz-step.done span{background:var(--green-l);color:var(--green);}
+.wiz-type-opt{display:flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px solid var(--line);border-radius:var(--r);cursor:pointer;font-size:0.875rem;font-weight:600;transition:all 0.12s;}
+.wiz-type-opt:has(input:checked){border-color:var(--blue);background:var(--blue-l);color:var(--blue-d);}
+.wiz-type-opt input{display:none;}
+.wiz-tr{display:grid;gap:8px;align-items:end;margin-bottom:8px;}
+.wiz-tr-tech{grid-template-columns:1.5fr 1fr 1fr 1fr auto;}
+.wiz-tr-zone{grid-template-columns:1fr 2fr auto;}
+.wiz-tr-cat{grid-template-columns:2fr 1fr auto;}
+.wiz-hdr{font-size:0.7rem;font-weight:700;color:var(--ink-3);margin-bottom:3px;}
 .mob-bar{display:none;}
 .mob-sheet-overlay{display:none;}
 .mob-sheet{display:none;}
@@ -610,10 +627,98 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
         <div class="ph-title">🔧 מנהל מאסטר</div>
         <div class="ph-sub">Maslul — גלוי לך בלבד</div>
       </div>
-      <button class="btn btn-blue" onclick="openNewTenantModal()">+ לקוח חדש</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline" onclick="openNewTenantModal()">+ מהיר</button>
+        <button class="btn btn-blue" onclick="initWizard();goPage('wizard')">🧙 אשף לקוח חדש</button>
+      </div>
     </div>
   </div>
   <div id="admin-tenant-list"></div>
+</div>
+
+<!-- WIZARD: NEW CLIENT SETUP -->
+<div id="page-wizard" class="page hidden">
+  <div class="ph">
+    <div class="ph-row">
+      <div><div class="ph-title">🧙 אשף לקוח חדש</div><div class="ph-sub">הגדרה מהירה · לקוח מוכן לשימוש תוך דקות</div></div>
+      <button class="btn btn-outline" onclick="goPage('admin')">← חזרה לניהול</button>
+    </div>
+  </div>
+  <div class="wiz-steps">
+    <div class="wiz-step active" id="ws-1"><span>1</span>חברה</div>
+    <div class="wiz-step" id="ws-2"><span>2</span>טכנאים</div>
+    <div class="wiz-step" id="ws-3"><span>3</span>אזורים</div>
+    <div class="wiz-step" id="ws-4"><span>4</span>שירותים</div>
+    <div class="wiz-step" id="ws-5"><span>5</span>אישור</div>
+  </div>
+  <!-- Step 1 -->
+  <div class="card wiz-panel" id="wp-1">
+    <div class="card-title">פרטי החברה</div>
+    <div class="fg-2">
+      <div class="fg"><label class="fl">שם החברה <span class="req">*</span></label><input class="fc" id="wc-name" placeholder="לדוגמה: PureWater"></div>
+      <div class="fg"><label class="fl">תוכנית</label><select class="fc" id="wc-plan"><option value="pilot">Pilot</option><option value="starter">Starter</option><option value="pro">Pro</option></select></div>
+    </div>
+    <div class="fg">
+      <label class="fl">סוג עסק <span class="req">*</span></label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
+        <label class="wiz-type-opt"><input type="radio" name="wc-type" value="field" checked><span>🔧 שירות שטח</span></label>
+        <label class="wiz-type-opt"><input type="radio" name="wc-type" value="cleaning"><span>🧹 ניקיון</span></label>
+        <label class="wiz-type-opt"><input type="radio" name="wc-type" value="delivery"><span>📦 שליחויות</span></label>
+      </div>
+    </div>
+    <div class="fg-2">
+      <div class="fg"><label class="fl">שעת התחלה</label><input class="fc" id="wc-start" type="time" value="07:00"></div>
+      <div class="fg"><label class="fl">שעת סיום</label><input class="fc" id="wc-end" type="time" value="18:00"></div>
+    </div>
+    <div class="fg-2">
+      <div class="fg"><label class="fl">Supabase Auth UUID של מנהל <span class="req">*</span></label><input class="fc" id="wc-uuid" dir="ltr" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+      <div class="fg"><label class="fl">שם המנהל <span class="req">*</span></label><input class="fc" id="wc-uname" placeholder="ישראל כהן"></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+      <button class="btn btn-blue" onclick="wNext(1)">הבא ← טכנאים</button>
+    </div>
+  </div>
+  <!-- Step 2 -->
+  <div class="card wiz-panel hidden" id="wp-2">
+    <div class="card-title">עובדי שטח</div>
+    <div id="wiz-techs"></div>
+    <button class="btn btn-outline btn-sm" onclick="wAddTech()" style="margin-bottom:1rem;">+ הוסף טכנאי</button>
+    <div style="display:flex;justify-content:space-between;margin-top:8px;">
+      <button class="btn btn-outline" onclick="wBack(2)">→ חזרה</button>
+      <button class="btn btn-blue" onclick="wNext(2)">הבא ← אזורים</button>
+    </div>
+  </div>
+  <!-- Step 3 -->
+  <div class="card wiz-panel hidden" id="wp-3">
+    <div class="card-title">אזורי שירות</div>
+    <div style="font-size:0.8125rem;color:var(--ink-3);margin-bottom:1rem;">כל אזור הוא קבוצת ערים. הטכנאים יקבלו קריאות רק באזור שלהם ביום נתון.</div>
+    <div id="wiz-zones"></div>
+    <button class="btn btn-outline btn-sm" onclick="wAddZone()" style="margin-bottom:1rem;">+ הוסף אזור</button>
+    <div style="display:flex;justify-content:space-between;margin-top:8px;">
+      <button class="btn btn-outline" onclick="wBack(3)">→ חזרה</button>
+      <button class="btn btn-blue" onclick="wNext(3)">הבא ← שירותים</button>
+    </div>
+  </div>
+  <!-- Step 4 -->
+  <div class="card wiz-panel hidden" id="wp-4">
+    <div class="card-title">סוגי שירות</div>
+    <div style="font-size:0.8125rem;color:var(--ink-3);margin-bottom:1rem;">כל שירות שהחברה מציעה — שם ומשך ממוצע בדקות.</div>
+    <div id="wiz-cats"></div>
+    <button class="btn btn-outline btn-sm" onclick="wAddCat()" style="margin-bottom:1rem;">+ הוסף שירות</button>
+    <div style="display:flex;justify-content:space-between;margin-top:8px;">
+      <button class="btn btn-outline" onclick="wBack(4)">→ חזרה</button>
+      <button class="btn btn-blue" onclick="wNext(4)">הבא ← סיכום</button>
+    </div>
+  </div>
+  <!-- Step 5 -->
+  <div class="card wiz-panel hidden" id="wp-5">
+    <div class="card-title">סיכום — הכל נראה טוב?</div>
+    <div id="wiz-review"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;">
+      <button class="btn btn-outline" onclick="wBack(5)">→ חזרה</button>
+      <button class="btn btn-blue btn-lg" id="wiz-create-btn" onclick="createWizardTenant()">🚀 צור לקוח</button>
+    </div>
+  </div>
 </div>
 
 </main>
@@ -1471,7 +1576,7 @@ function renderSettings(){
 
 // ═══ PAGES ═══
 function goPage(page){
-  ['home','dispatch','tasks','planner','reports','clients','admin','techview','technicians','zones','categories','settings'].forEach(p=>{
+  ['home','dispatch','tasks','planner','reports','clients','admin','techview','technicians','zones','categories','settings','wizard'].forEach(p=>{
     document.getElementById('page-'+p).classList.toggle('hidden',p!==page);
   });
   document.querySelectorAll('.ni-btn').forEach(b=>b.classList.remove('active'));
@@ -1496,6 +1601,136 @@ function goPage(page){
   if(page==='reports')renderReports();
   if(page==='planner')renderPlannerView();
 }
+// ═══ ONBOARDING WIZARD ═══
+const WIZ_LABELS={
+  field:{worker:'טכנאי',workers:'טכנאים',task:'קריאה',tasks:'קריאות',zone:'אזור',zones:'אזורים',dispatch:'שיבוץ קריאה',zones_title:'אזורי פעילות'},
+  cleaning:{worker:'מנקה',workers:'מנקים',task:'עבודה',tasks:'עבודות',zone:'אזור',zones:'אזורים',dispatch:'שיבוץ עבודה',zones_title:'אזורי פעילות'},
+  delivery:{worker:'שליח',workers:'שליחים',task:'משלוח',tasks:'משלוחים',zone:'מסלול',zones:'מסלולים',dispatch:'משלוח חדש',zones_title:'מסלולי פעילות'},
+};
+function initWizard(){
+  wGoStep(1);
+  ['wc-name','wc-uuid','wc-uname'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('wc-start').value='07:00';
+  document.getElementById('wc-end').value='18:00';
+  document.getElementById('wc-plan').value='pilot';
+  document.querySelector('input[name="wc-type"][value="field"]').checked=true;
+  document.getElementById('wiz-techs').innerHTML='';
+  document.getElementById('wiz-zones').innerHTML='';
+  document.getElementById('wiz-cats').innerHTML='';
+  wAddTech();wAddZone();wAddCat();
+}
+function wGoStep(n){
+  for(let i=1;i<=5;i++){
+    document.getElementById('wp-'+i).classList.toggle('hidden',i!==n);
+    const ws=document.getElementById('ws-'+i);
+    ws.classList.toggle('active',i===n);
+    ws.classList.toggle('done',i<n);
+    ws.classList.remove(...(i===n?['done']:i<n?['active']:['active','done']));
+    if(i<n)ws.classList.add('done');
+    if(i===n)ws.classList.add('active');
+  }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function wNext(from){
+  if(from===1){
+    const name=document.getElementById('wc-name').value.trim();
+    const uuid=document.getElementById('wc-uuid').value.trim();
+    const uname=document.getElementById('wc-uname').value.trim();
+    if(!name||!uuid||!uname){showToast('נא למלא את כל השדות החובה','error');return;}
+  }
+  if(from===2){
+    const rows=document.querySelectorAll('.wiz-tech-row');
+    if(!rows.length){showToast('יש להוסיף לפחות טכנאי אחד','error');return;}
+    for(const r of rows){if(!r.querySelector('.wt-name').value.trim()||!r.querySelector('.wt-city').value.trim()){showToast('נא למלא שם ועיר לכל טכנאי','error');return;}}
+  }
+  if(from===3){
+    const rows=document.querySelectorAll('.wiz-zone-row');
+    if(!rows.length){showToast('יש להוסיף לפחות אזור אחד','error');return;}
+    for(const r of rows){if(!r.querySelector('.wz-name').value.trim()||!r.querySelector('.wz-cities').value.trim()){showToast('נא למלא שם וערים לכל אזור','error');return;}}
+  }
+  if(from===4){
+    const rows=document.querySelectorAll('.wiz-cat-row');
+    if(!rows.length){showToast('יש להוסיף לפחות שירות אחד','error');return;}
+    for(const r of rows){if(!r.querySelector('.wc-cname').value.trim()){showToast('נא למלא שם לכל שירות','error');return;}}
+    wBuildReview();
+  }
+  wGoStep(from+1);
+}
+function wBack(from){wGoStep(from-1);}
+function wAddTech(){
+  const d=document.createElement('div');
+  d.className='wiz-tr wiz-tr-tech wiz-tech-row';
+  d.innerHTML=`<div><div class="wiz-hdr">שם מלא</div><input class="fc wt-name" placeholder="ישראל לוי"></div><div><div class="wiz-hdr">טלפון</div><input class="fc wt-phone" placeholder="050-0000000"></div><div><div class="wiz-hdr">עיר מגורים</div><input class="fc wt-city" placeholder="תל אביב"></div><div><div class="wiz-hdr">מקס קריאות/יום</div><input class="fc wt-max" type="number" value="9" min="1" max="20"></div><div style="padding-bottom:1px;"><button class="btn btn-ghost btn-sm" onclick="this.closest('.wiz-tech-row').remove()" style="color:var(--red);">✕</button></div>`;
+  document.getElementById('wiz-techs').appendChild(d);
+}
+function wAddZone(){
+  const d=document.createElement('div');
+  d.className='wiz-tr wiz-tr-zone wiz-zone-row';
+  d.innerHTML=`<div><div class="wiz-hdr">שם האזור</div><input class="fc wz-name" placeholder="מרכז"></div><div><div class="wiz-hdr">ערים (מופרד בפסיק)</div><input class="fc wz-cities" placeholder="תל אביב, רמת גן, גבעתיים"></div><div style="padding-bottom:1px;"><button class="btn btn-ghost btn-sm" onclick="this.closest('.wiz-zone-row').remove()" style="color:var(--red);">✕</button></div>`;
+  document.getElementById('wiz-zones').appendChild(d);
+}
+function wAddCat(){
+  const d=document.createElement('div');
+  d.className='wiz-tr wiz-tr-cat wiz-cat-row';
+  d.innerHTML=`<div><div class="wiz-hdr">שם השירות</div><input class="fc wc-cname" placeholder="תיקון בסיסי"></div><div><div class="wiz-hdr">משך (דקות)</div><input class="fc wc-cdur" type="number" value="30" min="5" max="480"></div><div style="padding-bottom:1px;"><button class="btn btn-ghost btn-sm" onclick="this.closest('.wiz-cat-row').remove()" style="color:var(--red);">✕</button></div>`;
+  document.getElementById('wiz-cats').appendChild(d);
+}
+function wBuildReview(){
+  const name=document.getElementById('wc-name').value.trim();
+  const type=document.querySelector('input[name="wc-type"]:checked').value;
+  const plan=document.getElementById('wc-plan').value;
+  const uname=document.getElementById('wc-uname').value.trim();
+  const start=document.getElementById('wc-start').value;
+  const end=document.getElementById('wc-end').value;
+  const techs=[...document.querySelectorAll('.wiz-tech-row')].map(r=>({name:r.querySelector('.wt-name').value,city:r.querySelector('.wt-city').value,max:r.querySelector('.wt-max').value}));
+  const zones=[...document.querySelectorAll('.wiz-zone-row')].map(r=>({name:r.querySelector('.wz-name').value,cities:r.querySelector('.wz-cities').value}));
+  const cats=[...document.querySelectorAll('.wiz-cat-row')].map(r=>({name:r.querySelector('.wc-cname').value,dur:r.querySelector('.wc-cdur').value}));
+  const typeLabel={field:'שירות שטח',cleaning:'ניקיון',delivery:'שליחויות'}[type];
+  document.getElementById('wiz-review').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+      <div class="card" style="margin:0;"><div class="card-title">החברה</div><div style="font-size:1rem;font-weight:800;margin-bottom:4px;">${name}</div><div style="font-size:0.8125rem;color:var(--ink-3);">סוג: ${typeLabel} · תוכנית: ${plan.toUpperCase()}</div><div style="font-size:0.8125rem;color:var(--ink-3);">שעות: ${start}–${end} · מנהל: ${uname}</div></div>
+      <div class="card" style="margin:0;"><div class="card-title">טכנאים (${techs.length})</div>${techs.map(t=>`<div style="font-size:0.875rem;margin-bottom:4px;">👷 <strong>${t.name}</strong> — ${t.city}, מקס ${t.max}/יום</div>`).join('')}</div>
+      <div class="card" style="margin:0;"><div class="card-title">אזורים (${zones.length})</div>${zones.map(z=>`<div style="font-size:0.875rem;margin-bottom:4px;">🗺️ <strong>${z.name}</strong>: ${z.cities}</div>`).join('')}</div>
+      <div class="card" style="margin:0;"><div class="card-title">שירותים (${cats.length})</div>${cats.map(c=>`<div style="font-size:0.875rem;margin-bottom:4px;">📦 ${c.name} — ${c.dur} דק'</div>`).join('')}</div>
+    </div>`;
+}
+async function createWizardTenant(){
+  const btn=document.getElementById('wiz-create-btn');
+  btn.disabled=true;btn.textContent='יוצר...';
+  const name=document.getElementById('wc-name').value.trim();
+  const type=document.querySelector('input[name="wc-type"]:checked').value;
+  const plan=document.getElementById('wc-plan').value;
+  const uuid=document.getElementById('wc-uuid').value.trim();
+  const uname=document.getElementById('wc-uname').value.trim();
+  const start=document.getElementById('wc-start').value;
+  const end=document.getElementById('wc-end').value;
+  const techs=[...document.querySelectorAll('.wiz-tech-row')].map(r=>({name:r.querySelector('.wt-name').value.trim(),phone:r.querySelector('.wt-phone').value.trim(),city:r.querySelector('.wt-city').value.trim(),max:parseInt(r.querySelector('.wt-max').value)||9}));
+  const zones=[...document.querySelectorAll('.wiz-zone-row')].map(r=>({name:r.querySelector('.wz-name').value.trim(),cities:r.querySelector('.wz-cities').value.split(',').map(c=>c.trim()).filter(Boolean)}));
+  const cats=[...document.querySelectorAll('.wiz-cat-row')].map(r=>({name:r.querySelector('.wc-cname').value.trim(),dur:parseInt(r.querySelector('.wc-cdur').value)||30}));
+  const config={
+    labels:WIZ_LABELS[type],
+    defaults:{regular_job_minutes:30,package_job_minutes:45,arrival_window_hours:3,max_daily_jobs:9,lookahead_days:30,work_start:start,work_end:end},
+    features:{crm_enabled:false,reports_enabled:false,files_enabled:false,checklists_enabled:false,whatsapp_enabled:false,demo_mode:false,google_maps_enabled:false}
+  };
+  const{data:tenant,error:te}=await sb.from('tenants').insert({name,plan,config}).select().single();
+  if(te){showToast('שגיאה ביצירת הלקוח','error');console.error(te);btn.disabled=false;btn.textContent='🚀 צור לקוח';return;}
+  const tid=tenant.id;
+  const{error:ue}=await sb.from('users').insert({id:uuid,tenant_id:tid,role:'admin',name:uname,super_admin:false});
+  if(ue){showToast(`שגיאה בקישור המנהל — הלקוח נוצר (${tid})`,'error');console.error(ue);}
+  for(const t of techs){
+    await sb.from('technicians').insert({tenant_id:tid,name:t.name,phone:t.phone||null,base_city:t.city,min_daily:2,max_daily:t.max,start_time:start,end_time:end,color:'#2563EB'});
+  }
+  for(const z of zones){
+    await sb.from('zones').insert({tenant_id:tid,name:z.name,cities:z.cities});
+  }
+  for(const c of cats){
+    await sb.from('categories').insert({tenant_id:tid,name:c.name,duration_minutes:c.dur});
+  }
+  showToast(`לקוח "${name}" נוצר — ${techs.length} טכנאים, ${zones.length} אזורים, ${cats.length} שירותים ✓`);
+  btn.disabled=false;btn.textContent='🚀 צור לקוח';
+  setTimeout(()=>goPage('admin'),1800);
+}
+
 function openMobMore(){
   document.getElementById('mob-overlay').classList.remove('hidden');
   const sh=document.getElementById('mob-sheet');
