@@ -438,6 +438,28 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
         <a id="wa-link" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#25D366;color:white;padding:9px 18px;border-radius:10px;font-size:0.875rem;font-weight:700;text-decoration:none;">📱 וואטסאפ ללקוח</a>
       </div>
     </div>
+    <div id="recur-section" class="card hidden" style="margin-top:1rem;">
+      <div class="card-title">הפוך לסדרה חוזרת</div>
+      <div style="font-size:0.8125rem;color:var(--ink-3);margin-bottom:0.75rem;">ייצור קריאות ממתינות לתאריכים הבאים — כל אחת תשובץ בנפרד.</div>
+      <div class="fg-2">
+        <div class="fg"><label class="fl">תדירות</label>
+          <select class="fc" id="recur-freq">
+            <option value="weekly">שבועי (כל 7 ימים)</option>
+            <option value="biweekly">כל שבועיים</option>
+            <option value="monthly" selected>חודשי (כל 30 יום)</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">מספר חזרות נוספות</label>
+          <select class="fc" id="recur-count">
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="5">5</option>
+            <option value="11" selected>11 (שנה)</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-outline btn-full" onclick="createRecurring()">📅 צור סדרה</button>
+    </div>
   </div>
 </div>
 
@@ -1538,6 +1560,7 @@ async function initApp() {
   applyFeatureVisibility();
   document.getElementById('do-date').value = todayStr();
   document.getElementById('specific-date').value = todayStr();
+  if(currentUserRole==='tech') routeTechLogin();
 }
 function setDateLabel(){
   const d=new Date(),label='יום '+DAYS_HE[d.getDay()]+' — '+d.toLocaleDateString('he-IL');
@@ -1619,6 +1642,59 @@ function goPage(page){
   if(page==='reports')renderReports();
   if(page==='planner')renderPlannerView();
 }
+// ═══ WHATSAPP HELPERS ═══
+function waPhone(phone){return(phone||'').replace(/[^0-9]/g,'').replace(/^0/,'972');}
+function waMsg(t){
+  const tech=technicians.find(x=>x.id===t.techId);
+  const dateStr=t.date?new Date(t.date).toLocaleDateString('he-IL'):'';
+  const techPart=tech?'. טכנאי: '+tech.name+' ('+tech.phone+')':'';
+  return encodeURIComponent('שלום '+t.client+', תזכורת לקריאת שירות: '+t.cat+' ב'+t.city+(t.street?', '+t.street:'')+(dateStr?' בתאריך '+dateStr:'')+(t.time?' בשעה '+t.time:'')+techPart+'. מספר קריאה: '+(t.assignId||''));
+}
+
+// ═══ RECURRING TASKS ═══
+function createRecurring(){
+  const d=window._lastDispatched;if(!d){showToast('אין קריאה אחרונה','error');return;}
+  const freq=document.getElementById('recur-freq').value;
+  const count=parseInt(document.getElementById('recur-count').value)||3;
+  const deltas={weekly:7,biweekly:14,monthly:30};
+  const delta=deltas[freq];
+  const recurId='REC-'+genId().slice(0,6).toUpperCase();
+  let base=new Date(d.date);
+  let created=0;
+  for(let i=0;i<count;i++){
+    base=new Date(base.getTime()+delta*86400000);
+    while(base.getDay()===6)base=new Date(base.getTime()+86400000); // skip Shabbat
+    const dateStr=base.toISOString().split('T')[0];
+    const t={id:nextTaskId++,client:d.client,phone:d.phone,city:d.city,street:d.street,
+      cat:d.catName,catId:d.catId,techId:null,status:'pending',time:'',date:dateStr,
+      notes:(d.notes?d.notes+' ':'')+`[חוזר:${recurId}]`,assignId:''};
+    tasks.push(t);
+    saveTaskToSupabase(t);
+    created++;
+  }
+  save();
+  document.getElementById('recur-section').classList.add('hidden');
+  showToast(`נוצרו ${created} קריאות ממתינות לסדרה ${recurId} ✓`);
+}
+
+// ═══ TECH LOGIN ROUTING ═══
+function routeTechLogin(){
+  // Hide all admin nav — tech sees only their view
+  ['nav-home','nav-dispatch','nav-tasks','nav-planner','nav-reports','nav-clients',
+   'nav-sec-crm','nav-technicians','nav-zones','nav-categories','nav-settings',
+   'nav-sec-admin','nav-admin'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('hidden');});
+  document.getElementById('role-sel').closest('.role-box')?.classList.add('hidden');
+  // Match tech by name
+  const userName=document.getElementById('current-user-name').textContent.trim();
+  const matched=technicians.find(t=>t.name===userName)||technicians[0];
+  if(matched){currentTechView=matched;renderTechView();goPage('techview');}
+  // Simplified mobile nav
+  const mob=document.getElementById('mob-bar');
+  if(mob)mob.innerHTML=`
+    <button class="mob-tab active" id="mtab-techview" onclick="goPage('techview')"><span class="mi">📅</span>היום שלי</button>
+    <button class="mob-tab" onclick="doLogout()"><span class="mi">🚪</span>יציאה</button>`;
+}
+
 // ═══ ONBOARDING WIZARD ═══
 const WIZ_LABELS={
   field:{worker:'טכנאי',workers:'טכנאים',task:'קריאה',tasks:'קריאות',zone:'אזור',zones:'אזורים',dispatch:'שיבוץ קריאה',zones_title:'אזורי פעילות'},
@@ -2217,22 +2293,30 @@ function searchClient(){
   const q=document.getElementById('client-search').value.trim().toLowerCase();
   const res=document.getElementById('client-search-results');
   if(!q){res.classList.add('hidden');return;}
-  const matches=tasks.filter(t=>t.client&&t.client.toLowerCase().includes(q)&&t.status!=='cancelled')
-    .sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time)).slice(0,8);
-  if(!matches.length){res.innerHTML='<div style="padding:1rem;color:var(--ink-4);font-size:0.875rem;">לא נמצאו תוצאות</div>';res.classList.remove('hidden');return;}
-  res.className='search-results';
-  res.innerHTML=matches.map(t=>{
+  const allMatches=tasks.filter(t=>t.client&&t.client.toLowerCase().includes(q))
+    .sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
+  const active=allMatches.filter(t=>!['cancelled','completed'].includes(t.status));
+  const history=allMatches.filter(t=>['cancelled','completed'].includes(t.status)).slice(0,6);
+  if(!allMatches.length){res.innerHTML='<div style="padding:1rem;color:var(--ink-4);font-size:0.875rem;">לא נמצאו תוצאות</div>';res.classList.remove('hidden');return;}
+  const renderRow=(t,dim=false)=>{
     const tech=technicians.find(x=>x.id===t.techId);
     const s=STATUS_MAP[t.status]||STATUS_MAP.pending;
-    return`<div class="search-result-row">
+    const waBtn=t.phone?`<a href="https://wa.me/${waPhone(t.phone)}?text=${waMsg(t)}" target="_blank" style="font-size:1rem;" title="WhatsApp">💬</a>`:'';
+    return`<div class="search-result-row" style="${dim?'opacity:0.6;':''}" >
       <div style="flex:1;">
-        <div style="font-weight:700;font-size:0.9375rem;">${t.client}</div>
+        <div style="font-weight:700;font-size:0.9375rem;">${t.client}${t.phone?` <span style="font-size:0.75rem;font-weight:400;color:var(--ink-3);">${t.phone}</span>`:''}</div>
         <div style="font-size:0.8125rem;color:var(--ink-3);">${t.cat} • ${t.city}${t.date?' • '+new Date(t.date).toLocaleDateString('he-IL'):''} ${t.time||''} ${tech?' • '+tech.name:''}</div>
       </div>
-      <span class="badge ${s.badge}">${s.label}</span>
-      ${t.assignId?`<span class="assign-id-tag">${t.assignId}</span>`:''}
+      <div style="display:flex;align-items:center;gap:6px;">${waBtn}<span class="badge ${s.badge}">${s.label}</span>${t.assignId?`<span class="assign-id-tag">${t.assignId}</span>`:''}</div>
     </div>`;
-  }).join('');
+  };
+  res.className='search-results';
+  let html=active.slice(0,6).map(t=>renderRow(t)).join('');
+  if(history.length){
+    html+=`<div style="font-size:0.65rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:1px;padding:8px 12px 4px;">היסטוריה</div>`;
+    html+=history.map(t=>renderRow(t,true)).join('');
+  }
+  res.innerHTML=html;
   res.classList.remove('hidden');
 }
 function clearClientSearch(){
@@ -2666,8 +2750,11 @@ function confirmAssign(idx,assignId){
   const wp=phone.replace(/[^0-9]/g,'').replace(/^0/,'972');
   document.getElementById('wa-link').href=phone?`https://wa.me/${wp}?text=${wm}`:'#';
   document.getElementById('wa-link').style.display=phone?'inline-flex':'none';
+  // Store for recurring
+  window._lastDispatched={client,phone,city,street,catId,catName,notes,date:c.date.str,techId:c.tech.id};
+  document.getElementById('recur-section').classList.remove('hidden');
   document.getElementById('dispatch-success').classList.remove('hidden');
-  setTimeout(()=>goPage('home'),3000);
+  setTimeout(()=>goPage('home'),4000);
 }
 function clearDispatch(){
   document.getElementById('dispatch-search-card').style.opacity='1';
@@ -2779,6 +2866,7 @@ function renderTasks(){
       </div>
       <div class="task-actions">
         <span class="badge ${s.badge} status-pill" onclick="openStatusModal('${t.id}')">${s.label}</span>
+        ${t.phone?`<a class="btn btn-outline btn-sm" href="https://wa.me/${waPhone(t.phone)}?text=${waMsg(t)}" target="_blank" title="WhatsApp ללקוח">💬</a>`:''}
         ${t.status==='pending'?`<button class="btn btn-blue btn-sm" onclick="quickAssign('${t.id}')">שבץ</button>`:''}
         ${canCancel?`<button class="btn btn-sm" style="background:var(--red-l);color:var(--red);border:1px solid #FECACA;" onclick="openCancelModal('${t.id}')">בטל</button>`:''}
       </div>
@@ -2812,25 +2900,63 @@ function setStatus(ns){
 function renderTechView(){
   if(!currentTechView){document.getElementById('techview-content').innerHTML='<div class="empty"><div class="empty-icon">👤</div></div>';return;}
   const tech=currentTechView;
-  const tt=tasks.filter(t=>t.techId===tech.id&&['assigned','en_route','arrived','completed'].includes(t.status)&&t.time).sort((a,b)=>a.time.localeCompare(b.time));
+  const today=todayStr();
+  const tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
+  const tomorrowStr=tomorrow.toISOString().split('T')[0];
+  const todayTasks=tasks.filter(t=>String(t.techId)===String(tech.id)&&t.date===today&&t.status!=='cancelled').sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  const tomorrowTasks=tasks.filter(t=>String(t.techId)===String(tech.id)&&t.date===tomorrowStr&&t.status!=='cancelled').sort((a,b)=>(a.time||'').localeCompare(b.time||''));
   const d=new Date();
+  const techCard=(t)=>{
+    const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;
+    const nextStatuses={assigned:['en_route'],en_route:['arrived'],arrived:['completed','issue']};
+    const nextBtns=(nextStatuses[t.status]||[]).map(ns=>{
+      const ni=STATUS_MAP[ns];
+      return`<button class="btn btn-sm" style="background:${ns==='completed'?'var(--green)':ns==='en_route'?'var(--blue)':'var(--amber)'};color:white;border:none;" onclick="techSetStatus('${t.id}','${ns}')">${ni.label}</button>`;
+    }).join('');
+    return`<div style="background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-bottom:10px;box-shadow:var(--sh);">
+      <div style="display:flex;gap:12px;">
+        <div style="min-width:52px;text-align:center;padding-top:2px;"><div style="font-size:1.25rem;font-weight:900;color:var(--ink);">${t.time||'—'}</div><div style="font-size:0.6rem;color:var(--ink-4);">שעה</div></div>
+        <div style="width:1px;background:var(--line);flex-shrink:0;"></div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:800;font-size:0.9375rem;">${t.cat}</div>
+          <div style="font-size:0.875rem;font-weight:600;color:var(--ink-2);margin-top:2px;">${t.client}${t.phone?` · <a href="tel:${t.phone}" style="color:var(--blue);text-decoration:none;">${t.phone}</a>`:''}</div>
+          <div style="font-size:0.8125rem;color:var(--ink-3);margin-top:2px;">📍 ${[t.street,t.city].filter(Boolean).join(', ')}</div>
+          ${t.notes?`<div style="font-size:0.75rem;color:var(--ink-3);margin-top:3px;font-style:italic;">💬 ${t.notes}</div>`:''}
+          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center;">
+            <span class="badge ${s.badge}">${s.label}</span>
+            ${nextBtns}
+            <a class="btn btn-outline btn-sm" href="https://waze.com/ul?q=${encodeURIComponent((t.street||'')+' '+t.city)}" target="_blank">🗺️ וייז</a>
+            ${t.phone?`<a class="btn btn-outline btn-sm" href="tel:${t.phone}">📞</a><a class="btn btn-outline btn-sm" href="https://wa.me/${waPhone(t.phone)}?text=${waMsg(t)}" target="_blank">💬</a>`:''}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  };
   document.getElementById('techview-content').innerHTML=`<div class="page">
-    <div style="text-align:center;padding:1.5rem 0 1rem;border-bottom:1px solid var(--line);margin-bottom:1rem;">
-      <div style="width:52px;height:52px;border-radius:50%;background:${tech.color};color:white;font-size:1.125rem;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">${initials(tech.name)}</div>
-      <div style="font-size:1.25rem;font-weight:900;">${tech.name}</div>
-      <div style="font-size:0.875rem;color:var(--ink-3);">יום ${DAYS_HE[d.getDay()]} · ${d.toLocaleDateString('he-IL')} · ${tt.length} קריאות</div>
+    <div style="display:flex;align-items:center;gap:14px;padding-bottom:1.25rem;border-bottom:1px solid var(--line);margin-bottom:1.25rem;">
+      <div style="width:48px;height:48px;border-radius:50%;background:${tech.color};color:white;font-size:1rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initials(tech.name)}</div>
+      <div>
+        <div style="font-size:1.25rem;font-weight:900;">${tech.name}</div>
+        <div style="font-size:0.8125rem;color:var(--ink-3);">יום ${DAYS_HE[d.getDay()]} · ${d.toLocaleDateString('he-IL')}</div>
+      </div>
+      <div style="margin-right:auto;text-align:center;background:var(--blue-l);border-radius:var(--r);padding:8px 14px;">
+        <div style="font-size:1.5rem;font-weight:900;color:var(--blue-d);">${todayTasks.length}</div>
+        <div style="font-size:0.6rem;font-weight:700;color:var(--blue-d);text-transform:uppercase;">קריאות היום</div>
+      </div>
     </div>
-    ${tt.map(t=>{const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;return`<div style="background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-bottom:10px;box-shadow:var(--sh);display:flex;gap:14px;">
-      <div style="min-width:56px;text-align:center;"><div style="font-size:1.25rem;font-weight:900;">${t.time}</div></div>
-      <div style="width:1px;background:var(--line);margin:0 4px;"></div>
-      <div style="flex:1;">
-        <div style="font-weight:700;">${t.cat}</div>
-        <div style="font-size:0.8125rem;color:var(--ink-2);margin-top:2px;">${t.client}${t.phone?` · <a href="tel:${t.phone}" style="color:var(--blue);text-decoration:none;">${t.phone}</a>`:''}</div>
-        <div style="font-size:0.75rem;color:var(--ink-4);margin-top:2px;">📍 ${t.street}, ${t.city}</div>
-        <div style="font-size:0.65rem;font-family:monospace;color:var(--ink-4);">${t.assignId}</div>
-        <div style="display:flex;gap:8px;margin-top:10px;"><span class="badge ${s.badge}">${s.label}</span><a class="btn btn-outline btn-sm" href="https://waze.com/ul?q=${encodeURIComponent(t.street+', '+t.city)}" target="_blank">🗺️</a>${t.phone?`<a class="btn btn-blue btn-sm" href="tel:${t.phone}">📞</a>`:''}</div>
-      </div></div>`;}).join('')||'<div class="empty"><div class="empty-icon">🎉</div><div>אין קריאות</div></div>'}
+    <div style="font-size:0.7rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.75rem;">היום</div>
+    ${todayTasks.map(techCard).join('')||'<div class="empty" style="padding:2rem;"><div class="empty-icon">🎉</div><div>אין קריאות להיום</div></div>'}
+    ${tomorrowTasks.length?`<div style="font-size:0.7rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:1px;margin:1.25rem 0 0.75rem;">מחר (${tomorrowTasks.length} קריאות)</div>${tomorrowTasks.map(t=>{const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;return`<div style="background:var(--line-2);border:1px solid var(--line);border-radius:var(--r-lg);padding:0.75rem 1rem;margin-bottom:8px;opacity:0.8;display:flex;gap:10px;align-items:center;"><div style="font-weight:800;min-width:48px;">${t.time||'—'}</div><div style="flex:1;"><div style="font-weight:700;">${t.cat}</div><div style="font-size:0.8125rem;color:var(--ink-3);">${t.client} · ${t.city}</div></div><span class="badge ${s.badge}">${s.label}</span></div>`;}).join('')}`:''}
   </div>`;
+}
+function techSetStatus(taskId,ns){
+  const t=tasks.find(x=>String(x.id)===String(taskId));
+  if(!t)return;
+  t.status=ns;
+  saveTaskToSupabase(t);
+  save();
+  renderTechView();
+  showToast('סטטוס עודכן ✓');
 }
 
 // ═══ TECHNICIANS ═══
