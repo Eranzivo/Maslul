@@ -336,6 +336,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <button id="nav-zones" class="ni-btn" onclick="goPage('zones')"><span>🗺️</span> <span data-label="zones">אזורים</span></button>
     <button id="nav-categories" class="ni-btn" onclick="goPage('categories')"><span>📦</span> <span data-label="categories">קטגוריות</span></button>
     <button id="nav-settings" class="ni-btn" onclick="goPage('settings')"><span>⚙️</span> הגדרות</button>
+    <button id="nav-users" class="ni-btn" onclick="goPage('users')"><span>👤</span> משתמשים</button>
     <div id="nav-sec-admin" class="sb-sec hidden" style="color:var(--purple);">MASLUL ADMIN</div>
     <button id="nav-admin" class="ni-btn hidden" onclick="goPage('admin')" style="color:var(--purple);"><span>🔧</span> מנהל מאסטר</button>
   </div>
@@ -608,6 +609,65 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <button class="btn btn-outline" style="margin-top:14px;" onclick="saveFeatureFlags()">שמור תכונות</button>
     </div>
     <button class="btn btn-blue btn-lg" onclick="saveSettings()">שמור הגדרות</button>
+  </div>
+</div>
+
+<!-- USERS -->
+<div id="page-users" class="page hidden">
+  <div class="ph">
+    <div class="ph-row">
+      <div><div class="ph-title">👤 ניהול משתמשים</div><div class="ph-sub" id="users-count-sub"></div></div>
+      <button class="btn btn-blue" onclick="openAddUserModal(null)">+ משתמש חדש</button>
+    </div>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table style="width:100%;border-collapse:collapse;font-size:0.875rem;" id="users-table">
+      <thead><tr style="background:var(--bg-2);border-bottom:1px solid var(--border);">
+        <th style="padding:10px 16px;text-align:right;font-weight:700;color:var(--ink-3);">שם</th>
+        <th style="padding:10px 16px;text-align:right;font-weight:700;color:var(--ink-3);">אימייל</th>
+        <th style="padding:10px 16px;text-align:right;font-weight:700;color:var(--ink-3);">תפקיד</th>
+        <th style="padding:10px 16px;text-align:right;font-weight:700;color:var(--ink-3);">גישה לעמודים</th>
+        <th style="padding:10px 16px;"></th>
+      </tr></thead>
+      <tbody id="users-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MODAL: ADD/EDIT USER -->
+<div id="modal-add-user" class="modal hidden" onclick="if(event.target===this)closeAddUserModal()">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="modal-hdr"><span id="user-modal-title">הוסף משתמש</span><button class="modal-x" onclick="closeAddUserModal()">✕</button></div>
+    <div style="padding:1.25rem;display:flex;flex-direction:column;gap:14px;">
+      <input type="hidden" id="user-edit-id">
+      <div class="fg"><label class="fl">שם מלא</label><input class="fc" id="user-name" placeholder="ישראל ישראלי"></div>
+      <div class="fg"><label class="fl">אימייל</label><input class="fc" id="user-email" type="email" placeholder="user@company.com"></div>
+      <div id="user-password-row" class="fg"><label class="fl">סיסמה זמנית</label><input class="fc" id="user-password" type="password" placeholder="לפחות 6 תווים" autocomplete="new-password"></div>
+      <div class="fg">
+        <label class="fl">תפקיד</label>
+        <select class="fc" id="user-role" onchange="onUserRoleChange()">
+          <option value="admin">מנהל — גישה מלאה</option>
+          <option value="coordinator" selected>מתאם — תפעול בלבד</option>
+          <option value="tech">טכנאי — תצוגת טכנאי בלבד</option>
+        </select>
+      </div>
+      <div id="user-perms-section" style="border:1px solid var(--border);border-radius:8px;padding:12px;">
+        <div style="font-size:0.75rem;font-weight:700;color:var(--ink-3);margin-bottom:10px;">עמודים נגישים</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-home" checked> דף הבית</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-dispatch" checked> שיבוץ</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-tasks" checked> קריאות</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-planner" checked> לוח תכנון</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-clients"> לקוחות (CRM)</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-reports"> דוחות</label>
+        </div>
+      </div>
+      <div id="user-modal-error" style="color:var(--red);font-size:0.8125rem;display:none;"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+        <button class="btn btn-outline" onclick="closeAddUserModal()">ביטול</button>
+        <button class="btn btn-blue" onclick="saveUser()" id="user-save-btn">שמור</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1155,13 +1215,14 @@ async function initAuth() {
 
 async function loadTenantFromUser() {
   const { data, error } = await sb.from('users')
-    .select('tenant_id, role, name, super_admin')
+    .select('tenant_id, role, name, super_admin, permissions')
     .eq('id', currentUser.id)
     .single();
   if (data) {
     currentTenantId = data.tenant_id;
     currentUserRole = data.role;
     currentUserSuperAdmin = data.super_admin || false;
+    currentUserPermissions = data.permissions || {};
     document.getElementById('current-user-name').textContent = data.name;
     document.getElementById('current-user-role').textContent =
       data.role === 'admin' ? 'מנהל' : data.role === 'coordinator' ? 'מתאם' : 'טכנאי';
@@ -1462,6 +1523,7 @@ let technicians=[],tasks=[],dayoffs=[],zones=[],categories=[],packages=[],client
 let tenantConfig={};
 let currentUserRole='coordinator';
 let currentUserSuperAdmin=false;
+let currentUserPermissions={};
 let clientArchiveView=false;
 let reportPeriod='month';
 let adminTenants=[],adminUsers=[];
@@ -1617,7 +1679,8 @@ function renderSettings(){
 // ═══ PAGES ═══
 function goPage(page){
   if(page==='wizard'&&!currentUserSuperAdmin){goPage('home');return;}
-  ['home','dispatch','tasks','planner','reports','clients','admin','techview','technicians','zones','categories','settings','wizard'].forEach(p=>{
+  if(page==='users'&&currentUserRole!=='admin'&&!currentUserSuperAdmin){goPage('home');return;}
+  ['home','dispatch','tasks','planner','reports','clients','admin','techview','technicians','zones','categories','settings','wizard','users'].forEach(p=>{
     document.getElementById('page-'+p).classList.toggle('hidden',p!==page);
   });
   document.querySelectorAll('.ni-btn').forEach(b=>b.classList.remove('active'));
@@ -1641,6 +1704,7 @@ function goPage(page){
   if(page==='admin')renderAdminPanel();
   if(page==='reports')renderReports();
   if(page==='planner')renderPlannerView();
+  if(page==='users')renderUsersPage();
 }
 // ═══ WHATSAPP HELPERS ═══
 function waPhone(phone){return(phone||'').replace(/[^0-9]/g,'').replace(/^0/,'972');}
@@ -1889,18 +1953,167 @@ function switchRole(){
 // ═══ FEATURE FLAGS ═══
 function applyFeatureVisibility(){
   const f=tenantConfig.features||{};
+  const isAdmin=currentUserRole==='admin'||currentUserSuperAdmin;
+  const isTech=currentUserRole==='tech';
+
+  // Coordinator view permissions (admins get everything, techs get nothing here)
+  const allowedViews=isAdmin
+    ?['home','dispatch','tasks','planner','clients','reports','technicians','zones','categories','settings','users']
+    :(currentUserPermissions.views||['home','dispatch','tasks','planner']);
+
+  // CRM
   const crmOn=!!f.crm_enabled;
+  const showClients=crmOn&&allowedViews.includes('clients');
   const secCrm=document.getElementById('nav-sec-crm');
   const navClients=document.getElementById('nav-clients');
-  if(secCrm)secCrm.classList.toggle('hidden',!crmOn);
-  if(navClients)navClients.classList.toggle('hidden',!crmOn);
+  if(secCrm)secCrm.classList.toggle('hidden',!showClients);
+  if(navClients)navClients.classList.toggle('hidden',!showClients);
+
+  // Reports
+  const showReports=!!f.reports_enabled&&allowedViews.includes('reports');
   const navReports=document.getElementById('nav-reports');
-  if(navReports)navReports.classList.toggle('hidden',!f.reports_enabled);
+  if(navReports)navReports.classList.toggle('hidden',!showReports);
+
+  // Settings section — admins only
+  ['technicians','zones','categories','settings','users'].forEach(v=>{
+    const el=document.getElementById('nav-'+v);
+    if(el)el.classList.toggle('hidden',!isAdmin);
+  });
+
+  // Ops pages for coordinator
+  ['home','dispatch','tasks','planner'].forEach(v=>{
+    const el=document.getElementById('nav-'+v);
+    if(el&&!isAdmin)el.classList.toggle('hidden',!allowedViews.includes(v));
+  });
+
+  // Admin section — super_admin only
   const secAdmin=document.getElementById('nav-sec-admin');
   const navAdmin=document.getElementById('nav-admin');
   if(secAdmin)secAdmin.classList.toggle('hidden',!currentUserSuperAdmin);
   if(navAdmin)navAdmin.classList.toggle('hidden',!currentUserSuperAdmin);
 }
+
+// ═══ USER MANAGEMENT ═══
+let _editingUserId=null;
+
+async function renderUsersPage(){
+  if(!currentTenantId)return;
+  const tbody=document.getElementById('users-tbody');
+  const sub=document.getElementById('users-count-sub');
+  if(!tbody)return;
+  tbody.innerHTML='<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--ink-4);">טוען...</td></tr>';
+  const{data,error}=await sb.from('users').select('id,name,email,role,permissions').eq('tenant_id',currentTenantId).order('created_at');
+  if(error){tbody.innerHTML='<tr><td colspan="5" style="padding:20px;color:var(--red);">שגיאה בטעינה</td></tr>';return;}
+  const users=data||[];
+  if(sub)sub.textContent=users.length+' משתמשים';
+  const roleLabel={admin:'מנהל',coordinator:'מתאם',tech:'טכנאי'};
+  const viewLabel={home:'דף הבית',dispatch:'שיבוץ',tasks:'קריאות',planner:'לוח תכנון',clients:'לקוחות',reports:'דוחות'};
+  tbody.innerHTML=users.map(u=>{
+    const perms=u.permissions||{};
+    const views=perms.views||[];
+    const viewsText=u.role==='admin'?'הכל':u.role==='tech'?'תצוגת טכנאי':views.map(v=>viewLabel[v]||v).join(', ')||'—';
+    const isSelf=u.id===currentUser?.id;
+    return `<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:10px 16px;font-weight:600;">${u.name}${isSelf?' <span style="font-size:0.7rem;background:var(--blue);color:#fff;border-radius:4px;padding:1px 5px;">אתה</span>':''}</td>
+      <td style="padding:10px 16px;color:var(--ink-3);">${u.email||'—'}</td>
+      <td style="padding:10px 16px;"><span style="background:${u.role==='admin'?'var(--blue)':u.role==='tech'?'var(--green)':'var(--ink-4)'};color:#fff;border-radius:4px;padding:2px 8px;font-size:0.75rem;">${roleLabel[u.role]||u.role}</span></td>
+      <td style="padding:10px 16px;font-size:0.8125rem;color:var(--ink-3);">${viewsText}</td>
+      <td style="padding:10px 16px;text-align:left;">
+        <button class="btn btn-outline btn-sm" onclick="openAddUserModal('${u.id}')">✏️ ערוך</button>
+        ${!isSelf?`<button class="btn btn-outline btn-sm" style="color:var(--red);margin-right:4px;" onclick="deleteUserRow('${u.id}','${u.name}')">🗑️</button>`:''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function onUserRoleChange(){
+  const role=document.getElementById('user-role').value;
+  document.getElementById('user-perms-section').style.display=role==='coordinator'?'block':'none';
+}
+
+function openAddUserModal(userId){
+  _editingUserId=userId;
+  const isNew=!userId;
+  document.getElementById('user-modal-title').textContent=isNew?'הוסף משתמש':'ערוך משתמש';
+  document.getElementById('user-edit-id').value=userId||'';
+  document.getElementById('user-name').value='';
+  document.getElementById('user-email').value='';
+  document.getElementById('user-password').value='';
+  document.getElementById('user-role').value='coordinator';
+  document.getElementById('user-password-row').style.display=isNew?'flex':'none';
+  document.getElementById('user-modal-error').style.display='none';
+  ['home','dispatch','tasks','planner'].forEach(v=>document.getElementById('perm-'+v).checked=true);
+  ['clients','reports'].forEach(v=>document.getElementById('perm-'+v).checked=false);
+  onUserRoleChange();
+  if(!isNew){
+    sb.from('users').select('name,email,role,permissions').eq('id',userId).single().then(({data})=>{
+      if(!data)return;
+      document.getElementById('user-name').value=data.name||'';
+      document.getElementById('user-email').value=data.email||'';
+      document.getElementById('user-role').value=data.role||'coordinator';
+      const views=(data.permissions||{}).views||[];
+      ['home','dispatch','tasks','planner','clients','reports'].forEach(v=>{
+        const el=document.getElementById('perm-'+v);
+        if(el)el.checked=views.includes(v);
+      });
+      onUserRoleChange();
+    });
+  }
+  document.getElementById('modal-add-user').classList.remove('hidden');
+}
+
+function closeAddUserModal(){document.getElementById('modal-add-user').classList.add('hidden');}
+
+async function saveUser(){
+  const isNew=!_editingUserId;
+  const name=document.getElementById('user-name').value.trim();
+  const email=document.getElementById('user-email').value.trim();
+  const password=document.getElementById('user-password').value;
+  const role=document.getElementById('user-role').value;
+  const errEl=document.getElementById('user-modal-error');
+  errEl.style.display='none';
+  if(!name){errEl.textContent='יש למלא שם';errEl.style.display='block';return;}
+  if(isNew&&!email){errEl.textContent='יש למלא אימייל';errEl.style.display='block';return;}
+  if(isNew&&password.length<6){errEl.textContent='סיסמה חייבת להכיל לפחות 6 תווים';errEl.style.display='block';return;}
+  const views=['home','dispatch','tasks','planner','clients','reports'].filter(v=>document.getElementById('perm-'+v)?.checked);
+  const permissions=role==='coordinator'?{views}:{};
+  const btn=document.getElementById('user-save-btn');
+  btn.disabled=true;btn.textContent='שומר...';
+  try{
+    if(isNew){
+      // Capture current admin session before signUp replaces it
+      const{data:{session:adminSession}}=await sb.auth.getSession();
+      const{data:signUpData,error:signUpErr}=await sb.auth.signUp({email,password,options:{data:{name}}});
+      if(signUpErr)throw signUpErr;
+      const newUserId=signUpData.user?.id;
+      if(!newUserId)throw new Error('לא נוצר משתמש');
+      // Restore admin session in case signUp replaced it
+      if(adminSession)await sb.auth.setSession({access_token:adminSession.access_token,refresh_token:adminSession.refresh_token});
+      const{error:insErr}=await sb.from('users').insert({id:newUserId,tenant_id:currentTenantId,name,email,role,permissions});
+      if(insErr)throw insErr;
+    } else {
+      const{error:updErr}=await sb.from('users').update({name,role,permissions}).eq('id',_editingUserId);
+      if(updErr)throw updErr;
+    }
+    closeAddUserModal();
+    renderUsersPage();
+    showToast(isNew?'משתמש נוצר ✓ — נשלח אימייל אימות':'משתמש עודכן ✓');
+  }catch(e){
+    errEl.textContent=e.message||'שגיאה בשמירה';
+    errEl.style.display='block';
+  }finally{
+    btn.disabled=false;btn.textContent='שמור';
+  }
+}
+
+async function deleteUserRow(userId,name){
+  if(!confirm('למחוק את '+name+'? המשתמש לא יוכל להתחבר. ניתן ליצור מחדש.'))return;
+  const{error}=await sb.from('users').delete().eq('id',userId);
+  if(error){showToast('שגיאה במחיקה','error');return;}
+  renderUsersPage();
+  showToast(name+' הוסר ✓');
+}
+
 async function saveFeatureFlags(){
   if(!currentTenantId)return;
   const features={
