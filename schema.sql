@@ -204,6 +204,23 @@ CREATE POLICY "clients_all" ON clients
   USING (tenant_id = get_tenant_id()) WITH CHECK (tenant_id = get_tenant_id());
 
 -- ═══════════════════════════════════════════════════════════════
+-- GRANTS (required from May 2026 — Supabase no longer auto-grants)
+-- RLS policies above still enforce all tenant isolation.
+-- ═══════════════════════════════════════════════════════════════
+
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+
+GRANT ALL ON public.tenants     TO authenticated, service_role;
+GRANT ALL ON public.users       TO authenticated, service_role;
+GRANT ALL ON public.technicians TO authenticated, service_role;
+GRANT ALL ON public.zones       TO authenticated, service_role;
+GRANT ALL ON public.categories  TO authenticated, service_role;
+GRANT ALL ON public.packages    TO authenticated, service_role;
+GRANT ALL ON public.tasks       TO authenticated, service_role;
+GRANT ALL ON public.day_offs    TO authenticated, service_role;
+GRANT ALL ON public.clients     TO authenticated, service_role;
+
+-- ═══════════════════════════════════════════════════════════════
 -- INDEXES
 -- ═══════════════════════════════════════════════════════════════
 
