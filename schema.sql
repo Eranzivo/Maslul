@@ -174,34 +174,42 @@ CREATE POLICY "users_all" ON users
   USING  (tenant_id = get_tenant_id() OR is_super_admin())
   WITH CHECK (tenant_id = get_tenant_id() OR is_super_admin());
 
--- All business tables: strictly own tenant (read + write)
+-- All business tables: own tenant OR super_admin (for cross-tenant admin panel)
+-- JS queries always filter by currentTenantId, so super_admin sees only the entered tenant's data
 DROP POLICY IF EXISTS "techs_all"   ON technicians;
 CREATE POLICY "techs_all"   ON technicians
-  USING (tenant_id = get_tenant_id()) WITH CHECK (tenant_id = get_tenant_id());
+  USING (tenant_id = get_tenant_id() OR is_super_admin())
+  WITH CHECK (tenant_id = get_tenant_id() OR is_super_admin());
 
 DROP POLICY IF EXISTS "zones_all"   ON zones;
 CREATE POLICY "zones_all"   ON zones
-  USING (tenant_id = get_tenant_id()) WITH CHECK (tenant_id = get_tenant_id());
+  USING (tenant_id = get_tenant_id() OR is_super_admin())
+  WITH CHECK (tenant_id = get_tenant_id() OR is_super_admin());
 
 DROP POLICY IF EXISTS "cats_all"    ON categories;
 CREATE POLICY "cats_all"    ON categories
-  USING (tenant_id = get_tenant_id()) WITH CHECK (tenant_id = get_tenant_id());
+  USING (tenant_id = get_tenant_id() OR is_super_admin())
+  WITH CHECK (tenant_id = get_tenant_id() OR is_super_admin());
 
 DROP POLICY IF EXISTS "pkgs_all"    ON packages;
 CREATE POLICY "pkgs_all"    ON packages
-  USING (tenant_id = get_tenant_id()) WITH CHECK (tenant_id = get_tenant_id());
+  USING (tenant_id = get_tenant_id() OR is_super_admin())
+  WITH CHECK (tenant_id = get_tenant_id() OR is_super_admin());
 
 DROP POLICY IF EXISTS "tasks_all"   ON tasks;
 CREATE POLICY "tasks_all"   ON tasks
-  USING (tenant_id = get_tenant_id()) WITH CHECK (tenant_id = get_tenant_id());
+  USING (tenant_id = get_tenant_id() OR is_super_admin())
+  WITH CHECK (tenant_id = get_tenant_id() OR is_super_admin());
 
 DROP POLICY IF EXISTS "dayoffs_all" ON day_offs;
 CREATE POLICY "dayoffs_all" ON day_offs
-  USING (tenant_id = get_tenant_id()) WITH CHECK (tenant_id = get_tenant_id());
+  USING (tenant_id = get_tenant_id() OR is_super_admin())
+  WITH CHECK (tenant_id = get_tenant_id() OR is_super_admin());
 
 DROP POLICY IF EXISTS "clients_all" ON clients;
 CREATE POLICY "clients_all" ON clients
-  USING (tenant_id = get_tenant_id()) WITH CHECK (tenant_id = get_tenant_id());
+  USING (tenant_id = get_tenant_id() OR is_super_admin())
+  WITH CHECK (tenant_id = get_tenant_id() OR is_super_admin());
 
 -- ═══════════════════════════════════════════════════════════════
 -- GRANTS (required from May 2026 — Supabase no longer auto-grants)

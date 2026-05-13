@@ -1,0 +1,21 @@
+{
+  "name": "מסלול",
+  "short_name": "מסלול",
+  "description": "מערכת ניהול קריאות ושיבוץ טכנאים",
+  "start_url": "/Maslul/",
+  "scope": "/Maslul/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F9FAFB",
+  "theme_color": "#2563EB",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
