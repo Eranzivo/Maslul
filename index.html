@@ -966,6 +966,7 @@ const CONFIG = {
   SUPABASE_KEY: 'sb_publishable_YIRTlesCnITRu4lu2dyfPQ_r-ztt6JI',
   DEMO_MODE: false,      // true = bypass auth, load pre-seeded demo data
   DEMO_TYPE: 'general',  // 'general' | 'cleaning' | 'delivery'
+  OPTIMIZER_URL: '',     // set to Railway URL when backend is live, e.g. 'https://maslul-optimizer.up.railway.app'
 };
 
 // ═══ SUPABASE CLIENT ═══
@@ -2408,6 +2409,51 @@ function getNextDates(){
     i++;
   }
   return dates;
+}
+
+// ═══ ROUTE OPTIMIZER ═══
+// Calls the FastAPI backend to re-order a technician's tasks for a given date.
+// Falls back silently if OPTIMIZER_URL is not set or the call fails.
+async function optimizeDay(techId, date) {
+  if (!CONFIG.OPTIMIZER_URL) return null;
+  const tech = technicians.find(t => String(t.id) === String(techId));
+  if (!tech) return null;
+  const dayTasks = tasks.filter(t =>
+    String(t.techId) === String(techId) &&
+    t.scheduledDate === date &&
+    t.status !== 'cancelled'
+  );
+  if (dayTasks.length < 2) return null;
+  try {
+    const body = {
+      date,
+      technicians: [{
+        id: String(tech.id),
+        name: tech.name,
+        base_city: tech.baseCity || tech.base_city || '',
+        start_time: tech.startTime || '07:00',
+        end_time: tech.endTime || '18:00',
+        tasks: dayTasks.map(t => ({
+          id: String(t.id),
+          city: t.city,
+          address: t.street || null,
+          duration_minutes: t.durationMinutes || 30,
+          scheduled_time: t.scheduledTime || null,
+        })),
+      }],
+    };
+    const res = await fetch(`${CONFIG.OPTIMIZER_URL}/optimize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.optimized?.[0] || null;
+  } catch (e) {
+    console.warn('Optimizer unavailable, using local scheduling', e);
+    return null;
+  }
 }
 
 // ═══ DISPATCH ═══
