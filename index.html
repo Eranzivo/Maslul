@@ -202,6 +202,11 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 /* SKILLS */
 .skill-checks{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}
 .skill-check{display:flex;align-items:center;gap:6px;background:var(--bg);border:1.5px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;transition:all 0.1s;font-size:0.875rem;font-weight:500;}
+.week-sched{display:grid;grid-template-columns:3.5rem 1.5rem 1fr 1fr;gap:5px 8px;align-items:center;font-size:0.8rem;margin-top:4px;}
+.week-sched-day{font-weight:700;color:var(--ink-2);text-align:right;}
+.week-sched select{padding:4px 6px;font-size:0.75rem;font-family:'Heebo',sans-serif;border:1px solid var(--line);border-radius:var(--r);background:var(--white);}
+.week-sched select:disabled{opacity:0.3;background:var(--bg);}
+.week-sched-hdr{font-size:0.65rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:0.5px;text-align:center;}
 .skill-check.checked{background:var(--blue-l);border-color:var(--blue);color:var(--blue-d);font-weight:700;}
 .skill-check input{display:none;}
 /* ROTATION */
@@ -897,9 +902,11 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div class="fg"><label class="fl"><span class="req">*</span> מינימום קריאות/יום</label><input class="fc" id="ti-min" type="number" value="2"></div>
       <div class="fg"><label class="fl"><span class="req">*</span> מקסימום קריאות/יום</label><input class="fc" id="ti-max" type="number" value="9"></div>
     </div>
-    <div class="fg-2">
-      <div class="fg"><label class="fl"><span class="req">*</span> שעת התחלה</label><select class="fc" id="ti-start"></select></div>
-      <div class="fg"><label class="fl"><span class="req">*</span> שעת סיום</label><select class="fc" id="ti-end"></select></div>
+    <div class="fg">
+      <label class="fl">שעות עבודה שבועיות</label>
+      <div class="week-sched" id="ti-weekly-sched">
+        <div class="week-sched-hdr">יום</div><div class="week-sched-hdr">עובד</div><div class="week-sched-hdr">התחלה</div><div class="week-sched-hdr">סיום</div>
+      </div>
     </div>
     <div class="fg">
       <label class="fl"><span class="req">*</span> מיומנויות</label>
@@ -1351,6 +1358,7 @@ async function loadFromSupabase() {
       skills: t.skills || [],
       catLimits: t.cat_limits || {},
       rotation: t.rotation || {},
+      weekly_schedule: t.weekly_schedule || {},
       userId: t.user_id || null,
       _dbId: t.id
     }));
@@ -1467,6 +1475,7 @@ async function saveTechToSupabase(tech) {
     start_time: tech.start, end_time: tech.end,
     blocked_cities: tech.blocked ? tech.blocked.split(',').map(c=>c.trim()).filter(c=>c) : [],
     skills: tech.skills || [], cat_limits: tech.catLimits || {}, rotation: tech.rotation || {},
+    weekly_schedule: tech.weekly_schedule || {},
   };
   if (tech._dbId) {
     const { error } = await sb.from('technicians').update(row).eq('id', tech._dbId);
@@ -1695,7 +1704,7 @@ function setDateLabel(){
 }
 function populateTimeSels(){
   const times=[];for(let h=5;h<=22;h++){['00','30'].forEach(m=>times.push(pad(h)+':'+m));}
-  ['set-start','set-end','ti-start','ti-end','do-from','do-to'].forEach(id=>{
+  ['set-start','set-end','do-from','do-to'].forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
     times.forEach(t=>{el.appendChild(new Option(t,t));});
   });
@@ -2800,7 +2809,17 @@ function getCatName(){
 
 // ═══ ENGINE ═══
 function getCityZone(city){return zones.find(z=>z.cities.includes(city))||null;}
-function isTechAvailable(tech,dateStr){return !dayoffs.some(d=>d.techId===tech.id&&d.date===dateStr&&d.type==='full');}
+function getTechDaySchedule(tech,dateStr){
+  const dow=new Date(dateStr).getDay();
+  const ws=tech.weekly_schedule||{};
+  const day=ws[String(dow)];
+  if(!day)return{work:true,start:tech.start||'07:00',end:tech.end||'17:00'};
+  return day;
+}
+function isTechAvailable(tech,dateStr){
+  if(dayoffs.some(d=>d.techId===tech.id&&d.date===dateStr&&d.type==='full'))return false;
+  return getTechDaySchedule(tech,dateStr).work!==false;
+}
 function getTechDayTasks(tech,dateStr){
   return tasks.filter(t=>t.techId===tech.id&&t.date===dateStr&&['assigned','en_route','arrived'].includes(t.status)).sort((a,b)=>a.time.localeCompare(b.time));
 }
@@ -2834,7 +2853,8 @@ function getCityIndexInZone(city,zoneId){
 function calcOptimalTime(tech,dateStr,city){
   const zid=getTechZoneId(tech,dateStr);
   const dayTasks=getTechDayTasks(tech,dateStr);
-  const[sh]=tech.start.split(':').map(Number);
+  const sched=getTechDaySchedule(tech,dateStr);
+  const[sh]=sched.start.split(':').map(Number);
   const durMins=settings.regularTime||30;
   const bufMins=10;
   if(!dayTasks.length){
@@ -2862,7 +2882,7 @@ function calcOptimalTime(tech,dateStr,city){
     }
   }
   // Otherwise append after last
-  const[eh]=tech.end.split(':').map(Number);
+  const[eh]=sched.end.split(':').map(Number);
   if(lastEnd+durMins<=eh*60)return minsToTime(lastEnd);
   return null; // no room
 }
@@ -2932,8 +2952,8 @@ async function optimizeDay(techId, date) {
         id: String(tech.id),
         name: tech.name,
         base_city: tech.base || '',
-        start_time: tech.start || '07:00',
-        end_time: tech.end || '18:00',
+        start_time: getTechDaySchedule(tech,date).start || '07:00',
+        end_time: getTechDaySchedule(tech,date).end || '18:00',
         tasks: dayTasks.map(t => {
           const cat = categories.find(c => c.id === t.catId);
           return {
@@ -3040,8 +3060,9 @@ function showCandidate(idx){
   const routeRows=dayTasks.length?[...dayTasks.map(t=>`<div class="route-row"><span class="route-time">${t.time}</span><span class="route-arrow">→</span><span class="route-city">${t.city}</span></div>`),`<div class="route-row"><span class="route-time">${c.optTime}</span><span class="route-arrow">→</span><span class="route-city route-new">✦ ${city} (חדש)</span></div>`].join(''):'';
   const routeHtml=routeRows?`<div class="route-preview"><div class="route-title">מסלול יום מתוכנן (רחוק לקרוב)</div>${routeRows}</div>`:'';
   // Time slots
-  const[sh]=tech.start.split(':').map(Number);
-  const[eh]=tech.end.split(':').map(Number);
+  const _sched=getTechDaySchedule(tech,c.date.str);
+  const[sh]=_sched.start.split(':').map(Number);
+  const[eh]=_sched.end.split(':').map(Number);
   const slotH=settings.window;
   const slots=[];
   for(let h=sh;h<=eh-slotH;h++){
@@ -3387,6 +3408,39 @@ function buildTechModalUI(){
     `<div class="rotation-day"><div class="day-name">${day}</div><select id="rot-${i}">${[{id:'',name:'—'},...zones].map(z=>`<option value="${z.id}">${z.name||'—'}</option>`).join('')}</select></div>`
   ).join('');
 }
+function buildWeekSchedGrid(ws){
+  const times=[];for(let h=5;h<=22;h++){['00','30'].forEach(m=>times.push(pad(h)+':'+m));}
+  const opts=times.map(t=>`<option value="${t}">${t}</option>`).join('');
+  const days=['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
+  let html='<div class="week-sched-hdr">יום</div><div class="week-sched-hdr">עובד</div><div class="week-sched-hdr">התחלה</div><div class="week-sched-hdr">סיום</div>';
+  days.forEach((name,i)=>{
+    const d=ws[String(i)]||{work:true,start:'07:00',end:'17:00'};
+    const on=d.work!==false;
+    html+=`<div class="week-sched-day">${name}</div>
+      <input type="checkbox" id="ws-work-${i}" ${on?'checked':''} onchange="toggleWsDay(${i})" style="width:16px;height:16px;cursor:pointer;justify-self:center;">
+      <select id="ws-start-${i}" ${on?'':'disabled'}>${opts}</select>
+      <select id="ws-end-${i}" ${on?'':'disabled'}>${opts}</select>`;
+  });
+  document.getElementById('ti-weekly-sched').innerHTML=html;
+  days.forEach((_,i)=>{
+    const d=ws[String(i)]||{work:true,start:'07:00',end:'17:00'};
+    const ss=document.getElementById('ws-start-'+i),se=document.getElementById('ws-end-'+i);
+    if(ss)ss.value=d.start||'07:00';if(se)se.value=d.end||'17:00';
+  });
+}
+function toggleWsDay(i){
+  const on=document.getElementById('ws-work-'+i).checked;
+  document.getElementById('ws-start-'+i).disabled=!on;
+  document.getElementById('ws-end-'+i).disabled=!on;
+}
+function readWeekSched(){
+  const ws={};
+  for(let i=0;i<6;i++){
+    const on=!!document.getElementById('ws-work-'+i)?.checked;
+    ws[String(i)]={work:on,start:document.getElementById('ws-start-'+i)?.value||'07:00',end:document.getElementById('ws-end-'+i)?.value||'17:00'};
+  }
+  return ws;
+}
 function toggleSkill(catId){
   const inp=document.getElementById('skill-'+catId),lbl=document.getElementById('skill-lbl-'+catId);
   inp.checked=!inp.checked;lbl.classList.toggle('checked',inp.checked);
@@ -3396,7 +3450,7 @@ function openAddTechModal(){
   document.getElementById('mo-tech-title').textContent='הוסף '+L('worker');
   ['ti-name','ti-phone','ti-base','ti-address','ti-blocked'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ti-min').value='2';document.getElementById('ti-max').value='9';
-  if(document.getElementById('ti-start').options.length){document.getElementById('ti-start').value='07:00';document.getElementById('ti-end').value='17:00';}
+  buildWeekSchedGrid({});
   document.getElementById('ti-save-btn').textContent='הוסף';
   document.querySelectorAll('.field-error').forEach(e=>e.classList.add('hidden'));
   document.getElementById('mo-tech').classList.remove('hidden');
@@ -3408,7 +3462,10 @@ function editTech(id){
   document.getElementById('ti-name').value=tech.name;document.getElementById('ti-phone').value=tech.phone;
   document.getElementById('ti-base').value=tech.base;document.getElementById('ti-address').value=tech.address||'';document.getElementById('ti-min').value=tech.min;
   document.getElementById('ti-max').value=tech.max;document.getElementById('ti-blocked').value=tech.blocked||'';
-  if(document.getElementById('ti-start').options.length){document.getElementById('ti-start').value=tech.start||'07:00';document.getElementById('ti-end').value=tech.end||'17:00';}
+  // Build weekly schedule — fallback: if no weekly_schedule set, derive from global start/end
+  const existingWs=tech.weekly_schedule&&Object.keys(tech.weekly_schedule).length?tech.weekly_schedule:
+    Object.fromEntries([0,1,2,3,4,5].map(i=>[String(i),{work:true,start:tech.start||'07:00',end:tech.end||'17:00'}]));
+  buildWeekSchedGrid(existingWs);
   (tech.skills||[]).forEach(sid=>{const inp=document.getElementById('skill-'+sid),lbl=document.getElementById('skill-lbl-'+sid);if(inp){inp.checked=true;lbl?.classList.add('checked');}});
   Object.entries(tech.catLimits||{}).forEach(([catId,val])=>{const inp=document.getElementById('catlim-'+catId);if(inp)inp.value=val;});
   Object.entries(tech.rotation||{}).forEach(([day,zid])=>{const sel=document.getElementById('rot-'+day);if(sel)sel.value=zid||'';});
@@ -3432,7 +3489,9 @@ function saveTech(){
   if(!valid)return;
   const catLimits={};
   categories.forEach(c=>{const v=parseInt(document.getElementById('catlim-'+c.id)?.value);if(v>0)catLimits[c.id]=v;});
-  const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),address:document.getElementById('ti-address').value.trim(),min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:document.getElementById('ti-start').value,end:document.getElementById('ti-end').value,blocked:document.getElementById('ti-blocked').value.trim(),skills,catLimits,rotation};
+  const weekly_schedule=readWeekSched();
+  const firstWorkDay=Object.values(weekly_schedule).find(d=>d.work!==false)||{start:'07:00',end:'17:00'};
+  const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),address:document.getElementById('ti-address').value.trim(),min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:firstWorkDay.start,end:firstWorkDay.end,weekly_schedule,blocked:document.getElementById('ti-blocked').value.trim(),skills,catLimits,rotation};
   if(editingTechId){const tech=technicians.find(t=>t.id===editingTechId);if(tech){Object.assign(tech,data);saveTechToSupabase(tech);}}
   else{const tech={id:nextTechId++,...data,color:COLORS[technicians.length%COLORS.length]};technicians.push(tech);saveTechToSupabase(tech);}
   save();buildRoleSelect();closeMo('mo-tech');renderTechs();renderHomeTechCards();showToast('נשמר ✓');
