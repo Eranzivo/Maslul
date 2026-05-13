@@ -12,15 +12,15 @@
   "dir": "rtl",
   "icons": [
     {
-      "src": "logo.png",
-      "sizes": "1080x1080",
-      "type": "image/png",
+      "src": "icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "logo.png",
-      "sizes": "1080x1080",
-      "type": "image/png",
+      "src": "icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
       "purpose": "maskable"
     }
   ]
