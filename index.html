@@ -1388,6 +1388,7 @@ async function saveTaskToSupabase(task) {
     scheduled_date: task.date || null,
     scheduled_time: task.time || null,
     notes: task.notes || '',
+    cancelled_at: task.cancelledAt || null,
   };
   if (task._dbId) {
     const { error } = await sb.from('tasks').update(row).eq('id', task._dbId);
