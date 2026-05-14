@@ -587,9 +587,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <button class="btn btn-outline btn-sm" onclick="plannerClearAll()" style="white-space:nowrap;">נקה הכל</button>
     </div>
     <div class="week-nav" style="margin-top:12px;">
-      <button class="week-nav-btn" onclick="changePlannerWeek(-1)">›</button>
-      <div class="week-title" id="planner-week-label" style="font-size:0.9375rem;"></div>
-      <button class="week-nav-btn" onclick="changePlannerWeek(1)">‹</button>
+      <button class="week-nav-btn" onclick="changePlannerWeek(-1)" title="שבוע קודם">›</button>
+      <div class="week-title" id="planner-week-label" style="font-size:0.9375rem;flex:1;text-align:center;"></div>
+      <button class="week-nav-btn" onclick="changePlannerWeek(1)" title="שבוע הבא">‹</button>
+      <button class="btn btn-outline btn-sm" onclick="plannerWeekOffset=0;renderPlannerContent()" style="margin-right:4px;">היום</button>
     </div>
   </div>
   <div id="planner-content" style="overflow-x:auto;padding-bottom:2rem;"></div>
@@ -3021,7 +3022,7 @@ function renderCatChips(){
   container.innerHTML=items.map(item=>`<button class="cat-chip ${selectedCat===item.id?'selected':''}" onclick="selectCat('${item.id}')">${item.label}</button>`).join('')+
     `<button class="cat-add-btn" onclick="goPage('categories')">+ הוסף</button>`;
 }
-function selectCat(id){selectedCat=id;renderCatChips();renderPkgSection();}
+function selectCat(id){selectedCat=id;renderCatChips();renderPkgSection();saveDispatchDraft();}
 function renderPkgSection(){
   if(!selectedCat){document.getElementById('pkg-section').classList.add('hidden');return;}
   document.getElementById('pkg-section').classList.remove('hidden');
@@ -3404,19 +3405,19 @@ function clearDispatch(){
 }
 function addPrefWindow(){
   prefWindows.push({from:'09:00',to:'13:00'});
-  renderPrefWindows();
+  renderPrefWindows();saveDispatchDraft();
 }
 function removePrefWindow(i){
   prefWindows.splice(i,1);
-  renderPrefWindows();
+  renderPrefWindows();saveDispatchDraft();
 }
 function renderPrefWindows(){
   const el=document.getElementById('pref-windows-list');if(!el)return;
   el.innerHTML=prefWindows.map((w,i)=>`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-      <input type="time" class="fc" value="${w.from}" style="width:90px;padding:6px 8px;" onchange="prefWindows[${i}].from=this.value">
+      <input type="time" class="fc" value="${w.from}" style="width:90px;padding:6px 8px;" onchange="prefWindows[${i}].from=this.value;saveDispatchDraft()">
       <span style="color:var(--ink-3);">עד</span>
-      <input type="time" class="fc" value="${w.to}" style="width:90px;padding:6px 8px;" onchange="prefWindows[${i}].to=this.value">
+      <input type="time" class="fc" value="${w.to}" style="width:90px;padding:6px 8px;" onchange="prefWindows[${i}].to=this.value;saveDispatchDraft()">
       <button type="button" onclick="removePrefWindow(${i})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:1.1rem;padding:0;line-height:1;">✕</button>
     </div>`).join('');
 }
@@ -4030,7 +4031,10 @@ function renderPlannerContent(){
   const lbl=document.getElementById('planner-week-label');
   if(lbl) lbl.textContent=days[0].toLocaleDateString('he-IL')+' – '+days[5].toLocaleDateString('he-IL');
   const sub=document.getElementById('planner-sub');
-  if(sub) sub.textContent=plannerSelectedTechs.length+' טכנאים מוצגים';
+  const weekStart=days[0].toISOString().split('T')[0];
+  const weekEnd=days[days.length-1].toISOString().split('T')[0];
+  const weekTasks=tasks.filter(t=>plannerSelectedTechs.includes(t.techId)&&t.date>=weekStart&&t.date<=weekEnd&&t.status!=='cancelled').length;
+  if(sub) sub.textContent=plannerSelectedTechs.length+' '+L('workers')+' · '+weekTasks+' '+L('tasks')+' השבוע';
   if(plannerMode==='weekly') renderPlannerWeekly(days);
   else renderPlannerDaily(days);
 }
@@ -4053,24 +4057,29 @@ function renderPlannerWeekly(days){
   const content=document.getElementById('planner-content');
   const selTechs=technicians.filter(t=>plannerSelectedTechs.includes(t.id));
   if(!selTechs.length){content.innerHTML='<div class="empty"><div class="empty-icon">👆</div><div>בחר לפחות טכנאי אחד למעלה</div></div>';return;}
-  const todayStr=new Date().toISOString().split('T')[0];
+  const todayDs=new Date().toISOString().split('T')[0];
   const dayHeaders=days.map(d=>{
     const ds=d.toISOString().split('T')[0];
-    const isToday=ds===todayStr;
-    return`<th style="text-align:center;padding:8px 4px;font-size:0.75rem;font-weight:800;color:${isToday?'var(--blue-d)':'var(--ink-3)'};background:${isToday?'var(--blue-l)':'var(--line-2)'};white-space:nowrap;min-width:130px;">
-      ${DAYS_SHORT[d.getDay()]}׳<br><span style="font-size:0.7rem;font-weight:600;opacity:0.8;">${d.getDate()}/${d.getMonth()+1}</span></th>`;
+    const isToday=ds===todayDs;
+    return`<th style="text-align:center;padding:10px 4px;font-size:0.75rem;font-weight:800;color:${isToday?'var(--blue)':'var(--ink-3)'};background:${isToday?'#DBEAFE':'var(--line-2)'};white-space:nowrap;min-width:110px;border-bottom:${isToday?'3px solid var(--blue)':'3px solid transparent'};">
+      ${DAYS_SHORT[d.getDay()]}׳ <span style="font-size:0.7rem;font-weight:${isToday?800:500};opacity:${isToday?1:0.7};">${d.getDate()}/${d.getMonth()+1}</span>${isToday?'<div style="font-size:0.6rem;color:var(--blue);margin-top:2px;">היום</div>':''}</th>`;
   }).join('');
   const rows=selTechs.map(tech=>{
     const cells=days.map(day=>{
       const ds=day.toISOString().split('T')[0];
+      const isToday=ds===todayDs;
       const isDayOff=dayoffs.some(d=>String(d.techId)===String(tech.id)&&d.date===ds&&d.type==='full');
       const techTasks=tasks.filter(t=>String(t.techId)===String(tech.id)&&t.date===ds&&t.status!=='cancelled');
-      if(isDayOff) return`<td style="background:var(--line-2);vertical-align:top;padding:6px;border-right:1px solid var(--line-2);"><div class="planner-day-off">יום חופש</div></td>`;
-      const chips=techTasks.sort((a,b)=>(a.time||'').localeCompare(b.time||'')).map(_plannerTaskChip).join('');
-      return`<td style="vertical-align:top;padding:6px;border-right:1px solid var(--line-2);min-height:52px;max-height:160px;overflow-y:auto;">${chips||'<div style="height:28px;"></div>'}</td>`;
+      const bg=isToday?'#F0F7FF':isDayOff?'var(--line-2)':'';
+      if(isDayOff) return`<td style="background:var(--line-2);vertical-align:top;padding:6px;border-left:1px solid var(--line-2);"><div class="planner-day-off">יום חופש</div></td>`;
+      const sorted=techTasks.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+      const visible=sorted.slice(0,3);
+      const extra=sorted.length-3;
+      const chips=visible.map(_plannerTaskChip).join('')+(extra>0?`<div style="font-size:0.65rem;color:var(--ink-4);padding:2px 6px;">+${extra} נוספות</div>`:'');
+      return`<td style="vertical-align:top;padding:5px;border-left:1px solid var(--line-2);${bg?'background:'+bg+';':''}min-width:110px;">${chips||'<div style="height:32px;"></div>'}</td>`;
     }).join('');
-    return`<tr>
-      <td style="padding:8px 12px;border-bottom:1px solid var(--line-2);border-left:2px solid var(--line);white-space:nowrap;vertical-align:middle;background:var(--white);">
+    return`<tr style="border-bottom:1px solid var(--line-2);">
+      <td style="padding:10px 14px;white-space:nowrap;vertical-align:middle;background:var(--white);position:sticky;right:0;z-index:1;border-left:2px solid var(--line-2);box-shadow:-2px 0 4px rgba(0,0,0,0.04);">
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="width:10px;height:10px;border-radius:50%;background:${tech.color||'#2563EB'};display:inline-block;flex-shrink:0;"></span>
           <span style="font-size:0.875rem;font-weight:700;">${h(tech.name)}</span>
@@ -4079,7 +4088,7 @@ function renderPlannerWeekly(days){
   }).join('');
   content.innerHTML=`<table style="border-collapse:collapse;width:100%;background:var(--white);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh);border:1px solid var(--line);">
     <thead><tr>
-      <th style="background:var(--line-2);padding:8px 12px;font-size:0.75rem;font-weight:800;color:var(--ink-3);text-align:right;white-space:nowrap;border-left:2px solid var(--line);min-width:110px;">טכנאי</th>
+      <th style="background:var(--line-2);padding:10px 14px;font-size:0.75rem;font-weight:800;color:var(--ink-3);text-align:right;white-space:nowrap;position:sticky;right:0;z-index:2;border-left:2px solid var(--line-2);border-bottom:3px solid transparent;">${L('workers')}</th>
       ${dayHeaders}
     </tr></thead>
     <tbody>${rows}</tbody>
