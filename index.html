@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://js.sentry-cdn.com/85e4d2c73530cb029d116a69ad4b2581.min.js" crossorigin="anonymous"></script>
+<script src="https://browser.sentry-cdn.com/8.0.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
 <style>
 :root{
   --ink:#111827;--ink-2:#374151;--ink-3:#6B7280;--ink-4:#9CA3AF;
@@ -1181,11 +1181,10 @@ const CONFIG = {
 
 // ═══ SENTRY ═══
 if(typeof Sentry !== 'undefined'){
-  Sentry.onLoad(function(){
-    Sentry.init({
-      environment: CONFIG.DEMO_MODE ? 'demo' : 'production',
-      beforeSend(event){ return CONFIG.DEMO_MODE ? null : event; },
-    });
+  Sentry.init({
+    dsn: 'https://85e4d2c73530cb029d116a69ad4b2581@o4511388045606912.ingest.de.sentry.io/4511388137750608',
+    environment: CONFIG.DEMO_MODE ? 'demo' : 'production',
+    beforeSend(event){ return CONFIG.DEMO_MODE ? null : event; },
   });
 }
 
@@ -1349,7 +1348,7 @@ async function loadTenantFromUser() {
     document.getElementById('current-user-name').textContent = data.name;
     document.getElementById('current-user-role').textContent =
       data.role === 'admin' ? 'מנהל' : data.role === 'coordinator' ? 'מתאם' : 'טכנאי';
-    if(typeof Sentry !== 'undefined') Sentry.setUser({username: data.name, id: data.tenant_id});
+    if(typeof Sentry !== 'undefined' && typeof Sentry.setUser === 'function') Sentry.setUser({username: data.name, id: data.tenant_id});
     const av=document.getElementById('user-av-sb');
     if(av)av.textContent=initials(data.name);
   } else {
@@ -1463,7 +1462,7 @@ async function sendPasswordReset() {
   errEl.textContent = 'קישור לאיפוס נשלח לאימייל ✓';
 }
 async function doLogout() {
-  if(typeof Sentry !== 'undefined') Sentry.setUser(null);
+  if(typeof Sentry !== 'undefined' && typeof Sentry.setUser === 'function') Sentry.setUser(null);
   await sb.auth.signOut();
 }
 
