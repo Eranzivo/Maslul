@@ -2270,9 +2270,12 @@ async function renderAdminPanel(){
   if(!list)return;
   list.innerHTML='<div style="text-align:center;padding:2rem;color:var(--ink-4);">טוען...</div>';
   try{
-    const[tenantRes,userRes]=await Promise.all([
+    const[tenantRes,userRes,techRes,zoneRes,catRes]=await Promise.all([
       sb.from('tenants').select('*'),
       sb.from('users').select('id,tenant_id,role,name,super_admin'),
+      sb.from('technicians').select('tenant_id,rotation'),
+      sb.from('zones').select('tenant_id'),
+      sb.from('categories').select('tenant_id'),
     ]);
     if(tenantRes.error){
       list.innerHTML=`<div class="empty"><div style="color:var(--red);font-weight:700;margin-bottom:6px;">שגיאה בטעינה</div><div style="font-size:0.8125rem;color:var(--ink-3);">${tenantRes.error.message||'בדוק שפונקציות RLS הותקנו בסופבייס'}</div></div>`;
@@ -2281,6 +2284,9 @@ async function renderAdminPanel(){
     }
     adminTenants=tenantRes.data||[];
     adminUsers=userRes.data||[];
+    const allTechs=techRes.data||[];
+    const allZones=zoneRes.data||[];
+    const allCats=catRes.data||[];
     if(!adminTenants.length){
       list.innerHTML='<div class="empty"><div class="empty-icon">🏢</div><div>אין לקוחות נגישים — ודא שפוליסות RLS מאפשרות גישת super_admin</div></div>';
       return;
@@ -2288,6 +2294,11 @@ async function renderAdminPanel(){
     const planColor={pilot:'var(--amber)',starter:'var(--blue)',pro:'var(--purple)'};
     list.innerHTML=adminTenants.map(t=>{
       const tUsers=adminUsers.filter(u=>u.tenant_id===t.id);
+      const tTechs=allTechs.filter(x=>x.tenant_id===t.id);
+      const tZones=allZones.filter(x=>x.tenant_id===t.id);
+      const tCats=allCats.filter(x=>x.tenant_id===t.id);
+      const hasRotation=tTechs.some(tech=>tech.rotation&&Object.keys(tech.rotation).some(k=>tech.rotation[k]));
+      const chip=(label,ok,warn)=>`<span style="${ok?'background:var(--green-l);color:var(--green);border:1px solid #BBF7D0;':warn?'background:#FEF3C7;color:#D97706;border:1px solid #FDE68A;':'background:var(--line-2);color:var(--ink-4);border:1px solid var(--line);'}border-radius:20px;padding:2px 9px;font-size:0.7rem;font-weight:700;">${label}</span>`;
       const f=(t.config&&t.config.features)||{};
       const plan=t.plan||'pilot';
       const feats=[f.crm_enabled&&'CRM',f.files_enabled&&'קבצים',f.checklists_enabled&&'צ\'ק',f.reports_enabled&&'דוחות',f.whatsapp_enabled&&'WhatsApp'].filter(Boolean).join(' · ')||'ללא תכונות';
@@ -2301,8 +2312,14 @@ async function renderAdminPanel(){
               ${isOwn?'<span style="background:var(--blue-l);color:var(--blue-d);padding:2px 8px;border-radius:10px;font-size:0.65rem;font-weight:700;">הסשן שלך</span>':''}
             </div>
             <div style="font-size:0.7rem;color:var(--ink-4);font-family:monospace;margin-bottom:6px;">${t.id}</div>
-            <div style="font-size:0.8125rem;margin-bottom:8px;">תכונות: <span style="font-weight:600;color:${feats==='ללא תכונות'?'var(--ink-4)':'var(--green)'};">${feats}</span></div>
-            <div style="display:flex;flex-wrap:wrap;gap:4px;">${tUsers.map(u=>`<span style="background:var(--line-2);border-radius:6px;padding:2px 8px;font-size:0.75rem;">👤 ${u.name} <span style="color:var(--ink-4);">(${u.role})</span>${u.super_admin?' ⭐':''}</span>`).join('')||'<span style="font-size:0.75rem;color:var(--ink-4);">אין משתמשים מקושרים</span>'}</div>
+            <div style="font-size:0.8125rem;margin-bottom:6px;">תכונות: <span style="font-weight:600;color:${feats==='ללא תכונות'?'var(--ink-4)':'var(--green)'};">${feats}</span></div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">${tUsers.map(u=>`<span style="background:var(--line-2);border-radius:6px;padding:2px 8px;font-size:0.75rem;">👤 ${u.name} <span style="color:var(--ink-4);">(${u.role})</span>${u.super_admin?' ⭐':''}</span>`).join('')||'<span style="font-size:0.75rem;color:var(--ink-4);">אין משתמשים מקושרים</span>'}</div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;">
+              ${chip(`👷 ${tTechs.length} טכנאים`,tTechs.length>0,false)}
+              ${chip(`🗺️ ${tZones.length} אזורים`,tZones.length>0,false)}
+              ${chip(`📋 ${tCats.length} קטגוריות`,tCats.length>0,false)}
+              ${chip('🔄 רוטציה',hasRotation,tTechs.length>0&&!hasRotation)}
+            </div>
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
             <button class="btn btn-blue btn-sm" onclick="enterTenantSession('${t.id}','${t.name}')">🔍 כנס לסשן</button>
