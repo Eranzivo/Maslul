@@ -439,6 +439,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div><div class="ph-title">דף הבית</div><div class="ph-sub" id="home-date"></div></div>
     <div class="flex-gap">
       <button class="btn btn-outline btn-sm" onclick="openDayoffModal()">📵 חופשות</button>
+      <button class="btn btn-outline" onclick="openAddTaskModal()">+ רשום קריאה</button>
       <button class="btn btn-blue" onclick="goPage('dispatch')">+ שיבוץ קריאה</button>
     </div>
   </div>
@@ -521,6 +522,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div class="flex-gap" style="justify-content:center;margin-top:1rem;">
         <a id="wa-link" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#25D366;color:white;padding:9px 18px;border-radius:10px;font-size:0.875rem;font-weight:700;text-decoration:none;">📱 וואטסאפ ללקוח</a>
       </div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn btn-outline" style="flex:1;" onclick="goPage('home')">🏠 דף הבית</button>
+        <button class="btn btn-blue" style="flex:1;" onclick="resetDispatch()">+ שיבוץ נוסף</button>
+      </div>
     </div>
     <div id="recur-section" class="card hidden" style="margin-top:1rem;">
       <div class="card-title">הפוך לסדרה חוזרת</div>
@@ -552,6 +557,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div class="ph-row ph">
     <div><div class="ph-title" data-label="tasks">קריאות</div></div>
     <div class="flex-gap">
+      <button class="btn btn-outline btn-sm" onclick="openAddTaskModal()">+ רשום קריאה</button>
       <span class="badge badge-blue" id="tf-all" onclick="filterTasks('all')" style="cursor:pointer;padding:5px 12px;">הכל</span>
       <span class="badge badge-gray" id="tf-pending" onclick="filterTasks('pending')" style="cursor:pointer;padding:5px 12px;">ממתינות</span>
       <span class="badge badge-gray" id="tf-assigned" onclick="filterTasks('assigned')" style="cursor:pointer;padding:5px 12px;">משובצות</span>
@@ -575,7 +581,11 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
         <button id="pm-daily" class="btn btn-outline btn-sm" onclick="setPlannerMode('daily')">יומי</button>
       </div>
     </div>
-    <div id="planner-tech-pills" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;padding-bottom:4px;"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap;">
+      <div id="planner-tech-pills" style="display:flex;flex-wrap:wrap;gap:8px;flex:1;"></div>
+      <button class="btn btn-outline btn-sm" onclick="plannerSelectAll()" style="white-space:nowrap;">בחר הכל</button>
+      <button class="btn btn-outline btn-sm" onclick="plannerClearAll()" style="white-space:nowrap;">נקה הכל</button>
+    </div>
     <div class="week-nav" style="margin-top:12px;">
       <button class="week-nav-btn" onclick="changePlannerWeek(-1)">›</button>
       <div class="week-title" id="planner-week-label" style="font-size:0.9375rem;"></div>
@@ -986,6 +996,31 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div class="mo-actions">
       <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-replace')">דלג</button>
       <button class="btn btn-blue" style="flex:2;" onclick="confirmReplace()">שבץ תחליף ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD PENDING TASK -->
+<div class="mo hidden" id="mo-add-task">
+  <div class="mo-box">
+    <div class="mo-title">רישום קריאה ממתינה</div>
+    <div class="fg">
+      <label class="fl"><span class="req">*</span> קטגוריה</label>
+      <select class="fc" id="at-cat"><option value="">בחר קטגוריה...</option></select>
+    </div>
+    <div class="fg-2">
+      <div class="fg"><label class="fl"><span class="req">*</span> שם לקוח</label><input class="fc" id="at-name" placeholder="שם מלא"></div>
+      <div class="fg"><label class="fl"><span class="req">*</span> טלפון</label><input class="fc" id="at-phone" placeholder="05X-XXXXXXX" type="tel"></div>
+    </div>
+    <div class="fg-2">
+      <div class="fg"><label class="fl"><span class="req">*</span> עיר</label><select class="fc" id="at-city"><option value="">בחר עיר...</option></select></div>
+      <div class="fg"><label class="fl">רחוב</label><input class="fc" id="at-street" placeholder="לדוגמה: הרצל 15"></div>
+    </div>
+    <div class="fg"><label class="fl">הערות</label><input class="fc" id="at-notes" placeholder="הערות, בקשות מיוחדות..."></div>
+    <div id="at-error" style="color:var(--red);font-size:0.8125rem;min-height:1.2rem;"></div>
+    <div class="mo-actions">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-add-task')">ביטול</button>
+      <button class="btn btn-blue" style="flex:2;" onclick="confirmAddTask()">שמור קריאה ←</button>
     </div>
   </div>
 </div>
@@ -3352,7 +3387,7 @@ function confirmAssign(idx,assignId){
     <div class="cr"><span class="ck">תאריך</span><span class="cv">${c.date.d.toLocaleDateString('he-IL')}</span></div>
     <div class="cr"><span class="ck">שעות</span><span class="cv">${slot.start} — ${slot.end}</span></div>
     <div class="cr"><span class="ck">טכנאי</span><span class="cv">${c.tech.name}</span></div>`;
-  const wm=encodeURIComponent(`שלום ${client}, קריאה שובצה ב${city} בתאריך ${c.date.d.toLocaleDateString('he-IL')} בין השעות ${slot.start}-${slot.end}. מספר קריאה: ${assignId}. לפרטים: ${c.tech.phone}`);
+  const wm=encodeURIComponent(`שלום ${client}, ${L('task')} שובצה ב${city} בתאריך ${c.date.d.toLocaleDateString('he-IL')} בין השעות ${slot.start}-${slot.end}. מספר ${L('task')}: ${assignId}. לפרטים: ${c.tech.phone}`);
   const wp=phone.replace(/[^0-9]/g,'').replace(/^0/,'972');
   document.getElementById('wa-link').href=phone?`https://wa.me/${wp}?text=${wm}`:'#';
   document.getElementById('wa-link').style.display=phone?'inline-flex':'none';
@@ -3360,7 +3395,6 @@ function confirmAssign(idx,assignId){
   window._lastDispatched={client,phone,city,street,catId,catName,notes,date:c.date.str,techId:c.tech.id};
   document.getElementById('recur-section').classList.remove('hidden');
   document.getElementById('dispatch-success').classList.remove('hidden');
-  setTimeout(()=>goPage('home'),4000);
 }
 function clearDispatch(){
   document.getElementById('dispatch-search-card').style.opacity='1';
@@ -3399,17 +3433,34 @@ function saveDispatchDraft(){
   if(CONFIG.DEMO_MODE||!currentTenantId)return;
   const d={};
   _DDFIELDS.forEach(id=>{const el=document.getElementById(id);if(el)d[id]=el.value;});
+  d._cat=selectedCat||'';
+  d._windows=prefWindows.length?JSON.stringify(prefWindows):'';
   localStorage.setItem(_DDKEY,JSON.stringify(d));
 }
 function restoreDispatchDraft(){
   _DDFIELDS.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const card=document.getElementById('dispatch-search-card');
   try{
     const raw=localStorage.getItem(_DDKEY);if(!raw)return;
     const d=JSON.parse(raw);
-    _DDFIELDS.forEach(id=>{const el=document.getElementById(id);if(el&&d[id])el.value=d[id];});
+    let hasData=false;
+    _DDFIELDS.forEach(id=>{const el=document.getElementById(id);if(el&&d[id]){el.value=d[id];hasData=true;}});
+    if(d._cat){selectedCat=d._cat;renderCatChips();renderPkgSection();hasData=true;}
+    if(d._windows){try{prefWindows=JSON.parse(d._windows);renderPrefWindows();hasData=true;}catch(e){}}
+    if(hasData&&card){card.style.borderColor='var(--amber)';card.style.borderWidth='2px';
+      const badge=document.createElement('div');
+      badge.id='draft-badge';badge.style.cssText='font-size:0.7rem;color:var(--amber);font-weight:800;margin-bottom:6px;';
+      badge.textContent='◉ טיוטה שמורה';
+      const h2=card.querySelector('h2');if(h2&&!document.getElementById('draft-badge'))h2.after(badge);
+    }
   }catch(e){}
 }
-function clearDispatchDraft(){localStorage.removeItem(_DDKEY);}
+function clearDispatchDraft(){
+  localStorage.removeItem(_DDKEY);
+  const card=document.getElementById('dispatch-search-card');
+  if(card){card.style.borderColor='';card.style.borderWidth='';}
+  const badge=document.getElementById('draft-badge');if(badge)badge.remove();
+}
 
 // ═══ CANCEL & REPLACE ═══
 function openCancelModal(taskId){
@@ -3478,6 +3529,41 @@ function confirmReplace(){
   replaceSuggestion=null;
 }
 
+// ═══ ADD PENDING TASK ═══
+function openAddTaskModal(){
+  const catSel=document.getElementById('at-cat');
+  catSel.innerHTML='<option value="">בחר קטגוריה...</option>'+categories.map(c=>`<option value="${c.id}">${h(c.name)}</option>`).join('');
+  const allCities=[...new Set(zones.flatMap(z=>z.cities))].sort();
+  const citySel=document.getElementById('at-city');
+  citySel.innerHTML='<option value="">בחר עיר...</option>'+allCities.map(c=>`<option value="${c}">${h(c)}</option>`).join('');
+  ['at-name','at-phone','at-street','at-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('at-error').textContent='';
+  document.getElementById('mo-add-task').classList.remove('hidden');
+}
+function confirmAddTask(){
+  const catEl=document.getElementById('at-cat');
+  const name=document.getElementById('at-name').value.trim();
+  const phone=document.getElementById('at-phone').value.trim();
+  const city=document.getElementById('at-city').value;
+  const street=document.getElementById('at-street').value.trim();
+  const notes=document.getElementById('at-notes').value.trim();
+  const errEl=document.getElementById('at-error');
+  errEl.textContent='';
+  if(!catEl.value){errEl.textContent='נא לבחור קטגוריה';return;}
+  if(!name){errEl.textContent='נא להזין שם לקוח';return;}
+  if(!phone){errEl.textContent='נא להזין מספר טלפון';return;}
+  if(!city){errEl.textContent='נא לבחור עיר';return;}
+  const catObj=categories.find(c=>c.id===catEl.value);
+  const newTask={id:nextTaskId++,client:name,phone,city,street,cat:catObj?.name||'',catId:catEl.value,techId:null,status:'pending',time:'',date:'',notes,assignId:'',preferredWindows:[]};
+  tasks.push(newTask);
+  save();
+  saveTaskToSupabase(newTask);
+  closeMo('mo-add-task');
+  goPage('tasks');
+  filterTasks('pending');
+  showToast('הקריאה נרשמה ✓');
+}
+
 // ═══ TASKS ═══
 function filterTasks(f){
   currentFilter=f;
@@ -3513,6 +3599,7 @@ function renderTasks(){
       <div class="task-main">
         <div class="task-client">${h(t.client)} ${t.assignId?`<span class="assign-id-tag">${h(t.assignId)}</span>`:''}</div>
         <div class="task-detail">${h(t.cat)} • ${t.street?h(t.street)+', ':''}${h(t.city)}${t.date?' • '+new Date(t.date+'T12:00:00').toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'}):''}${t.time?' '+t.time:''}${tech?' • '+h(tech.name):''}</div>
+        ${t.notes?`<div style="font-size:0.75rem;color:var(--ink-4);margin-top:2px;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px;">💬 ${h(t.notes)}</div>`:''}
       </div>
       <div class="task-actions">
         <span class="badge ${s.badge} status-pill" onclick="openStatusModal('${t.id}')">${s.label}</span>
@@ -3599,7 +3686,7 @@ function renderTechView(){
     </div>
     <div style="font-size:0.7rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.75rem;">היום</div>
     ${todayTasks.map(techCard).join('')||'<div class="empty" style="padding:2rem;"><div class="empty-icon">🎉</div><div>אין קריאות להיום</div></div>'}
-    ${tomorrowTasks.length?`<div style="font-size:0.7rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:1px;margin:1.25rem 0 0.75rem;">מחר (${tomorrowTasks.length} קריאות)</div>${tomorrowTasks.map(t=>{const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;return`<div style="background:var(--line-2);border:1px solid var(--line);border-radius:var(--r-lg);padding:0.75rem 1rem;margin-bottom:8px;opacity:0.8;display:flex;gap:10px;align-items:center;"><div style="font-weight:800;min-width:48px;">${t.time||'—'}</div><div style="flex:1;"><div style="font-weight:700;">${h(t.cat)}</div><div style="font-size:0.8125rem;color:var(--ink-3);">${h(t.client)} · ${h(t.city)}</div></div><span class="badge ${s.badge}">${s.label}</span></div>`;}).join('')}`:''}
+    ${tomorrowTasks.length?`<div style="font-size:0.7rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:1px;margin:1.25rem 0 0.75rem;">מחר (${tomorrowTasks.length} קריאות)</div>${tomorrowTasks.map(t=>{const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;return`<div style="background:var(--line-2);border:1px solid var(--line);border-radius:var(--r-lg);padding:0.75rem 1rem;margin-bottom:8px;opacity:0.85;display:flex;gap:10px;align-items:flex-start;"><div style="font-weight:800;min-width:48px;padding-top:2px;">${t.time||'—'}</div><div style="flex:1;"><div style="font-weight:700;">${h(t.cat)}</div><div style="font-size:0.8125rem;color:var(--ink-3);">${h(t.client)} · ${h(t.city)}</div>${t.notes?`<div style="font-size:0.75rem;color:var(--ink-4);margin-top:2px;font-style:italic;">💬 ${h(t.notes)}</div>`:''}</div><span class="badge ${s.badge}">${s.label}</span></div>`;}).join('')}`:''}
   </div>`;
 }
 function techSetStatus(taskId,ns){
@@ -3913,6 +4000,14 @@ function togglePlannerTech(id){
   renderPlannerTechPills();
   renderPlannerContent();
 }
+function plannerSelectAll(){
+  plannerSelectedTechs=technicians.map(t=>t.id);
+  renderPlannerTechPills();renderPlannerContent();
+}
+function plannerClearAll(){
+  plannerSelectedTechs=[];
+  renderPlannerTechPills();renderPlannerContent();
+}
 
 function setPlannerMode(mode){
   plannerMode=mode;
@@ -3972,7 +4067,7 @@ function renderPlannerWeekly(days){
       const techTasks=tasks.filter(t=>String(t.techId)===String(tech.id)&&t.date===ds&&t.status!=='cancelled');
       if(isDayOff) return`<td style="background:var(--line-2);vertical-align:top;padding:6px;border-right:1px solid var(--line-2);"><div class="planner-day-off">יום חופש</div></td>`;
       const chips=techTasks.sort((a,b)=>(a.time||'').localeCompare(b.time||'')).map(_plannerTaskChip).join('');
-      return`<td style="vertical-align:top;padding:6px;border-right:1px solid var(--line-2);">${chips||'<div style="height:28px;"></div>'}</td>`;
+      return`<td style="vertical-align:top;padding:6px;border-right:1px solid var(--line-2);min-height:52px;max-height:160px;overflow-y:auto;">${chips||'<div style="height:28px;"></div>'}</td>`;
     }).join('');
     return`<tr>
       <td style="padding:8px 12px;border-bottom:1px solid var(--line-2);border-left:2px solid var(--line);white-space:nowrap;vertical-align:middle;background:var(--white);">
