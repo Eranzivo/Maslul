@@ -355,9 +355,14 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 </head>
 <body>
 
+<!-- INIT LOADER (shown during auth check, hidden by showLogin/showApp) -->
+<div id="init-loader" style="position:fixed;inset:0;background:white;z-index:99999;display:flex;align-items:center;justify-content:center;">
+  <div style="width:28px;height:28px;border:3px solid #E5E7EB;border-top-color:#2563EB;border-radius:50%;animation:spin 0.7s linear infinite;"></div>
+</div>
+
 <!-- LOGIN SCREEN -->
 <!-- ═══ LANDING PAGE ═══ -->
-<div id="landing-page">
+<div id="landing-page" class="hidden">
 
   <!-- NAV -->
   <nav style="position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop-filter:blur(10px);border-bottom:1px solid #E5E7EB;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:60px;">
@@ -377,33 +382,33 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   </section>
 
   <!-- PROBLEM SECTION -->
-  <section style="background:#0F172A;padding:4.5rem 1.5rem;color:white;">
+  <section style="background:#F9FAFB;border-top:1px solid #E5E7EB;padding:4.5rem 1.5rem;">
     <div style="max-width:920px;margin:0 auto;">
       <div style="text-align:center;margin-bottom:2.75rem;">
-        <div style="font-size:0.68rem;font-weight:800;color:#60A5FA;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">הבעיה שאנחנו פותרים</div>
-        <h2 style="font-size:clamp(1.75rem,4vw,3rem);font-weight:900;letter-spacing:-1px;margin:0 0 0.75rem;line-height:1.1;">עסקים קטנים מבזבזים שעות<br><span style="color:#60A5FA;font-style:italic;">על שיבוץ ידני</span></h2>
-        <p style="font-size:0.95rem;color:#94A3B8;margin:0;">כל מתאמת שמנהלת טכנאים מכירה את הסיטואציה הזו.</p>
+        <div style="font-size:0.68rem;font-weight:800;color:#2563EB;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">הבעיה שאנחנו פותרים</div>
+        <h2 style="font-size:clamp(1.75rem,4vw,2.75rem);font-weight:900;letter-spacing:-1px;margin:0 0 0.75rem;line-height:1.1;color:#111827;">עסקים קטנים מבזבזים שעות<br><span style="color:#2563EB;font-style:italic;">על שיבוץ ידני</span></h2>
+        <p style="font-size:0.95rem;color:#6B7280;margin:0;">כל מתאמת שמנהלת טכנאים מכירה את הסיטואציה הזו.</p>
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0.875rem;">
-        <div style="background:#1E293B;border:1px solid #334155;border-radius:16px;padding:1.625rem;">
-          <div style="font-size:1.875rem;margin-bottom:1rem;">🔄</div>
-          <div style="font-weight:800;font-size:0.9375rem;margin-bottom:8px;">ביטולים שיוצרים בלגן</div>
-          <div style="font-size:0.8rem;color:#94A3B8;line-height:1.65;">לקוח מבטל ברגע האחרון — המתאמת צריכה למצוא תחליף ידנית תוך דקות.</div>
+        <div style="background:white;border:1px solid #E5E7EB;border-radius:16px;padding:1.5rem;box-shadow:0 1px 6px rgba(0,0,0,0.05);">
+          <div style="font-size:1.75rem;margin-bottom:0.875rem;">🔄</div>
+          <div style="font-weight:800;font-size:0.9rem;margin-bottom:7px;color:#111827;">ביטולים שיוצרים בלגן</div>
+          <div style="font-size:0.78rem;color:#6B7280;line-height:1.65;">לקוח מבטל ברגע האחרון — המתאמת צריכה למצוא תחליף ידנית תוך דקות.</div>
         </div>
-        <div style="background:#1E293B;border:1px solid #334155;border-radius:16px;padding:1.625rem;">
-          <div style="font-size:1.875rem;margin-bottom:1rem;">🗺️</div>
-          <div style="font-weight:800;font-size:0.9375rem;margin-bottom:8px;">לוגיקה גיאוגרפית לא קיימת</div>
-          <div style="font-size:0.8rem;color:#94A3B8;line-height:1.65;">טכנאי מנתניה נוסע לאשקלון כי "יש לו פנוי" — במקום לאחד יום מלא בשרון.</div>
+        <div style="background:white;border:1px solid #E5E7EB;border-radius:16px;padding:1.5rem;box-shadow:0 1px 6px rgba(0,0,0,0.05);">
+          <div style="font-size:1.75rem;margin-bottom:0.875rem;">🗺️</div>
+          <div style="font-weight:800;font-size:0.9rem;margin-bottom:7px;color:#111827;">לוגיקה גיאוגרפית לא קיימת</div>
+          <div style="font-size:0.78rem;color:#6B7280;line-height:1.65;">טכנאי מנתניה נוסע לאשקלון כי "יש לו פנוי" — במקום לאחד יום מלא בשרון.</div>
         </div>
-        <div style="background:#1E293B;border:1px solid #334155;border-radius:16px;padding:1.625rem;">
-          <div style="font-size:1.875rem;margin-bottom:1rem;">📊</div>
-          <div style="font-weight:800;font-size:0.9375rem;margin-bottom:8px;">וואטסאפ וגוגל שיטס</div>
-          <div style="font-size:0.8rem;color:#94A3B8;line-height:1.65;">1–2 שעות ביום על תיאום ידני. שאלות, בלבולים, טעויות שעולות כסף.</div>
+        <div style="background:white;border:1px solid #E5E7EB;border-radius:16px;padding:1.5rem;box-shadow:0 1px 6px rgba(0,0,0,0.05);">
+          <div style="font-size:1.75rem;margin-bottom:0.875rem;">📊</div>
+          <div style="font-weight:800;font-size:0.9rem;margin-bottom:7px;color:#111827;">וואטסאפ וגוגל שיטס</div>
+          <div style="font-size:0.78rem;color:#6B7280;line-height:1.65;">1–2 שעות ביום על תיאום ידני. שאלות, בלבולים, טעויות שעולות כסף.</div>
         </div>
-        <div style="background:#1E293B;border:1px solid #334155;border-radius:16px;padding:1.625rem;">
-          <div style="font-size:1.875rem;margin-bottom:1rem;">📋</div>
-          <div style="font-weight:800;font-size:0.9375rem;margin-bottom:8px;">אין מעקב אמיתי</div>
-          <div style="font-size:0.8rem;color:#94A3B8;line-height:1.65;">אי אפשר לדעת בזמן אמת איפה כל טכנאי, מה הסטטוס, ומה לא בוצע.</div>
+        <div style="background:white;border:1px solid #E5E7EB;border-radius:16px;padding:1.5rem;box-shadow:0 1px 6px rgba(0,0,0,0.05);">
+          <div style="font-size:1.75rem;margin-bottom:0.875rem;">📋</div>
+          <div style="font-weight:800;font-size:0.9rem;margin-bottom:7px;color:#111827;">אין מעקב אמיתי</div>
+          <div style="font-size:0.78rem;color:#6B7280;line-height:1.65;">אי אפשר לדעת בזמן אמת איפה כל טכנאי, מה הסטטוס, ומה לא בוצע.</div>
         </div>
       </div>
     </div>
@@ -514,10 +519,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   </section>
 
   <!-- FOOTER CTA -->
-  <section style="background:#1E3A8A;text-align:center;padding:4rem 1.5rem;color:white;">
-    <h2 style="font-size:clamp(1.5rem,4vw,2.25rem);font-weight:900;margin:0 0 0.75rem;letter-spacing:-0.5px;">מוכנים לנסות?</h2>
-    <p style="font-size:1rem;opacity:0.75;margin:0 0 2rem;line-height:1.6;">השאירו פרטים ונחזור אליכם תוך יום עסקים.</p>
-    <a href="mailto:infomaslul@gmail.com?subject=בקשת הדגמה - מסלול" style="background:white;color:#1E3A8A;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:1rem;font-weight:800;display:inline-block;font-family:'Heebo',sans-serif;">בקש הדגמה ←</a>
+  <section style="background:#F9FAFB;border-top:1px solid #E5E7EB;text-align:center;padding:4rem 1.5rem;">
+    <h2 style="font-size:clamp(1.5rem,4vw,2.25rem);font-weight:900;margin:0 0 0.75rem;letter-spacing:-0.5px;color:#111827;">מוכנים לנסות?</h2>
+    <p style="font-size:1rem;color:#6B7280;margin:0 0 2rem;line-height:1.6;">השאירו פרטים ונחזור אליכם תוך יום עסקים.</p>
+    <a href="mailto:infomaslul@gmail.com?subject=בקשת הדגמה - מסלול" style="background:#2563EB;color:white;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:1rem;font-weight:800;display:inline-block;font-family:'Heebo',sans-serif;">בקש הדגמה ←</a>
   </section>
   <footer style="background:#0F172A;text-align:center;padding:1.25rem;color:#64748B;font-size:0.78rem;font-family:'Heebo',sans-serif;">
     © 2025 מסלול · מנוע שיבוץ חכם · <a href="mailto:infomaslul@gmail.com" style="color:#64748B;">infomaslul@gmail.com</a>
@@ -1602,6 +1607,7 @@ async function loadTenantFromUser() {
 }
 
 function showLogin() {
+  document.getElementById('init-loader')?.classList.add('hidden');
   document.getElementById('landing-page').classList.remove('hidden');
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('reset-screen').classList.add('hidden');
@@ -1639,6 +1645,7 @@ async function doResetPassword() {
 }
 
 function showApp() {
+  document.getElementById('init-loader')?.classList.add('hidden');
   document.getElementById('landing-page').classList.add('hidden');
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app-shell').classList.remove('hidden');
@@ -4353,7 +4360,7 @@ function renderPlannerTechPills(){
     const on=plannerSelectedTechs.includes(t.id);
     const c=t.color||'#2563EB';
     return`<div class="tech-pill${on?' on':''}" style="${on?'border-color:#2563EB;color:#2563EB;background:#EFF6FF;':'color:var(--ink-2);'}" onclick="togglePlannerTech('${t.id}')">
-      <span style="width:10px;height:10px;border-radius:50%;background:${c};display:inline-block;flex-shrink:0;"></span>${t.name}
+      <span style="width:10px;height:10px;border-radius:50%;background:${on?'#2563EB':c};display:inline-block;flex-shrink:0;"></span>${t.name}
     </div>`;
   }).join('');
 }
