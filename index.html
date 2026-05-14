@@ -1424,9 +1424,23 @@ async function doLogin() {
   if (!password) { errEl.textContent = 'נא להזין סיסמה'; return; }
   btn.textContent = 'מתחבר...';
   btn.disabled = true;
-  const { error } = await sb.auth.signInWithPassword({ email, password });
+  let result;
+  try {
+    result = await Promise.race([
+      sb.auth.signInWithPassword({ email, password }),
+      new Promise((_,reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+    ]);
+  } catch(e) {
+    btn.textContent = 'כניסה';
+    btn.disabled = false;
+    errEl.textContent = e.message === 'timeout'
+      ? 'השרת לא מגיב — ייתכן שהפרויקט ב-Supabase מושהה, נסה שוב'
+      : 'שגיאת רשת — בדוק חיבור לאינטרנט';
+    return;
+  }
   btn.textContent = 'כניסה';
   btn.disabled = false;
+  const { error } = result;
   if (!error) return;
   if (error.message?.includes('rate limit') || error.message?.includes('too many')) {
     errEl.textContent = 'יותר מדי ניסיונות — נסה שוב בעוד מספר דקות';
