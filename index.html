@@ -1725,7 +1725,7 @@ async function doLogout() {
   sessionStorage.removeItem('ma_session');
   currentUser = null;
   currentTenantId = null;
-  await sb.auth.signOut();
+  try { await sb.auth.signOut(); } catch(e) { console.warn('signOut error:', e); }
   showLogin();
 }
 
