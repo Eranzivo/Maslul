@@ -2654,8 +2654,14 @@ async function renderAdminPanel(){
       console.error('admin panel tenants error:',tenantRes.error);
       return;
     }
+    if(userRes.error){
+      console.error('admin panel users error:',userRes.error);
+      list.innerHTML=`<div class="empty"><div style="color:var(--red);font-weight:700;margin-bottom:6px;">שגיאה בטעינת משתמשים</div><div style="font-size:0.8125rem;color:var(--ink-3);">${userRes.error.message}</div></div>`;
+      return;
+    }
     adminTenants=tenantRes.data||[];
     adminUsers=userRes.data||[];
+    console.log('admin panel: tenants=',adminTenants.length,'users=',adminUsers.length,adminUsers);
     const allTechs=techRes.data||[];
     const allZones=zoneRes.data||[];
     const allCats=catRes.data||[];
@@ -2664,7 +2670,8 @@ async function renderAdminPanel(){
       return;
     }
     const planColor={pilot:'var(--amber)',starter:'var(--blue)',pro:'var(--purple)'};
-    list.innerHTML=adminTenants.map(t=>{
+    const userDebugNote=adminUsers.length===0?`<div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:8px;padding:8px 12px;font-size:0.78rem;color:#92400E;margin-bottom:12px;">⚠️ שאילתת users החזירה 0 שורות — ייתכן שחסרים רשומות ב-users table או שה-RLS חוסם. פתח DevTools → Console לפרטים.</div>`:'';
+    list.innerHTML=userDebugNote+adminTenants.map(t=>{
       const tUsers=adminUsers.filter(u=>u.tenant_id===t.id);
       const tTechs=allTechs.filter(x=>x.tenant_id===t.id);
       const tZones=allZones.filter(x=>x.tenant_id===t.id);
@@ -4037,7 +4044,12 @@ function renderZones(){
     </div>`).join('')||'<div class="empty"><div class="empty-icon">🗺️</div><div>הוסף אזור ראשון</div></div>';
 }
 function addZone(){const z={id:'z'+Date.now(),name:'אזור חדש',cities:[]};zones.push(z);saveZoneToSupabase(z);save();renderZones();populateCitySelect();}
-function deleteZone(id){const z=zones.find(x=>x.id===id);if(z&&z._dbId)deleteZoneFromSupabase(z._dbId);zones=zones.filter(x=>x.id!==id);save();renderZones();populateCitySelect();}
+function deleteZone(id){
+  const z=zones.find(x=>x.id===id);if(!z)return;
+  if(!confirm(`למחוק את האזור "${z.name}"?\n\nכל הערים המשויכות יאבדו ולא ניתן לשחזר. המשך?`))return;
+  if(z._dbId)deleteZoneFromSupabase(z._dbId);
+  zones=zones.filter(x=>x.id!==id);save();renderZones();populateCitySelect();
+}
 function addCities(zoneId){
   const inp=document.getElementById('new-city-'+zoneId);const text=inp.value.trim();if(!text)return;
   const z=zones.find(x=>x.id===zoneId);if(!z)return;
