@@ -364,6 +364,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div class="fg"><label class="fl">סיסמה</label><input class="fc" id="login-password" type="password" placeholder="••••••••" dir="ltr" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div id="login-error" style="color:var(--red);font-size:0.8rem;margin-bottom:10px;min-height:18px;"></div>
     <button id="login-btn" class="btn btn-blue btn-full btn-lg" onclick="doLogin()">כניסה</button>
+    <div style="text-align:center;margin-top:12px;">
+      <button onclick="sendPasswordReset()" style="background:none;border:none;color:var(--ink-4);font-size:0.8rem;cursor:pointer;font-family:inherit;text-decoration:underline;">שכחתי סיסמה</button>
+    </div>
   </div>
 </div>
 
@@ -1414,6 +1417,17 @@ async function doLogin() {
   if (error) errEl.textContent = 'אימייל או סיסמה שגויים';
 }
 
+async function sendPasswordReset() {
+  const email = document.getElementById('login-email').value.trim();
+  const errEl = document.getElementById('login-error');
+  if (!email) { errEl.textContent = 'הכנס אימייל לאיפוס'; return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: 'https://eranzivo.github.io/Maslul/'
+  });
+  if (error) { errEl.textContent = 'שגיאה: ' + error.message; return; }
+  errEl.style.color = 'var(--green)';
+  errEl.textContent = 'קישור לאיפוס נשלח לאימייל ✓';
+}
 async function doLogout() {
   if(typeof Sentry !== 'undefined') Sentry.setUser(null);
   await sb.auth.signOut();

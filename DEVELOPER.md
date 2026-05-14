@@ -7,7 +7,7 @@ Maslul (מסלול) is a Hebrew-first SaaS scheduling engine for Israeli SMBs wi
 **Live URL:** https://eranzivo.github.io/Maslul/  
 **Optimizer API:** https://maslul-production-77fa.up.railway.app  
 **Stack:** Single `index.html` + Supabase backend + GitHub Pages + Railway (FastAPI)  
-**Owner:** Eran Zivo (solo founder, non-technical)
+**Owner:** Eran Zivo (solo founder, non-technical) — infomaslul@gmail.com
 
 ---
 
@@ -32,21 +32,26 @@ No build step. No npm. No toolchain.
 | `schema.sql` | Complete Supabase DDL, RLS policies, onboarding SQL |
 | `CLAUDE.md` | AI assistant context (architecture rules, invariants) |
 | `DEVELOPER.md` | This file |
+| `PRODUCT_GUIDE.md` | Section-by-section product brief + 15-min demo script |
+| `manifest.json` | PWA manifest (icon, name, start_url) |
+| `icon.svg` | App icon (blue square with מ) |
+| `logo.png` | Business logo (kept in repo, not used in app UI) |
 | `backend/main.py` | FastAPI app — `/health` and `/optimize` endpoints |
 | `backend/optimizer.py` | OR-Tools TSP solver + Google Maps / haversine distance matrix |
 | `backend/cities.py` | 50 Israeli city coordinates (haversine fallback) |
 | `backend/requirements.txt` | Python dependencies |
 | `backend/railway.toml` | Railway deployment config (root dir, start command, healthcheck) |
 
-Everything frontend lives in `index.html`. It's ~3500 lines. Internal structure:
+Everything frontend lives in `index.html`. It's ~4000 lines. Internal structure:
 
 ```
-<style>           CSS (lines ~10–240)
+<style>              CSS (lines ~10–250)
 <body>
-  #login-screen   Login form (shown before auth)
-  #app-shell      Main app (hidden until logged in)
-    .sidebar      Left-fixed nav
-    .content      Page sections (one per route)
+  #login-screen      Login form (shown before auth)
+  #reset-screen      Password reset form (shown on PASSWORD_RECOVERY event)
+  #app-shell         Main app (hidden until logged in)
+    .sidebar         Left-fixed nav
+    .content         Page sections (one per route)
       #page-home
       #page-dispatch
       #page-tasks
@@ -61,9 +66,9 @@ Everything frontend lives in `index.html`. It's ~3500 lines. Internal structure:
       #page-admin       (super_admin only)
       #page-techview    (tech's own schedule view)
       #page-wizard      (super_admin only — new client onboarding)
-    #mob-bar      Mobile bottom tab nav (hidden on desktop)
-    modals        All modal dialogs (id="mo-*", #modal-add-user, etc.)
-<script>          All JS
+    #mob-bar         Mobile bottom tab nav (hidden on desktop)
+    modals           All modal dialogs (id="mo-*")
+<script>             All JS
 ```
 
 ---
@@ -83,6 +88,12 @@ Every table has a `tenant_id` UUID column. Supabase Row Level Security (RLS) enf
 3. `initApp()` loads all tenant data from Supabase into memory
 4. `applyFeatureVisibility()` shows/hides nav items based on role + feature flags
 5. If `currentUserRole === 'tech'` → `routeTechLogin()` redirects to tech view
+
+**Password reset flow:**
+- Login screen has "שכחתי סיסמה" link → `sendPasswordReset()` → calls `sb.auth.resetPasswordForEmail()` with `redirectTo: site URL`
+- Reset link lands user back on app → Supabase fires `PASSWORD_RECOVERY` event in `onAuthStateChange`
+- App intercepts this and shows `#reset-screen` instead of login
+- User sets new password → `sb.auth.updateUser({ password })` → redirected to login
 
 ### Role system
 
@@ -111,7 +122,7 @@ See `schema.sql` for the full DDL. Key tables:
 |---|---|
 | `tenants` | `id`, `name`, `plan`, `config` (JSONB) |
 | `users` | `id`, `tenant_id`, `role`, `name`, `email`, `permissions` (JSONB), `super_admin` |
-| `technicians` | `id`, `tenant_id`, `name`, `user_id` (FK → auth.users), `rotation` (JSONB), `skills`, `cat_limits`, etc. |
+| `technicians` | `id`, `tenant_id`, `name`, `user_id` (FK → auth.users), `rotation` (JSONB), `weekly_schedule` (JSONB), `skills`, `cat_limits`, etc. |
 | `tasks` | `id`, `tenant_id`, `assign_id`, `status`, `technician_id`, `scheduled_date`, `cancelled_at`, etc. |
 | `zones` | `id`, `tenant_id`, `name`, `cities` (array) |
 | `categories` | `id`, `tenant_id`, `name`, `duration_minutes` |
@@ -145,7 +156,14 @@ See `schema.sql` for the full DDL. Key tables:
 
 ## Adding a New Tenant (Client)
 
-**Preferred:** Use the onboarding wizard in the app (הגדרות → 🧙 אשף לקוח חדש, super_admin only). The wizard creates the tenant, technicians, zones, categories, and rotation automatically.
+**Preferred:** Use the Master Admin panel → "➕ לקוח חדש" (super_admin only). Creates tenant + links auth user in one flow.
+
+**From Master Admin you can also:**
+- Edit tenant name and plan (✏️ ערוך / מחק button)
+- Delete a tenant (two-step confirmation, blocks deleting your own session)
+- Toggle feature flags per tenant
+- Enter a client's session to view their data (persists across page refresh via sessionStorage)
+- See readiness chips per tenant: technician count, zone count, category count, rotation status
 
 **Manual SQL fallback:**
 
@@ -166,25 +184,56 @@ INSERT INTO users (id, tenant_id, role, name, email) VALUES (
 
 ---
 
+## Weekly Schedule (per-technician)
+
+Each tech has a `weekly_schedule` JSONB column with per-day work hours:
+
+```json
+{ "0": {"work": true, "start": "07:00", "end": "17:00"},
+  "1": {"work": true, "start": "07:00", "end": "17:00"},
+  "5": {"work": false, "start": "07:00", "end": "17:00"} }
+```
+
+Keys 0–5 = Sunday–Friday. Saturday is always skipped by `getNextDates()`.
+
+- `getTechDaySchedule(tech, dateStr)` — returns day-specific hours, falls back to global `tech.start`/`tech.end`
+- `isTechAvailable(tech, dateStr)` — checks both `dayoffs` (one-off blocks) and `weekly_schedule` (permanent recurring)
+- Dispatch and optimizer both use day-specific hours
+
+---
+
 ## Route Optimization Backend
 
 **URL:** `https://maslul-production-77fa.up.railway.app`  
 **Deployed from:** `backend/` subfolder of this repo, via Railway  
-**Triggered by:** `CONFIG.OPTIMIZER_URL` in `index.html` (empty = disabled, set to Railway URL = active)
+**Triggered by:** `CONFIG.OPTIMIZER_URL` in `index.html`
 
 The frontend calls `optimizeDay(techId, date)` which POSTs to `/optimize`. The backend:
-1. Builds a distance matrix — Google Maps Distance Matrix API if `GOOGLE_MAPS_API_KEY` env var is set, otherwise haversine between city coordinates × 35km/h speed factor
+1. Builds a distance matrix — Google Maps Distance Matrix API if `GOOGLE_MAPS_API_KEY` env var is set, otherwise haversine between city coordinates
 2. Runs OR-Tools TSP solver with time dimension (5-second limit)
 3. Returns ordered task list with estimated arrival times
 
-`runOptimize(techId)` applies the result back to tasks in memory and Supabase. A "🔀 מסלול מיטבי" button appears on home tech cards when `OPTIMIZER_URL` is set and the tech has 2+ tasks today.
+A "🔀 מסלול מיטבי" button appears on home tech cards when the tech has 2+ tasks today.
 
 **Railway env vars:**
 | Variable | Value |
 |---|---|
 | `PORT` | `8080` |
 | `ALLOWED_ORIGINS` | `https://eranzivo.github.io` |
-| `GOOGLE_MAPS_API_KEY` | (add when Google Cloud account is set up) |
+| `GOOGLE_MAPS_API_KEY` | set — Distance Matrix API enabled on Google Cloud |
+
+---
+
+## Error Tracking (Sentry)
+
+Sentry Browser SDK loaded via CDN loader in `<head>`. Project: `maslul` on `ingest.de.sentry.io` (EU region).
+
+- Initialised in `Sentry.onLoad()` after `CONFIG` is defined
+- Environment: `production` in live app, `null` (skipped) in demo mode
+- User context set via `Sentry.setUser()` after login (attaches name + tenant_id to every error)
+- User context cleared on logout
+
+Any unhandled JS exception is automatically captured and appears in the Sentry Issues dashboard.
 
 ---
 
@@ -194,7 +243,7 @@ Feature flags live in `tenants.config.features`. They control nav visibility and
 
 `applyFeatureVisibility()` runs after login and reads the flags + current user role/permissions to show/hide nav items.
 
-Toggling: Admin panel → enter tenant session → "תכונות" section, OR direct SQL update.
+Toggling: Master Admin panel → enter tenant → "תכונות" section.
 
 Current flags: `crm_enabled`, `reports_enabled`, `files_enabled`, `checklists_enabled`, `whatsapp_enabled`, `google_maps_enabled`
 
@@ -219,7 +268,7 @@ The core business logic lives in `findBestSlot()` / `buildCandidates()`.
 2. **Far-to-near routing:** Cities within a zone are ordered by `getCityIndexInZone()`. Earlier jobs go to farther cities
 3. **Fill existing days first:** Prefer days where the tech already has jobs in that zone (`fillScore = existingInZone * 100 + currentLoad`)
 4. **Category limits:** Per-tech daily caps (`tech.catLimits[catId]`)
-5. **Day-off awareness:** `isTechAvailable()` checks `dayoffs` array before adding candidate
+5. **Availability:** `isTechAvailable()` checks `dayoffs` array AND `weekly_schedule` before adding candidate
 
 ---
 
@@ -271,6 +320,21 @@ async function saveXToSupabase(x) {
 
 ---
 
+## Infrastructure
+
+| Service | Purpose | Account |
+|---|---|---|
+| GitHub Pages | Frontend hosting | infomaslul@gmail.com |
+| Supabase | DB + Auth + RLS | infomaslul@gmail.com |
+| Railway | FastAPI optimizer backend | infomaslul@gmail.com |
+| Google Cloud | Distance Matrix API | infomaslul@gmail.com |
+| Sentry | Error tracking | infomaslul@gmail.com |
+| UptimeRobot | Uptime monitoring | infomaslul@gmail.com |
+
+Railway is on trial (expires ~June 12 2026) → upgrade to Hobby ($5/mo) before then.
+
+---
+
 ## Known Gotchas
 
 - **UUID onclick quoting** — always `onclick="fn('${id}')"` not `onclick="fn(${id})"`
@@ -281,6 +345,7 @@ async function saveXToSupabase(x) {
 - **Email confirmation** — disable in Supabase Auth → Email → Confirm sign up, so techs can log in immediately with temp passwords
 - **OR-Tools on Railway** — first deploy takes 2–3 min (large library). Health check at `/health`
 - **Port 8080** — Railway domain must be configured to route to port 8080. Check Networking → domain → pencil icon if 502
+- **Session impersonation** — stored in `sessionStorage` (tab-scoped, clears on tab close). `exitTenantSession()` clears it explicitly
 
 ---
 
@@ -301,16 +366,22 @@ async function saveXToSupabase(x) {
 - ✅ In-app user management (no Supabase dashboard needed)
 - ✅ Coordinator role with per-user view permissions
 - ✅ FastAPI + OR-Tools optimizer on Railway
+- ✅ Google Maps Distance Matrix API (real drive times)
 - ✅ Route optimization UI (home card button)
 - ✅ WhatsApp click-to-send (zero cost)
 - ✅ Recurring tasks
 - ✅ Client archive, reports, planner view
-- ✅ Onboarding wizard (super_admin, hidden until client #2)
+- ✅ Onboarding wizard (super_admin)
+- ✅ Weekly schedule per technician (permanent day-level hours)
+- ✅ Mobile layout (≤600px breakpoint, bottom-sheet modals)
+- ✅ Sentry error tracking (EU region, user context)
+- ✅ Password reset flow (in-app, no Supabase dashboard needed)
+- ✅ Master Admin: readiness chips, edit/delete tenant, session persistence
 
 **Next:**
-- ⬜ Google Maps Distance Matrix API (real drive times)
-- ⬜ Mobile page layouts (deferred until Israel feedback)
-- ⬜ Cross-tenant RLS hardening (before client #2)
+- ⬜ Custom domain (maslul.co.il) — before client #2
+- ⬜ Railway Hobby plan upgrade — before June 12 2026
 - ⬜ WhatsApp API automation via GreenAPI (~$20/month)
+- ⬜ Morning briefing digest (daily summary for coordinators)
 
 **Architecture trigger:** Move to modular ES modules + Vercel when 2+ paying clients or a second developer joins.
