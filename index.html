@@ -1074,6 +1074,33 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   </div>
 </div>
 
+<!-- MODAL: EDIT TENANT (admin only) -->
+<div class="mo hidden" id="mo-tenant-edit">
+  <div class="mo-box">
+    <div class="mo-title" id="mo-tenant-edit-title">עריכת לקוח</div>
+    <div class="fg"><label class="fl">שם החברה</label><input class="fc" id="te-name"></div>
+    <div class="fg">
+      <label class="fl">פלאן</label>
+      <select class="fc" id="te-plan">
+        <option value="pilot">Pilot</option>
+        <option value="starter">Starter</option>
+        <option value="pro">Pro</option>
+      </select>
+    </div>
+    <div class="mo-actions">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-tenant-edit')">ביטול</button>
+      <button class="btn btn-blue" style="flex:2;" onclick="saveTenantEdit()">שמור שינויים</button>
+    </div>
+    <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--line);">
+      <button class="btn btn-sm" style="width:100%;background:var(--red-l);color:var(--red);border:1px solid #FECACA;font-weight:700;" onclick="confirmDeleteTenant()">🗑️ מחק לקוח לצמיתות</button>
+      <div id="te-delete-confirm" class="hidden" style="margin-top:8px;">
+        <div style="font-size:0.8rem;color:var(--red);font-weight:700;margin-bottom:8px;text-align:center;">כל הנתונים יימחקו לצמיתות. אין דרך חזרה.</div>
+        <button class="btn btn-sm" style="width:100%;background:var(--red);color:white;font-weight:700;" onclick="deleteTenant()">אני מבין — מחק הכל</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: TASK DETAIL -->
 <div class="mo hidden" id="mo-task-detail">
   <div class="mo-box" style="max-width:500px;">
@@ -1310,6 +1337,24 @@ function showLogin() {
 function showApp() {
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app-shell').classList.remove('hidden');
+  // Restore impersonation session after page refresh (super_admin only)
+  if(currentUserSuperAdmin){
+    const saved=sessionStorage.getItem('ma_session');
+    if(saved){
+      try{
+        const s=JSON.parse(saved);
+        currentTenantId=s.tenantId;
+        const existing=document.getElementById('session-banner');if(existing)existing.remove();
+        const b=document.createElement('div');b.id='session-banner';
+        b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9998;background:#0F172A;color:white;text-align:center;padding:6px 16px;font-size:0.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:16px;';
+        b.innerHTML=`<span>🔍 מצב תצוגה: ${s.tenantName}</span><button onclick="exitTenantSession('${s.origTenantId}')" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);border-radius:6px;padding:3px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;">← יציאה לניהול</button>`;
+        document.body.prepend(b);
+        const shell=document.getElementById('app-shell');if(shell)shell.style.paddingTop='34px';
+        ['nav-sec-admin','nav-admin'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('hidden');});
+        document.getElementById('sec-features')?.classList.add('hidden');
+      }catch(e){sessionStorage.removeItem('ma_session');}
+    }
+  }
   initApp();
 }
 
@@ -2324,6 +2369,7 @@ async function renderAdminPanel(){
           <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
             <button class="btn btn-blue btn-sm" onclick="enterTenantSession('${t.id}','${t.name}')">🔍 כנס לסשן</button>
             <button class="btn btn-outline btn-sm" onclick="openTenantFeatModal('${t.id}')">⚙️ תכונות</button>
+            <button class="btn btn-outline btn-sm" onclick="openTenantEditModal('${t.id}')">✏️ ערוך / מחק</button>
             <button class="btn btn-sm" style="background:var(--green-l);color:var(--green);border:1px solid #BBF7D0;font-weight:700;" onclick="enableAllFeatures('${t.id}')">✅ הפעל הכל</button>
           </div>
         </div>
@@ -2377,8 +2423,46 @@ async function enableAllFeatures(tenantId){
   renderAdminPanel();
 }
 
+let editingTenantId=null;
+function openTenantEditModal(tenantId){
+  const t=adminTenants.find(x=>x.id===tenantId);if(!t)return;
+  editingTenantId=tenantId;
+  document.getElementById('mo-tenant-edit-title').textContent='עריכת לקוח — '+t.name;
+  document.getElementById('te-name').value=t.name;
+  document.getElementById('te-plan').value=t.plan||'pilot';
+  document.getElementById('te-delete-confirm').classList.add('hidden');
+  document.getElementById('mo-tenant-edit').classList.remove('hidden');
+}
+async function saveTenantEdit(){
+  const t=adminTenants.find(x=>x.id===editingTenantId);if(!t)return;
+  const name=document.getElementById('te-name').value.trim();
+  const plan=document.getElementById('te-plan').value;
+  if(!name){showToast('שם חובה','error');return;}
+  const{error}=await sb.from('tenants').update({name,plan}).eq('id',editingTenantId);
+  if(error){showToast('שגיאה','error');console.error(error);return;}
+  t.name=name;t.plan=plan;
+  closeMo('mo-tenant-edit');
+  showToast('לקוח עודכן ✓');
+  renderAdminPanel();
+}
+function confirmDeleteTenant(){
+  document.getElementById('te-delete-confirm').classList.remove('hidden');
+}
+async function deleteTenant(){
+  if(!editingTenantId)return;
+  const t=adminTenants.find(x=>x.id===editingTenantId);
+  if(editingTenantId===currentTenantId){showToast('לא ניתן למחוק את הסשן הנוכחי','error');return;}
+  const{error}=await sb.from('tenants').delete().eq('id',editingTenantId);
+  if(error){showToast('שגיאה במחיקה','error');console.error(error);return;}
+  closeMo('mo-tenant-edit');
+  showToast(`לקוח "${t?.name}" נמחק`);
+  editingTenantId=null;
+  renderAdminPanel();
+}
+
 function enterTenantSession(tenantId,tenantName){
   const origTenantId=currentTenantId;
+  sessionStorage.setItem('ma_session',JSON.stringify({tenantId,tenantName,origTenantId}));
   currentTenantId=tenantId;
   // Show impersonation banner
   const existing=document.getElementById('session-banner');if(existing)existing.remove();
@@ -2405,6 +2489,7 @@ function enterTenantSession(tenantId,tenantName){
 }
 
 async function exitTenantSession(origTenantId){
+  sessionStorage.removeItem('ma_session');
   document.getElementById('session-banner')?.remove();
   const shell=document.getElementById('app-shell');if(shell)shell.style.paddingTop='';
   currentTenantId=origTenantId;
