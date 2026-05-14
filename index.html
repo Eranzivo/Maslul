@@ -356,32 +356,171 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 <body>
 
 <!-- LOGIN SCREEN -->
-<div id="login-screen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);">
-  <div style="background:var(--white);border:1px solid var(--line);border-radius:var(--r-xl);padding:2.5rem 2rem;width:100%;max-width:380px;box-shadow:var(--sh-lg);">
+<!-- ═══ LANDING PAGE ═══ -->
+<div id="landing-page">
+
+  <!-- NAV -->
+  <nav style="position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop-filter:blur(10px);border-bottom:1px solid #E5E7EB;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:60px;">
+    <div style="font-size:1.375rem;font-weight:900;letter-spacing:-0.5px;color:#111827;"><span style="color:#2563EB;">מס</span>לול</div>
+    <button onclick="openLoginModal()" style="background:#2563EB;color:white;border:none;border-radius:8px;padding:9px 22px;font-size:0.875rem;font-weight:700;cursor:pointer;font-family:'Heebo',sans-serif;">כניסה</button>
+  </nav>
+
+  <!-- HERO -->
+  <section style="background:#F8FAFF;background-image:linear-gradient(rgba(37,99,235,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,0.05) 1px,transparent 1px);background-size:36px 36px;text-align:center;padding:5rem 1.5rem 4.5rem;">
+    <div style="display:inline-block;background:white;border:1px solid #BFDBFE;border-radius:30px;padding:5px 18px;font-size:0.68rem;font-weight:800;color:#2563EB;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:1.5rem;">ניהול שטח חכם לעסקים ישראליים</div>
+    <h1 style="font-size:clamp(2.25rem,6vw,3.75rem);font-weight:900;line-height:1.08;letter-spacing:-2px;margin:0 0 1.25rem;color:#111827;">שיבוץ טכנאים.<br><span style="color:#2563EB;">בלי הפתעות.</span></h1>
+    <p style="font-size:1.1rem;color:#6B7280;max-width:500px;margin:0 auto 2.25rem;line-height:1.7;">מסלול מתאם קריאות שירות, מנהל לוחות זמנים ומסנכרן את הצוות בשטח — הכל ממסך אחד.</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <a href="mailto:infomaslul@gmail.com?subject=בקשת הדגמה - מסלול" style="background:#2563EB;color:white;text-decoration:none;padding:14px 30px;border-radius:10px;font-size:1rem;font-weight:700;display:inline-block;font-family:'Heebo',sans-serif;">בקש הדגמה ←</a>
+      <button onclick="openLoginModal()" style="background:white;color:#2563EB;border:1.5px solid #BFDBFE;border-radius:10px;padding:14px 28px;font-size:1rem;font-weight:700;cursor:pointer;font-family:'Heebo',sans-serif;">כניסה למערכת</button>
+    </div>
+    <div style="margin-top:1rem;font-size:0.8rem;color:#9CA3AF;">ללא כרטיס אשראי · הטמעה תוך 30 דקות · תמיכה בעברית</div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section style="padding:4.5rem 1.5rem;max-width:920px;margin:0 auto;">
+    <div style="text-align:center;margin-bottom:2.75rem;">
+      <div style="font-size:0.68rem;font-weight:800;color:#2563EB;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">איך זה עובד</div>
+      <h2 style="font-size:clamp(1.625rem,3.5vw,2.375rem);font-weight:900;letter-spacing:-0.75px;margin:0;color:#111827;">מקריאת לקוח לשיבוץ — ב-4 צעדים</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1rem;">
+      <div style="background:white;border:1px solid #E5E7EB;border-radius:16px;padding:1.625rem;box-shadow:0 1px 6px rgba(0,0,0,0.05);">
+        <div style="font-size:1.875rem;margin-bottom:0.875rem;">📞</div>
+        <div style="font-size:0.62rem;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px;">שלב 1</div>
+        <div style="font-weight:800;font-size:0.9375rem;margin-bottom:7px;color:#111827;">הוסף קריאה</div>
+        <div style="font-size:0.8rem;color:#6B7280;line-height:1.6;">לקוח התקשר? רשמו שם, עיר וקטגוריה תוך שניות.</div>
+      </div>
+      <div style="background:white;border:1px solid #E5E7EB;border-radius:16px;padding:1.625rem;box-shadow:0 1px 6px rgba(0,0,0,0.05);">
+        <div style="font-size:1.875rem;margin-bottom:0.875rem;">🎯</div>
+        <div style="font-size:0.62rem;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px;">שלב 2</div>
+        <div style="font-weight:800;font-size:0.9375rem;margin-bottom:7px;color:#111827;">שבץ בחכמה</div>
+        <div style="font-size:0.8rem;color:#6B7280;line-height:1.6;">האלגוריתם בוחר טכנאי, תאריך ושעה לפי אזור ועומס.</div>
+      </div>
+      <div style="background:white;border:1px solid #E5E7EB;border-radius:16px;padding:1.625rem;box-shadow:0 1px 6px rgba(0,0,0,0.05);">
+        <div style="font-size:1.875rem;margin-bottom:0.875rem;">📲</div>
+        <div style="font-size:0.62rem;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px;">שלב 3</div>
+        <div style="font-weight:800;font-size:0.9375rem;margin-bottom:7px;color:#111827;">עדכן ועקוב</div>
+        <div style="font-size:0.8rem;color:#6B7280;line-height:1.6;">הטכנאי מעדכן מהנייד. המתאמת רואה הכל בלוח בקרה.</div>
+      </div>
+      <div style="background:white;border:1px solid #E5E7EB;border-radius:16px;padding:1.625rem;box-shadow:0 1px 6px rgba(0,0,0,0.05);">
+        <div style="font-size:1.875rem;margin-bottom:0.875rem;">📊</div>
+        <div style="font-size:0.62rem;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px;">שלב 4</div>
+        <div style="font-weight:800;font-size:0.9375rem;margin-bottom:7px;color:#111827;">נתח ביצועים</div>
+        <div style="font-size:0.8rem;color:#6B7280;line-height:1.6;">דוחות עומס וביצועים — לשיפור שוטף של הצוות.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPLETE PLATFORM -->
+  <section style="background:#F9FAFB;border-top:1px solid #E5E7EB;border-bottom:1px solid #E5E7EB;padding:4.5rem 1.5rem;">
+    <div style="max-width:920px;margin:0 auto;">
+      <div style="text-align:center;margin-bottom:2.75rem;">
+        <div style="font-size:0.68rem;font-weight:800;color:#2563EB;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">פלטפורמה מלאה</div>
+        <h2 style="font-size:clamp(1.625rem,3.5vw,2.375rem);font-weight:900;letter-spacing:-0.75px;margin:0;color:#111827;">כל מה שהצוות שלך צריך</h2>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.125rem;">
+        <div style="background:white;border:1px solid #E5E7EB;border-radius:16px;padding:1.875rem;box-shadow:0 1px 6px rgba(0,0,0,0.05);">
+          <div style="font-size:1.625rem;margin-bottom:0.875rem;">🎯</div>
+          <div style="font-size:0.62rem;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px;">שיבוץ חכם</div>
+          <div style="font-weight:800;font-size:1rem;margin-bottom:10px;color:#111827;">אופטימיזציה אוטומטית</div>
+          <ul style="font-size:0.8rem;color:#6B7280;line-height:1.75;padding-right:1.1rem;margin:0;">
+            <li>שיבוץ לפי אזור ועומס יומי</li>
+            <li>מגבלות קטגוריה לטכנאי</li>
+            <li>מילוי חריץ אחרי ביטול</li>
+            <li>חלונות זמן מועדפים ללקוח</li>
+          </ul>
+        </div>
+        <div style="background:white;border:1px solid #E5E7EB;border-radius:16px;padding:1.875rem;box-shadow:0 1px 6px rgba(0,0,0,0.05);">
+          <div style="font-size:1.625rem;margin-bottom:0.875rem;">📅</div>
+          <div style="font-size:0.62rem;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px;">יומן</div>
+          <div style="font-weight:800;font-size:1rem;margin-bottom:10px;color:#111827;">תצוגה יומית ושבועית</div>
+          <ul style="font-size:0.8rem;color:#6B7280;line-height:1.75;padding-right:1.1rem;margin:0;">
+            <li>כל הטכנאים בתצוגה אחת</li>
+            <li>סינון לפי עובד</li>
+            <li>ניהול חופשות וחסימות</li>
+            <li>מעבר מהיר בין שבועות</li>
+          </ul>
+        </div>
+        <div style="background:white;border:1px solid #E5E7EB;border-radius:16px;padding:1.875rem;box-shadow:0 1px 6px rgba(0,0,0,0.05);">
+          <div style="font-size:1.625rem;margin-bottom:0.875rem;">📱</div>
+          <div style="font-size:0.62rem;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px;">תצוגת טכנאי</div>
+          <div style="font-weight:800;font-size:1rem;margin-bottom:10px;color:#111827;">ממוטב למובייל</div>
+          <ul style="font-size:0.8rem;color:#6B7280;line-height:1.75;padding-right:1.1rem;margin:0;">
+            <li>קריאות היום לפי סדר מסלול</li>
+            <li>עדכון סטטוס בקליק</li>
+            <li>ניווט ישיר דרך Waze</li>
+            <li>הערות ופרטי לקוח מיידיים</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section style="padding:4.5rem 1.5rem;max-width:680px;margin:0 auto;">
+    <div style="text-align:center;margin-bottom:2.5rem;">
+      <h2 style="font-size:clamp(1.5rem,3vw,2rem);font-weight:900;letter-spacing:-0.5px;margin:0;color:#111827;">שאלות נפוצות</h2>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="background:white;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
+        <div onclick="toggleFaq(0)" style="display:flex;justify-content:space-between;align-items:center;padding:1.125rem 1.375rem;cursor:pointer;"><span style="font-weight:700;color:#111827;font-size:0.9375rem;">כמה זמן לוקח להתחיל?</span><span id="faq-a-0" style="color:#2563EB;font-size:1.25rem;font-weight:300;transition:transform 0.15s;flex-shrink:0;margin-right:8px;">+</span></div>
+        <div id="faq-b-0" class="hidden" style="padding:0 1.375rem 1.125rem;font-size:0.85rem;color:#6B7280;line-height:1.7;">ההטמעה הראשונה נמשכת כ-30 דקות — הגדרת אזורים, קטגוריות וטכנאים. אין צורך בהתקנת תוכנה, הכל עובד מהדפדפן.</div>
+      </div>
+      <div style="background:white;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
+        <div onclick="toggleFaq(1)" style="display:flex;justify-content:space-between;align-items:center;padding:1.125rem 1.375rem;cursor:pointer;"><span style="font-weight:700;color:#111827;font-size:0.9375rem;">האם ניתן להתאים את המערכת לסוג העסק שלי?</span><span id="faq-a-1" style="color:#2563EB;font-size:1.25rem;font-weight:300;flex-shrink:0;margin-right:8px;">+</span></div>
+        <div id="faq-b-1" class="hidden" style="padding:0 1.375rem 1.125rem;font-size:0.85rem;color:#6B7280;line-height:1.7;">כן. ניתן לשנות שמות (טכנאי, קריאה, אזור), להגדיר קטגוריות ייחודיות ולהתאים את לוגיקת השיבוץ לכל סוג עסק — שירות, ניקיון, משלוחים ועוד.</div>
+      </div>
+      <div style="background:white;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
+        <div onclick="toggleFaq(2)" style="display:flex;justify-content:space-between;align-items:center;padding:1.125rem 1.375rem;cursor:pointer;"><span style="font-weight:700;color:#111827;font-size:0.9375rem;">האם יש חוזה או התחייבות לתקופה?</span><span id="faq-a-2" style="color:#2563EB;font-size:1.25rem;font-weight:300;flex-shrink:0;margin-right:8px;">+</span></div>
+        <div id="faq-b-2" class="hidden" style="padding:0 1.375rem 1.125rem;font-size:0.85rem;color:#6B7280;line-height:1.7;">לא. תשלום חודשי גמיש, ניתן לבטל בכל עת. לא נדרשת כרטיס אשראי לתקופת הניסיון.</div>
+      </div>
+      <div style="background:white;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
+        <div onclick="toggleFaq(3)" style="display:flex;justify-content:space-between;align-items:center;padding:1.125rem 1.375rem;cursor:pointer;"><span style="font-weight:700;color:#111827;font-size:0.9375rem;">כמה טכנאים ניתן לנהל?</span><span id="faq-a-3" style="color:#2563EB;font-size:1.25rem;font-weight:300;flex-shrink:0;margin-right:8px;">+</span></div>
+        <div id="faq-b-3" class="hidden" style="padding:0 1.375rem 1.125rem;font-size:0.85rem;color:#6B7280;line-height:1.7;">אין הגבלה. המערכת עובדת היטב עם 2 טכנאים וגם עם 20. המחיר מותאם לגודל הצוות.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER CTA -->
+  <section style="background:#1E3A8A;text-align:center;padding:4rem 1.5rem;color:white;">
+    <h2 style="font-size:clamp(1.5rem,4vw,2.25rem);font-weight:900;margin:0 0 0.75rem;letter-spacing:-0.5px;">מוכנים לנסות?</h2>
+    <p style="font-size:1rem;opacity:0.75;margin:0 0 2rem;line-height:1.6;">השאירו פרטים ונחזור אליכם תוך יום עסקים.</p>
+    <a href="mailto:infomaslul@gmail.com?subject=בקשת הדגמה - מסלול" style="background:white;color:#1E3A8A;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:1rem;font-weight:800;display:inline-block;font-family:'Heebo',sans-serif;">בקש הדגמה ←</a>
+  </section>
+  <footer style="background:#0F172A;text-align:center;padding:1.25rem;color:#64748B;font-size:0.78rem;font-family:'Heebo',sans-serif;">
+    © 2025 מסלול · מנוע שיבוץ חכם · <a href="mailto:infomaslul@gmail.com" style="color:#64748B;">infomaslul@gmail.com</a>
+  </footer>
+
+</div><!-- /landing-page -->
+
+<!-- ═══ LOGIN MODAL ═══ -->
+<div id="login-screen" class="hidden" style="position:fixed;inset:0;z-index:9000;background:rgba(15,23,42,0.55);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+  <div style="background:white;border-radius:20px;padding:2.5rem 2rem;width:100%;max-width:380px;box-shadow:0 25px 60px rgba(0,0,0,0.2);position:relative;margin:1rem;">
+    <button onclick="document.getElementById('login-screen').classList.add('hidden')" style="position:absolute;top:14px;left:16px;background:none;border:none;color:#9CA3AF;font-size:1.375rem;cursor:pointer;line-height:1;padding:0;" title="סגור">✕</button>
     <div style="text-align:center;margin-bottom:2rem;">
-      <div style="font-size:2rem;font-weight:900;letter-spacing:-1px;"><span style="color:var(--blue);">מס</span>לול</div>
-      <div style="font-size:0.8rem;color:var(--ink-4);margin-top:4px;">מנוע שיבוץ חכם</div>
+      <div style="font-size:1.875rem;font-weight:900;letter-spacing:-1px;"><span style="color:#2563EB;">מס</span>לול</div>
+      <div style="font-size:0.8rem;color:#9CA3AF;margin-top:4px;">כניסה למערכת</div>
     </div>
     <div class="fg"><label class="fl">אימייל</label><input class="fc" id="login-email" type="email" placeholder="your@email.com" dir="ltr"></div>
-    <div class="fg"><label class="fl">סיסמה</label><div style="position:relative;"><input class="fc" id="login-password" type="password" placeholder="••••••••" dir="ltr" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:2.5rem;"><button type="button" onclick="togglePw('login-password',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--ink-4);font-size:1rem;padding:0;line-height:1;">👁</button></div></div>
-    <div id="login-error" style="color:var(--red);font-size:0.8rem;margin-bottom:10px;min-height:18px;"></div>
+    <div class="fg"><label class="fl">סיסמה</label><div style="position:relative;"><input class="fc" id="login-password" type="password" placeholder="••••••••" dir="ltr" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:2.5rem;"><button type="button" onclick="togglePw('login-password',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9CA3AF;font-size:1rem;padding:0;line-height:1;">👁</button></div></div>
+    <div id="login-error" style="color:#EF4444;font-size:0.8rem;margin-bottom:10px;min-height:18px;"></div>
     <button id="login-btn" class="btn btn-blue btn-full btn-lg" onclick="doLogin()">כניסה</button>
     <div style="text-align:center;margin-top:12px;">
-      <button onclick="sendPasswordReset()" style="background:none;border:none;color:var(--ink-4);font-size:0.8rem;cursor:pointer;font-family:inherit;text-decoration:underline;">שכחתי סיסמה</button>
+      <button onclick="sendPasswordReset()" style="background:none;border:none;color:#9CA3AF;font-size:0.8rem;cursor:pointer;font-family:'Heebo',sans-serif;text-decoration:underline;">שכחתי סיסמה</button>
     </div>
   </div>
 </div>
 
-<!-- RESET PASSWORD SCREEN -->
-<div id="reset-screen" class="hidden" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);">
-  <div style="background:var(--white);border:1px solid var(--line);border-radius:var(--r-xl);padding:2.5rem 2rem;width:100%;max-width:380px;box-shadow:var(--sh-lg);">
+<!-- ═══ RESET PASSWORD MODAL ═══ -->
+<div id="reset-screen" class="hidden" style="position:fixed;inset:0;z-index:9000;background:rgba(15,23,42,0.55);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+  <div style="background:white;border-radius:20px;padding:2.5rem 2rem;width:100%;max-width:380px;box-shadow:0 25px 60px rgba(0,0,0,0.2);margin:1rem;">
     <div style="text-align:center;margin-bottom:2rem;">
-      <div style="font-size:2rem;font-weight:900;letter-spacing:-1px;"><span style="color:var(--blue);">מס</span>לול</div>
-      <div style="font-size:0.8rem;color:var(--ink-4);margin-top:4px;">הגדרת סיסמה חדשה</div>
+      <div style="font-size:1.875rem;font-weight:900;letter-spacing:-1px;"><span style="color:#2563EB;">מס</span>לול</div>
+      <div style="font-size:0.8rem;color:#9CA3AF;margin-top:4px;">הגדרת סיסמה חדשה</div>
     </div>
-    <div class="fg"><label class="fl">סיסמה חדשה</label><div style="position:relative;"><input class="fc" id="reset-pw" type="password" placeholder="לפחות 6 תווים" dir="ltr" style="padding-right:2.5rem;"><button type="button" onclick="togglePw('reset-pw',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--ink-4);font-size:1rem;padding:0;line-height:1;">👁</button></div></div>
-    <div class="fg"><label class="fl">אישור סיסמה</label><div style="position:relative;"><input class="fc" id="reset-pw2" type="password" placeholder="••••••••" dir="ltr" onkeydown="if(event.key==='Enter')doResetPassword()" style="padding-right:2.5rem;"><button type="button" onclick="togglePw('reset-pw2',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--ink-4);font-size:1rem;padding:0;line-height:1;">👁</button></div></div>
-    <div id="reset-error" style="color:var(--red);font-size:0.8rem;margin-bottom:10px;min-height:18px;"></div>
+    <div class="fg"><label class="fl">סיסמה חדשה</label><div style="position:relative;"><input class="fc" id="reset-pw" type="password" placeholder="לפחות 6 תווים" dir="ltr" style="padding-right:2.5rem;"><button type="button" onclick="togglePw('reset-pw',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9CA3AF;font-size:1rem;padding:0;line-height:1;">👁</button></div></div>
+    <div class="fg"><label class="fl">אישור סיסמה</label><div style="position:relative;"><input class="fc" id="reset-pw2" type="password" placeholder="••••••••" dir="ltr" onkeydown="if(event.key==='Enter')doResetPassword()" style="padding-right:2.5rem;"><button type="button" onclick="togglePw('reset-pw2',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9CA3AF;font-size:1rem;padding:0;line-height:1;">👁</button></div></div>
+    <div id="reset-error" style="color:#EF4444;font-size:0.8rem;margin-bottom:10px;min-height:18px;"></div>
     <button class="btn btn-blue btn-full btn-lg" onclick="doResetPassword()">שמור סיסמה חדשה</button>
   </div>
 </div>
@@ -404,7 +543,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <button id="nav-home" class="ni-btn active" onclick="goPage('home')"><span>🏠</span> דף הבית</button>
     <button id="nav-dispatch" class="ni-btn" onclick="goPage('dispatch')"><span>🎯</span> <span data-label="dispatch">שיבוץ קריאה</span></button>
     <button id="nav-tasks" class="ni-btn" onclick="goPage('tasks')"><span>📋</span> <span data-label="tasks">קריאות</span></button>
-    <button id="nav-planner" class="ni-btn" onclick="goPage('planner')"><span>📅</span> לוח תכנון</button>
+    <button id="nav-planner" class="ni-btn" onclick="goPage('planner')"><span>📅</span> יומן</button>
     <button id="nav-reports" class="ni-btn hidden" onclick="goPage('reports')"><span>📊</span> דוחות</button>
     <div id="nav-sec-crm" class="sb-sec hidden">CRM</div>
     <button id="nav-clients" class="ni-btn hidden" onclick="goPage('clients')"><span>👥</span> לקוחות</button>
@@ -439,7 +578,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div><div class="ph-title">דף הבית</div><div class="ph-sub" id="home-date"></div></div>
     <div class="flex-gap">
       <button class="btn btn-outline btn-sm" onclick="openDayoffModal()">📵 חופשות</button>
-      <button class="btn btn-outline" onclick="openAddTaskModal()">+ רשום קריאה</button>
+      <button class="btn btn-outline" onclick="openAddTaskModal()">+ הוסף קריאה</button>
       <button class="btn btn-blue" onclick="goPage('dispatch')">+ שיבוץ קריאה</button>
     </div>
   </div>
@@ -557,7 +696,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div class="ph-row ph">
     <div><div class="ph-title" data-label="tasks">קריאות</div></div>
     <div class="flex-gap">
-      <button class="btn btn-outline btn-sm" onclick="openAddTaskModal()">+ רשום קריאה</button>
+      <button class="btn btn-outline btn-sm" onclick="openAddTaskModal()">+ הוסף קריאה</button>
       <span class="badge badge-blue" id="tf-all" onclick="filterTasks('all')" style="cursor:pointer;padding:5px 12px;">הכל</span>
       <span class="badge badge-gray" id="tf-pending" onclick="filterTasks('pending')" style="cursor:pointer;padding:5px 12px;">ממתינות</span>
       <span class="badge badge-gray" id="tf-assigned" onclick="filterTasks('assigned')" style="cursor:pointer;padding:5px 12px;">משובצות</span>
@@ -575,7 +714,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 <div id="page-planner" class="page hidden">
   <div class="ph">
     <div class="ph-row">
-      <div><div class="ph-title">📅 לוח תכנון</div><div class="ph-sub" id="planner-sub"></div></div>
+      <div><div class="ph-title">📅 יומן</div><div class="ph-sub" id="planner-sub"></div></div>
       <div class="flex-gap">
         <button id="pm-weekly" class="btn btn-blue btn-sm" onclick="setPlannerMode('weekly')">שבועי</button>
         <button id="pm-daily" class="btn btn-outline btn-sm" onclick="setPlannerMode('daily')">יומי</button>
@@ -758,7 +897,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
           <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-home" checked> דף הבית</label>
           <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-dispatch" checked> שיבוץ</label>
           <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-tasks" checked> קריאות</label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-planner" checked> לוח תכנון</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-planner" checked> יומן</label>
           <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-clients"> לקוחות (CRM)</label>
           <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-reports"> דוחות</label>
         </div>
@@ -1399,14 +1538,28 @@ async function loadTenantFromUser() {
 }
 
 function showLogin() {
-  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('landing-page').classList.remove('hidden');
+  document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('reset-screen').classList.add('hidden');
   document.getElementById('app-shell').classList.add('hidden');
 }
+function openLoginModal() {
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('login-error').textContent='';
+}
 function showResetScreen() {
+  document.getElementById('landing-page').classList.add('hidden');
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('reset-screen').classList.remove('hidden');
   document.getElementById('app-shell').classList.add('hidden');
+}
+function toggleFaq(i){
+  const ans=document.getElementById('faq-b-'+i);
+  const arr=document.getElementById('faq-a-'+i);
+  if(!ans)return;
+  const open=ans.classList.contains('hidden');
+  ans.classList.toggle('hidden',!open);
+  if(arr)arr.textContent=open?'−':'+';
 }
 async function doResetPassword() {
   const pw = document.getElementById('reset-pw').value;
@@ -1422,6 +1575,7 @@ async function doResetPassword() {
 }
 
 function showApp() {
+  document.getElementById('landing-page').classList.add('hidden');
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app-shell').classList.remove('hidden');
   // Restore impersonation session after page refresh (super_admin only)
@@ -2270,7 +2424,7 @@ async function renderUsersPage(){
   const users=data||[];
   if(sub)sub.textContent=users.length+' משתמשים';
   const roleLabel={admin:'מנהל',coordinator:'מתאם',tech:'טכנאי'};
-  const viewLabel={home:'דף הבית',dispatch:'שיבוץ',tasks:'קריאות',planner:'לוח תכנון',clients:'לקוחות',reports:'דוחות'};
+  const viewLabel={home:'דף הבית',dispatch:'שיבוץ',tasks:'קריאות',planner:'יומן',clients:'לקוחות',reports:'דוחות'};
   tbody.innerHTML=users.map(u=>{
     const perms=u.permissions||{};
     const views=perms.views||[];
@@ -3988,7 +4142,7 @@ function renderPlannerTechPills(){
   container.innerHTML=technicians.map(t=>{
     const on=plannerSelectedTechs.includes(t.id);
     const c=t.color||'#2563EB';
-    return`<div class="tech-pill${on?' on':''}" style="${on?'border-color:'+c+';color:'+c+';':''}" onclick="togglePlannerTech('${t.id}')">
+    return`<div class="tech-pill${on?' on':''}" style="${on?'border-color:#2563EB;color:#2563EB;background:#EFF6FF;':'color:var(--ink-2);'}" onclick="togglePlannerTech('${t.id}')">
       <span style="width:10px;height:10px;border-radius:50%;background:${c};display:inline-block;flex-shrink:0;"></span>${t.name}
     </div>`;
   }).join('');
