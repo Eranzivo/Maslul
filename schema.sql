@@ -266,6 +266,7 @@ ALTER TABLE tasks       ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ;
 ALTER TABLE tasks       ADD COLUMN IF NOT EXISTS client_phone TEXT DEFAULT '';
 ALTER TABLE clients     ADD COLUMN IF NOT EXISTS archived     BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE clients     ADD COLUMN IF NOT EXISTS archived_at  TIMESTAMPTZ;
+ALTER TABLE tasks       ADD COLUMN IF NOT EXISTS preferred_windows JSONB NOT NULL DEFAULT '[]'::jsonb;
 
 -- ═══════════════════════════════════════════════════════════════
 -- ONBOARD A NEW CLIENT (use the Master Admin panel in-app,

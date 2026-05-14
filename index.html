@@ -133,6 +133,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .time-slot:hover{background:#DCFCE7;border-color:var(--green);}
 .time-slot.selected{background:var(--green);color:white;border-color:var(--green);}
 .time-slot.busy{background:var(--red-l);border-color:#FECACA;cursor:default;color:var(--red);}
+.time-slot.preferred{background:#EFF6FF;border-color:#BFDBFE;border-style:dashed;}
+.time-slot.preferred:hover{background:#DBEAFE;border-color:var(--blue);}
 .time-slot-range{font-weight:700;}
 /* CUSTOMER FORM */
 .customer-form{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--line);}
@@ -491,6 +493,11 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
         <label class="fl"><span class="req">*</span> רחוב ומספר</label>
         <input class="fc" id="s-street" placeholder="לדוגמה: הרצל 15">
       </div>
+    </div>
+    <div class="fg">
+      <label class="fl">חלונות זמן מועדפים <span style="font-size:0.75rem;color:var(--ink-4);font-weight:400;">(אופציונלי — לפי בקשת הלקוח)</span></label>
+      <div id="pref-windows-list"></div>
+      <button type="button" onclick="addPrefWindow()" style="margin-top:4px;font-size:0.8125rem;color:var(--blue);background:none;border:none;cursor:pointer;padding:0;font-weight:700;">+ הוסף חלון זמן</button>
     </div>
     <button class="find-btn" onclick="findBestSlot()">מצא שיבוץ אופטימלי ←</button>
   </div>
@@ -962,15 +969,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div class="mo-box">
     <div class="mo-title">ביטול קריאה</div>
     <div id="cancel-task-info" style="margin-bottom:1rem;"></div>
-    <div class="cancel-option" onclick="cancelOnly()">
-      <h4>🚫 בטל בלבד</h4>
-      <p>הקריאה מבוטלת והמקום נשאר פנוי</p>
+    <p style="font-size:0.9rem;color:var(--ink-2);margin-bottom:1rem;">לשבץ קריאה ממתינה לחריץ הפנוי?</p>
+    <div class="mo-actions" style="margin-top:0;">
+      <button class="btn btn-outline" style="flex:1;" onclick="cancelOnly()">לא, בטל בלבד</button>
+      <button class="btn btn-blue" style="flex:2;" id="cancel-replace-btn" onclick="cancelAndReplace()">כן, חפש תחליף ←</button>
     </div>
-    <div class="cancel-option" id="cancel-replace-opt" onclick="cancelAndReplace()">
-      <h4>🔄 בטל ומצא תחליף</h4>
-      <p>המערכת תחפש קריאה ממתינה מתאימה לאותו חריץ</p>
-    </div>
-    <div class="mo-actions"><button class="btn btn-outline btn-full" onclick="closeMo('mo-cancel')">ביטול</button></div>
+    <div style="margin-top:8px;"><button class="btn btn-outline btn-full" onclick="closeMo('mo-cancel')">חזרה</button></div>
   </div>
 </div>
 
@@ -1513,6 +1517,7 @@ async function loadFromSupabase() {
       techId: t.technician_id, status: t.status,
       time: t.scheduled_time || '', date: t.scheduled_date || '',
       notes: t.notes || '', assignId: t.assign_id || '',
+      preferredWindows: t.preferred_windows || [],
       checklistDone: t.checklist_done || {},
       _dbId: t.id
     }));
@@ -1594,6 +1599,7 @@ async function saveTaskToSupabase(task) {
     scheduled_time: task.time || null,
     notes: task.notes || '',
     cancelled_at: task.cancelledAt || null,
+    preferred_windows: task.preferredWindows || [],
   };
   if (task._dbId) {
     const { error } = await sb.from('tasks').update(row).eq('id', task._dbId);
@@ -1743,7 +1749,7 @@ let clientArchiveView=false;
 let reportPeriod='month';
 let adminTenants=[],adminUsers=[];
 let nextTaskId=1,nextTechId=1,editingTechId=null;
-let selectedCat=null,currentFilter='all',statusTaskId=null,cancelTaskId=null;
+let selectedCat=null,currentFilter='all',statusTaskId=null,cancelTaskId=null,prefWindows=[];
 let currentRole='admin',currentTechView=null;
 let currentWeekOffset=0,selectedTechForCal=null;
 let plannerMode='weekly',plannerWeekOffset=0,plannerSelectedTechs=[],plannerDayIdx=0,detailTaskId=null;
@@ -3269,7 +3275,12 @@ function showCandidate(idx){
   for(let h=sh;h<=eh-slotH;h++){
     const sStart=pad(h)+':00',sEnd=pad(h+slotH)+':00';
     const busy=dayTasks.some(t=>{const th=parseInt(t.time.split(':')[0]);return th>=h&&th<h+slotH;});
-    slots.push({start:sStart,end:sEnd,busy});
+    const slotFromMins=h*60,slotToMins=(h+slotH)*60;
+    const preferred=!busy&&prefWindows.length>0&&prefWindows.some(w=>{
+      const[fh,fm]=w.from.split(':').map(Number);const[th,tm]=w.to.split(':').map(Number);
+      return slotFromMins<th*60+tm&&slotToMins>fh*60+fm;
+    });
+    slots.push({start:sStart,end:sEnd,busy,preferred});
   }
   const assignId=genId();
   window._currentSlots=slots;window._currentIdx=idx;
@@ -3291,7 +3302,7 @@ function showCandidate(idx){
       </div>
       ${routeHtml}
       <div style="font-size:0.8rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 6px;">בחר חלון זמן</div>
-      <div class="time-slots">${slots.map((s,si)=>`<div class="time-slot ${s.busy?'busy':''}" onclick="${s.busy?'':'selectTimeSlot('+si+')'}" id="ts-${si}"><span class="time-slot-range">${s.start} — ${s.end}</span><span style="font-size:0.7rem;">${s.busy?'תפוס':'פנוי'}</span></div>`).join('')}</div>
+      <div class="time-slots">${slots.map((s,si)=>`<div class="time-slot ${s.busy?'busy':s.preferred?'preferred':''}" onclick="${s.busy?'':'selectTimeSlot('+si+')'}" id="ts-${si}"><span class="time-slot-range">${s.start} — ${s.end}</span><span style="font-size:0.7rem;">${s.busy?'תפוס':s.preferred?'⭐ מועדף':'פנוי'}</span></div>`).join('')}</div>
       <div class="customer-form" id="cform-${idx}" style="display:none;">
         <div style="font-size:0.8rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;margin-bottom:10px;">פרטי לקוח</div>
         <div class="fg-2">
@@ -3327,7 +3338,7 @@ function confirmAssign(idx,assignId){
   const notes=document.getElementById('c-notes').value||'';
   const slot=slots[selectedTimeSlot];
   const catId=getCatId();const catName=getCatName();
-  const newTask={id:nextTaskId++,client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:slot.start,date:c.date.str,notes,assignId};
+  const newTask={id:nextTaskId++,client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:slot.start,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows]};
   tasks.push(newTask);
   save();
   saveTaskToSupabase(newTask);
@@ -3357,8 +3368,27 @@ function clearDispatch(){
   document.getElementById('dispatch-result').classList.add('hidden');
   selectedTimeSlot=null;allCandidates=[];currentCandidateIdx=0;
 }
+function addPrefWindow(){
+  prefWindows.push({from:'09:00',to:'13:00'});
+  renderPrefWindows();
+}
+function removePrefWindow(i){
+  prefWindows.splice(i,1);
+  renderPrefWindows();
+}
+function renderPrefWindows(){
+  const el=document.getElementById('pref-windows-list');if(!el)return;
+  el.innerHTML=prefWindows.map((w,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <input type="time" class="fc" value="${w.from}" style="width:90px;padding:6px 8px;" onchange="prefWindows[${i}].from=this.value">
+      <span style="color:var(--ink-3);">עד</span>
+      <input type="time" class="fc" value="${w.to}" style="width:90px;padding:6px 8px;" onchange="prefWindows[${i}].to=this.value">
+      <button type="button" onclick="removePrefWindow(${i})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:1.1rem;padding:0;line-height:1;">✕</button>
+    </div>`).join('');
+}
 function resetDispatch(){
   clearDispatch();selectedCat=null;renderCatChips();
+  prefWindows=[];renderPrefWindows();
   document.getElementById('pkg-section').classList.add('hidden');
   document.getElementById('dispatch-success').classList.add('hidden');
   restoreDispatchDraft();
@@ -3386,13 +3416,11 @@ function openCancelModal(taskId){
   cancelTaskId=taskId;
   const t=tasks.find(x=>String(x.id)===String(taskId));if(!t)return;
   document.getElementById('cancel-task-info').innerHTML=`<div style="font-weight:700;">${h(t.client)}</div><div style="font-size:0.8125rem;color:var(--ink-3);">${h(t.cat)} • ${h(t.city)} • ${t.time||'—'} • ${h(t.assignId)}</div>`;
-  // check if there are pending tasks in same zone
   const cityZone=getCityZone(t.city);
   const pendingInZone=tasks.filter(x=>x.status==='pending'&&getCityZone(x.city)?.id===cityZone?.id);
-  const replaceOpt=document.getElementById('cancel-replace-opt');
-  replaceOpt.style.opacity=pendingInZone.length?'1':'0.4';
-  replaceOpt.style.pointerEvents=pendingInZone.length?'auto':'none';
-  if(!pendingInZone.length)replaceOpt.querySelector('p').textContent='אין קריאות ממתינות באזור זה';
+  const replaceBtn=document.getElementById('cancel-replace-btn');
+  replaceBtn.disabled=!pendingInZone.length;
+  replaceBtn.title=pendingInZone.length?'':'אין קריאות ממתינות באזור זה';
   document.getElementById('mo-cancel').classList.remove('hidden');
 }
 function cancelOnly(){
@@ -3400,27 +3428,38 @@ function cancelOnly(){
   if(t){t.status='cancelled';t.cancelledAt=new Date().toISOString();saveTaskToSupabase(t);}
   save();renderTasks();renderHomeTechCards();closeMo('mo-cancel');
 }
+function windowMatchScore(task,time){
+  if(!time||!task.preferredWindows?.length)return 0;
+  const[hh,mm]=time.split(':').map(Number);const mins=hh*60+mm;
+  return task.preferredWindows.some(w=>{
+    const[fh,fm]=w.from.split(':').map(Number);
+    const[th,tm]=w.to.split(':').map(Number);
+    return mins>=fh*60+fm&&mins<th*60+tm;
+  })?1:0;
+}
 function cancelAndReplace(){
   const t=tasks.find(x=>String(x.id)===String(cancelTaskId));if(!t)return;
   const cityZone=getCityZone(t.city);
-  // find best pending task in same zone
   const pending=tasks.filter(x=>x.status==='pending'&&getCityZone(x.city)?.id===cityZone?.id);
   if(!pending.length){cancelOnly();return;}
-  // prefer same city, then same zone
-  const best=pending.sort((a,b)=>(a.city===t.city?-1:1))[0];
+  const best=pending.sort((a,b)=>{
+    const ws=windowMatchScore(b,t.time)-windowMatchScore(a,t.time);
+    if(ws!==0)return ws;
+    return(a.city===t.city?-1:1);
+  })[0];
   replaceSuggestion={cancelledTask:t,replacement:best,freedSlot:{time:t.time,date:t.date}};
-  // cancel original
   t.status='cancelled';t.cancelledAt=new Date().toISOString();
   save();closeMo('mo-cancel');
-  // show replacement suggestion
+  const winMatch=windowMatchScore(best,t.time)>0;
   document.getElementById('replace-suggestion').innerHTML=`
     <div class="alert alert-green">הקריאה בוטלה. נמצאה קריאה ממתינה מתאימה:</div>
     <div class="confirm-box">
-      <div class="cr"><span class="ck">לקוח</span><span class="cv">${best.client}</span></div>
-      <div class="cr"><span class="ck">עיר</span><span class="cv">${best.city}</span></div>
-      <div class="cr"><span class="ck">קטגוריה</span><span class="cv">${best.cat}</span></div>
-      <div class="cr"><span class="ck">חריץ פנוי</span><span class="cv">${t.time} — ${new Date(t.date).toLocaleDateString('he-IL')}</span></div>
-      <div class="cr"><span class="ck">טכנאי</span><span class="cv">${technicians.find(x=>x.id===t.techId)?.name||'—'}</span></div>
+      <div class="cr"><span class="ck">לקוח</span><span class="cv">${h(best.client)}</span></div>
+      <div class="cr"><span class="ck">עיר</span><span class="cv">${h(best.city)}</span></div>
+      <div class="cr"><span class="ck">קטגוריה</span><span class="cv">${h(best.cat)}</span></div>
+      <div class="cr"><span class="ck">חריץ פנוי</span><span class="cv">${t.time} — ${new Date(t.date+'T12:00:00').toLocaleDateString('he-IL')}</span></div>
+      <div class="cr"><span class="ck">טכנאי</span><span class="cv">${h(technicians.find(x=>x.id===t.techId)?.name||'—')}</span></div>
+      ${winMatch?'<div class="cr"><span class="ck">התאמה</span><span class="cv" style="color:var(--green);">✓ חלון זמן מועדף</span></div>':''}
     </div>`;
   document.getElementById('mo-replace').classList.remove('hidden');
   renderTasks();renderHomeTechCards();
