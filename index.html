@@ -361,7 +361,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div style="font-size:0.8rem;color:var(--ink-4);margin-top:4px;">מנוע שיבוץ חכם</div>
     </div>
     <div class="fg"><label class="fl">אימייל</label><input class="fc" id="login-email" type="email" placeholder="your@email.com" dir="ltr"></div>
-    <div class="fg"><label class="fl">סיסמה</label><input class="fc" id="login-password" type="password" placeholder="••••••••" dir="ltr" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="fg"><label class="fl">סיסמה</label><div style="position:relative;"><input class="fc" id="login-password" type="password" placeholder="••••••••" dir="ltr" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:2.5rem;"><button type="button" onclick="togglePw('login-password',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--ink-4);font-size:1rem;padding:0;line-height:1;">👁</button></div></div>
     <div id="login-error" style="color:var(--red);font-size:0.8rem;margin-bottom:10px;min-height:18px;"></div>
     <button id="login-btn" class="btn btn-blue btn-full btn-lg" onclick="doLogin()">כניסה</button>
     <div style="text-align:center;margin-top:12px;">
@@ -377,8 +377,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div style="font-size:2rem;font-weight:900;letter-spacing:-1px;"><span style="color:var(--blue);">מס</span>לול</div>
       <div style="font-size:0.8rem;color:var(--ink-4);margin-top:4px;">הגדרת סיסמה חדשה</div>
     </div>
-    <div class="fg"><label class="fl">סיסמה חדשה</label><input class="fc" id="reset-pw" type="password" placeholder="לפחות 6 תווים" dir="ltr"></div>
-    <div class="fg"><label class="fl">אישור סיסמה</label><input class="fc" id="reset-pw2" type="password" placeholder="••••••••" dir="ltr" onkeydown="if(event.key==='Enter')doResetPassword()"></div>
+    <div class="fg"><label class="fl">סיסמה חדשה</label><div style="position:relative;"><input class="fc" id="reset-pw" type="password" placeholder="לפחות 6 תווים" dir="ltr" style="padding-right:2.5rem;"><button type="button" onclick="togglePw('reset-pw',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--ink-4);font-size:1rem;padding:0;line-height:1;">👁</button></div></div>
+    <div class="fg"><label class="fl">אישור סיסמה</label><div style="position:relative;"><input class="fc" id="reset-pw2" type="password" placeholder="••••••••" dir="ltr" onkeydown="if(event.key==='Enter')doResetPassword()" style="padding-right:2.5rem;"><button type="button" onclick="togglePw('reset-pw2',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--ink-4);font-size:1rem;padding:0;line-height:1;">👁</button></div></div>
     <div id="reset-error" style="color:var(--red);font-size:0.8rem;margin-bottom:10px;min-height:18px;"></div>
     <button class="btn btn-blue btn-full btn-lg" onclick="doResetPassword()">שמור סיסמה חדשה</button>
   </div>
@@ -1395,7 +1395,7 @@ function showApp() {
         const existing=document.getElementById('session-banner');if(existing)existing.remove();
         const b=document.createElement('div');b.id='session-banner';
         b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9998;background:#0F172A;color:white;text-align:center;padding:6px 16px;font-size:0.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:16px;';
-        b.innerHTML=`<span>🔍 מצב תצוגה: ${s.tenantName}</span><button onclick="exitTenantSession('${s.origTenantId}')" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);border-radius:6px;padding:3px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;">← יציאה לניהול</button>`;
+        b.innerHTML=`<span>🔍 מצב תצוגה: ${h(s.tenantName)}</span><button onclick="exitTenantSession('${s.origTenantId}')" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);border-radius:6px;padding:3px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;">← יציאה לניהול</button>`;
         document.body.prepend(b);
         const shell=document.getElementById('app-shell');if(shell)shell.style.paddingTop='34px';
         ['nav-sec-admin','nav-admin'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('hidden');});
@@ -1406,19 +1406,39 @@ function showApp() {
   initApp();
 }
 
+function togglePw(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.textContent = show ? '🙈' : '👁';
+}
 async function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
   const password = document.getElementById('login-password').value;
   const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
   errEl.textContent = '';
-  document.getElementById('login-btn').textContent = 'מתחבר...';
+  errEl.style.color = 'var(--red)';
+  if (!email) { errEl.textContent = 'נא להזין כתובת אימייל'; return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errEl.textContent = 'כתובת האימייל אינה תקינה'; return; }
+  if (!password) { errEl.textContent = 'נא להזין סיסמה'; return; }
+  btn.textContent = 'מתחבר...';
+  btn.disabled = true;
   const { error } = await sb.auth.signInWithPassword({ email, password });
-  document.getElementById('login-btn').textContent = 'כניסה';
-  if (error) errEl.textContent = 'אימייל או סיסמה שגויים';
+  btn.textContent = 'כניסה';
+  btn.disabled = false;
+  if (!error) return;
+  if (error.message?.includes('rate limit') || error.message?.includes('too many')) {
+    errEl.textContent = 'יותר מדי ניסיונות — נסה שוב בעוד מספר דקות';
+  } else if (error.message?.includes('Invalid login') || error.message?.includes('invalid') || error.status === 400) {
+    errEl.textContent = 'אימייל או סיסמה שגויים';
+  } else {
+    errEl.textContent = 'שגיאת כניסה — בדוק חיבור לאינטרנט ונסה שוב';
+  }
 }
 
 async function sendPasswordReset() {
-  const email = document.getElementById('login-email').value.trim();
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
   const errEl = document.getElementById('login-error');
   if (!email) { errEl.textContent = 'הכנס אימייל לאיפוס'; return; }
   const { error } = await sb.auth.resetPasswordForEmail(email, {
@@ -1609,7 +1629,7 @@ async function saveZoneToSupabase(zone) {
   } else {
     const { data, error } = await sb.from('zones').insert(row).select().single();
     if (error) { console.error('insert zone error:', error); showToast('שגיאה בשמירה', 'error'); }
-    else zone._dbId = data.id;
+    else { zone._dbId = data.id; zone.id = data.id; }
   }
 }
 async function deleteZoneFromSupabase(dbId) {
@@ -1624,7 +1644,7 @@ async function saveCatToSupabase(cat) {
   } else {
     const { data, error } = await sb.from('categories').insert(row).select().single();
     if (error) { console.error('insert cat error:', error); showToast('שגיאה בשמירה', 'error'); }
-    else cat._dbId = data.id;
+    else { cat._dbId = data.id; cat.id = data.id; }
   }
 }
 async function deleteCatFromSupabase(dbId) {
@@ -1639,7 +1659,7 @@ async function savePkgToSupabase(pkg) {
   } else {
     const { data, error } = await sb.from('packages').insert(row).select().single();
     if (error) { console.error('insert pkg error:', error); showToast('שגיאה בשמירה', 'error'); }
-    else pkg._dbId = data.id;
+    else { pkg._dbId = data.id; pkg.id = data.id; }
   }
 }
 async function deletePkgFromSupabase(dbId) {
@@ -1771,6 +1791,7 @@ function seedData(){
 function todayStr(){return new Date().toISOString().split('T')[0];}
 function pad(n){return n<10?'0'+n:''+n;}
 function initials(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2);}
+const h=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function genId(){return 'MSL-'+String(nextTaskId).padStart(5,'0');}
 function timeToMins(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m;}
 function minsToTime(m){return pad(Math.floor(m/60))+':'+pad(m%60);}
@@ -2039,9 +2060,9 @@ function wBuildReview(){
   document.getElementById('wiz-review').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
       <div class="card" style="margin:0;"><div class="card-title">החברה</div><div style="font-size:1rem;font-weight:800;margin-bottom:4px;">${name}</div><div style="font-size:0.8125rem;color:var(--ink-3);">סוג: ${typeLabel} · תוכנית: ${plan.toUpperCase()}</div><div style="font-size:0.8125rem;color:var(--ink-3);">שעות: ${start}–${end} · מנהל: ${uname}</div></div>
-      <div class="card" style="margin:0;"><div class="card-title">טכנאים (${techs.length})</div>${techs.map(t=>`<div style="font-size:0.875rem;margin-bottom:4px;">👷 <strong>${t.name}</strong> — ${t.city}, מקס ${t.max}/יום</div>`).join('')}</div>
-      <div class="card" style="margin:0;"><div class="card-title">אזורים (${zones.length})</div>${zones.map(z=>`<div style="font-size:0.875rem;margin-bottom:4px;">🗺️ <strong>${z.name}</strong>: ${z.cities}</div>`).join('')}</div>
-      <div class="card" style="margin:0;"><div class="card-title">שירותים (${cats.length})</div>${cats.map(c=>`<div style="font-size:0.875rem;margin-bottom:4px;">📦 ${c.name} — ${c.dur} דק'</div>`).join('')}</div>
+      <div class="card" style="margin:0;"><div class="card-title">טכנאים (${techs.length})</div>${techs.map(t=>`<div style="font-size:0.875rem;margin-bottom:4px;">👷 <strong>${h(t.name)}</strong> — ${h(t.city)}, מקס ${t.max}/יום</div>`).join('')}</div>
+      <div class="card" style="margin:0;"><div class="card-title">אזורים (${zones.length})</div>${zones.map(z=>`<div style="font-size:0.875rem;margin-bottom:4px;">🗺️ <strong>${h(z.name)}</strong>: ${h(z.cities)}</div>`).join('')}</div>
+      <div class="card" style="margin:0;"><div class="card-title">שירותים (${cats.length})</div>${cats.map(c=>`<div style="font-size:0.875rem;margin-bottom:4px;">📦 ${h(c.name)} — ${c.dur} דק'</div>`).join('')}</div>
     </div>`;
 }
 async function createWizardTenant(){
@@ -2196,12 +2217,12 @@ async function renderUsersPage(){
     const views=perms.views||[];
     const linkedTech=u.role==='tech'?technicians.find(t=>t.userId===u.id):null;
     const viewsText=u.role==='admin'?'הכל'
-      :u.role==='tech'?(linkedTech?'📅 '+linkedTech.name:'⚠️ לא מקושר לטכנאי')
+      :u.role==='tech'?(linkedTech?'📅 '+h(linkedTech.name):'⚠️ לא מקושר לטכנאי')
       :views.map(v=>viewLabel[v]||v).join(', ')||'—';
     const isSelf=u.id===currentUser?.id;
     return `<tr style="border-bottom:1px solid var(--border);">
-      <td style="padding:10px 16px;font-weight:600;">${u.name}${isSelf?' <span style="font-size:0.7rem;background:var(--blue);color:#fff;border-radius:4px;padding:1px 5px;">אתה</span>':''}</td>
-      <td style="padding:10px 16px;color:var(--ink-3);">${u.email||'—'}</td>
+      <td style="padding:10px 16px;font-weight:600;">${h(u.name)}${isSelf?' <span style="font-size:0.7rem;background:var(--blue);color:#fff;border-radius:4px;padding:1px 5px;">אתה</span>':''}</td>
+      <td style="padding:10px 16px;color:var(--ink-3);">${h(u.email||'—')}</td>
       <td style="padding:10px 16px;"><span style="background:${u.role==='admin'?'var(--blue)':u.role==='tech'?'var(--green)':'var(--ink-4)'};color:#fff;border-radius:4px;padding:2px 8px;font-size:0.75rem;">${roleLabel[u.role]||u.role}</span></td>
       <td style="padding:10px 16px;font-size:0.8125rem;color:var(--ink-3);">${viewsText}</td>
       <td style="padding:10px 16px;text-align:left;white-space:nowrap;">
@@ -2412,13 +2433,13 @@ async function renderAdminPanel(){
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-              <div style="font-size:1.125rem;font-weight:900;">${t.name}</div>
+              <div style="font-size:1.125rem;font-weight:900;">${h(t.name)}</div>
               <span style="background:${planColor[plan]||'var(--ink-3)'};color:white;padding:2px 8px;border-radius:10px;font-size:0.65rem;font-weight:800;">${plan.toUpperCase()}</span>
               ${isOwn?'<span style="background:var(--blue-l);color:var(--blue-d);padding:2px 8px;border-radius:10px;font-size:0.65rem;font-weight:700;">הסשן שלך</span>':''}
             </div>
             <div style="font-size:0.7rem;color:var(--ink-4);font-family:monospace;margin-bottom:6px;">${t.id}</div>
             <div style="font-size:0.8125rem;margin-bottom:6px;">תכונות: <span style="font-weight:600;color:${feats==='ללא תכונות'?'var(--ink-4)':'var(--green)'};">${feats}</span></div>
-            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">${tUsers.map(u=>`<span style="background:var(--line-2);border-radius:6px;padding:2px 8px;font-size:0.75rem;">👤 ${u.name} <span style="color:var(--ink-4);">(${u.role})</span>${u.super_admin?' ⭐':''}</span>`).join('')||'<span style="font-size:0.75rem;color:var(--ink-4);">אין משתמשים מקושרים</span>'}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">${tUsers.map(u=>`<span style="background:var(--line-2);border-radius:6px;padding:2px 8px;font-size:0.75rem;">👤 ${h(u.name)} <span style="color:var(--ink-4);">(${u.role})</span>${u.super_admin?' ⭐':''}</span>`).join('')||'<span style="font-size:0.75rem;color:var(--ink-4);">אין משתמשים מקושרים</span>'}</div>
             <div style="display:flex;gap:5px;flex-wrap:wrap;">
               ${chip(`👷 ${tTechs.length} טכנאים`,tTechs.length>0,false)}
               ${chip(`🗺️ ${tZones.length} אזורים`,tZones.length>0,false)}
@@ -2528,7 +2549,7 @@ function enterTenantSession(tenantId,tenantName){
   const existing=document.getElementById('session-banner');if(existing)existing.remove();
   const b=document.createElement('div');b.id='session-banner';
   b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9998;background:#0F172A;color:white;text-align:center;padding:6px 16px;font-size:0.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:16px;';
-  b.innerHTML=`<span>🔍 מצב תצוגה: ${tenantName}</span><button onclick="exitTenantSession('${origTenantId}')" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);border-radius:6px;padding:3px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;">← יציאה לניהול</button>`;
+  b.innerHTML=`<span>🔍 מצב תצוגה: ${h(tenantName)}</span><button onclick="exitTenantSession('${origTenantId}')" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);border-radius:6px;padding:3px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;">← יציאה לניהול</button>`;
   document.body.prepend(b);
   const shell=document.getElementById('app-shell');if(shell)shell.style.paddingTop='34px';
   // Apply that tenant's feature flags from cached data
@@ -2649,14 +2670,14 @@ function renderReports(){
       ${techStats.length?techStats.map(({tech,total:t,done})=>{
         const pct=maxTech?Math.round((t/maxTech)*100):0;
         return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line-2);">
-          <div style="width:32px;height:32px;border-radius:50%;background:${tech.color};display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:white;flex-shrink:0;">${initials(tech.name)}</div>
-          <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:0.875rem;">${tech.name}</div><div style="background:var(--line-2);border-radius:4px;height:7px;margin-top:5px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${tech.color};border-radius:4px;"></div></div></div>
+          <div style="width:32px;height:32px;border-radius:50%;background:${tech.color};display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:white;flex-shrink:0;">${h(initials(tech.name))}</div>
+          <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:0.875rem;">${h(tech.name)}</div><div style="background:var(--line-2);border-radius:4px;height:7px;margin-top:5px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${tech.color};border-radius:4px;"></div></div></div>
           <div style="text-align:left;flex-shrink:0;"><div style="font-size:1.125rem;font-weight:900;">${t}</div><div style="font-size:0.7rem;color:var(--ink-3);">${done} הושלמו</div></div>
         </div>`;
       }).join(''):'<div style="color:var(--ink-4);font-size:0.875rem;padding:1rem 0;text-align:center;">אין נתונים לתקופה זו</div>'}
     </div>
-    ${zoneStats.length?`<div class="card" style="margin-bottom:1rem;"><div class="card-title">${L('zones')} — חלוקה גיאוגרפית</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:8px;">${zoneStats.map(({zone,total:t,done})=>`<div style="background:var(--blue-l);border-radius:var(--r);padding:12px;"><div style="font-weight:700;font-size:0.9rem;">${zone.name}</div><div style="font-size:1.75rem;font-weight:900;color:var(--blue-d);margin-top:4px;">${t}</div><div style="font-size:0.7rem;color:var(--ink-3);">${done} הושלמו</div></div>`).join('')}</div></div>`:''}
-    ${catStats.length?`<div class="card"><div class="card-title">קטגוריות — נפח קריאות</div>${catStats.map(({cat,total:t})=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-2);"><div style="font-size:0.875rem;font-weight:600;">${cat.name}</div><span class="badge badge-blue">${t}</span></div>`).join('')}</div>`:''}
+    ${zoneStats.length?`<div class="card" style="margin-bottom:1rem;"><div class="card-title">${L('zones')} — חלוקה גיאוגרפית</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:8px;">${zoneStats.map(({zone,total:t,done})=>`<div style="background:var(--blue-l);border-radius:var(--r);padding:12px;"><div style="font-weight:700;font-size:0.9rem;">${h(zone.name)}</div><div style="font-size:1.75rem;font-weight:900;color:var(--blue-d);margin-top:4px;">${t}</div><div style="font-size:0.7rem;color:var(--ink-3);">${done} הושלמו</div></div>`).join('')}</div></div>`:''}
+    ${catStats.length?`<div class="card"><div class="card-title">קטגוריות — נפח קריאות</div>${catStats.map(({cat,total:t})=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-2);"><div style="font-size:0.875rem;font-weight:600;">${h(cat.name)}</div><span class="badge badge-blue">${t}</span></div>`).join('')}</div>`:''}
   `;
 }
 
@@ -2704,9 +2725,9 @@ function renderClients(){
     const taskCount=tasks.filter(t=>t.clientId===c.id||t.client===c.name).length;
     if(clientArchiveView){
       return`<div class="client-card" style="opacity:0.75;">
-        <div class="client-name">${c.name}</div>
-        ${c.phone?`<div class="client-meta">📞 ${c.phone}</div>`:''}
-        ${c.city?`<div class="client-meta">📍 ${c.city}</div>`:''}
+        <div class="client-name">${h(c.name)}</div>
+        ${c.phone?`<div class="client-meta">📞 ${h(c.phone)}</div>`:''}
+        ${c.city?`<div class="client-meta">📍 ${h(c.city)}</div>`:''}
         <div style="font-size:0.75rem;color:var(--ink-4);margin-top:8px;">${taskCount} קריאות בהיסטוריה</div>
         <div style="display:flex;gap:6px;margin-top:10px;">
           <button class="btn btn-outline btn-sm" onclick="restoreClient('${c.id}')">↩️ שחזר</button>
@@ -2715,11 +2736,11 @@ function renderClients(){
       </div>`;
     }
     return`<div class="client-card">
-      <div class="client-name">${c.name}</div>
-      ${c.phone?`<div class="client-meta">📞 <a href="tel:${c.phone}" style="color:var(--blue);text-decoration:none;">${c.phone}</a></div>`:''}
-      ${c.city?`<div class="client-meta">📍 ${c.city}${c.address?', '+c.address:''}</div>`:''}
-      ${c.email?`<div class="client-meta">✉️ ${c.email}</div>`:''}
-      ${c.notes?`<div class="client-meta" style="margin-top:6px;font-style:italic;color:var(--ink-4);">${c.notes}</div>`:''}
+      <div class="client-name">${h(c.name)}</div>
+      ${c.phone?`<div class="client-meta">📞 <a href="tel:${c.phone}" style="color:var(--blue);text-decoration:none;">${h(c.phone)}</a></div>`:''}
+      ${c.city?`<div class="client-meta">📍 ${h(c.city)}${c.address?', '+h(c.address):''}</div>`:''}
+      ${c.email?`<div class="client-meta">✉️ ${h(c.email)}</div>`:''}
+      ${c.notes?`<div class="client-meta" style="margin-top:6px;font-style:italic;color:var(--ink-4);">${h(c.notes)}</div>`:''}
       <div style="font-size:0.75rem;color:var(--ink-4);margin-top:8px;">${taskCount} קריאות בהיסטוריה</div>
       <div style="display:flex;gap:6px;margin-top:10px;">
         <button class="btn btn-outline btn-sm" onclick="editClient('${c.id}')">עריכה</button>
@@ -2810,10 +2831,10 @@ function searchClient(){
     const waBtn=t.phone?`<a href="https://wa.me/${waPhone(t.phone)}?text=${waMsg(t)}" target="_blank" style="font-size:1rem;" title="WhatsApp">💬</a>`:'';
     return`<div class="search-result-row" style="${dim?'opacity:0.6;':''}" >
       <div style="flex:1;">
-        <div style="font-weight:700;font-size:0.9375rem;">${t.client}${t.phone?` <span style="font-size:0.75rem;font-weight:400;color:var(--ink-3);">${t.phone}</span>`:''}</div>
-        <div style="font-size:0.8125rem;color:var(--ink-3);">${t.cat} • ${t.city}${t.date?' • '+new Date(t.date).toLocaleDateString('he-IL'):''} ${t.time||''} ${tech?' • '+tech.name:''}</div>
+        <div style="font-weight:700;font-size:0.9375rem;">${h(t.client)}${t.phone?` <span style="font-size:0.75rem;font-weight:400;color:var(--ink-3);">${h(t.phone)}</span>`:''}</div>
+        <div style="font-size:0.8125rem;color:var(--ink-3);">${h(t.cat)} • ${h(t.city)}${t.date?' • '+new Date(t.date).toLocaleDateString('he-IL'):''} ${t.time||''} ${tech?' • '+h(tech.name):''}</div>
       </div>
-      <div style="display:flex;align-items:center;gap:6px;">${waBtn}<span class="badge ${s.badge}">${s.label}</span>${t.assignId?`<span class="assign-id-tag">${t.assignId}</span>`:''}</div>
+      <div style="display:flex;align-items:center;gap:6px;">${waBtn}<span class="badge ${s.badge}">${s.label}</span>${t.assignId?`<span class="assign-id-tag">${h(t.assignId)}</span>`:''}</div>
     </div>`;
   };
   res.className='search-results';
@@ -2860,9 +2881,9 @@ function renderHomeTechCards(){
     return`<div class="tech-home-card" onclick="openTechWeekly('${tech.id}')">
       <div class="th-color-bar" style="background:${tech.color};"></div>
       <div class="th-body">
-        <div class="th-avatar" style="background:${tech.color};">${initials(tech.name)}</div>
-        <div class="th-name">${tech.name}</div>
-        <div class="th-area">${zone?zone.name:'—'}</div>
+        <div class="th-avatar" style="background:${tech.color};">${h(initials(tech.name))}</div>
+        <div class="th-name">${h(tech.name)}</div>
+        <div class="th-area">${zone?h(zone.name):'—'}</div>
         <div class="th-stats"><span style="font-size:1.25rem;font-weight:900;color:${fc};">${cnt}</span><span style="font-size:0.8rem;color:var(--ink-4);"> / ${tech.max} ${L('tasks')}</span></div>
         <div class="load-bar"><div class="load-fill" style="width:${lp}%;background:${fc};"></div></div>
         ${optBtn}
@@ -2921,10 +2942,10 @@ function renderWeeklyCalendar(){
       const topPx=((startMins-calStartH*60)/60)*60;
       const heightPx=Math.max((durMins/60)*60,20);
       const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;
-      return`<div class="cal-task" style="top:${topPx}px;height:${heightPx}px;background:${cc.bg};color:${cc.fg};border:1px solid ${cc.border};" title="${t.client} — ${t.cat}">
-        <div style="font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.client}</div>
-        <div style="opacity:0.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.city}</div>
-        <div style="opacity:0.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.cat}</div>
+      return`<div class="cal-task" style="top:${topPx}px;height:${heightPx}px;background:${cc.bg};color:${cc.fg};border:1px solid ${cc.border};" title="${h(t.client)} — ${h(t.cat)}">
+        <div style="font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${h(t.client)}</div>
+        <div style="opacity:0.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${h(t.city)}</div>
+        <div style="opacity:0.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${h(t.cat)}</div>
         <div style="font-size:0.6rem;opacity:0.6;">${t.time} • ${s.label}</div>
       </div>`;
     }).join('');
@@ -2954,7 +2975,7 @@ function renderPkgSection(){
     }).join('');
   }else{
     const cat=categories.find(c=>'cat_'+c.id===selectedCat);if(!cat){rows.innerHTML='';return;}
-    rows.innerHTML=`<div class="pkg-row"><span class="pkg-name">${cat.name}</span><input class="fc pkg-qty" type="number" min="1" max="10" value="1" onchange="updateTotalTime()"><span class="pkg-time">${cat.time} דק'</span></div>`;
+    rows.innerHTML=`<div class="pkg-row"><span class="pkg-name">${h(cat.name)}</span><input class="fc pkg-qty" type="number" min="1" max="10" value="1" onchange="updateTotalTime()"><span class="pkg-time">${cat.time} דק'</span></div>`;
   }
   updateTotalTime();
 }
@@ -3220,7 +3241,7 @@ function showCandidate(idx){
   const dayTasks=getTechDayTasks(tech,c.date.str);
   // Route preview
   const city=document.getElementById('s-city').value;
-  const routeRows=dayTasks.length?[...dayTasks.map(t=>`<div class="route-row"><span class="route-time">${t.time}</span><span class="route-arrow">→</span><span class="route-city">${t.city}</span></div>`),`<div class="route-row"><span class="route-time">${c.optTime}</span><span class="route-arrow">→</span><span class="route-city route-new">✦ ${city} (חדש)</span></div>`].join(''):'';
+  const routeRows=dayTasks.length?[...dayTasks.map(t=>`<div class="route-row"><span class="route-time">${t.time}</span><span class="route-arrow">→</span><span class="route-city">${h(t.city)}</span></div>`),`<div class="route-row"><span class="route-time">${c.optTime}</span><span class="route-arrow">→</span><span class="route-city route-new">✦ ${h(city)} (חדש)</span></div>`].join(''):'';
   const routeHtml=routeRows?`<div class="route-preview"><div class="route-title">מסלול יום מתוכנן (רחוק לקרוב)</div>${routeRows}</div>`:'';
   // Time slots
   const _sched=getTechDaySchedule(tech,c.date.str);
@@ -3238,8 +3259,8 @@ function showCandidate(idx){
   document.getElementById('suggestion-card').innerHTML=`
     <div class="suggestion-result">
       <div class="sr-header">
-        <div class="sr-avatar" style="background:${tech.color};">${initials(tech.name)}</div>
-        <div style="flex:1;"><div class="sr-name">${tech.name}</div><div class="sr-area">${zone?zone.name:'—'} • ${tech.phone}</div></div>
+        <div class="sr-avatar" style="background:${tech.color};">${h(initials(tech.name))}</div>
+        <div style="flex:1;"><div class="sr-name">${h(tech.name)}</div><div class="sr-area">${zone?h(zone.name):'—'} • ${h(tech.phone)}</div></div>
         <div style="text-align:center;">
           <div style="font-size:0.65rem;color:var(--ink-3);font-weight:700;text-transform:uppercase;margin-bottom:3px;">${idx+1}/${allCandidates.length}</div>
           <div class="assign-id">${assignId}</div>
@@ -3347,7 +3368,7 @@ function clearDispatchDraft(){localStorage.removeItem(_DDKEY);}
 function openCancelModal(taskId){
   cancelTaskId=taskId;
   const t=tasks.find(x=>String(x.id)===String(taskId));if(!t)return;
-  document.getElementById('cancel-task-info').innerHTML=`<div style="font-weight:700;">${t.client}</div><div style="font-size:0.8125rem;color:var(--ink-3);">${t.cat} • ${t.city} • ${t.time||'—'} • ${t.assignId}</div>`;
+  document.getElementById('cancel-task-info').innerHTML=`<div style="font-weight:700;">${h(t.client)}</div><div style="font-size:0.8125rem;color:var(--ink-3);">${h(t.cat)} • ${h(t.city)} • ${t.time||'—'} • ${h(t.assignId)}</div>`;
   // check if there are pending tasks in same zone
   const cityZone=getCityZone(t.city);
   const pendingInZone=tasks.filter(x=>x.status==='pending'&&getCityZone(x.city)?.id===cityZone?.id);
@@ -3434,8 +3455,8 @@ function renderTasks(){
     const canCancel=['assigned','en_route','arrived'].includes(t.status);
     return`<div class="task-row">
       <div class="task-main">
-        <div class="task-client">${t.client} ${t.assignId?`<span class="assign-id-tag">${t.assignId}</span>`:''}</div>
-        <div class="task-detail">${t.cat} • ${t.street?t.street+', ':''}${t.city}${t.date?' • '+new Date(t.date+'T12:00:00').toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'}):''}${t.time?' '+t.time:''}${tech?' • '+tech.name:''}</div>
+        <div class="task-client">${h(t.client)} ${t.assignId?`<span class="assign-id-tag">${h(t.assignId)}</span>`:''}</div>
+        <div class="task-detail">${h(t.cat)} • ${t.street?h(t.street)+', ':''}${h(t.city)}${t.date?' • '+new Date(t.date+'T12:00:00').toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'}):''}${t.time?' '+t.time:''}${tech?' • '+h(tech.name):''}</div>
       </div>
       <div class="task-actions">
         <span class="badge ${s.badge} status-pill" onclick="openStatusModal('${t.id}')">${s.label}</span>
@@ -3459,7 +3480,7 @@ function quickAssign(id){
 function openStatusModal(id){
   statusTaskId=id;const t=tasks.find(x=>String(x.id)===String(id));if(!t)return;
   const s=STATUS_MAP[t.status];
-  document.getElementById('status-info').innerHTML=`<div style="font-weight:700;">${t.client}</div><div style="font-size:0.8125rem;color:var(--ink-3);">${t.cat} • ${t.city}${t.assignId?' • '+t.assignId:''}</div>`;
+  document.getElementById('status-info').innerHTML=`<div style="font-weight:700;">${h(t.client)}</div><div style="font-size:0.8125rem;color:var(--ink-3);">${h(t.cat)} • ${h(t.city)}${t.assignId?' • '+h(t.assignId):''}</div>`;
   document.getElementById('status-opts').innerHTML=s.next.map(ns=>{
     const ni=STATUS_MAP[ns];
     return`<button class="btn btn-outline btn-full" style="justify-content:flex-start;" onclick="setStatus('${ns}')"><span class="badge ${ni.badge}">${ni.label}</span> עדכן</button>`;
@@ -3494,10 +3515,10 @@ function renderTechView(){
         <div style="min-width:52px;text-align:center;padding-top:2px;"><div style="font-size:1.25rem;font-weight:900;color:var(--ink);">${t.time||'—'}</div><div style="font-size:0.6rem;color:var(--ink-4);">שעה</div></div>
         <div style="width:1px;background:var(--line);flex-shrink:0;"></div>
         <div style="flex:1;min-width:0;">
-          <div style="font-weight:800;font-size:0.9375rem;">${t.cat}</div>
-          <div style="font-size:0.875rem;font-weight:600;color:var(--ink-2);margin-top:2px;">${t.client}${t.phone?` · <a href="tel:${t.phone}" style="color:var(--blue);text-decoration:none;">${t.phone}</a>`:''}</div>
-          <div style="font-size:0.8125rem;color:var(--ink-3);margin-top:2px;">📍 ${[t.street,t.city].filter(Boolean).join(', ')}</div>
-          ${t.notes?`<div style="font-size:0.75rem;color:var(--ink-3);margin-top:3px;font-style:italic;">💬 ${t.notes}</div>`:''}
+          <div style="font-weight:800;font-size:0.9375rem;">${h(t.cat)}</div>
+          <div style="font-size:0.875rem;font-weight:600;color:var(--ink-2);margin-top:2px;">${h(t.client)}${t.phone?` · <a href="tel:${t.phone}" style="color:var(--blue);text-decoration:none;">${h(t.phone)}</a>`:''}</div>
+          <div style="font-size:0.8125rem;color:var(--ink-3);margin-top:2px;">📍 ${[t.street,t.city].filter(Boolean).map(h).join(', ')}</div>
+          ${t.notes?`<div style="font-size:0.75rem;color:var(--ink-3);margin-top:3px;font-style:italic;">💬 ${h(t.notes)}</div>`:''}
           <div class="tv-action-row" style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center;">
             <span class="badge ${s.badge}">${s.label}</span>
             ${nextBtns}
@@ -3510,9 +3531,9 @@ function renderTechView(){
   };
   document.getElementById('techview-content').innerHTML=`<div class="page">
     <div style="display:flex;align-items:center;gap:14px;padding-bottom:1.25rem;border-bottom:1px solid var(--line);margin-bottom:1.25rem;">
-      <div style="width:48px;height:48px;border-radius:50%;background:${tech.color};color:white;font-size:1rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initials(tech.name)}</div>
+      <div style="width:48px;height:48px;border-radius:50%;background:${tech.color};color:white;font-size:1rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${h(initials(tech.name))}</div>
       <div>
-        <div style="font-size:1.25rem;font-weight:900;">${tech.name}</div>
+        <div style="font-size:1.25rem;font-weight:900;">${h(tech.name)}</div>
         <div style="font-size:0.8125rem;color:var(--ink-3);">יום ${DAYS_HE[d.getDay()]} · ${d.toLocaleDateString('he-IL')}</div>
       </div>
       <div style="margin-right:auto;text-align:center;background:var(--blue-l);border-radius:var(--r);padding:8px 14px;">
@@ -3522,7 +3543,7 @@ function renderTechView(){
     </div>
     <div style="font-size:0.7rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.75rem;">היום</div>
     ${todayTasks.map(techCard).join('')||'<div class="empty" style="padding:2rem;"><div class="empty-icon">🎉</div><div>אין קריאות להיום</div></div>'}
-    ${tomorrowTasks.length?`<div style="font-size:0.7rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:1px;margin:1.25rem 0 0.75rem;">מחר (${tomorrowTasks.length} קריאות)</div>${tomorrowTasks.map(t=>{const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;return`<div style="background:var(--line-2);border:1px solid var(--line);border-radius:var(--r-lg);padding:0.75rem 1rem;margin-bottom:8px;opacity:0.8;display:flex;gap:10px;align-items:center;"><div style="font-weight:800;min-width:48px;">${t.time||'—'}</div><div style="flex:1;"><div style="font-weight:700;">${t.cat}</div><div style="font-size:0.8125rem;color:var(--ink-3);">${t.client} · ${t.city}</div></div><span class="badge ${s.badge}">${s.label}</span></div>`;}).join('')}`:''}
+    ${tomorrowTasks.length?`<div style="font-size:0.7rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:1px;margin:1.25rem 0 0.75rem;">מחר (${tomorrowTasks.length} קריאות)</div>${tomorrowTasks.map(t=>{const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;return`<div style="background:var(--line-2);border:1px solid var(--line);border-radius:var(--r-lg);padding:0.75rem 1rem;margin-bottom:8px;opacity:0.8;display:flex;gap:10px;align-items:center;"><div style="font-weight:800;min-width:48px;">${t.time||'—'}</div><div style="flex:1;"><div style="font-weight:700;">${h(t.cat)}</div><div style="font-size:0.8125rem;color:var(--ink-3);">${h(t.client)} · ${h(t.city)}</div></div><span class="badge ${s.badge}">${s.label}</span></div>`;}).join('')}`:''}
   </div>`;
 }
 function techSetStatus(taskId,ns){
@@ -3542,12 +3563,12 @@ function renderTechs(){
     const cnt=getTechLoad(tech,todayStr());
     const lp=Math.min(100,Math.round((cnt/Math.max(tech.max,1))*100));
     const fc=lp>=90?'var(--red)':lp>=60?'var(--amber)':'var(--green)';
-    const skills=(tech.skills||[]).map(sid=>{const c=categories.find(x=>x.id===sid);return c?`<span class="skill-tag">${c.name}</span>`:''}).join('');
+    const skills=(tech.skills||[]).map(sid=>{const c=categories.find(x=>x.id===sid);return c?`<span class="skill-tag">${h(c.name)}</span>`:''}).join('');
     return`<div class="tech-card">
-      <div class="tech-av" style="background:${tech.color};">${initials(tech.name)}</div>
-      <div class="tech-name">${tech.name}</div>
-      <div class="tech-info">📞 ${tech.phone}</div>
-      <div class="tech-info">🏠 ${tech.base}${tech.address?', '+tech.address:''}</div>
+      <div class="tech-av" style="background:${tech.color};">${h(initials(tech.name))}</div>
+      <div class="tech-name">${h(tech.name)}</div>
+      <div class="tech-info">📞 ${h(tech.phone)}</div>
+      <div class="tech-info">🏠 ${h(tech.base)}${tech.address?', '+h(tech.address):''}</div>
       <div class="tech-info">📊 ${tech.min}–${tech.max} ${L('tasks')}/יום</div>
       ${skills?`<div style="margin-top:6px;">${skills}</div>`:''}
       <div class="load-bar" style="margin:8px 0 3px;"><div class="load-fill" style="width:${lp}%;background:${fc};"></div></div>
@@ -3561,14 +3582,14 @@ function renderTechs(){
 }
 function buildTechModalUI(){
   document.getElementById('ti-skills-container').innerHTML=categories.map(c=>
-    `<label class="skill-check" id="skill-lbl-${c.id}" onclick="toggleSkill('${c.id}')"><input type="checkbox" id="skill-${c.id}"> ${c.name}</label>`
+    `<label class="skill-check" id="skill-lbl-${c.id}" onclick="toggleSkill('${c.id}')"><input type="checkbox" id="skill-${c.id}"> ${h(c.name)}</label>`
   ).join('');
   document.getElementById('ti-cat-limits').innerHTML=categories.map(c=>
-    `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:0.875rem;flex:1;">${c.name}</span><input class="fc" id="catlim-${c.id}" type="number" min="0" placeholder="ללא הגבלה" style="width:130px;"></div>`
+    `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:0.875rem;flex:1;">${h(c.name)}</span><input class="fc" id="catlim-${c.id}" type="number" min="0" placeholder="ללא הגבלה" style="width:130px;"></div>`
   ).join('');
   const rotDays=['א׳','ב׳','ג׳','ד׳','ה׳','ו׳'];
   document.getElementById('ti-rotation').innerHTML=rotDays.map((day,i)=>
-    `<div class="rotation-day"><div class="day-name">${day}</div><select id="rot-${i}">${[{id:'',name:'—'},...zones].map(z=>`<option value="${z.id}">${z.name||'—'}</option>`).join('')}</select></div>`
+    `<div class="rotation-day"><div class="day-name">${day}</div><select id="rot-${i}">${[{id:'',name:'—'},...zones].map(z=>`<option value="${z.id}">${h(z.name||'—')}</option>`).join('')}</select></div>`
   ).join('');
 }
 function buildWeekSchedGrid(ws){
@@ -3673,10 +3694,10 @@ function renderZones(){
   document.getElementById('zones-list').innerHTML=zones.map((z,zi)=>`
     <div class="zone-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <input class="fc" value="${z.name}" onchange="zones[${zi}].name=this.value;saveZoneToSupabase(zones[${zi}]);save();" style="font-weight:800;font-size:0.9375rem;border:none;padding:0;background:transparent;flex:1;">
+        <input class="fc" value="${h(z.name)}" onchange="zones[${zi}].name=this.value;saveZoneToSupabase(zones[${zi}]);save();" style="font-weight:800;font-size:0.9375rem;border:none;padding:0;background:transparent;flex:1;">
         <button class="btn btn-ghost btn-sm" onclick="deleteZone('${z.id}')" style="color:var(--red);">הסר</button>
       </div>
-      <div class="zone-cities">${z.cities.map((c,ci)=>`<span class="city-tag">${c}<button onclick="removeCity('${z.id}',${ci})">×</button></span>`).join('')}</div>
+      <div class="zone-cities">${z.cities.map((c,ci)=>`<span class="city-tag">${h(c)}<button onclick="removeCity('${z.id}',${ci})">×</button></span>`).join('')}</div>
       <div style="font-size:0.75rem;color:var(--ink-3);margin-bottom:6px;">הדבק ערים (שורה לכל עיר או פסיקים)</div>
       <div style="display:flex;gap:8px;">
         <textarea class="fc" id="new-city-${z.id}" placeholder="תל אביב&#10;חולון&#10;בת ים" style="flex:1;height:60px;resize:vertical;font-size:0.875rem;"></textarea>
@@ -3697,12 +3718,12 @@ function removeCity(zoneId,ci){const z=zones.find(x=>x.id===zoneId);if(z){z.citi
 // ═══ CATEGORIES ═══
 function renderCategories(){
   document.getElementById('cats-list').innerHTML=categories.map((c,i)=>
-    `<div class="tag-item">${c.name} <span style="font-size:0.75rem;color:var(--ink-3);">(${c.time} דק')</span><button class="tag-del" onclick="deleteCat(${i})">×</button></div>`
+    `<div class="tag-item">${h(c.name)} <span style="font-size:0.75rem;color:var(--ink-3);">(${c.time} דק')</span><button class="tag-del" onclick="deleteCat(${i})">×</button></div>`
   ).join('');
   document.getElementById('pkgs-list').innerHTML=packages.map((p,i)=>{
-    const items=p.items.map(item=>{const c=categories.find(x=>x.id===item.catId);return`${c?c.name:'?'} ×${item.qty}`;}).join(' + ');
+    const items=p.items.map(item=>{const c=categories.find(x=>x.id===item.catId);return`${c?h(c.name):'?'} ×${item.qty}`;}).join(' + ');
     return`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-2);font-size:0.875rem;">
-      <div><strong>${p.name}</strong> <span style="color:var(--ink-3);">${items}</span></div>
+      <div><strong>${h(p.name)}</strong> <span style="color:var(--ink-3);">${items}</span></div>
       <button class="btn btn-ghost btn-sm" onclick="deletePkg(${i})" style="color:var(--red);">הסר</button></div>`;
   }).join('')||'<div style="color:var(--ink-4);font-size:0.875rem;padding:1rem 0;">אין חבילות</div>';
   renderCatChips();
@@ -3721,7 +3742,7 @@ let pkgRowCount=0;
 function openAddPkgModal(){pkgRowCount=0;document.getElementById('pkg-name').value='';document.getElementById('pkg-cat-rows').innerHTML='';addPkgRow();document.getElementById('mo-pkg').classList.remove('hidden');}
 function addPkgRow(){
   const id=pkgRowCount++;const div=document.createElement('div');div.className='fg-2';
-  div.innerHTML=`<div class="fg"><label class="fl">קטגוריה</label><select class="fc" id="pkg-cat-${id}">${categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
+  div.innerHTML=`<div class="fg"><label class="fl">קטגוריה</label><select class="fc" id="pkg-cat-${id}">${categories.map(c=>`<option value="${c.id}">${h(c.name)}</option>`).join('')}</select></div>
     <div class="fg"><label class="fl">כמות</label><input class="fc" id="pkg-qty-${id}" type="number" min="1" value="1" style="width:90px;"></div>`;
   document.getElementById('pkg-cat-rows').appendChild(div);
 }
@@ -3734,7 +3755,7 @@ function savePkg(){
 
 // ═══ DAY OFF ═══
 function openDayoffModal(){
-  document.getElementById('do-tech').innerHTML=technicians.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+  document.getElementById('do-tech').innerHTML=technicians.map(t=>`<option value="${t.id}">${h(t.name)}</option>`).join('');
   renderDayoffList();document.getElementById('mo-dayoff').classList.remove('hidden');
 }
 function addDayoff(){
@@ -3872,8 +3893,8 @@ function _plannerTaskChip(t){
   };
   const col=statusColors[t.status]||{bg:'#EFF6FF',fg:'#1D4ED8'};
   return`<div class="planner-task-chip" style="background:${col.bg};color:${col.fg};border-color:${col.fg}22;" onclick="openTaskDetail('${t.id}')">
-    <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.client||''}</div>
-    <div style="opacity:0.75;font-size:0.65rem;">${t.time||''} ${t.city||''}</div>
+    <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h(t.client||'')}</div>
+    <div style="opacity:0.75;font-size:0.65rem;">${t.time||''} ${h(t.city||'')}</div>
   </div>`;
 }
 
@@ -3901,7 +3922,7 @@ function renderPlannerWeekly(days){
       <td style="padding:8px 12px;border-bottom:1px solid var(--line-2);border-left:2px solid var(--line);white-space:nowrap;vertical-align:middle;background:var(--white);">
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="width:10px;height:10px;border-radius:50%;background:${tech.color||'#2563EB'};display:inline-block;flex-shrink:0;"></span>
-          <span style="font-size:0.875rem;font-weight:700;">${tech.name}</span>
+          <span style="font-size:0.875rem;font-weight:700;">${h(tech.name)}</span>
         </div>
       </td>${cells}</tr>`;
   }).join('');
@@ -3974,17 +3995,17 @@ function openTaskDetail(id){
   detailTaskId=id;
   const tech=technicians.find(x=>String(x.id)===String(t.techId));
   document.getElementById('td-client').textContent=t.client||'';
-  document.getElementById('td-assignid').innerHTML=t.assignId?`<span class="assign-id-tag">${t.assignId}</span>`:'';
+  document.getElementById('td-assignid').innerHTML=t.assignId?`<span class="assign-id-tag">${h(t.assignId)}</span>`:'';
   const s=STATUS_MAP[t.status]||STATUS_MAP.pending;
   const sb=document.getElementById('td-status-badge');
   sb.textContent=s.label;sb.className='badge '+s.badge;
   document.getElementById('td-details').innerHTML=[
     t.date?['תאריך',new Date(t.date).toLocaleDateString('he-IL')]:'',
     t.time?['שעה',t.time]:'',
-    tech?['טכנאי',tech.name]:'',
-    t.city?['עיר',t.city+(t.street?' — '+t.street:'')]:'',
-    t.cat?['קטגוריה',t.cat]:'',
-    t.phone?['טלפון',t.phone]:'',
+    tech?['טכנאי',h(tech.name)]:'',
+    t.city?['עיר',h(t.city)+(t.street?' — '+h(t.street):'')]:'',
+    t.cat?['קטגוריה',h(t.cat)]:'',
+    t.phone?['טלפון',h(t.phone)]:'',
   ].filter(Boolean).map(([k,v])=>`<div class="td-field"><span class="td-key">${k}</span><span class="td-val">${v}</span></div>`).join('');
   document.getElementById('td-notes').value=t.notes||'';
   document.getElementById('td-status-opts').innerHTML=s.next.map(ns=>{

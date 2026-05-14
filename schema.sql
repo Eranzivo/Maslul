@@ -168,6 +168,10 @@ DROP POLICY IF EXISTS "tenant_insert" ON tenants;
 CREATE POLICY "tenant_insert" ON tenants
   FOR INSERT WITH CHECK (is_super_admin());
 
+DROP POLICY IF EXISTS "tenant_delete" ON tenants;
+CREATE POLICY "tenant_delete" ON tenants
+  FOR DELETE USING (is_super_admin());
+
 -- Users: own tenant, OR super_admin sees all
 DROP POLICY IF EXISTS "users_all" ON users;
 CREATE POLICY "users_all" ON users
