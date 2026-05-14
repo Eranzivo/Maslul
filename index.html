@@ -367,6 +367,20 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   </div>
 </div>
 
+<!-- RESET PASSWORD SCREEN -->
+<div id="reset-screen" class="hidden" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);">
+  <div style="background:var(--white);border:1px solid var(--line);border-radius:var(--r-xl);padding:2.5rem 2rem;width:100%;max-width:380px;box-shadow:var(--sh-lg);">
+    <div style="text-align:center;margin-bottom:2rem;">
+      <div style="font-size:2rem;font-weight:900;letter-spacing:-1px;"><span style="color:var(--blue);">מס</span>לול</div>
+      <div style="font-size:0.8rem;color:var(--ink-4);margin-top:4px;">הגדרת סיסמה חדשה</div>
+    </div>
+    <div class="fg"><label class="fl">סיסמה חדשה</label><input class="fc" id="reset-pw" type="password" placeholder="לפחות 6 תווים" dir="ltr"></div>
+    <div class="fg"><label class="fl">אישור סיסמה</label><input class="fc" id="reset-pw2" type="password" placeholder="••••••••" dir="ltr" onkeydown="if(event.key==='Enter')doResetPassword()"></div>
+    <div id="reset-error" style="color:var(--red);font-size:0.8rem;margin-bottom:10px;min-height:18px;"></div>
+    <button class="btn btn-blue btn-full btn-lg" onclick="doResetPassword()">שמור סיסמה חדשה</button>
+  </div>
+</div>
+
 <!-- APP -->
 <div id="app-shell" class="hidden">
 <div id="app-loading" class="app-loading hidden">
@@ -1306,6 +1320,7 @@ async function initAuth() {
     showLogin();
   }
   sb.auth.onAuthStateChange(async (_event, session) => {
+    if (_event === 'PASSWORD_RECOVERY') { showResetScreen(); return; }
     if (session) {
       currentUser = session.user;
       await loadTenantFromUser();
@@ -1343,7 +1358,25 @@ async function loadTenantFromUser() {
 
 function showLogin() {
   document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('reset-screen').classList.add('hidden');
   document.getElementById('app-shell').classList.add('hidden');
+}
+function showResetScreen() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('reset-screen').classList.remove('hidden');
+  document.getElementById('app-shell').classList.add('hidden');
+}
+async function doResetPassword() {
+  const pw = document.getElementById('reset-pw').value;
+  const pw2 = document.getElementById('reset-pw2').value;
+  const errEl = document.getElementById('reset-error');
+  errEl.textContent = '';
+  if (pw.length < 6) { errEl.textContent = 'סיסמה חייבת להכיל לפחות 6 תווים'; return; }
+  if (pw !== pw2) { errEl.textContent = 'הסיסמאות אינן תואמות'; return; }
+  const { error } = await sb.auth.updateUser({ password: pw });
+  if (error) { errEl.textContent = 'שגיאה: ' + error.message; return; }
+  showToast('סיסמה עודכנה בהצלחה ✓');
+  showLogin();
 }
 
 function showApp() {
