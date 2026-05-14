@@ -1463,7 +1463,11 @@ async function sendPasswordReset() {
 }
 async function doLogout() {
   if(typeof Sentry !== 'undefined' && typeof Sentry.setUser === 'function') Sentry.setUser(null);
+  sessionStorage.removeItem('ma_session');
+  currentUser = null;
+  currentTenantId = null;
   await sb.auth.signOut();
+  showLogin();
 }
 
 // ═══ SUPABASE DATA LAYER ═══
