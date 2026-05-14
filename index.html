@@ -385,7 +385,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
         <h2 style="font-size:clamp(1.75rem,4vw,3rem);font-weight:900;letter-spacing:-1px;margin:0 0 0.75rem;line-height:1.1;">עסקים קטנים מבזבזים שעות<br><span style="color:#60A5FA;font-style:italic;">על שיבוץ ידני</span></h2>
         <p style="font-size:0.95rem;color:#94A3B8;margin:0;">כל מתאמת שמנהלת טכנאים מכירה את הסיטואציה הזו.</p>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;">
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0.875rem;">
         <div style="background:#1E293B;border:1px solid #334155;border-radius:16px;padding:1.625rem;">
           <div style="font-size:1.875rem;margin-bottom:1rem;">🔄</div>
           <div style="font-weight:800;font-size:0.9375rem;margin-bottom:8px;">ביטולים שיוצרים בלגן</div>
@@ -730,6 +730,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div><div class="ph-title" data-label="tasks">קריאות</div></div>
     <div class="flex-gap">
       <button class="btn btn-outline btn-sm" onclick="openAddTaskModal()">+ הוסף קריאה</button>
+      <button class="btn btn-outline btn-sm" onclick="openCsvImportModal()" title="ייבוא קריאות מקובץ CSV / Excel">📥 ייבא CSV</button>
       <span class="badge badge-blue" id="tf-all" onclick="filterTasks('all')" style="cursor:pointer;padding:5px 12px;">הכל</span>
       <span class="badge badge-gray" id="tf-pending" onclick="filterTasks('pending')" style="cursor:pointer;padding:5px 12px;">ממתינות</span>
       <span class="badge badge-gray" id="tf-assigned" onclick="filterTasks('assigned')" style="cursor:pointer;padding:5px 12px;">משובצות</span>
@@ -1238,6 +1239,37 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   </div>
 </div>
 
+<!-- MODAL: CSV IMPORT -->
+<div class="mo hidden" id="mo-csv-import">
+  <div class="mo-box" style="max-width:560px;width:95vw;">
+    <div class="mo-title">📥 ייבוא קריאות מ-CSV</div>
+    <div style="background:var(--blue-l);border-radius:10px;padding:12px 14px;margin-bottom:1rem;font-size:0.82rem;color:var(--blue-d);line-height:1.6;">
+      <strong>שלב 1:</strong> הורד את תבנית הקובץ ←<br>
+      <strong>שלב 2:</strong> מלא ב-Excel (שמור כ-CSV)<br>
+      <strong>שלב 3:</strong> העלה וייבא
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:1rem;">
+      <button class="btn btn-outline btn-sm" onclick="downloadCsvTemplate()" style="flex:1;">⬇️ הורד תבנית CSV</button>
+    </div>
+    <div class="fg" style="margin-bottom:0.75rem;">
+      <label class="fl">בחר קובץ CSV <span class="req">*</span></label>
+      <input type="file" accept=".csv,.txt" class="fc" id="csv-file-input" onchange="onCsvFileSelect(event)" style="padding:8px;">
+    </div>
+    <div id="csv-preview-wrap" class="hidden" style="margin-bottom:1rem;">
+      <div style="font-size:0.8rem;font-weight:700;color:var(--ink-2);margin-bottom:6px;">תצוגה מקדימה <span id="csv-row-count" style="color:var(--ink-4);font-weight:400;"></span></div>
+      <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--line);">
+        <table style="width:100%;border-collapse:collapse;font-size:0.78rem;" id="csv-preview-table"></table>
+      </div>
+      <div id="csv-validation-msg" style="margin-top:8px;font-size:0.8rem;"></div>
+    </div>
+    <div id="csv-import-result" class="hidden" style="margin-bottom:0.75rem;padding:12px;border-radius:8px;font-size:0.85rem;font-weight:700;text-align:center;"></div>
+    <div class="mo-actions" style="margin-top:0;">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-csv-import')">סגור</button>
+      <button class="btn btn-blue" style="flex:2;" id="csv-import-btn" onclick="importCsvRows()" disabled>ייבא קריאות</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: NEW TENANT (admin only) -->
 <div class="mo hidden" id="mo-tenant">
   <div class="mo-box">
@@ -1602,7 +1634,7 @@ async function doResetPassword() {
   if (pw.length < 6) { errEl.textContent = 'סיסמה חייבת להכיל לפחות 6 תווים'; return; }
   if (pw !== pw2) { errEl.textContent = 'הסיסמאות אינן תואמות'; return; }
   const { error } = await sb.auth.updateUser({ password: pw });
-  if (error) { errEl.textContent = 'שגיאה: ' + error.message; return; }
+  if (error) { errEl.textContent = 'שגיאה בעדכון הסיסמה — נסה שוב'; return; }
   showToast('סיסמה עודכנה בהצלחה ✓');
   showLogin();
 }
@@ -1660,7 +1692,7 @@ async function doLogin() {
     btn.textContent = 'כניסה';
     btn.disabled = false;
     errEl.textContent = e.message === 'timeout'
-      ? 'השרת לא מגיב — ייתכן שהפרויקט ב-Supabase מושהה, נסה שוב'
+      ? 'השרת לא מגיב — נסה שוב בעוד מספר שניות'
       : 'שגיאת רשת — בדוק חיבור לאינטרנט';
     return;
   }
@@ -1684,7 +1716,7 @@ async function sendPasswordReset() {
   const { error } = await sb.auth.resetPasswordForEmail(email, {
     redirectTo: 'https://eranzivo.github.io/Maslul/'
   });
-  if (error) { errEl.textContent = 'שגיאה: ' + error.message; return; }
+  if (error) { errEl.textContent = 'שגיאה בשליחת קישור — בדוק את האימייל ונסה שוב'; return; }
   errEl.style.color = 'var(--green)';
   errEl.textContent = 'קישור לאיפוס נשלח לאימייל ✓';
 }
@@ -3757,6 +3789,140 @@ function confirmAddTask(){
   goPage('tasks');
   filterTasks('pending');
   showToast('הקריאה נרשמה ✓');
+}
+
+// ═══ CSV IMPORT ═══
+let csvParsedRows=[];
+const CSV_COLS=[
+  {key:'assign_id',   label:'מספר עצמי',       req:false},
+  {key:'client_name', label:'שם לקוח',          req:true},
+  {key:'client_phone',label:'טלפון',             req:false},
+  {key:'city',        label:'עיר',               req:true},
+  {key:'street',      label:'כתובת',             req:false},
+  {key:'category_name',label:'סוג שירות',        req:false},
+  {key:'notes',       label:'הערות',             req:false},
+  {key:'scheduled_date',label:'תאריך (YYYY-MM-DD)',req:false},
+  {key:'scheduled_time',label:'שעה (HH:MM)',      req:false},
+];
+
+function openCsvImportModal(){
+  csvParsedRows=[];
+  const fi=document.getElementById('csv-file-input');if(fi)fi.value='';
+  document.getElementById('csv-preview-wrap').classList.add('hidden');
+  document.getElementById('csv-import-result').classList.add('hidden');
+  document.getElementById('csv-import-btn').disabled=true;
+  document.getElementById('mo-csv-import').classList.remove('hidden');
+}
+
+function downloadCsvTemplate(){
+  const BOM='﻿';
+  const header=CSV_COLS.map(c=>c.key).join(',');
+  const labelRow=CSV_COLS.map(c=>c.req?c.label+' *':c.label).join(',');
+  const sample=',ישראל כהן,050-1234567,תל אביב,הרצל 5,תחזוקה שנתית,בקשה דחופה,2026-06-01,09:00';
+  const content=BOM+header+'\n'+labelRow+'\n'+sample+'\n';
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(content);
+  a.download='תבנית_ייבוא_קריאות.csv';
+  a.click();
+}
+
+function parseCsv(text){
+  const lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim());
+  if(lines.length<2)return[];
+  const rawHeader=lines[0].split(',').map(s=>s.trim().replace(/^﻿/,''));
+  const rows=[];
+  for(let i=1;i<lines.length;i++){
+    const vals=lines[i].split(',');
+    const obj={};
+    rawHeader.forEach((h,j)=>{obj[h]=(vals[j]||'').trim();});
+    rows.push(obj);
+  }
+  return rows;
+}
+
+function onCsvFileSelect(ev){
+  const file=ev.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const text=e.target.result;
+    const rows=parseCsv(text);
+    csvParsedRows=rows.filter(r=>{
+      const firstCol=Object.values(r)[0]||'';
+      return firstCol&&!CSV_COLS.map(c=>c.label).includes(firstCol.replace(' *',''));
+    });
+    renderCsvPreview();
+  };
+  reader.readAsText(file,'UTF-8');
+}
+
+function renderCsvPreview(){
+  const wrap=document.getElementById('csv-preview-wrap');
+  const tbl=document.getElementById('csv-preview-table');
+  const msg=document.getElementById('csv-validation-msg');
+  const btn=document.getElementById('csv-import-btn');
+  const countEl=document.getElementById('csv-row-count');
+  wrap.classList.remove('hidden');
+  if(!csvParsedRows.length){
+    tbl.innerHTML='<tr><td style="padding:12px;color:var(--red);">לא נמצאו שורות תקינות בקובץ</td></tr>';
+    msg.textContent='';btn.disabled=true;return;
+  }
+  const show=csvParsedRows.slice(0,5);
+  const keys=CSV_COLS.map(c=>c.key);
+  const errors=[];
+  csvParsedRows.forEach((r,i)=>{
+    if(!r.client_name)errors.push(`שורה ${i+2}: חסר שם לקוח`);
+    if(!r.city)errors.push(`שורה ${i+2}: חסרה עיר`);
+  });
+  const thStyle='background:var(--line-2);padding:6px 10px;font-size:0.75rem;font-weight:700;white-space:nowrap;text-align:right;border-bottom:1px solid var(--line);';
+  const tdStyle='padding:6px 10px;font-size:0.75rem;border-bottom:1px solid var(--line);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;';
+  tbl.innerHTML=`<thead><tr>${keys.map(k=>`<th style="${thStyle}">${CSV_COLS.find(c=>c.key===k)?.label||k}</th>`).join('')}</tr></thead>
+    <tbody>${show.map(r=>`<tr>${keys.map(k=>`<td style="${tdStyle}">${h(r[k]||'')}</td>`).join('')}</tr>`).join('')}</tbody>`;
+  countEl.textContent=`(${csvParsedRows.length} שורות${csvParsedRows.length>5?' — מציג 5 ראשונות':''})`;
+  if(errors.length){
+    msg.innerHTML=`<span style="color:var(--red);">⚠️ ${errors.slice(0,3).join(' | ')}${errors.length>3?` ועוד ${errors.length-3}`:''}</span>`;
+    btn.disabled=true;
+  }else{
+    msg.innerHTML=`<span style="color:var(--green);">✓ ${csvParsedRows.length} קריאות מוכנות לייבוא</span>`;
+    btn.disabled=false;
+  }
+}
+
+async function importCsvRows(){
+  const btn=document.getElementById('csv-import-btn');
+  const resultEl=document.getElementById('csv-import-result');
+  btn.disabled=true;btn.textContent='מייבא...';
+  let ok=0,fail=0;
+  for(const r of csvParsedRows){
+    try{
+      const catObj=categories.find(c=>c.name===r.category_name)||null;
+      const newTask={
+        id:nextTaskId++,
+        client:r.client_name,phone:r.client_phone||'',
+        city:r.city,street:r.street||'',
+        cat:catObj?.name||r.category_name||'',catId:catObj?.id||'',
+        techId:null,status:'pending',time:r.scheduled_time||'',
+        date:r.scheduled_date||'',notes:r.notes||'',
+        assignId:r.assign_id||'',preferredWindows:[]
+      };
+      tasks.push(newTask);
+      await saveTaskToSupabase(newTask);
+      ok++;
+    }catch(e){fail++;}
+  }
+  save();renderTasks();
+  btn.textContent='ייבא קריאות';
+  resultEl.classList.remove('hidden');
+  if(fail===0){
+    resultEl.style.cssText='margin-bottom:0.75rem;padding:12px;border-radius:8px;font-size:0.85rem;font-weight:700;text-align:center;background:var(--green-l);color:var(--green);border:1px solid #BBF7D0;';
+    resultEl.textContent=`✓ ${ok} קריאות נוספו בהצלחה`;
+  }else{
+    resultEl.style.cssText='margin-bottom:0.75rem;padding:12px;border-radius:8px;font-size:0.85rem;font-weight:700;text-align:center;background:#FEF3C7;color:#92400E;border:1px solid #FDE68A;';
+    resultEl.textContent=`${ok} נוספו בהצלחה · ${fail} שגיאות`;
+  }
+  csvParsedRows=[];
+  const fi=document.getElementById('csv-file-input');if(fi)fi.value='';
+  document.getElementById('csv-preview-wrap').classList.add('hidden');
+  if(fail===0)setTimeout(()=>closeMo('mo-csv-import'),2000);
 }
 
 // ═══ TASKS ═══
