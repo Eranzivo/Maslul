@@ -664,8 +664,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div class="fg-2">
       <div class="fg">
         <label class="fl"><span class="req">*</span> עיר / יישוב</label>
-        <select class="fc" id="s-city"><option value="">בחר עיר...</option></select>
-        <div style="font-size:0.75rem;color:var(--ink-4);margin-top:3px;">עיר לא מופיעה? <a onclick="goPage('zones')" style="color:var(--blue);cursor:pointer;font-weight:700;">הוסף בהגדרות האזורים ←</a></div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <select class="fc" id="s-city" style="flex:1;"><option value="">בחר עיר...</option></select>
+          <button type="button" onclick="openAddCityModal()" title="הוסף עיר חדשה לאזור" style="background:var(--blue-l);color:var(--blue-d);border:1px solid var(--blue-m);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:1rem;flex-shrink:0;font-weight:700;">⊕</button>
+        </div>
       </div>
       <div class="fg">
         <label class="fl"><span class="req">*</span> רחוב ומספר</label>
@@ -1271,6 +1273,29 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div class="mo-actions" style="margin-top:0;">
       <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-csv-import')">סגור</button>
       <button class="btn btn-blue" style="flex:2;" id="csv-import-btn" onclick="importCsvRows()" disabled>ייבא קריאות</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD CITY TO ZONE (from dispatch page) -->
+<div class="mo hidden" id="mo-add-city">
+  <div class="mo-box" style="max-width:400px;">
+    <div class="mo-title">⊕ הוסף עיר חדשה</div>
+    <div class="fg">
+      <label class="fl">שם העיר / יישוב <span class="req">*</span></label>
+      <input class="fc" id="ac-city-name" placeholder="לדוגמה: מצפה רמון">
+    </div>
+    <div class="fg">
+      <label class="fl">אזור <span class="req">*</span></label>
+      <select class="fc" id="ac-zone-sel"><option value="">בחר אזור...</option></select>
+    </div>
+    <div style="background:#EFF6FF;border-radius:8px;padding:10px 12px;font-size:0.8rem;color:var(--blue-d);margin-bottom:1rem;line-height:1.55;">
+      💡 הוסף את העיר לפי מרחקה מבסיס הטכנאי — <strong>הרחוקה ביותר תופיע ראשונה</strong> ברשימת הערים באזור.
+    </div>
+    <div id="ac-error" style="color:var(--red);font-size:0.8rem;margin-bottom:8px;"></div>
+    <div class="mo-actions" style="margin-top:0;">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-add-city')">ביטול</button>
+      <button class="btn btn-blue" style="flex:2;" onclick="confirmAddCity()">הוסף לאזור</button>
     </div>
   </div>
 </div>
@@ -3325,56 +3350,67 @@ function getCityIndexInZone(city,zoneId){
   const z=zones.find(x=>x.id===zoneId);if(!z)return 999;
   return z.cities.indexOf(city);
 }
-// Calculate optimal time for new task using far-to-near logic
+// Calculate optimal time for new task using far-to-near logic.
+// Zone cities array: index 0 = FARTHEST from tech base, last index = CLOSEST.
+// New task is inserted between all "farther" tasks (lower index) and all "closer" tasks (higher index).
 function calcOptimalTime(tech,dateStr,city){
   const zid=getTechZoneId(tech,dateStr);
-  const dayTasks=getTechDayTasks(tech,dateStr);
+  const dayTasks=getTechDayTasks(tech,dateStr); // already sorted by time
   const sched=getTechDaySchedule(tech,dateStr);
   const[sh]=sched.start.split(':').map(Number);
-  const durMins=settings.regularTime||30;
-  const bufMins=10;
-  if(!dayTasks.length){
-    // First task of day — if city is "close" (low index = north), start later to leave room for far cities
-    const cityIdx=getCityIndexInZone(city,zid);
-    const totalCities=zones.find(x=>x.id===zid)?.cities.length||1;
-    if(cityIdx>totalCities*0.5){
-      // City is in the latter half of zone = nearby = schedule for afternoon
-      return minsToTime((sh+3)*60); // start 3 hours into day
-    }
-    return minsToTime(sh*60);
-  }
-  // Has existing tasks — schedule after last task with buffer
-  const lastTask=dayTasks[dayTasks.length-1];
-  const lastEnd=timeToMins(lastTask.time)+durMins+bufMins;
-  // Far-to-near: if new city has LOWER index (farther) than existing tasks, it should go BEFORE them
-  const newCityIdx=getCityIndexInZone(city,zid);
-  const existingIndices=dayTasks.map(t=>getCityIndexInZone(t.city,zid));
-  const minExisting=Math.min(...existingIndices);
-  if(newCityIdx<minExisting&&dayTasks.length<3){
-    // New city is farther — ideally slot it before existing ones
-    const firstTaskMins=timeToMins(dayTasks[0].time);
-    if(firstTaskMins-(durMins+bufMins)>=sh*60){
-      return minsToTime(firstTaskMins-(durMins+bufMins));
-    }
-  }
-  // Otherwise append after last
   const[eh]=sched.end.split(':').map(Number);
-  if(lastEnd+durMins<=eh*60)return minsToTime(lastEnd);
-  return null; // no room
+  const dur=settings.regularTime||30;
+  const buf=10;
+  const newIdx=getCityIndexInZone(city,zid);
+  const totalCities=zones.find(x=>x.id===zid)?.cities.length||1;
+
+  if(!dayTasks.length){
+    // Late-start principle: nearby cities (high index) start later so farther ones can precede them.
+    const relativeNear=newIdx/Math.max(totalCities-1,1); // 0=far 1=near
+    const lateOffset=Math.round(relativeNear*(dur+buf)*Math.ceil(totalCities*0.4));
+    return minsToTime(sh*60+lateOffset);
+  }
+
+  // Separate existing tasks into those that must come BEFORE (farther/same) and AFTER (closer).
+  // Unknown city (idx 999) is treated as neutral — don't use for blocking.
+  const tasksBefore=dayTasks.filter(t=>{const i=getCityIndexInZone(t.city,zid);return i!==999&&i<=newIdx;});
+  const tasksAfter =dayTasks.filter(t=>{const i=getCityIndexInZone(t.city,zid);return i!==999&&i> newIdx;});
+
+  // Earliest we can start = after the last "before" task completes.
+  let earliest=sh*60;
+  if(tasksBefore.length){
+    const lastBefore=tasksBefore.reduce((a,b)=>timeToMins(a.time)>timeToMins(b.time)?a:b);
+    earliest=timeToMins(lastBefore.time)+dur+buf;
+  }
+  // Latest we can start = must finish before the first "after" task begins.
+  let latest=eh*60-dur;
+  if(tasksAfter.length){
+    const firstAfter=tasksAfter.reduce((a,b)=>timeToMins(a.time)<timeToMins(b.time)?a:b);
+    latest=timeToMins(firstAfter.time)-dur-buf;
+  }
+  if(earliest<=latest)return minsToTime(earliest);
+  return null; // no geographically valid slot available
 }
-// Validate no illogical back-and-forth (e.g. far-near-far)
+
+// Route is logical if calcOptimalTime finds a valid geographic insertion point
+// AND inserting at that time doesn't create a far-near-far backtrack.
 function isRouteLogical(tech,dateStr,newCity){
+  const optTime=calcOptimalTime(tech,dateStr,newCity);
+  if(!optTime)return false;
   const zid=getTechZoneId(tech,dateStr);
-  const dayTasks=getTechDayTasks(tech,dateStr);
-  if(dayTasks.length<2)return true;
-  const cityIndices=dayTasks.map(t=>getCityIndexInZone(t.city,zid));
   const newIdx=getCityIndexInZone(newCity,zid);
-  // Check for zigzag: if we'd go far-near-far
-  const last=cityIndices[cityIndices.length-1];
-  const secondLast=cityIndices[cityIndices.length-2];
-  // If last two were going near (increasing index) and new is far (low index) — illogical
-  if(secondLast<last&&newIdx<last-2)return false;
-  return true;
+  if(newIdx===999)return true; // city not in zone index — can't validate, allow
+  const newTimeMins=timeToMins(optTime);
+  return getTechDayTasks(tech,dateStr).every(t=>{
+    const tIdx=getCityIndexInZone(t.city,zid);
+    if(tIdx===999)return true;
+    const tTime=timeToMins(t.time);
+    // A task scheduled BEFORE us must not be closer (higher idx) — that would be near-then-far
+    if(tTime<newTimeMins&&tIdx>newIdx+1)return false;
+    // A task scheduled AFTER us must not be farther (lower idx) — that would be near-then-far-again
+    if(tTime>newTimeMins&&tIdx<newIdx-1)return false;
+    return true;
+  });
 }
 function buildCandidates(city,catId){
   const dates=getNextDates();const candidates=[];
@@ -3533,7 +3569,13 @@ function showCandidate(idx){
   const dayTasks=getTechDayTasks(tech,c.date.str);
   // Route preview
   const city=document.getElementById('s-city').value;
-  const routeRows=dayTasks.length?[...dayTasks.map(t=>`<div class="route-row"><span class="route-time">${t.time}</span><span class="route-arrow">→</span><span class="route-city">${h(t.city)}</span></div>`),`<div class="route-row"><span class="route-time">${c.optTime}</span><span class="route-arrow">→</span><span class="route-city route-new">✦ ${h(city)} (חדש)</span></div>`].join(''):'';
+  // Merge existing tasks + new task, sort by time → shows correct insertion position
+  const allForRoute=[...dayTasks.map(t=>({time:t.time,city:t.city,isNew:false})),{time:c.optTime,city,isNew:true}]
+    .sort((a,b)=>timeToMins(a.time)-timeToMins(b.time));
+  const routeRows=dayTasks.length?allForRoute.map(r=>r.isNew
+    ?`<div class="route-row"><span class="route-time">${r.time}</span><span class="route-arrow">→</span><span class="route-city route-new">✦ ${h(r.city)} (חדש)</span></div>`
+    :`<div class="route-row"><span class="route-time">${r.time}</span><span class="route-arrow">→</span><span class="route-city">${h(r.city)}</span></div>`
+  ).join(''):'';
   const routeHtml=routeRows?`<div class="route-preview"><div class="route-title">מסלול יום מתוכנן (רחוק לקרוב)</div>${routeRows}</div>`:'';
   // Time slots
   const _sched=getTechDaySchedule(tech,c.date.str);
@@ -3798,6 +3840,33 @@ function confirmAddTask(){
   showToast('הקריאה נרשמה ✓');
 }
 
+// ═══ ADD CITY FROM DISPATCH ═══
+function openAddCityModal(){
+  const cityInput=document.getElementById('s-city');
+  document.getElementById('ac-city-name').value='';
+  document.getElementById('ac-error').textContent='';
+  const zoneSel=document.getElementById('ac-zone-sel');
+  zoneSel.innerHTML='<option value="">בחר אזור...</option>'+zones.map(z=>`<option value="${z.id}">${h(z.name)}</option>`).join('');
+  document.getElementById('mo-add-city').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('ac-city-name').focus(),100);
+}
+function confirmAddCity(){
+  const cityName=document.getElementById('ac-city-name').value.trim();
+  const zoneId=document.getElementById('ac-zone-sel').value;
+  const errEl=document.getElementById('ac-error');
+  if(!cityName){errEl.textContent='נא להזין שם עיר';return;}
+  if(!zoneId){errEl.textContent='נא לבחור אזור';return;}
+  const z=zones.find(x=>x.id===zoneId);if(!z)return;
+  if(z.cities.includes(cityName)){errEl.textContent='העיר כבר קיימת באזור זה';return;}
+  z.cities.push(cityName);
+  saveZoneToSupabase(z);save();populateCitySelect();
+  closeMo('mo-add-city');
+  // Auto-select the newly added city in dispatch
+  document.getElementById('s-city').value=cityName;
+  saveDispatchDraft();
+  showToast(`"${cityName}" נוספה לאזור "${z.name}" ✓`);
+}
+
 // ═══ CSV IMPORT ═══
 let csvParsedRows=[];
 const CSV_COLS=[
@@ -3894,6 +3963,14 @@ function renderCsvPreview(){
   }
 }
 
+function parseImportDate(s){
+  if(!s)return'';
+  s=String(s).trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s; // already YYYY-MM-DD
+  const m=s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+  if(m)return`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; // DD/MM/YYYY → YYYY-MM-DD
+  return'';
+}
 async function importCsvRows(){
   const btn=document.getElementById('csv-import-btn');
   const resultEl=document.getElementById('csv-import-result');
@@ -3908,7 +3985,7 @@ async function importCsvRows(){
         city:r.city,street:r.street||'',
         cat:catObj?.name||r.category_name||'',catId:catObj?.id||'',
         techId:null,status:'pending',time:r.scheduled_time||'',
-        date:r.scheduled_date||'',notes:r.notes||'',
+        date:parseImportDate(r.scheduled_date),notes:r.notes||'',
         assignId:r.assign_id||'',preferredWindows:[]
       };
       tasks.push(newTask);
@@ -4209,7 +4286,7 @@ function renderZones(){
         <button class="btn btn-ghost btn-sm" onclick="deleteZone('${z.id}')" style="color:var(--red);">הסר</button>
       </div>
       <div class="zone-cities">${z.cities.map((c,ci)=>`<span class="city-tag">${h(c)}<button onclick="removeCity('${z.id}',${ci})">×</button></span>`).join('')}</div>
-      <div style="font-size:0.75rem;color:var(--ink-3);margin-bottom:6px;">הדבק ערים (שורה לכל עיר או פסיקים)</div>
+      <div style="font-size:0.72rem;color:var(--ink-3);margin-bottom:6px;">הדבק ערים — <strong>סדר חשוב:</strong> הרחוקה מבסיס הטכנאי ראשונה, הקרובה ביותר אחרונה (קובע את מסלול השיבוץ)</div>
       <div style="display:flex;gap:8px;">
         <textarea class="fc" id="new-city-${z.id}" placeholder="תל אביב&#10;חולון&#10;בת ים" style="flex:1;height:60px;resize:vertical;font-size:0.875rem;"></textarea>
         <button class="btn btn-outline btn-sm" onclick="addCities('${z.id}')" style="align-self:flex-end;">+ הוסף</button>
