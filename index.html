@@ -136,6 +136,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .time-slot.busy{background:var(--red-l);border-color:#FECACA;cursor:default;color:var(--red);}
 .time-slot.preferred{background:#EFF6FF;border-color:#BFDBFE;border-style:dashed;}
 .time-slot.preferred:hover{background:#DBEAFE;border-color:var(--blue);}
+.time-slot.suggested{background:#FFFBEB;border-color:#FCD34D;border-width:2px;}
+.time-slot.suggested:hover{background:#FEF3C7;border-color:#F59E0B;}
 .time-slot-range{font-weight:700;}
 /* CUSTOMER FORM */
 .customer-form{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--line);}
@@ -1914,8 +1916,9 @@ async function saveTechToSupabase(tech) {
     weekly_schedule: tech.weekly_schedule || {},
   };
   if (tech._dbId) {
-    const { error } = await sb.from('technicians').update(row).eq('id', tech._dbId);
+    const { data: updatedRow, error } = await sb.from('technicians').update(row).eq('id', tech._dbId).select().single();
     if (error) { console.error('update tech error:', error); showToast('שגיאה בשמירה', 'error'); }
+    else if (!updatedRow) { console.warn('tech update: 0 rows affected — RLS may be blocking'); showToast('אזהרה: השינוי לא נשמר — בדוק הרשאות', 'error'); }
   } else {
     const { data, error } = await sb.from('technicians').insert(row).select().single();
     if (error) { console.error('insert tech error:', error); showToast('שגיאה בשמירה', 'error'); }
@@ -3582,16 +3585,21 @@ function showCandidate(idx){
   const[sh]=_sched.start.split(':').map(Number);
   const[eh]=_sched.end.split(':').map(Number);
   const slotH=settings.window;
+  const dur=settings.regularTime||30;const buf=10;
+  const slotCapacity=Math.max(1,Math.floor(slotH*60/(dur+buf)));
+  const optH=c.optTime?parseInt(c.optTime.split(':')[0]):-1;
   const slots=[];
   for(let h=sh;h<=eh-slotH;h++){
     const sStart=pad(h)+':00',sEnd=pad(h+slotH)+':00';
-    const busy=dayTasks.some(t=>{const th=parseInt(t.time.split(':')[0]);return th>=h&&th<h+slotH;});
+    const tasksInSlot=dayTasks.filter(t=>{const th=parseInt(t.time.split(':')[0]);return th>=h&&th<h+slotH;});
+    const slotCount=tasksInSlot.length;const full=slotCount>=slotCapacity;
+    const isSuggested=optH>=h&&optH<h+slotH;
     const slotFromMins=h*60,slotToMins=(h+slotH)*60;
-    const preferred=!busy&&prefWindows.length>0&&prefWindows.some(w=>{
+    const preferred=!full&&prefWindows.length>0&&prefWindows.some(w=>{
       const[fh,fm]=w.from.split(':').map(Number);const[th,tm]=w.to.split(':').map(Number);
       return slotFromMins<th*60+tm&&slotToMins>fh*60+fm;
     });
-    slots.push({start:sStart,end:sEnd,busy,preferred});
+    slots.push({start:sStart,end:sEnd,full,slotCount,slotCapacity,isSuggested,preferred});
   }
   const assignId=genId();
   window._currentSlots=slots;window._currentIdx=idx;
@@ -3613,7 +3621,7 @@ function showCandidate(idx){
       </div>
       ${routeHtml}
       <div style="font-size:0.8rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 6px;">בחר חלון זמן</div>
-      <div class="time-slots">${slots.map((s,si)=>`<div class="time-slot ${s.busy?'busy':s.preferred?'preferred':''}" onclick="${s.busy?'':'selectTimeSlot('+si+')'}" id="ts-${si}"><span class="time-slot-range">${s.start} — ${s.end}</span><span style="font-size:0.7rem;">${s.busy?'תפוס':s.preferred?'⭐ מועדף':'פנוי'}</span></div>`).join('')}</div>
+      <div class="time-slots">${slots.map((s,si)=>`<div class="time-slot ${s.full?'busy':s.isSuggested?'suggested':s.preferred?'preferred':''}" onclick="${s.full?'':'selectTimeSlot('+si+')'}" id="ts-${si}"><span class="time-slot-range">${s.start} — ${s.end}</span><span style="font-size:0.7rem;">${s.full?'מלא ('+s.slotCount+'/'+s.slotCapacity+')':s.slotCount>0?''+s.slotCount+'/'+s.slotCapacity+(s.isSuggested?' ⭐':''):s.preferred?'⭐ מועדף':'פנוי'}</span></div>`).join('')}</div>
       <div class="customer-form" id="cform-${idx}" style="display:none;">
         <div style="font-size:0.8rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;margin-bottom:10px;">פרטי לקוח</div>
         <div class="fg-2">
@@ -3630,7 +3638,7 @@ function showCandidate(idx){
   selectedTimeSlot=null;
 }
 function selectTimeSlot(si){
-  if(window._currentSlots&&window._currentSlots[si]?.busy)return;
+  if(window._currentSlots&&window._currentSlots[si]?.full)return;
   selectedTimeSlot=si;
   document.querySelectorAll('.time-slot:not(.busy)').forEach((el,i)=>el.classList.toggle('selected',i===si));
   const formEl=document.getElementById('cform-'+window._currentIdx);
@@ -3638,7 +3646,7 @@ function selectTimeSlot(si){
 }
 function confirmAssign(idx,assignId){
   if(selectedTimeSlot===null){alert('נא לבחור חלון זמן');return;}
-  const slots=window._currentSlots;if(!slots||slots[selectedTimeSlot]?.busy)return;
+  const slots=window._currentSlots;if(!slots||slots[selectedTimeSlot]?.full)return;
   const c=allCandidates[idx];if(!c)return;
   const client=document.getElementById('c-name').value.trim();
   if(!client){document.getElementById('c-name').classList.add('error');document.getElementById('c-name').focus();alert('שם לקוח הוא שדה חובה');return;}
@@ -3649,7 +3657,19 @@ function confirmAssign(idx,assignId){
   const notes=document.getElementById('c-notes').value||'';
   const slot=slots[selectedTimeSlot];
   const catId=getCatId();const catName=getCatName();
-  const newTask={id:nextTaskId++,client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:slot.start,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows]};
+  // Compute actual task time: use engine's optTime if it falls in selected slot, else stack after existing slot tasks
+  const slotStartH=parseInt(slot.start.split(':')[0]);
+  const optH2=c.optTime?parseInt(c.optTime.split(':')[0]):-1;
+  let taskTime;
+  if(c.optTime&&optH2>=slotStartH&&optH2<slotStartH+(settings.window||3)){
+    taskTime=c.optTime;
+  }else{
+    const dayTasks2=getTechDayTasks(c.tech,c.date.str);
+    const inSlot=dayTasks2.filter(t=>{const th=parseInt(t.time.split(':')[0]);return th>=slotStartH&&th<slotStartH+(settings.window||3);});
+    const jobMins=(settings.regularTime||30)+10;
+    taskTime=minsToTime(timeToMins(slot.start)+inSlot.length*jobMins);
+  }
+  const newTask={id:nextTaskId++,client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows]};
   tasks.push(newTask);
   save();
   saveTaskToSupabase(newTask);
