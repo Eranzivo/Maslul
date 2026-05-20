@@ -1,5 +1,20 @@
 # Maslul — Claude Code Context
 
+## Working Rule
+**Before every task — read all files in `context/` first:**
+- `context/business.md` — what the product is, who it's for, the goal
+- `context/architecture.md` — tech stack, file map, hard rules, gotchas
+- `context/scheduling-rules.md` — the core scheduling logic (do not break)
+- `context/client-israel.md` — current pilot client details and constraints
+
+Never start coding without reading context first.
+
+**Outputs rule:** Every command or generated artifact (summaries, reports, plans, drafts) must be saved to `outputs/[task-name]_[YYYY-MM-DD].md`. Never save in a random location.
+
+**Connections:** See `connections/registry.json` for all external services. Secrets live only in `.env` (root) — never in `context/`, `connections/`, or `commands/`.
+
+---
+
 ## What This Is
 Hebrew-first SaaS scheduling engine for Israeli SMBs with field workers.
 Deployed as a single HTML file: https://eranzivo.github.io/Maslul/
@@ -9,7 +24,7 @@ Deployed as a single HTML file: https://eranzivo.github.io/Maslul/
 - **Backend:** Supabase (PostgreSQL + Auth + RLS) — direct from browser
 - **Hosting:** GitHub Pages (static)
 - **Font:** Heebo (Google Fonts)
-
+7
 ## Tech Stack (Roadmap)
 - **Frontend:** Modular ES modules, Vercel (when 2+ paying clients or 2nd developer)
 - **Backend:** FastAPI (Python) on Railway — scheduling engine first, CRUD later

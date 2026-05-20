@@ -1,0 +1,52 @@
+{
+  "connections": [
+    {
+      "name": "Supabase",
+      "file": "supabase.md",
+      "endpoint": "https://[project-ref].supabase.co",
+      "account": "infomaslul@gmail.com",
+      "status": "active",
+      "used_for": "Database, Auth, RLS — source of truth for all tenant data"
+    },
+    {
+      "name": "GitHub",
+      "file": "github.md",
+      "endpoint": "https://github.com/eranzivo/Maslul",
+      "account": "infomaslul@gmail.com",
+      "status": "active",
+      "used_for": "Frontend hosting via GitHub Pages, source code"
+    },
+    {
+      "name": "Railway",
+      "file": "railway.md",
+      "endpoint": "https://maslul-production-77fa.up.railway.app",
+      "account": "infomaslul@gmail.com",
+      "status": "active",
+      "used_for": "FastAPI optimizer backend — /optimize and /health endpoints"
+    },
+    {
+      "name": "Google Maps",
+      "file": "google-maps.md",
+      "endpoint": "https://maps.googleapis.com/maps/api/distancematrix",
+      "account": "infomaslul@gmail.com",
+      "status": "active",
+      "used_for": "Distance Matrix API — real drive times between Israeli cities"
+    },
+    {
+      "name": "Sentry",
+      "file": "sentry.md",
+      "endpoint": "https://ingest.de.sentry.io (EU region)",
+      "account": "infomaslul@gmail.com",
+      "status": "active",
+      "used_for": "Frontend error tracking — unhandled JS exceptions"
+    },
+    {
+      "name": "GreenAPI (WhatsApp)",
+      "file": "greenapi.md",
+      "endpoint": "https://api.green-api.com",
+      "account": "infomaslul@gmail.com",
+      "status": "planned",
+      "used_for": "WhatsApp automation — automated client messages (~$20/month)"
+    }
+  ]
+}
