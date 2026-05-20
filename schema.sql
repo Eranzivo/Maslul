@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS technicians (
   name           TEXT NOT NULL,
   phone          TEXT,
   base_city      TEXT,
+  return_city    TEXT NOT NULL DEFAULT '',
   base_address   TEXT,
   color          TEXT DEFAULT '#2563EB',
   min_daily      INTEGER NOT NULL DEFAULT 2,
@@ -255,6 +256,7 @@ ALTER TABLE users       ADD COLUMN IF NOT EXISTS created_at    TIMESTAMPTZ NOT N
 ALTER TABLE users       ADD COLUMN IF NOT EXISTS email         TEXT NOT NULL DEFAULT '';
 ALTER TABLE users       ADD COLUMN IF NOT EXISTS permissions   JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE technicians ADD COLUMN IF NOT EXISTS base_address   TEXT;
+ALTER TABLE technicians ADD COLUMN IF NOT EXISTS return_city    TEXT NOT NULL DEFAULT '';
 ALTER TABLE technicians ADD COLUMN IF NOT EXISTS user_id        UUID REFERENCES auth.users(id);
 ALTER TABLE technicians ADD COLUMN IF NOT EXISTS cat_limits     JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE technicians ADD COLUMN IF NOT EXISTS rotation       JSONB NOT NULL DEFAULT '{}'::jsonb;

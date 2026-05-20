@@ -1114,8 +1114,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div class="fg"><label class="fl"><span class="req">*</span> טלפון</label><input class="fc" id="ti-phone" placeholder="05X-XXXXXXX"><div class="field-error hidden" id="e-ti-phone">שדה חובה</div></div>
     </div>
     <div class="fg-2">
-      <div class="fg"><label class="fl"><span class="req">*</span> עיר מגורים</label><input class="fc" id="ti-base" placeholder="תל אביב"><div class="field-error hidden" id="e-ti-base">שדה חובה</div></div>
-      <div class="fg"><label class="fl">רחוב ומספר</label><input class="fc" id="ti-address" placeholder="הרצל 14"></div>
+      <div class="fg"><label class="fl"><span class="req">*</span> עיר יציאה (נקודת מוצא)</label><input class="fc" id="ti-base" placeholder="תל אביב"><div class="field-error hidden" id="e-ti-base">שדה חובה</div></div>
+      <div class="fg"><label class="fl">עיר חזרה (סוף יום)</label><input class="fc" id="ti-return" placeholder="כמו עיר יציאה אם זהה"></div>
     </div>
     <div class="fg-2">
       <div class="fg"><label class="fl"><span class="req">*</span> מינימום קריאות/יום</label><input class="fc" id="ti-min" type="number" value="2"></div>
@@ -1786,7 +1786,7 @@ async function loadFromSupabase() {
 
     // Map Supabase format → app format
     technicians = (techRes.data || []).map(t => ({
-      id: t.id, name: t.name, phone: t.phone, base: t.base_city,
+      id: t.id, name: t.name, phone: t.phone, base: t.base_city, return_city: t.return_city || '',
       address: t.base_address || '',
       color: t.color, min: t.min_daily, max: t.max_daily,
       start: t.start_time, end: t.end_time,
@@ -1907,7 +1907,7 @@ async function deleteTaskFromSupabase(taskId) {
 async function saveTechToSupabase(tech) {
   const row = {
     tenant_id: currentTenantId,
-    name: tech.name, phone: tech.phone, base_city: tech.base,
+    name: tech.name, phone: tech.phone, base_city: tech.base, return_city: tech.return_city || '',
     base_address: tech.address || '',
     color: tech.color, min_daily: tech.min, max_daily: tech.max,
     start_time: tech.start, end_time: tech.end,
@@ -1935,45 +1935,39 @@ async function deleteTechFromSupabase(dbId) {
 }
 
 async function saveZoneToSupabase(zone) {
-  const row = { tenant_id: currentTenantId, name: zone.name, cities: zone.cities };
-  if (zone._dbId) {
-    const { error } = await sb.from('zones').update(row).eq('id', zone._dbId);
-    if (error) { console.error('update zone error:', error); showToast('שגיאה בשמירה', 'error'); }
-  } else {
-    const { data, error } = await sb.from('zones').insert(row).select().single();
-    if (error) { console.error('insert zone error:', error); showToast('שגיאה בשמירה', 'error'); }
-    else { zone._dbId = data.id; zone.id = data.id; }
-  }
+  if (!currentTenantId) return;
+  const dbId = zone._dbId || zone.id;
+  const row = { id: dbId, tenant_id: currentTenantId, name: zone.name, cities: zone.cities };
+  const { data, error } = await sb.from('zones').upsert(row, { onConflict: 'id' }).select().single();
+  if (error) { console.error('zone save error:', error); showToast('שגיאה בשמירת האזור', 'error'); return; }
+  if (!data) { console.warn('zone upsert blocked'); showToast('אזהרה: האזור לא נשמר — בדוק הרשאות', 'error'); return; }
+  if (!zone._dbId) { zone._dbId = data.id; save(); }
 }
 async function deleteZoneFromSupabase(dbId) {
   await sb.from('zones').delete().eq('id', dbId);
 }
 
 async function saveCatToSupabase(cat) {
-  const row = { tenant_id: currentTenantId, name: cat.name, duration_minutes: cat.time };
-  if (cat._dbId) {
-    const { error } = await sb.from('categories').update(row).eq('id', cat._dbId);
-    if (error) { console.error('update cat error:', error); showToast('שגיאה בשמירה', 'error'); }
-  } else {
-    const { data, error } = await sb.from('categories').insert(row).select().single();
-    if (error) { console.error('insert cat error:', error); showToast('שגיאה בשמירה', 'error'); }
-    else { cat._dbId = data.id; cat.id = data.id; }
-  }
+  if (!currentTenantId) return;
+  const dbId = cat._dbId || cat.id;
+  const row = { id: dbId, tenant_id: currentTenantId, name: cat.name, duration_minutes: cat.time };
+  const { data, error } = await sb.from('categories').upsert(row, { onConflict: 'id' }).select().single();
+  if (error) { console.error('cat save error:', error); showToast('שגיאה בשמירת קטגוריה', 'error'); return; }
+  if (!data) { console.warn('cat upsert blocked'); showToast('אזהרה: הקטגוריה לא נשמרה', 'error'); return; }
+  if (!cat._dbId) { cat._dbId = data.id; save(); }
 }
 async function deleteCatFromSupabase(dbId) {
   await sb.from('categories').delete().eq('id', dbId);
 }
 
 async function savePkgToSupabase(pkg) {
-  const row = { tenant_id: currentTenantId, name: pkg.name, items: pkg.items };
-  if (pkg._dbId) {
-    const { error } = await sb.from('packages').update(row).eq('id', pkg._dbId);
-    if (error) { console.error('update pkg error:', error); showToast('שגיאה בשמירה', 'error'); }
-  } else {
-    const { data, error } = await sb.from('packages').insert(row).select().single();
-    if (error) { console.error('insert pkg error:', error); showToast('שגיאה בשמירה', 'error'); }
-    else { pkg._dbId = data.id; pkg.id = data.id; }
-  }
+  if (!currentTenantId) return;
+  const dbId = pkg._dbId || pkg.id;
+  const row = { id: dbId, tenant_id: currentTenantId, name: pkg.name, items: pkg.items };
+  const { data, error } = await sb.from('packages').upsert(row, { onConflict: 'id' }).select().single();
+  if (error) { console.error('pkg save error:', error); showToast('שגיאה בשמירת חבילה', 'error'); return; }
+  if (!data) { console.warn('pkg upsert blocked'); showToast('אזהרה: החבילה לא נשמרה', 'error'); return; }
+  if (!pkg._dbId) { pkg._dbId = data.id; save(); }
 }
 async function deletePkgFromSupabase(dbId) {
   await sb.from('packages').delete().eq('id', dbId);
@@ -2106,6 +2100,7 @@ function pad(n){return n<10?'0'+n:''+n;}
 function initials(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2);}
 const h=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function genId(){return 'MSL-'+String(nextTaskId).padStart(5,'0');}
+function genClientId(){if(window.crypto&&crypto.randomUUID)return crypto.randomUUID();return'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);});}
 function timeToMins(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m;}
 function minsToTime(m){return pad(Math.floor(m/60))+':'+pad(m%60);}
 
@@ -3347,6 +3342,23 @@ function isCityInTechZone(tech,city,dateStr){
   const z=zones.find(x=>x.id===zid);return z?z.cities.includes(city):false;
 }
 
+// SLOT RESERVATION: early time slots are held for farther cities.
+// As the date approaches, near-city slots are progressively released.
+// nearness: 0=farthest city in zone, 1=closest. Only applies to empty days.
+function getSlotReservationOffset(dateStr,cityIdx,totalCities){
+  if(!totalCities||totalCities<=1)return 0;
+  const nearness=cityIdx/Math.max(totalCities-1,1); // 0=far, 1=near
+  if(nearness<0.3)return 0; // far cities never penalised
+  const today=new Date(new Date().toDateString()); // strip time
+  const daysAhead=Math.ceil((new Date(dateStr)-today)/86400000);
+  let reserveMins=0;
+  if(daysAhead>=3)reserveMins=60;       // 72h+: strong reservation
+  else if(daysAhead>=2)reserveMins=30;  // 48-72h: partial
+  else if(daysAhead>=1)reserveMins=15;  // 24-48h: light
+  // <24h: 0 — aggressive fill, no reservation
+  return Math.round(reserveMins*nearness);
+}
+
 // ROUTE OPTIMIZATION: far-to-near (north-to-south or based on lat order)
 // We approximate geography by the order cities appear in the zone
 function getCityIndexInZone(city,zoneId){
@@ -3369,9 +3381,12 @@ function calcOptimalTime(tech,dateStr,city){
 
   if(!dayTasks.length){
     // Late-start principle: nearby cities (high index) start later so farther ones can precede them.
+    // Reservation offset adds extra delay for near cities when the date is still far out,
+    // keeping early slots open for farther jobs that haven't been booked yet.
     const relativeNear=newIdx/Math.max(totalCities-1,1); // 0=far 1=near
     const lateOffset=Math.round(relativeNear*(dur+buf)*Math.ceil(totalCities*0.4));
-    return minsToTime(sh*60+lateOffset);
+    const reserveOffset=getSlotReservationOffset(dateStr,newIdx,totalCities);
+    return minsToTime(sh*60+lateOffset+reserveOffset);
   }
 
   // Separate existing tasks into those that must come BEFORE (farther/same) and AFTER (closer).
@@ -3409,9 +3424,9 @@ function isRouteLogical(tech,dateStr,newCity){
     if(tIdx===999)return true;
     const tTime=timeToMins(t.time);
     // A task scheduled BEFORE us must not be closer (higher idx) — that would be near-then-far
-    if(tTime<newTimeMins&&tIdx>newIdx+1)return false;
-    // A task scheduled AFTER us must not be farther (lower idx) — that would be near-then-far-again
-    if(tTime>newTimeMins&&tIdx<newIdx-1)return false;
+    if(tTime<newTimeMins&&tIdx>newIdx)return false;
+    // A task scheduled AFTER us must not be farther (lower idx) — that would be far-near-far zigzag
+    if(tTime>newTimeMins&&tIdx<newIdx)return false;
     return true;
   });
 }
@@ -3429,7 +3444,7 @@ function buildCandidates(city,catId){
       if(!isRouteLogical(tech,date.str,city))continue;
       const optTime=calcOptimalTime(tech,date.str,city);
       if(!optTime)continue; // no room in day
-      const existingInZone=tasks.filter(t=>t.techId===tech.id&&t.date===date.str&&getCityZone(t.city)?.id===getTechZoneId(tech,date.str)&&['assigned','en_route','arrived'].includes(t.status)).length;
+      const existingInZone=tasks.filter(t=>t.techId===tech.id&&t.date===date.str&&getCityZone(t.city)?.id===getTechZoneId(tech,date.str)&&t.status!=='cancelled').length;
       const fillScore=existingInZone*100+load;
       candidates.push({tech,date,load,existingInZone,fillScore,dateScore:dates.indexOf(date),optTime});
     }
@@ -3467,6 +3482,7 @@ async function optimizeDay(techId, date) {
         id: String(tech.id),
         name: tech.name,
         base_city: tech.base || '',
+        return_city: tech.return_city || tech.base || '',
         start_time: getTechDaySchedule(tech,date).start || '07:00',
         end_time: getTechDaySchedule(tech,date).end || '18:00',
         tasks: dayTasks.map(t => {
@@ -4176,7 +4192,7 @@ function renderTechs(){
       <div class="tech-av" style="background:${tech.color};">${h(initials(tech.name))}</div>
       <div class="tech-name">${h(tech.name)}</div>
       <div class="tech-info">📞 ${h(tech.phone)}</div>
-      <div class="tech-info">🏠 ${h(tech.base)}${tech.address?', '+h(tech.address):''}</div>
+      <div class="tech-info">🚀 יציאה: ${h(tech.base)}${tech.return_city&&tech.return_city!==tech.base?' · חזרה: '+h(tech.return_city):''}</div>
       <div class="tech-info">📊 ${tech.min}–${tech.max} ${L('tasks')}/יום</div>
       ${skills?`<div style="margin-top:6px;">${skills}</div>`:''}
       <div class="load-bar" style="margin:8px 0 3px;"><div class="load-fill" style="width:${lp}%;background:${fc};"></div></div>
@@ -4240,7 +4256,7 @@ function toggleSkill(catId){
 function openAddTechModal(){
   editingTechId=null;buildTechModalUI();
   document.getElementById('mo-tech-title').textContent='הוסף '+L('worker');
-  ['ti-name','ti-phone','ti-base','ti-address','ti-blocked'].forEach(id=>document.getElementById(id).value='');
+  ['ti-name','ti-phone','ti-base','ti-return','ti-blocked'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ti-min').value='2';document.getElementById('ti-max').value='9';
   buildWeekSchedGrid({});
   document.getElementById('ti-save-btn').textContent='הוסף';
@@ -4252,7 +4268,7 @@ function editTech(id){
   editingTechId=id;buildTechModalUI();
   document.getElementById('mo-tech-title').textContent='עריכת '+L('worker');
   document.getElementById('ti-name').value=tech.name;document.getElementById('ti-phone').value=tech.phone;
-  document.getElementById('ti-base').value=tech.base;document.getElementById('ti-address').value=tech.address||'';document.getElementById('ti-min').value=tech.min;
+  document.getElementById('ti-base').value=tech.base;document.getElementById('ti-return').value=tech.return_city||'';document.getElementById('ti-min').value=tech.min;
   document.getElementById('ti-max').value=tech.max;document.getElementById('ti-blocked').value=tech.blocked||'';
   // Build weekly schedule — fallback: if no weekly_schedule set, derive from global start/end
   const existingWs=tech.weekly_schedule&&Object.keys(tech.weekly_schedule).length?tech.weekly_schedule:
@@ -4283,7 +4299,8 @@ function saveTech(){
   categories.forEach(c=>{const v=parseInt(document.getElementById('catlim-'+c.id)?.value);if(v>0)catLimits[c.id]=v;});
   const weekly_schedule=readWeekSched();
   const firstWorkDay=Object.values(weekly_schedule).find(d=>d.work!==false)||{start:'07:00',end:'17:00'};
-  const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),address:document.getElementById('ti-address').value.trim(),min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:firstWorkDay.start,end:firstWorkDay.end,weekly_schedule,blocked:document.getElementById('ti-blocked').value.trim(),skills,catLimits,rotation};
+  const existingTech=editingTechId?technicians.find(t=>t.id===editingTechId):null;
+  const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),return_city:document.getElementById('ti-return').value.trim(),address:existingTech?.address||'',min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:firstWorkDay.start,end:firstWorkDay.end,weekly_schedule,blocked:document.getElementById('ti-blocked').value.trim(),skills,catLimits,rotation};
   if(editingTechId){const tech=technicians.find(t=>t.id===editingTechId);if(tech){Object.assign(tech,data);saveTechToSupabase(tech);}}
   else{const tech={id:nextTechId++,...data,color:COLORS[technicians.length%COLORS.length]};technicians.push(tech);saveTechToSupabase(tech);}
   save();buildRoleSelect();closeMo('mo-tech');renderTechs();renderHomeTechCards();showToast('נשמר ✓');
@@ -4313,7 +4330,7 @@ function renderZones(){
       </div>
     </div>`).join('')||'<div class="empty"><div class="empty-icon">🗺️</div><div>הוסף אזור ראשון</div></div>';
 }
-function addZone(){const z={id:'z'+Date.now(),name:'אזור חדש',cities:[]};zones.push(z);saveZoneToSupabase(z);save();renderZones();populateCitySelect();}
+function addZone(){const z={id:genClientId(),name:'אזור חדש',cities:[]};zones.push(z);save();renderZones();populateCitySelect();saveZoneToSupabase(z);}
 function deleteZone(id){
   const z=zones.find(x=>x.id===id);if(!z)return;
   if(!confirm(`למחוק את האזור "${z.name}"?\n\nכל הערים המשויכות יאבדו ולא ניתן לשחזר. המשך?`))return;
@@ -4345,7 +4362,7 @@ function addCategory(){
   const name=document.getElementById('new-cat-name').value.trim();
   const time=parseInt(document.getElementById('new-cat-time').value)||settings.regularTime||30;
   if(!name)return;
-  const cat={id:'c'+Date.now(),name,time};categories.push(cat);saveCatToSupabase(cat);
+  const cat={id:genClientId(),name,time};categories.push(cat);saveCatToSupabase(cat);
   document.getElementById('new-cat-name').value='';document.getElementById('new-cat-time').value='';
   save();renderCategories();showToast('נשמר ✓');
 }
@@ -4363,7 +4380,7 @@ function savePkg(){
   const name=document.getElementById('pkg-name').value.trim();if(!name){alert('נא להזין שם');return;}
   const items=[];
   for(let i=0;i<pkgRowCount;i++){const catEl=document.getElementById('pkg-cat-'+i),qtyEl=document.getElementById('pkg-qty-'+i);if(catEl&&qtyEl)items.push({catId:catEl.value,qty:parseInt(qtyEl.value)||1});}
-  const pkg={id:'p'+Date.now(),name,items};packages.push(pkg);savePkgToSupabase(pkg);save();closeMo('mo-pkg');renderCategories();showToast('נשמר ✓');
+  const pkg={id:genClientId(),name,items};packages.push(pkg);save();closeMo('mo-pkg');renderCategories();savePkgToSupabase(pkg);showToast('נשמר ✓');
 }
 
 // ═══ DAY OFF ═══
@@ -4454,11 +4471,14 @@ function renderPlannerView(){
 function renderPlannerTechPills(){
   const container=document.getElementById('planner-tech-pills');
   if(!container)return;
+  const isSolo=plannerSelectedTechs.length===1;
   container.innerHTML=technicians.map(t=>{
     const on=plannerSelectedTechs.includes(t.id);
     const c=t.color||'#2563EB';
-    return`<div class="tech-pill${on?' on':''}" style="${on?'border-color:#2563EB;color:#2563EB;background:#EFF6FF;':'color:var(--ink-2);'}" onclick="togglePlannerTech('${t.id}')">
-      <span style="width:10px;height:10px;border-radius:50%;background:${on?'#2563EB':c};display:inline-block;flex-shrink:0;"></span>${t.name}
+    const soloActive=isSolo&&on;
+    return`<div class="tech-pill${on?' on':''}" style="${on?`border-color:${c};color:${c};background:${c}14;`:'color:var(--ink-2);'}" onclick="togglePlannerTech('${t.id}')">
+      <span style="width:10px;height:10px;border-radius:50%;background:${on?c:'#D1D5DB'};display:inline-block;flex-shrink:0;"></span>${t.name}
+      <button onclick="event.stopPropagation();plannerSoloTech('${t.id}')" title="הצג רק ${t.name}" style="background:none;border:none;cursor:pointer;font-size:0.65rem;padding:0 0 0 4px;opacity:${on?0.6:0.3};color:inherit;line-height:1;">${soloActive?'✕':'👁'}</button>
     </div>`;
   }).join('');
 }
@@ -4476,6 +4496,14 @@ function plannerSelectAll(){
 }
 function plannerClearAll(){
   plannerSelectedTechs=[];
+  renderPlannerTechPills();renderPlannerContent();
+}
+function plannerSoloTech(id){
+  if(plannerSelectedTechs.length===1&&plannerSelectedTechs[0]===id){
+    plannerSelectedTechs=technicians.map(t=>t.id); // toggle off solo → show all
+  } else {
+    plannerSelectedTechs=[id];
+  }
   renderPlannerTechPills();renderPlannerContent();
 }
 
@@ -4508,6 +4536,11 @@ function renderPlannerContent(){
   else renderPlannerDaily(days);
 }
 
+function expandPlannerCell(btn,techId,dateStr){
+  const allTasks=tasks.filter(t=>String(t.techId)===String(techId)&&t.date===dateStr&&t.status!=='cancelled')
+    .sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  btn.parentNode.innerHTML=allTasks.map(_plannerTaskChip).join('');
+}
 function _plannerTaskChip(t){
   const statusColors={
     completed:{bg:'#F0FDF4',fg:'#16A34A'},
@@ -4544,7 +4577,8 @@ function renderPlannerWeekly(days){
       const sorted=techTasks.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
       const visible=sorted.slice(0,3);
       const extra=sorted.length-3;
-      const chips=visible.map(_plannerTaskChip).join('')+(extra>0?`<div style="font-size:0.65rem;color:var(--ink-4);padding:2px 6px;">+${extra} נוספות</div>`:'');
+      const cellId=`pc-${tech.id}-${ds}`;
+      const chips=visible.map(_plannerTaskChip).join('')+(extra>0?`<button id="${cellId}" onclick="expandPlannerCell(this,'${tech.id}','${ds}')" style="display:block;width:100%;text-align:right;background:var(--line-2);border:none;border-radius:4px;font-size:0.65rem;color:var(--blue);padding:3px 6px;cursor:pointer;font-family:'Heebo',sans-serif;font-weight:700;margin-top:2px;">+${extra} נוספות ▾</button>`:'');
       return`<td style="vertical-align:top;padding:5px;border-left:1px solid var(--line-2);${bg?'background:'+bg+';':''}min-width:110px;">${chips||'<div style="height:32px;"></div>'}</td>`;
     }).join('');
     return`<tr style="border-bottom:1px solid var(--line-2);">
