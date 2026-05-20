@@ -793,7 +793,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 <!-- ZONES -->
 <div id="page-zones" class="page hidden">
   <div class="ph-row ph">
-    <div><div class="ph-title" data-label="zones_title">אזורי פעילות</div></div>
+    <div>
+      <div class="ph-title" data-label="zones_title">אזורי פעילות</div>
+      <div id="zone-save-status" style="font-size:0.75rem;color:var(--ink-3);margin-top:2px;"></div>
+    </div>
     <button class="btn btn-blue" onclick="addZone()">+ אזור חדש</button>
   </div>
   <div id="zones-list"></div>
@@ -1778,9 +1781,11 @@ async function loadFromSupabase() {
       sb.from('clients').select('*').eq('tenant_id', currentTenantId),
     ]);
 
-    // Check for auth errors
-    if (techRes.error || taskRes.error) {
-      console.error('Supabase error:', techRes.error || taskRes.error);
+    // Check for auth/critical errors — any failure means we can't trust the data
+    const criticalError = techRes.error || taskRes.error || zoneRes.error || catRes.error || pkgRes.error;
+    if (criticalError) {
+      console.error('Supabase load error:', criticalError);
+      Sentry?.captureException(criticalError);
       return false;
     }
 
@@ -1934,14 +1939,34 @@ async function deleteTechFromSupabase(dbId) {
   await sb.from('technicians').delete().eq('id', dbId);
 }
 
+function _setZoneSaveStatus(msg, isError) {
+  const el = document.getElementById('zone-save-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--red)' : 'var(--ink-3)';
+  if (!isError && msg) setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 3000);
+}
 async function saveZoneToSupabase(zone) {
   if (!currentTenantId) return;
-  const dbId = zone._dbId || zone.id;
-  const row = { id: dbId, tenant_id: currentTenantId, name: zone.name, cities: zone.cities };
-  const { data, error } = await sb.from('zones').upsert(row, { onConflict: 'id' }).select().single();
-  if (error) { console.error('zone save error:', error); showToast('שגיאה בשמירת האזור', 'error'); return; }
-  if (!data) { console.warn('zone upsert blocked'); showToast('אזהרה: האזור לא נשמר — בדוק הרשאות', 'error'); return; }
-  if (!zone._dbId) { zone._dbId = data.id; save(); }
+  _setZoneSaveStatus('שומר…');
+  const row = { tenant_id: currentTenantId, name: zone.name, cities: zone.cities };
+  if (zone._dbId) {
+    const { error } = await sb.from('zones').update(row).eq('id', zone._dbId);
+    if (error) {
+      console.error('zone update error:', error); Sentry?.captureException(error);
+      _setZoneSaveStatus('⚠️ שגיאה בשמירה — נסה שוב', true);
+      showToast('שגיאה בשמירת האזור', 'error');
+    } else { _setZoneSaveStatus('נשמר ✓'); }
+  } else {
+    const { data, error } = await sb.from('zones').insert({ ...row, id: zone.id }).select('id').single();
+    if (error) {
+      console.error('zone insert error:', error); Sentry?.captureException(error);
+      _setZoneSaveStatus('⚠️ שגיאה בשמירה — נסה שוב', true);
+      showToast('שגיאה בשמירת האזור', 'error'); return;
+    }
+    if (data) { zone._dbId = data.id; zone.id = data.id; save(); }
+    _setZoneSaveStatus('נשמר ✓');
+  }
 }
 async function deleteZoneFromSupabase(dbId) {
   await sb.from('zones').delete().eq('id', dbId);
@@ -1949,12 +1974,15 @@ async function deleteZoneFromSupabase(dbId) {
 
 async function saveCatToSupabase(cat) {
   if (!currentTenantId) return;
-  const dbId = cat._dbId || cat.id;
-  const row = { id: dbId, tenant_id: currentTenantId, name: cat.name, duration_minutes: cat.time };
-  const { data, error } = await sb.from('categories').upsert(row, { onConflict: 'id' }).select().single();
-  if (error) { console.error('cat save error:', error); showToast('שגיאה בשמירת קטגוריה', 'error'); return; }
-  if (!data) { console.warn('cat upsert blocked'); showToast('אזהרה: הקטגוריה לא נשמרה', 'error'); return; }
-  if (!cat._dbId) { cat._dbId = data.id; save(); }
+  const row = { tenant_id: currentTenantId, name: cat.name, duration_minutes: cat.time };
+  if (cat._dbId) {
+    const { error } = await sb.from('categories').update(row).eq('id', cat._dbId);
+    if (error) { console.error('cat update error:', error); Sentry?.captureException(error); showToast('שגיאה בשמירת קטגוריה', 'error'); }
+  } else {
+    const { data, error } = await sb.from('categories').insert(row).select('id').single();
+    if (error) { console.error('cat insert error:', error); Sentry?.captureException(error); showToast('שגיאה בשמירת קטגוריה', 'error'); return; }
+    if (data) { cat._dbId = data.id; cat.id = data.id; save(); }
+  }
 }
 async function deleteCatFromSupabase(dbId) {
   await sb.from('categories').delete().eq('id', dbId);
@@ -1962,12 +1990,15 @@ async function deleteCatFromSupabase(dbId) {
 
 async function savePkgToSupabase(pkg) {
   if (!currentTenantId) return;
-  const dbId = pkg._dbId || pkg.id;
-  const row = { id: dbId, tenant_id: currentTenantId, name: pkg.name, items: pkg.items };
-  const { data, error } = await sb.from('packages').upsert(row, { onConflict: 'id' }).select().single();
-  if (error) { console.error('pkg save error:', error); showToast('שגיאה בשמירת חבילה', 'error'); return; }
-  if (!data) { console.warn('pkg upsert blocked'); showToast('אזהרה: החבילה לא נשמרה', 'error'); return; }
-  if (!pkg._dbId) { pkg._dbId = data.id; save(); }
+  const row = { tenant_id: currentTenantId, name: pkg.name, items: pkg.items };
+  if (pkg._dbId) {
+    const { error } = await sb.from('packages').update(row).eq('id', pkg._dbId);
+    if (error) { console.error('pkg update error:', error); Sentry?.captureException(error); showToast('שגיאה בשמירת חבילה', 'error'); }
+  } else {
+    const { data, error } = await sb.from('packages').insert(row).select('id').single();
+    if (error) { console.error('pkg insert error:', error); Sentry?.captureException(error); showToast('שגיאה בשמירת חבילה', 'error'); return; }
+    if (data) { pkg._dbId = data.id; pkg.id = data.id; save(); }
+  }
 }
 async function deletePkgFromSupabase(dbId) {
   await sb.from('packages').delete().eq('id', dbId);
