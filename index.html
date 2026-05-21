@@ -1820,37 +1820,12 @@ async function loadFromSupabase() {
       id: z.id, name: z.name, cities: z.cities || [], _dbId: z.id
     }));
 
-    // ── ZONE RECOVERY ─────────────────────────────────────────────────────────
-    // Triggers when: (a) Supabase has no zones at all, OR (b) zones exist but
-    // ALL of them are empty — which is exactly what happened when Israel spent
-    // an hour entering cities and the save silently failed.
-    const allZonesEmpty = zones.length === 0 || zones.every(z => !z.cities || z.cities.length === 0);
-
-    if (allZonesEmpty) {
-      // Try localStorage backup first (has cities from the failed session)
-      try {
-        const lsZones = JSON.parse(localStorage.getItem('ml8_zones') || '[]');
-        const lsHasCities = lsZones.some(z => z.cities && z.cities.length > 0);
-        if (lsHasCities) {
-          // Wipe empty Supabase zones before restoring
-          zones.forEach(z => { if (z._dbId) deleteZoneFromSupabase(z._dbId); });
-          zones = lsZones;
-          console.warn('[Maslul] Recovered', zones.length, 'zones from localStorage — re-saving to Supabase');
-          showToast('אזורים שוחזרו מגיבוי מקומי — שמירה מחדש...', 'warning');
-          setTimeout(() => { zones.forEach(z => { z._dbId = undefined; saveZoneToSupabase(z); }); save(); }, 500);
-        }
-      } catch(e) { console.warn('[Maslul] Zone localStorage recovery error:', e); }
-
-      // If still no cities anywhere — seed from the geographic zones extracted from the calendar
-      const stillEmpty = zones.every(z => !z.cities || z.cities.length === 0);
-      if (stillEmpty && currentTenantId === '00000000-0000-0000-0000-000000000001') {
-        // Delete the empty placeholder zones in Supabase (if any)
-        zones.forEach(z => { if (z._dbId) deleteZoneFromSupabase(z._dbId); });
-        zones = getIsraelDefaultZones();
-        console.log('[Maslul] Seeding', zones.length, 'geographic zones for Israel tenant');
-        setTimeout(() => { zones.forEach(z => saveZoneToSupabase(z)); save(); }, 600);
-        showToast('ערים שוחזרו לאזורים גאוגרפיים מהיומן — בדוק בדף האזורים', 'info');
-      }
+    // ── ZONE RECOVERY + MERGE ─────────────────────────────────────────────────
+    // Run for Israel's tenant on every load: ensure all 6 geographic zones exist
+    // and have cities. Zones with existing cities are never touched. Missing zones
+    // are created, empty zones are populated. Safe to run repeatedly.
+    if (currentTenantId === '00000000-0000-0000-0000-000000000001') {
+      setTimeout(() => mergeIsraelDefaultZones(), 700);
     }
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -1914,6 +1889,7 @@ async function loadFromSupabase() {
 }
 
 async function saveTaskToSupabase(task) {
+  if (!currentTenantId) return;
   const row = {
     tenant_id: currentTenantId,
     assign_id: task.assignId,
@@ -1946,6 +1922,7 @@ async function deleteTaskFromSupabase(taskId) {
 }
 
 async function saveTechToSupabase(tech) {
+  if (!currentTenantId) return;
   const row = {
     tenant_id: currentTenantId,
     name: tech.name, phone: tech.phone, base_city: tech.base, return_city: tech.return_city || '',
@@ -1957,19 +1934,33 @@ async function saveTechToSupabase(tech) {
     weekly_schedule: tech.weekly_schedule || {},
   };
   if (tech._dbId) {
-    const { data: updatedRow, error } = await sb.from('technicians').update(row).eq('id', tech._dbId).select().single();
-    if (error) { console.error('update tech error:', error); showToast('שגיאה בשמירה', 'error'); }
-    else if (!updatedRow) { console.warn('tech update: 0 rows affected — RLS may be blocking'); showToast('אזהרה: השינוי לא נשמר — בדוק הרשאות', 'error'); }
+    const upsertRow = { id: tech._dbId, ...row };
+    const { data: updatedRow, error } = await sb.from('technicians')
+      .upsert(upsertRow, { onConflict: 'id' })
+      .select().single();
+    if (error) {
+      console.error('tech save error:', error); Sentry?.captureException(error);
+      showToast('שגיאה בשמירת הטכנאי: ' + (error.message || error.code || 'בדוק חיבור'), 'error');
+      return false;
+    }
+    if (!updatedRow) {
+      console.warn('tech upsert: no row returned — RLS may be blocking');
+      showToast('אזהרה: הטכנאי לא נשמר — בדוק הרשאות', 'error');
+      return false;
+    }
   } else {
     const { data, error } = await sb.from('technicians').insert(row).select().single();
-    if (error) { console.error('insert tech error:', error); showToast('שגיאה בשמירה', 'error'); }
-    else {
-      const oldId = tech.id;
-      tech._dbId = data.id;
-      tech.id = data.id;
-      tasks.forEach(t => { if (t.techId === oldId) t.techId = data.id; });
+    if (error) {
+      console.error('insert tech error:', error); Sentry?.captureException(error);
+      showToast('שגיאה בשמירת הטכנאי: ' + (error.message || error.code || 'בדוק חיבור'), 'error');
+      return false;
     }
+    const oldId = tech.id;
+    tech._dbId = data.id;
+    tech.id = data.id;
+    tasks.forEach(t => { if (t.techId === oldId) t.techId = data.id; });
   }
+  return true;
 }
 async function deleteTechFromSupabase(dbId) {
   await sb.from('technicians').delete().eq('id', dbId);
@@ -4374,9 +4365,17 @@ function saveTech(){
   const firstWorkDay=Object.values(weekly_schedule).find(d=>d.work!==false)||{start:'07:00',end:'17:00'};
   const existingTech=editingTechId?technicians.find(t=>t.id===editingTechId):null;
   const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),return_city:document.getElementById('ti-return').value.trim(),address:existingTech?.address||'',min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:firstWorkDay.start,end:firstWorkDay.end,weekly_schedule,blocked:document.getElementById('ti-blocked').value.trim(),skills,catLimits,rotation};
-  if(editingTechId){const tech=technicians.find(t=>t.id===editingTechId);if(tech){Object.assign(tech,data);saveTechToSupabase(tech);}}
-  else{const tech={id:nextTechId++,...data,color:COLORS[technicians.length%COLORS.length]};technicians.push(tech);saveTechToSupabase(tech);}
-  save();buildRoleSelect();closeMo('mo-tech');renderTechs();renderHomeTechCards();showToast('נשמר ✓');
+  let techForSave;
+  if(editingTechId){const tech=technicians.find(t=>t.id===editingTechId);if(tech){Object.assign(tech,data);techForSave=tech;}}
+  else{const tech={id:nextTechId++,...data,color:COLORS[technicians.length%COLORS.length]};technicians.push(tech);techForSave=tech;}
+  save();buildRoleSelect();closeMo('mo-tech');renderTechs();renderHomeTechCards();
+  if(techForSave){
+    showToast('שומר…');
+    saveTechToSupabase(techForSave).then(ok=>{
+      if(ok!==false)showToast('נשמר ✓');
+      save();
+    });
+  }
 }
 function deleteTech(id){
   if(!confirm('למחוק?'))return;
@@ -4388,6 +4387,31 @@ function deleteTech(id){
 }
 
 // ═══ ZONES ═══
+// Merges default geographic zones into Israel's current zone list.
+// Called on every login — safe to run repeatedly:
+//   • Zone exists with cities  → untouched
+//   • Zone exists, no cities   → cities populated from defaults
+//   • Zone missing entirely    → created with default cities
+function mergeIsraelDefaultZones(){
+  const defaults = getIsraelDefaultZones();
+  let changed = false;
+  defaults.forEach(dz => {
+    const existing = zones.find(z => z.name === dz.name);
+    if (!existing) {
+      // Zone doesn't exist at all — create it
+      zones.push(dz);
+      saveZoneToSupabase(dz);
+      changed = true;
+    } else if (!existing.cities || existing.cities.length === 0) {
+      // Zone exists but cities were never saved — populate now
+      existing.cities = [...dz.cities];
+      saveZoneToSupabase(existing);
+      changed = true;
+    }
+  });
+  if (changed) { save(); populateCitySelect(); renderZones(); showToast('אזורים עודכנו — ערים שוחזרו מהיומן', 'info'); }
+}
+
 // Pre-built geographic zones extracted from PureWater Israel's actual calendar (May 2026).
 // Cities ordered far → near relative to each zone's typical starting point.
 // Called automatically when Israel's tenant has no zones in Supabase.
