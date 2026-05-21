@@ -3665,8 +3665,12 @@ function showCandidate(idx){
   const[sh]=_sched.start.split(':').map(Number);
   const[eh]=_sched.end.split(':').map(Number);
   const slotH=settings.window;
-  const dur=settings.regularTime||30;const buf=10;
-  const slotCapacity=Math.max(1,Math.floor(slotH*60/(dur+buf)));
+  const _catForSlot=getCatId()?categories.find(c=>c.id===getCatId()):null;
+  const dur=(_catForSlot?.time)||settings.regularTime||30;const buf=10;
+  // A window is an arrival commitment to the customer, not a block on the technician.
+  // Count how many jobs can START within the window (job k starts at k*(dur+buf)):
+  // max k such that k*(dur+buf) < slotH*60  →  k < slotH*60/(dur+buf)
+  const slotCapacity=Math.max(1,Math.floor((slotH*60-1)/(dur+buf))+1);
   const optH=c.optTime?parseInt(c.optTime.split(':')[0]):-1;
   const slots=[];
   for(let h=sh;h<=eh-slotH;h++){
@@ -3746,7 +3750,8 @@ function confirmAssign(idx,assignId){
   }else{
     const dayTasks2=getTechDayTasks(c.tech,c.date.str);
     const inSlot=dayTasks2.filter(t=>{const th=parseInt(t.time.split(':')[0]);return th>=slotStartH&&th<slotStartH+(settings.window||3);});
-    const jobMins=(settings.regularTime||30)+10;
+    const _assignCat=catId?categories.find(c=>c.id===catId):null;
+    const jobMins=((_assignCat?.time)||settings.regularTime||30)+10;
     taskTime=minsToTime(timeToMins(slot.start)+inSlot.length*jobMins);
   }
   const newTask={id:nextTaskId++,client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows]};
