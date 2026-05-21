@@ -597,6 +597,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <button id="nav-admin" class="ni-btn hidden" onclick="goPage('admin')" style="color:var(--purple);"><span>🔧</span> מנהל מאסטר</button>
   </div>
   <div class="sb-bot">
+    <div id="save-indicator" style="display:none;font-size:0.7rem;color:var(--ink-3);text-align:center;padding:2px 0 4px;letter-spacing:0.3px;">⟳ שומר…</div>
     <select class="sb-view-sel" id="role-sel" onchange="switchRole()">
       <option value="admin">מתאמת / מנהל</option>
     </select>
@@ -1888,33 +1889,63 @@ async function loadFromSupabase() {
   }
 }
 
+// ═══ UNIFIED DB WRITE LAYER ════════════════════════════════════════════════
+// All entity saves go through dbUpsert / dbInsert so that every write has:
+//   • currentTenantId guard (no writes when unauthenticated or in demo mode)
+//   • upsert instead of split insert/update (no race conditions on existing rows)
+//   • consistent error toast + Sentry capture
+//   • _savesInFlight counter driving the "שומר…" badge in the sidebar
+let _savesInFlight = 0;
+function _trackSave(delta) {
+  _savesInFlight = Math.max(0, _savesInFlight + delta);
+  const el = document.getElementById('save-indicator');
+  if (el) el.style.display = _savesInFlight > 0 ? 'block' : 'none';
+}
+async function dbUpsert(table, row) {
+  if (!currentTenantId) return null;
+  _trackSave(+1);
+  const { data, error } = await sb.from(table)
+    .upsert({ ...row, tenant_id: currentTenantId }, { onConflict: 'id' })
+    .select().single();
+  _trackSave(-1);
+  if (error) {
+    console.error(`[db] ${table}:`, error);
+    Sentry?.captureException(error);
+    showToast('שגיאה בשמירה: ' + (error.message || error.code || 'בדוק חיבור'), 'error');
+    return null;
+  }
+  return data;
+}
+async function dbInsert(table, row) {
+  if (!currentTenantId) return null;
+  _trackSave(+1);
+  const { data, error } = await sb.from(table)
+    .insert({ ...row, tenant_id: currentTenantId })
+    .select().single();
+  _trackSave(-1);
+  if (error) {
+    console.error(`[db] ${table}:`, error);
+    Sentry?.captureException(error);
+    showToast('שגיאה בשמירה: ' + (error.message || error.code || 'בדוק חיבור'), 'error');
+    return null;
+  }
+  return data;
+}
+// ═══════════════════════════════════════════════════════════════════════════
+
 async function saveTaskToSupabase(task) {
-  if (!currentTenantId) return;
   const row = {
-    tenant_id: currentTenantId,
-    assign_id: task.assignId,
-    client_name: task.client,
-    client_phone: task.phone,
-    city: task.city,
-    street: task.street,
-    category_id: task.catId,
-    category_name: task.cat,
-    technician_id: task.techId || null,
-    status: task.status,
-    scheduled_date: task.date || null,
-    scheduled_time: task.time || null,
-    notes: task.notes || '',
-    cancelled_at: task.cancelledAt || null,
+    assign_id: task.assignId, client_name: task.client, client_phone: task.phone,
+    city: task.city, street: task.street, category_id: task.catId, category_name: task.cat,
+    technician_id: task.techId || null, status: task.status,
+    scheduled_date: task.date || null, scheduled_time: task.time || null,
+    notes: task.notes || '', cancelled_at: task.cancelledAt || null,
     preferred_windows: task.preferredWindows || [],
   };
-  if (task._dbId) {
-    const { error } = await sb.from('tasks').update(row).eq('id', task._dbId);
-    if (error) console.error('update task error:', error);
-  } else {
-    const { data, error } = await sb.from('tasks').insert(row).select().single();
-    if (error) console.error('insert task error:', error);
-    else { task._dbId = data.id; task.id = data.id; }
-  }
+  if (task._dbId) return (await dbUpsert('tasks', { id: task._dbId, ...row })) !== null;
+  const data = await dbInsert('tasks', row);
+  if (data) { task._dbId = data.id; task.id = data.id; save(); }
+  return data !== null;
 }
 
 async function deleteTaskFromSupabase(taskId) {
@@ -1922,45 +1953,22 @@ async function deleteTaskFromSupabase(taskId) {
 }
 
 async function saveTechToSupabase(tech) {
-  if (!currentTenantId) return;
   const row = {
-    tenant_id: currentTenantId,
     name: tech.name, phone: tech.phone, base_city: tech.base, return_city: tech.return_city || '',
-    base_address: tech.address || '',
-    color: tech.color, min_daily: tech.min, max_daily: tech.max,
+    base_address: tech.address || '', color: tech.color, min_daily: tech.min, max_daily: tech.max,
     start_time: tech.start, end_time: tech.end,
     blocked_cities: tech.blocked ? tech.blocked.split(',').map(c=>c.trim()).filter(c=>c) : [],
-    skills: tech.skills || [], cat_limits: tech.catLimits || {}, rotation: tech.rotation || {},
-    weekly_schedule: tech.weekly_schedule || {},
+    skills: tech.skills || [], cat_limits: tech.catLimits || {},
+    rotation: tech.rotation || {}, weekly_schedule: tech.weekly_schedule || {},
   };
-  if (tech._dbId) {
-    const upsertRow = { id: tech._dbId, ...row };
-    const { data: updatedRow, error } = await sb.from('technicians')
-      .upsert(upsertRow, { onConflict: 'id' })
-      .select().single();
-    if (error) {
-      console.error('tech save error:', error); Sentry?.captureException(error);
-      showToast('שגיאה בשמירת הטכנאי: ' + (error.message || error.code || 'בדוק חיבור'), 'error');
-      return false;
-    }
-    if (!updatedRow) {
-      console.warn('tech upsert: no row returned — RLS may be blocking');
-      showToast('אזהרה: הטכנאי לא נשמר — בדוק הרשאות', 'error');
-      return false;
-    }
-  } else {
-    const { data, error } = await sb.from('technicians').insert(row).select().single();
-    if (error) {
-      console.error('insert tech error:', error); Sentry?.captureException(error);
-      showToast('שגיאה בשמירת הטכנאי: ' + (error.message || error.code || 'בדוק חיבור'), 'error');
-      return false;
-    }
-    const oldId = tech.id;
-    tech._dbId = data.id;
-    tech.id = data.id;
-    tasks.forEach(t => { if (t.techId === oldId) t.techId = data.id; });
+  if (tech._dbId) return (await dbUpsert('technicians', { id: tech._dbId, ...row })) !== null;
+  const data = await dbInsert('technicians', row);
+  if (data) {
+    const old = tech.id; tech._dbId = data.id; tech.id = data.id;
+    tasks.forEach(t => { if (t.techId === old) t.techId = data.id; });
+    save();
   }
-  return true;
+  return data !== null;
 }
 async function deleteTechFromSupabase(dbId) {
   await sb.from('technicians').delete().eq('id', dbId);
@@ -1974,27 +1982,14 @@ function _setZoneSaveStatus(msg, isError) {
   if (!isError && msg) setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 3000);
 }
 async function saveZoneToSupabase(zone) {
-  if (!currentTenantId) return;
-  // Serialize saves per zone: each call chains after the previous one for the same zone.
-  // This prevents INSERT/UPDATE races when the user adds cities immediately after creating a zone.
+  // Per-zone queue: serializes saves so rapid city edits don't race with the initial INSERT.
   const queueKey = zone.id;
   const prev = _zoneSaveQueues[queueKey] || Promise.resolve();
   const thisOp = prev.then(async () => {
     _setZoneSaveStatus('שומר…');
-    // Always send the zone's own id — upsert handles both insert (new zone) and update (existing zone)
-    const row = { id: zone.id, tenant_id: currentTenantId, name: zone.name, cities: zone.cities };
-    const { data, error } = await sb.from('zones')
-      .upsert(row, { onConflict: 'id' })
-      .select('id')
-      .single();
-    if (error) {
-      console.error('zone save error:', error); Sentry?.captureException(error);
-      _setZoneSaveStatus('⚠️ שגיאה בשמירה', true);
-      showToast('שגיאה בשמירת האזור: ' + (error.message || error.code || 'בדוק חיבור'), 'error');
-    } else {
-      if (data) { zone._dbId = data.id; save(); }
-      _setZoneSaveStatus('נשמר ✓');
-    }
+    const data = await dbUpsert('zones', { id: zone.id, name: zone.name, cities: zone.cities });
+    if (data) { zone._dbId = data.id; save(); _setZoneSaveStatus('נשמר ✓'); }
+    else { _setZoneSaveStatus('⚠️ שגיאה בשמירה', true); }
   }).catch(e => { console.error('zone save exception:', e); Sentry?.captureException(e); });
   _zoneSaveQueues[queueKey] = thisOp;
   await thisOp;
@@ -2005,32 +2000,22 @@ async function deleteZoneFromSupabase(dbId) {
 }
 
 async function saveCatToSupabase(cat) {
-  if (!currentTenantId) return;
-  const row = { tenant_id: currentTenantId, name: cat.name, duration_minutes: cat.time };
-  if (cat._dbId) {
-    const { error } = await sb.from('categories').update(row).eq('id', cat._dbId);
-    if (error) { console.error('cat update error:', error); Sentry?.captureException(error); showToast('שגיאה בשמירת קטגוריה', 'error'); }
-  } else {
-    const { data, error } = await sb.from('categories').insert(row).select('id').single();
-    if (error) { console.error('cat insert error:', error); Sentry?.captureException(error); showToast('שגיאה בשמירת קטגוריה', 'error'); return; }
-    if (data) { cat._dbId = data.id; cat.id = data.id; save(); }
-  }
+  const row = { name: cat.name, duration_minutes: cat.time, checklist: cat.checklist || [] };
+  if (cat._dbId) return (await dbUpsert('categories', { id: cat._dbId, ...row })) !== null;
+  const data = await dbInsert('categories', row);
+  if (data) { cat._dbId = data.id; cat.id = data.id; save(); }
+  return data !== null;
 }
 async function deleteCatFromSupabase(dbId) {
   await sb.from('categories').delete().eq('id', dbId);
 }
 
 async function savePkgToSupabase(pkg) {
-  if (!currentTenantId) return;
-  const row = { tenant_id: currentTenantId, name: pkg.name, items: pkg.items };
-  if (pkg._dbId) {
-    const { error } = await sb.from('packages').update(row).eq('id', pkg._dbId);
-    if (error) { console.error('pkg update error:', error); Sentry?.captureException(error); showToast('שגיאה בשמירת חבילה', 'error'); }
-  } else {
-    const { data, error } = await sb.from('packages').insert(row).select('id').single();
-    if (error) { console.error('pkg insert error:', error); Sentry?.captureException(error); showToast('שגיאה בשמירת חבילה', 'error'); return; }
-    if (data) { pkg._dbId = data.id; pkg.id = data.id; save(); }
-  }
+  const row = { name: pkg.name, items: pkg.items };
+  if (pkg._dbId) return (await dbUpsert('packages', { id: pkg._dbId, ...row })) !== null;
+  const data = await dbInsert('packages', row);
+  if (data) { pkg._dbId = data.id; pkg.id = data.id; save(); }
+  return data !== null;
 }
 async function deletePkgFromSupabase(dbId) {
   await sb.from('packages').delete().eq('id', dbId);
@@ -2038,36 +2023,29 @@ async function deletePkgFromSupabase(dbId) {
 
 async function saveDayoffToSupabase(dayoff) {
   const row = {
-    tenant_id: currentTenantId, technician_id: dayoff.techId, date: dayoff.date,
+    technician_id: dayoff.techId, date: dayoff.date,
     type: dayoff.type || 'full', from_time: dayoff.from || null,
     to_time: dayoff.to || null, reason: dayoff.reason || '',
   };
-  if (dayoff._dbId) {
-    const { error } = await sb.from('day_offs').update(row).eq('id', dayoff._dbId);
-    if (error) { console.error('update dayoff error:', error); showToast('שגיאה בשמירה', 'error'); }
-  } else {
-    const { data, error } = await sb.from('day_offs').insert(row).select().single();
-    if (error) { console.error('insert dayoff error:', error); showToast('שגיאה בשמירה', 'error'); }
-    else dayoff._dbId = data.id;
-  }
+  if (dayoff._dbId) return (await dbUpsert('day_offs', { id: dayoff._dbId, ...row })) !== null;
+  const data = await dbInsert('day_offs', row);
+  if (data) { dayoff._dbId = data.id; save(); }
+  return data !== null;
 }
 async function deleteDayoffFromSupabase(dbId) {
   await sb.from('day_offs').delete().eq('id', dbId);
 }
 
 async function saveSettingsToSupabase() {
-  if (!currentTenantId) return;
+  if (!currentTenantId) return false;
   const { startTime, endTime, window, maxDaily, lookahead, monthlyVolume, regularTime, packageTime } = settings;
-  const updatedConfig = {
-    ...tenantConfig,
-    defaults: { startTime, endTime, window, maxDaily, lookahead, monthlyVolume, regularTime, packageTime },
-  };
-  const { error } = await sb.from('tenants').update({
-    name: settings.company,
-    config: updatedConfig,
-  }).eq('id', currentTenantId);
-  if (error) { console.error('update settings error:', error); showToast('שגיאה בשמירת הגדרות', 'error'); }
-  else tenantConfig = updatedConfig;
+  const updatedConfig = { ...tenantConfig, defaults: { startTime, endTime, window, maxDaily, lookahead, monthlyVolume, regularTime, packageTime } };
+  _trackSave(+1);
+  const { error } = await sb.from('tenants').update({ name: settings.company, config: updatedConfig }).eq('id', currentTenantId);
+  _trackSave(-1);
+  if (error) { console.error('settings save:', error); Sentry?.captureException(error); showToast('שגיאה בשמירת הגדרות: ' + (error.message || error.code), 'error'); return false; }
+  tenantConfig = updatedConfig;
+  return true;
 }
 
 // ═══ CONSTANTS ═══
@@ -3063,16 +3041,11 @@ function renderReports(){
 // ═══ CLIENTS (CRM) ═══
 let editingClientId=null;
 async function saveClientToSupabase(client){
-  if(!currentTenantId)return;
-  const row={tenant_id:currentTenantId,name:client.name,phone:client.phone,email:client.email,city:client.city,address:client.address,notes:client.notes};
-  if(client._dbId){
-    const{error}=await sb.from('clients').update(row).eq('id',client._dbId);
-    if(error){console.error(error);showToast('שגיאה בשמירה','error');}
-  }else{
-    const{data,error}=await sb.from('clients').insert(row).select().single();
-    if(error){console.error(error);showToast('שגיאה בשמירה','error');}
-    else{client._dbId=data.id;client.id=data.id;}
-  }
+  const row={name:client.name,phone:client.phone,email:client.email,city:client.city,address:client.address,notes:client.notes,archived:client.archived||false};
+  if(client._dbId)return(await dbUpsert('clients',{id:client._dbId,...row}))!==null;
+  const data=await dbInsert('clients',row);
+  if(data){client._dbId=data.id;client.id=data.id;save();}
+  return data!==null;
 }
 async function deleteClientFromSupabase(dbId){
   if(!currentTenantId||!dbId)return;
@@ -4501,9 +4474,10 @@ function addCategory(){
   const name=document.getElementById('new-cat-name').value.trim();
   const time=parseInt(document.getElementById('new-cat-time').value)||settings.regularTime||30;
   if(!name)return;
-  const cat={id:genClientId(),name,time};categories.push(cat);saveCatToSupabase(cat);
+  const cat={id:genClientId(),name,time};categories.push(cat);
   document.getElementById('new-cat-name').value='';document.getElementById('new-cat-time').value='';
-  save();renderCategories();showToast('נשמר ✓');
+  save();renderCategories();
+  saveCatToSupabase(cat).then(ok=>{if(ok!==false)showToast('נשמר ✓');});
 }
 function deleteCat(i){const cat=categories[i];if(cat&&cat._dbId)deleteCatFromSupabase(cat._dbId);categories.splice(i,1);save();renderCategories();}
 function deletePkg(i){const pkg=packages[i];if(pkg&&pkg._dbId)deletePkgFromSupabase(pkg._dbId);packages.splice(i,1);save();renderCategories();}
@@ -4519,7 +4493,8 @@ function savePkg(){
   const name=document.getElementById('pkg-name').value.trim();if(!name){alert('נא להזין שם');return;}
   const items=[];
   for(let i=0;i<pkgRowCount;i++){const catEl=document.getElementById('pkg-cat-'+i),qtyEl=document.getElementById('pkg-qty-'+i);if(catEl&&qtyEl)items.push({catId:catEl.value,qty:parseInt(qtyEl.value)||1});}
-  const pkg={id:genClientId(),name,items};packages.push(pkg);save();closeMo('mo-pkg');renderCategories();savePkgToSupabase(pkg);showToast('נשמר ✓');
+  const pkg={id:genClientId(),name,items};packages.push(pkg);save();closeMo('mo-pkg');renderCategories();
+  savePkgToSupabase(pkg).then(ok=>{if(ok!==false)showToast('נשמר ✓');});
 }
 
 // ═══ DAY OFF ═══
@@ -4531,7 +4506,8 @@ function addDayoff(){
   const techId=document.getElementById('do-tech').value;
   const date=document.getElementById('do-date').value;if(!date){alert('נא לבחור תאריך');return;}
   const dayoff={techId,date,type:document.getElementById('do-type').value,from:document.getElementById('do-from').value,to:document.getElementById('do-to').value,reason:document.getElementById('do-reason').value};
-  dayoffs.push(dayoff);saveDayoffToSupabase(dayoff);save();renderDayoffList();
+  dayoffs.push(dayoff);save();renderDayoffList();
+  saveDayoffToSupabase(dayoff).then(ok=>{if(ok!==false)showToast('נשמר ✓');});
 }
 function renderDayoffList(){
   const list=document.getElementById('do-list');if(!dayoffs.length){list.innerHTML='';return;}
@@ -4555,7 +4531,7 @@ function saveSettings(){
   settings.monthlyVolume=parseInt(document.getElementById('set-monthly').value)||300;
   settings.regularTime=parseInt(document.getElementById('set-regular-time').value)||30;
   settings.packageTime=parseInt(document.getElementById('set-package-time').value)||45;
-  save();saveSettingsToSupabase();showToast('הגדרות נשמרו ✓');
+  save();saveSettingsToSupabase().then(ok=>{if(ok!==false)showToast('הגדרות נשמרו ✓');});
 }
 function exportSettings(){
   const data={settings,zones,categories,packages,exportedAt:new Date().toISOString(),version:'ml8'};
