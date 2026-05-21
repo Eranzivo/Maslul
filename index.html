@@ -2194,7 +2194,9 @@ async function initApp() {
   _DDFIELDS.forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener(id==='s-city'?'change':'input',saveDispatchDraft);});
   document.getElementById('do-date').value = todayStr();
   document.getElementById('specific-date').value = todayStr();
-  if(currentUserRole==='tech') routeTechLogin();
+  if(currentUserRole==='tech'){routeTechLogin();return;}
+  const savedPage=sessionStorage.getItem('ml_page');
+  if(savedPage)goPage(savedPage);
 }
 function setDateLabel(){
   const d=new Date(),label='יום '+DAYS_HE[d.getDay()]+' — '+d.toLocaleDateString('he-IL');
@@ -2252,6 +2254,7 @@ function renderSettings(){
 function goPage(page){
   if(page==='wizard'&&!currentUserSuperAdmin){goPage('home');return;}
   if(page==='users'&&currentUserRole!=='admin'&&!currentUserSuperAdmin){goPage('home');return;}
+  if(!CONFIG.DEMO_MODE)sessionStorage.setItem('ml_page',page);
   ['home','dispatch','tasks','planner','reports','clients','admin','techview','technicians','zones','categories','settings','wizard','users'].forEach(p=>{
     document.getElementById('page-'+p).classList.toggle('hidden',p!==page);
   });
