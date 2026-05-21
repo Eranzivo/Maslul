@@ -9,6 +9,8 @@
 
 Never start coding without reading context first.
 
+**New entity / new table rule:** Before adding any new Supabase table or entity, run every step in `context/new-entity-checklist.md`. All 8 steps are required. Do not ship without completing the checklist.
+
 **Outputs rule:** Every command or generated artifact (summaries, reports, plans, drafts) must be saved to `outputs/[task-name]_[YYYY-MM-DD].md`. Never save in a random location.
 
 **Connections:** See `connections/registry.json` for all external services. Secrets live only in `.env` (root) — never in `context/`, `connections/`, or `commands/`.

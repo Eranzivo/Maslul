@@ -1459,17 +1459,31 @@ const CONFIG = {
   OPTIMIZER_URL: 'https://maslul-production-77fa.up.railway.app',
 };
 
+// ═══ STAGING CONFIG ═══
+// Fill in once you create the staging Supabase project (free tier).
+// Then test at: https://eranzivo.github.io/Maslul/?env=staging
+// Staging is completely isolated — zero risk to Israel's live data.
+const STAGING_CONFIG = {
+  SUPABASE_URL: '', // paste staging project URL here
+  SUPABASE_KEY: '', // paste staging anon key here
+};
+const _isStaging = !CONFIG.DEMO_MODE && new URLSearchParams(window.location.search).get('env') === 'staging'
+                   && !!STAGING_CONFIG.SUPABASE_URL;
+if (_isStaging) console.log('[Maslul] STAGING MODE — connected to staging Supabase');
+
 // ═══ SENTRY ═══
 if(typeof Sentry !== 'undefined'){
   Sentry.init({
     dsn: 'https://85e4d2c73530cb029d116a69ad4b2581@o4511388045606912.ingest.de.sentry.io/4511388137750608',
-    environment: CONFIG.DEMO_MODE ? 'demo' : 'production',
-    beforeSend(event){ return CONFIG.DEMO_MODE ? null : event; },
+    environment: CONFIG.DEMO_MODE ? 'demo' : (_isStaging ? 'staging' : 'production'),
+    beforeSend(event){ return (CONFIG.DEMO_MODE || _isStaging) ? null : event; },
   });
 }
 
 // ═══ SUPABASE CLIENT ═══
-const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+const _sbUrl = _isStaging ? STAGING_CONFIG.SUPABASE_URL : CONFIG.SUPABASE_URL;
+const _sbKey = _isStaging ? STAGING_CONFIG.SUPABASE_KEY : CONFIG.SUPABASE_KEY;
+const sb = supabase.createClient(_sbUrl, _sbKey);
 let currentUser = null;
 let currentTenantId = null;
 
@@ -1778,6 +1792,9 @@ async function doLogout() {
 // ═══ SUPABASE DATA LAYER ═══
 async function loadFromSupabase() {
   if (!currentTenantId) return false;
+  // Replay any saves that failed or were in-flight on the previous session.
+  // Must run BEFORE fetching, so replayed changes are included in the fresh load.
+  await _replayWAL();
   try {
     const [techRes, taskRes, zoneRes, catRes, pkgRes, dayoffRes, tenantRes, clientRes] = await Promise.all([
       sb.from('technicians').select('*').eq('tenant_id', currentTenantId),
@@ -1894,6 +1911,25 @@ async function loadFromSupabase() {
       nextTaskId = maxNum + 1;
     }
 
+    // Schema field validation — catches column drift (new DB column not yet mapped in JS).
+    // Logs a warning + sends a Sentry event for every existing record with a missing required field.
+    // Never blocks the app — purely diagnostic.
+    (function _validateSchema() {
+      const check = (entities, fields, label) => entities.forEach(e => {
+        fields.forEach(f => {
+          if (e[f] == null || e[f] === '') {
+            const msg = `schema drift: ${label}.${f} null on ${e.id}`;
+            console.warn('[schema]', msg);
+            Sentry?.captureMessage(msg, 'warning');
+          }
+        });
+      });
+      check(technicians, ['name','max','rotation'], 'tech');
+      check(tasks,       ['assignId','status','city'], 'task');
+      check(zones,       ['name','cities'], 'zone');
+      check(categories,  ['name','time'], 'category');
+    })();
+
     // Keep localStorage in sync with Supabase so the fallback always reflects latest known-good state
     save();
     return true;
@@ -1902,6 +1938,52 @@ async function loadFromSupabase() {
     return false;
   }
 }
+
+// ═══ WRITE-AHEAD LOG (WAL) ════════════════════════════════════════════════
+// Every dbUpsert writes the payload here BEFORE calling Supabase.
+// On confirmed success the entry is cleared. If the app closes/crashes before
+// the Supabase round-trip completes, _replayWAL() re-sends pending entries to
+// Supabase on the NEXT load — before fresh data is fetched — so the change is
+// never silently lost due to a network blip or accidental refresh.
+// Scope: upserts only (rows that already have a Supabase UUID).
+// New inserts are covered by the beforeunload warning.
+const _WAL_KEY = 'ml_wal_v1';
+function _walWrite(table, row) {
+  if (!row.id) return null;
+  try {
+    const wal = JSON.parse(localStorage.getItem(_WAL_KEY) || '{}');
+    wal[`${table}:${row.id}`] = { table, row, ts: Date.now() };
+    localStorage.setItem(_WAL_KEY, JSON.stringify(wal));
+    return `${table}:${row.id}`;
+  } catch(e) { return null; }
+}
+function _walClear(key) {
+  if (!key) return;
+  try {
+    const wal = JSON.parse(localStorage.getItem(_WAL_KEY) || '{}');
+    delete wal[key];
+    localStorage.setItem(_WAL_KEY, JSON.stringify(wal));
+  } catch(e) {}
+}
+async function _replayWAL() {
+  if (!currentTenantId) return;
+  try {
+    const wal = JSON.parse(localStorage.getItem(_WAL_KEY) || '{}');
+    const entries = Object.entries(wal);
+    if (!entries.length) return;
+    console.log(`[WAL] replaying ${entries.length} pending save(s)`);
+    let ok = 0, fail = 0;
+    for (const [key, {table, row}] of entries) {
+      const { error } = await sb.from(table)
+        .upsert({ ...row, tenant_id: currentTenantId }, { onConflict: 'id' });
+      if (!error) { _walClear(key); ok++; }
+      else { console.warn('[WAL] replay failed:', table, row.id, error.message); fail++; }
+    }
+    if (ok)   showToast(`${ok} שינוי${ok>1?'ים':''} שוחזר${ok>1?'ו':''} מגיבוי ✓`, 'info');
+    if (fail) showToast(`⚠️ ${fail} שינוי${fail>1?'ים':''} לא הצליח${fail>1?'ו':''} להישמר — בדוק חיבור`, 'error');
+  } catch(e) { console.error('[WAL] replay error:', e); }
+}
+// ═══════════════════════════════════════════════════════════════════════════
 
 // ═══ UNIFIED DB WRITE LAYER ════════════════════════════════════════════════
 // All entity saves go through dbUpsert / dbInsert so that every write has:
@@ -1924,6 +2006,7 @@ window.addEventListener('beforeunload', e => {
 });
 async function dbUpsert(table, row) {
   if (!currentTenantId) { showToast('שגיאה: לא מחובר — יש להתחבר מחדש', 'error'); return null; }
+  const walKey = _walWrite(table, { ...row, tenant_id: currentTenantId });
   _trackSave(+1);
   const { data, error } = await sb.from(table)
     .upsert({ ...row, tenant_id: currentTenantId }, { onConflict: 'id' })
@@ -1932,9 +2015,10 @@ async function dbUpsert(table, row) {
   if (error) {
     console.error(`[db] ${table}:`, error);
     Sentry?.captureException(error);
-    showToast('שגיאה בשמירה: ' + (error.message || error.code || 'בדוק חיבור'), 'error');
-    return null;
+    showToast('שגיאה בשמירה — השינוי שמור מקומית, ינסה שנית בטעינה הבאה', 'error');
+    return null; // walKey stays — replayed on next loadFromSupabase
   }
+  _walClear(walKey);
   return data;
 }
 async function dbInsert(table, row) {
@@ -2188,6 +2272,14 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function initApp() {
+  if (_isStaging) {
+    const b = document.createElement('div');
+    b.id = 'staging-banner';
+    b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#d97706;color:#fff;text-align:center;font-size:0.75rem;padding:4px;font-weight:700;letter-spacing:0.5px;';
+    b.textContent = '🧪 STAGING — נתוני בדיקה בלבד, לא מחובר לנתוני הלקוח';
+    document.body.prepend(b);
+    document.body.style.marginTop = '26px';
+  }
   if (CONFIG.DEMO_MODE) {
     loadDemoData(CONFIG.DEMO_TYPE);
     showDemoBanner();

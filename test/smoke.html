@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maslul — Smoke Tests</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; padding: 24px; direction: rtl; }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  .subtitle { color: #64748b; font-size: 0.85rem; margin-bottom: 24px; }
+  .config-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin-bottom: 24px; max-width: 560px; }
+  .config-card h2 { font-size: 1rem; margin-bottom: 12px; color: #475569; }
+  label { display: block; font-size: 0.8rem; color: #64748b; margin-bottom: 4px; margin-top: 10px; }
+  input { width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; direction: ltr; }
+  .btn { padding: 9px 20px; border: none; border-radius: 7px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
+  .btn-run { background: #3b82f6; color: #fff; margin-top: 16px; width: 100%; }
+  .btn-run:disabled { background: #94a3b8; cursor: not-allowed; }
+  #results { max-width: 560px; }
+  .test-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+              border-radius: 8px; margin-bottom: 6px; font-size: 0.88rem; background: #fff;
+              border: 1px solid #e2e8f0; }
+  .test-row.pass { border-color: #86efac; background: #f0fdf4; }
+  .test-row.fail { border-color: #fca5a5; background: #fef2f2; }
+  .test-row.running { border-color: #93c5fd; background: #eff6ff; }
+  .icon { font-size: 1.1rem; width: 22px; text-align: center; }
+  .name { flex: 1; }
+  .ms { color: #94a3b8; font-size: 0.75rem; margin-right: auto; }
+  .err { color: #dc2626; font-size: 0.75rem; margin-top: 4px; display: block; }
+  #summary { margin-top: 16px; font-weight: 700; font-size: 0.95rem; }
+  .summary-pass { color: #16a34a; }
+  .summary-fail { color: #dc2626; }
+  .warning { background: #fef9c3; border: 1px solid #fde047; border-radius: 8px; padding: 12px 16px;
+             font-size: 0.82rem; color: #713f12; margin-bottom: 20px; max-width: 560px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<h1>Maslul — Smoke Tests</h1>
+<p class="subtitle">בדיקת round-trip לכל 8 הישויות מול Supabase. מריץ על Staging בלבד.</p>
+
+<div class="warning">
+  ⚠️ <strong>הרץ רק מול Staging.</strong> הבדיקות יוצרות ומוחקות רשומות אמיתיות בבסיס הנתונים.
+  אל תחבר למסד הנתונים של הייצור (Israel / לקוחות אמיתיים).
+</div>
+
+<div class="config-card">
+  <h2>פרטי חיבור Staging</h2>
+  <label>Supabase URL</label>
+  <input id="cfg-url" placeholder="https://xxxx.supabase.co" dir="ltr">
+  <label>Anon Key</label>
+  <input id="cfg-key" placeholder="eyJ..." dir="ltr">
+  <label>Tenant ID לבדיקה (UUID של tenant staging)</label>
+  <input id="cfg-tenant" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" dir="ltr">
+  <label>Auth Email (משתמש staging)</label>
+  <input id="cfg-email" type="email" placeholder="test@example.com" dir="ltr">
+  <label>Auth Password</label>
+  <input id="cfg-pass" type="password" dir="ltr">
+  <button class="btn btn-run" id="run-btn" onclick="runAll()">הרץ בדיקות</button>
+</div>
+
+<div id="results"></div>
+<div id="summary"></div>
+
+<script>
+const TESTS = [
+  { id: 'auth',       name: 'Auth: התחברות + טעינת tenant' },
+  { id: 'tech',       name: 'Technician: insert → read → update → delete' },
+  { id: 'zone',       name: 'Zone: insert → add city → read → delete' },
+  { id: 'category',   name: 'Category: insert → read → delete' },
+  { id: 'package',    name: 'Package: insert → read → delete' },
+  { id: 'task',       name: 'Task: insert → update status → read → delete' },
+  { id: 'dayoff',     name: 'Day-off: insert → read → delete' },
+  { id: 'client',     name: 'Client: insert → read → delete' },
+  { id: 'cleanup',    name: 'Cleanup: ניקוי רשומות בדיקה' },
+];
+
+let sb, tenantId;
+const created = {}; // table → [id, ...]
+
+function $id(id) { return document.getElementById(id); }
+
+function renderTests() {
+  $id('results').innerHTML = TESTS.map(t =>
+    `<div class="test-row" id="row-${t.id}">
+       <span class="icon" id="icon-${t.id}">⬜</span>
+       <span class="name">${t.name}</span>
+       <span class="ms" id="ms-${t.id}"></span>
+     </div>`
+  ).join('');
+}
+
+function setRow(id, state, ms, err) {
+  const row = $id(`row-${id}`);
+  const icon = $id(`icon-${id}`);
+  const msEl = $id(`ms-${id}`);
+  row.className = `test-row ${state}`;
+  icon.textContent = state === 'pass' ? '✅' : state === 'fail' ? '❌' : '⏳';
+  if (ms) msEl.textContent = `${ms}ms`;
+  if (err) {
+    const span = document.createElement('span');
+    span.className = 'err';
+    span.textContent = err;
+    row.appendChild(span);
+  }
+}
+
+async function run(id, fn) {
+  setRow(id, 'running');
+  const t0 = Date.now();
+  try {
+    await fn();
+    setRow(id, 'pass', Date.now() - t0);
+    return true;
+  } catch(e) {
+    setRow(id, 'fail', Date.now() - t0, e.message);
+    return false;
+  }
+}
+
+function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+async function runAll() {
+  const url    = $id('cfg-url').value.trim();
+  const key    = $id('cfg-key').value.trim();
+  const tenant = $id('cfg-tenant').value.trim();
+  const email  = $id('cfg-email').value.trim();
+  const pass   = $id('cfg-pass').value;
+  if (!url || !key || !tenant || !email || !pass) {
+    alert('מלא את כל שדות החיבור תחילה'); return;
+  }
+  $id('run-btn').disabled = true;
+  $id('summary').textContent = '';
+  tenantId = tenant;
+  sb = supabase.createClient(url, key);
+  renderTests();
+
+  let passed = 0, failed = 0;
+
+  const ok = async (id, fn) => {
+    const r = await run(id, fn);
+    r ? passed++ : failed++;
+  };
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  await ok('auth', async () => {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    assert(!error, error?.message);
+    assert(data?.user?.id, 'no user returned');
+    const { data: ud, error: ue } = await sb.from('users')
+      .select('tenant_id').eq('id', data.user.id).single();
+    assert(!ue, ue?.message);
+    assert(ud?.tenant_id === tenant, `tenant_id mismatch: got ${ud?.tenant_id}`);
+  });
+
+  // ── Technician ────────────────────────────────────────────────────────────
+  let techId;
+  await ok('tech', async () => {
+    const { data: ins, error: ie } = await sb.from('technicians').insert({
+      tenant_id: tenant, name: '[TEST] טכנאי בדיקה', phone: '050-0000000',
+      base_city: 'תל אביב', color: '#aabbcc', min_daily: 2, max_daily: 8,
+      start_time: '07:00', end_time: '18:00', blocked_cities: [],
+      skills: [], cat_limits: {}, rotation: {}, weekly_schedule: {}
+    }).select().single();
+    assert(!ie, ie?.message); assert(ins?.id, 'no id returned');
+    techId = ins.id; (created.technicians = created.technicians||[]).push(techId);
+    // read back
+    const { data: rd } = await sb.from('technicians').select('name').eq('id', techId).single();
+    assert(rd?.name === '[TEST] טכנאי בדיקה', `read-back name mismatch: ${rd?.name}`);
+    // update
+    const { error: ue } = await sb.from('technicians').update({ name: '[TEST] טכנאי בדיקה (עודכן)' }).eq('id', techId);
+    assert(!ue, ue?.message);
+    const { data: rd2 } = await sb.from('technicians').select('name').eq('id', techId).single();
+    assert(rd2?.name?.includes('עודכן'), 'update not persisted');
+  });
+
+  // ── Zone ─────────────────────────────────────────────────────────────────
+  await ok('zone', async () => {
+    const { data: ins, error: ie } = await sb.from('zones').insert({
+      tenant_id: tenant, name: '[TEST] אזור בדיקה', cities: ['תל אביב']
+    }).select().single();
+    assert(!ie, ie?.message); assert(ins?.id, 'no id');
+    (created.zones = created.zones||[]).push(ins.id);
+    // add city via upsert
+    const { error: ue } = await sb.from('zones').update({ cities: ['תל אביב', 'רמת גן'] }).eq('id', ins.id);
+    assert(!ue, ue?.message);
+    const { data: rd } = await sb.from('zones').select('cities').eq('id', ins.id).single();
+    assert(rd?.cities?.includes('רמת גן'), 'city not saved');
+  });
+
+  // ── Category ─────────────────────────────────────────────────────────────
+  await ok('category', async () => {
+    const { data: ins, error: ie } = await sb.from('categories').insert({
+      tenant_id: tenant, name: '[TEST] קטגוריית בדיקה', duration_minutes: 30
+    }).select().single();
+    assert(!ie, ie?.message); assert(ins?.id, 'no id');
+    (created.categories = created.categories||[]).push(ins.id);
+    const { data: rd } = await sb.from('categories').select('name').eq('id', ins.id).single();
+    assert(rd?.name?.includes('[TEST]'), 'read-back mismatch');
+  });
+
+  // ── Package ───────────────────────────────────────────────────────────────
+  await ok('package', async () => {
+    const { data: ins, error: ie } = await sb.from('packages').insert({
+      tenant_id: tenant, name: '[TEST] חבילת בדיקה', items: [{ cat: 'test', qty: 1 }]
+    }).select().single();
+    assert(!ie, ie?.message); assert(ins?.id, 'no id');
+    (created.packages = created.packages||[]).push(ins.id);
+    const { data: rd } = await sb.from('packages').select('items').eq('id', ins.id).single();
+    assert(Array.isArray(rd?.items) && rd.items.length === 1, 'items not saved');
+  });
+
+  // ── Task ──────────────────────────────────────────────────────────────────
+  await ok('task', async () => {
+    const { data: ins, error: ie } = await sb.from('tasks').insert({
+      tenant_id: tenant, assign_id: 'MSL-SMOKE-01', client_name: '[TEST] לקוח בדיקה',
+      client_phone: '050-9999999', city: 'תל אביב', street: 'דיזנגוף 1',
+      category_name: 'test', technician_id: techId || null,
+      status: 'pending', scheduled_date: null, scheduled_time: null,
+      notes: '', cancelled_at: null, preferred_windows: [], checklist_done: {}
+    }).select().single();
+    assert(!ie, ie?.message); assert(ins?.id, 'no id');
+    (created.tasks = created.tasks||[]).push(ins.id);
+    // update status
+    const { error: ue } = await sb.from('tasks').update({ status: 'assigned' }).eq('id', ins.id);
+    assert(!ue, ue?.message);
+    const { data: rd } = await sb.from('tasks').select('status,checklist_done').eq('id', ins.id).single();
+    assert(rd?.status === 'assigned', 'status update not saved');
+    assert(rd?.checklist_done !== undefined, 'checklist_done column missing');
+  });
+
+  // ── Day-off ───────────────────────────────────────────────────────────────
+  await ok('dayoff', async () => {
+    const { data: ins, error: ie } = await sb.from('day_offs').insert({
+      tenant_id: tenant, technician_id: techId || null,
+      date: '2099-01-01', type: 'full', from_time: null, to_time: null, reason: 'smoke test'
+    }).select().single();
+    assert(!ie, ie?.message); assert(ins?.id, 'no id');
+    (created.day_offs = created.day_offs||[]).push(ins.id);
+    const { data: rd } = await sb.from('day_offs').select('reason').eq('id', ins.id).single();
+    assert(rd?.reason === 'smoke test', 'read-back mismatch');
+  });
+
+  // ── Client ────────────────────────────────────────────────────────────────
+  await ok('client', async () => {
+    const { data: ins, error: ie } = await sb.from('clients').insert({
+      tenant_id: tenant, name: '[TEST] לקוח בדיקה', phone: '050-8888888',
+      email: '', city: 'תל אביב', address: '', notes: '', archived: false
+    }).select().single();
+    assert(!ie, ie?.message); assert(ins?.id, 'no id');
+    (created.clients = created.clients||[]).push(ins.id);
+    const { data: rd } = await sb.from('clients').select('name').eq('id', ins.id).single();
+    assert(rd?.name?.includes('[TEST]'), 'read-back mismatch');
+  });
+
+  // ── Cleanup ───────────────────────────────────────────────────────────────
+  await ok('cleanup', async () => {
+    for (const [table, ids] of Object.entries(created)) {
+      for (const id of ids) {
+        const { error } = await sb.from(table).delete().eq('id', id);
+        if (error) throw new Error(`cleanup ${table}/${id}: ${error.message}`);
+      }
+    }
+    await sb.auth.signOut();
+  });
+
+  // ── Summary ───────────────────────────────────────────────────────────────
+  const total = passed + failed;
+  $id('summary').innerHTML = failed === 0
+    ? `<span class="summary-pass">✅ כל ${total} הבדיקות עברו בהצלחה</span>`
+    : `<span class="summary-fail">❌ ${failed} מתוך ${total} נכשלו — בדוק פרטים למעלה</span>`;
+  $id('run-btn').disabled = false;
+}
+</script>
+</body>
+</html>
