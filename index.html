@@ -1820,6 +1820,40 @@ async function loadFromSupabase() {
       id: z.id, name: z.name, cities: z.cities || [], _dbId: z.id
     }));
 
+    // ── ZONE RECOVERY ─────────────────────────────────────────────────────────
+    // Triggers when: (a) Supabase has no zones at all, OR (b) zones exist but
+    // ALL of them are empty — which is exactly what happened when Israel spent
+    // an hour entering cities and the save silently failed.
+    const allZonesEmpty = zones.length === 0 || zones.every(z => !z.cities || z.cities.length === 0);
+
+    if (allZonesEmpty) {
+      // Try localStorage backup first (has cities from the failed session)
+      try {
+        const lsZones = JSON.parse(localStorage.getItem('ml8_zones') || '[]');
+        const lsHasCities = lsZones.some(z => z.cities && z.cities.length > 0);
+        if (lsHasCities) {
+          // Wipe empty Supabase zones before restoring
+          zones.forEach(z => { if (z._dbId) deleteZoneFromSupabase(z._dbId); });
+          zones = lsZones;
+          console.warn('[Maslul] Recovered', zones.length, 'zones from localStorage — re-saving to Supabase');
+          showToast('אזורים שוחזרו מגיבוי מקומי — שמירה מחדש...', 'warning');
+          setTimeout(() => { zones.forEach(z => { z._dbId = undefined; saveZoneToSupabase(z); }); save(); }, 500);
+        }
+      } catch(e) { console.warn('[Maslul] Zone localStorage recovery error:', e); }
+
+      // If still no cities anywhere — seed from the geographic zones extracted from the calendar
+      const stillEmpty = zones.every(z => !z.cities || z.cities.length === 0);
+      if (stillEmpty && currentTenantId === '00000000-0000-0000-0000-000000000001') {
+        // Delete the empty placeholder zones in Supabase (if any)
+        zones.forEach(z => { if (z._dbId) deleteZoneFromSupabase(z._dbId); });
+        zones = getIsraelDefaultZones();
+        console.log('[Maslul] Seeding', zones.length, 'geographic zones for Israel tenant');
+        setTimeout(() => { zones.forEach(z => saveZoneToSupabase(z)); save(); }, 600);
+        showToast('ערים שוחזרו לאזורים גאוגרפיים מהיומן — בדוק בדף האזורים', 'info');
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     categories = (catRes.data || []).map(c => ({
       id: c.id, name: c.name, time: c.duration_minutes, checklist: c.checklist || [], _dbId: c.id
     }));
@@ -1870,6 +1904,8 @@ async function loadFromSupabase() {
       nextTaskId = maxNum + 1;
     }
 
+    // Keep localStorage in sync with Supabase so the fallback always reflects latest known-good state
+    save();
     return true;
   } catch(e) {
     console.error('Supabase load error:', e);
@@ -1948,25 +1984,30 @@ function _setZoneSaveStatus(msg, isError) {
 }
 async function saveZoneToSupabase(zone) {
   if (!currentTenantId) return;
-  _setZoneSaveStatus('שומר…');
-  const row = { tenant_id: currentTenantId, name: zone.name, cities: zone.cities };
-  if (zone._dbId) {
-    const { error } = await sb.from('zones').update(row).eq('id', zone._dbId);
+  // Serialize saves per zone: each call chains after the previous one for the same zone.
+  // This prevents INSERT/UPDATE races when the user adds cities immediately after creating a zone.
+  const queueKey = zone.id;
+  const prev = _zoneSaveQueues[queueKey] || Promise.resolve();
+  const thisOp = prev.then(async () => {
+    _setZoneSaveStatus('שומר…');
+    // Always send the zone's own id — upsert handles both insert (new zone) and update (existing zone)
+    const row = { id: zone.id, tenant_id: currentTenantId, name: zone.name, cities: zone.cities };
+    const { data, error } = await sb.from('zones')
+      .upsert(row, { onConflict: 'id' })
+      .select('id')
+      .single();
     if (error) {
-      console.error('zone update error:', error); Sentry?.captureException(error);
-      _setZoneSaveStatus('⚠️ שגיאה בשמירה — נסה שוב', true);
-      showToast('שגיאה בשמירת האזור', 'error');
-    } else { _setZoneSaveStatus('נשמר ✓'); }
-  } else {
-    const { data, error } = await sb.from('zones').insert({ ...row, id: zone.id }).select('id').single();
-    if (error) {
-      console.error('zone insert error:', error); Sentry?.captureException(error);
-      _setZoneSaveStatus('⚠️ שגיאה בשמירה — נסה שוב', true);
-      showToast('שגיאה בשמירת האזור', 'error'); return;
+      console.error('zone save error:', error); Sentry?.captureException(error);
+      _setZoneSaveStatus('⚠️ שגיאה בשמירה', true);
+      showToast('שגיאה בשמירת האזור: ' + (error.message || error.code || 'בדוק חיבור'), 'error');
+    } else {
+      if (data) { zone._dbId = data.id; save(); }
+      _setZoneSaveStatus('נשמר ✓');
     }
-    if (data) { zone._dbId = data.id; zone.id = data.id; save(); }
-    _setZoneSaveStatus('נשמר ✓');
-  }
+  }).catch(e => { console.error('zone save exception:', e); Sentry?.captureException(e); });
+  _zoneSaveQueues[queueKey] = thisOp;
+  await thisOp;
+  if (_zoneSaveQueues[queueKey] === thisOp) delete _zoneSaveQueues[queueKey];
 }
 async function deleteZoneFromSupabase(dbId) {
   await sb.from('zones').delete().eq('id', dbId);
@@ -2071,6 +2112,7 @@ let plannerMode='weekly',plannerWeekOffset=0,plannerSelectedTechs=[],plannerDayI
 let allCandidates=[],currentCandidateIdx=0,selectedTimeSlot=null;
 let replaceSuggestion=null;
 let settings={company:'מסלול',startTime:'07:00',endTime:'18:00',window:3,maxDaily:9,lookahead:30,monthlyVolume:300,regularTime:30,packageTime:45};
+const _zoneSaveQueues={}; // serializes saves per zone — prevents race conditions on fast edits
 
 // ═══ STORAGE ═══
 function save(){
@@ -2466,7 +2508,7 @@ async function createWizardTenant(){
     if(zoneIds.length>0){for(let d=0;d<6;d++)rotation[String(d)]=zoneIds[(i+d)%zoneIds.length];}
     await sb.from('technicians').insert({
       tenant_id:tid,name:t.name,phone:t.phone||null,base_city:t.city,
-      min_daily:2,max_daily:t.max,start_time:start,end_time:end,
+      min_daily:4,max_daily:t.max,start_time:start,end_time:end,
       color:techColors[i%techColors.length],rotation,skills:catIds,cat_limits:{}
     });
   }
@@ -4346,6 +4388,36 @@ function deleteTech(id){
 }
 
 // ═══ ZONES ═══
+// Pre-built geographic zones extracted from PureWater Israel's actual calendar (May 2026).
+// Cities ordered far → near relative to each zone's typical starting point.
+// Called automatically when Israel's tenant has no zones in Supabase.
+function getIsraelDefaultZones(){
+  return [
+    { id:genClientId(), name:'גוש דן', cities:[
+      'לוד','יהוד','אור יהודה','קרית אונו','גבעת שמואל','פתח תקווה',
+      'רמת גן','גבעתיים','תל אביב','חולון','בת ים','ראשון לציון','נס ציונה'
+    ]},
+    { id:genClientId(), name:'שרון', cities:[
+      'נתניה','פרדס חנה כרכור','קיסריה','אור עקיבא','בת חפר',
+      'שעיר אפרים','צופים','כפר סבא','רעננה','הרצליה','רמת השרון'
+    ]},
+    { id:genClientId(), name:'חיפה וקריות', cities:[
+      'יקנעם','זכרון יעקב','עתלית','טירת כרמל',
+      'קרית אתא','קרית ים','קרית חיים','חיפה'
+    ]},
+    { id:genClientId(), name:'גליל', cities:[
+      'קיבוץ דן','קיבוץ מצובה','נהריה','בוסתן הגליל','כפר מסריק',
+      'כרמיאל','טבריה','עילבון','נוף הגליל','גן נר','עפולה'
+    ]},
+    { id:genClientId(), name:'שפלה', cities:[
+      'מודיעין','לוד','רמלה','באר יעקב','מושב הודיה','יבנה'
+    ]},
+    { id:genClientId(), name:'דרום', cities:[
+      'קרית גת','שדרות','קרית מלאכי','אשדוד','אשקלון'
+    ]},
+  ];
+}
+
 function renderZones(){
   document.getElementById('zones-list').innerHTML=zones.map((z,zi)=>`
     <div class="zone-card">
@@ -4361,7 +4433,14 @@ function renderZones(){
       </div>
     </div>`).join('')||'<div class="empty"><div class="empty-icon">🗺️</div><div>הוסף אזור ראשון</div></div>';
 }
-function addZone(){const z={id:genClientId(),name:'אזור חדש',cities:[]};zones.push(z);save();renderZones();populateCitySelect();saveZoneToSupabase(z);}
+async function addZone(){
+  const z={id:genClientId(),name:'אזור חדש',cities:[]};
+  zones.push(z);save();
+  // Await the Supabase insert so _dbId is set BEFORE the textarea appears.
+  // This eliminates the race where a fast city-add fires a duplicate INSERT.
+  await saveZoneToSupabase(z);
+  renderZones();populateCitySelect();
+}
 function deleteZone(id){
   const z=zones.find(x=>x.id===id);if(!z)return;
   if(!confirm(`למחוק את האזור "${z.name}"?\n\nכל הערים המשויכות יאבדו ולא ניתן לשחזר. המשך?`))return;
