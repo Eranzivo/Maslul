@@ -1829,12 +1829,18 @@ async function loadFromSupabase() {
       id: z.id, name: z.name, cities: z.cities || [], _dbId: z.id
     }));
 
-    // ── ZONE RECOVERY + MERGE ─────────────────────────────────────────────────
-    // Run for Israel's tenant on every load: ensure all 6 geographic zones exist
-    // and have cities. Zones with existing cities are never touched. Missing zones
-    // are created, empty zones are populated. Safe to run repeatedly.
+    // ── ZONE RECOVERY (one-time seed for Israel's tenant) ─────────────────────
+    // Runs only if zones are missing or any zone has no cities.
+    // Once all zones have cities, the flag 'ml_zones_seeded_001' is set and
+    // this never runs again — so manual zone edits are never overwritten.
     if (currentTenantId === '00000000-0000-0000-0000-000000000001') {
-      setTimeout(() => mergeIsraelDefaultZones(), 700);
+      const alreadySeeded = localStorage.getItem('ml_zones_seeded_001');
+      const zonesLoaded = (zoneRes.data || []);
+      const needsSeed = !alreadySeeded && (
+        zonesLoaded.length === 0 ||
+        zonesLoaded.some(z => !z.cities || z.cities.length === 0)
+      );
+      if (needsSeed) setTimeout(() => mergeIsraelDefaultZones(), 700);
     }
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -1909,6 +1915,13 @@ function _trackSave(delta) {
   const el = document.getElementById('save-indicator');
   if (el) el.style.display = _savesInFlight > 0 ? 'block' : 'none';
 }
+// Warn if user tries to refresh/close while saves are still in-flight
+window.addEventListener('beforeunload', e => {
+  if (_savesInFlight > 0) {
+    e.preventDefault();
+    e.returnValue = 'יש שמירה בתהליך — רענון עכשיו יגרום לאיבוד נתונים. להמשיך?';
+  }
+});
 async function dbUpsert(table, row) {
   if (!currentTenantId) { showToast('שגיאה: לא מחובר — יש להתחבר מחדש', 'error'); return null; }
   _trackSave(+1);
@@ -1949,6 +1962,7 @@ async function saveTaskToSupabase(task) {
     scheduled_date: task.date || null, scheduled_time: task.time || null,
     notes: task.notes || '', cancelled_at: task.cancelledAt || null,
     preferred_windows: task.preferredWindows || [],
+    checklist_done: task.checklistDone || {},
   };
   if (task._dbId) return (await dbUpsert('tasks', { id: task._dbId, ...row })) !== null;
   const data = await dbInsert('tasks', row);
@@ -3503,6 +3517,15 @@ function buildCandidates(city,catId){
       if(!getCatLimitOk(tech,catId,date.str))continue;
       const load=getTechLoad(tech,date.str);
       if(load>=tech.max)continue;
+      // min_daily hard enforcement: don't open a fresh day while any existing day is underfull
+      if(load===0&&(tech.min||0)>1){
+        const hasUnderfull=dates.some(d2=>{
+          if(d2.str===date.str)return false;
+          const l2=getTechLoad(tech,d2.str);
+          return l2>0&&l2<tech.min;
+        });
+        if(hasUnderfull)continue;
+      }
       if(!isRouteLogical(tech,date.str,city))continue;
       const optTime=calcOptimalTime(tech,date.str,city);
       if(!optTime)continue; // no room in day
@@ -4412,7 +4435,12 @@ function mergeIsraelDefaultZones(){
       changed = true;
     }
   });
-  if (changed) { save(); populateCitySelect(); renderZones(); showToast('אזורים עודכנו — ערים שוחזרו מהיומן', 'info'); }
+  if (changed) {
+    save(); populateCitySelect(); renderZones();
+    showToast('אזורים עודכנו — ערים שוחזרו מהיומן', 'info');
+  }
+  // Mark seed as done so this never overwrites manual zone edits in future logins
+  localStorage.setItem('ml_zones_seeded_001', '1');
 }
 
 // Pre-built geographic zones extracted from PureWater Israel's actual calendar (May 2026).
