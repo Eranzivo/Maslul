@@ -598,6 +598,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   </div>
   <div class="sb-bot">
     <div id="save-indicator" style="display:none;font-size:0.7rem;color:var(--ink-3);text-align:center;padding:2px 0 4px;letter-spacing:0.3px;">⟳ שומר…</div>
+    <div id="conn-indicator" style="display:none;font-size:0.7rem;text-align:center;padding:2px 0 4px;letter-spacing:0.3px;color:var(--red);">⚠️ אין חיבור לרשת</div>
     <select class="sb-view-sel" id="role-sel" onchange="switchRole()">
       <option value="admin">מתאמת / מנהל</option>
     </select>
@@ -1666,6 +1667,7 @@ function showLogin() {
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('reset-screen').classList.add('hidden');
   document.getElementById('app-shell').classList.add('hidden');
+  stopConnectionMonitor();
 }
 function openLoginModal() {
   document.getElementById('login-screen').classList.remove('hidden');
@@ -1703,6 +1705,7 @@ function showApp() {
   document.getElementById('landing-page').classList.add('hidden');
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app-shell').classList.remove('hidden');
+  if (!CONFIG.DEMO_MODE) startConnectionMonitor();
   // Restore impersonation session after page refresh (super_admin only)
   if(currentUserSuperAdmin){
     const saved=sessionStorage.getItem('ma_session');
@@ -1982,6 +1985,46 @@ async function _replayWAL() {
     if (ok)   showToast(`${ok} שינוי${ok>1?'ים':''} שוחזר${ok>1?'ו':''} מגיבוי ✓`, 'info');
     if (fail) showToast(`⚠️ ${fail} שינוי${fail>1?'ים':''} לא הצליח${fail>1?'ו':''} להישמר — בדוק חיבור`, 'error');
   } catch(e) { console.error('[WAL] replay error:', e); }
+}
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ═══ CONNECTION HEALTH MONITOR ═══════════════════════════════════════════
+// Pings Supabase every 60 seconds with a lightweight query.
+// Shows a red "אין חיבור לרשת" banner in the sidebar when offline,
+// warns if the user tries to save while disconnected, and restores
+// normal state silently when the connection comes back.
+let _connOk = true;
+let _connInterval = null;
+async function _checkConnection() {
+  if (!currentTenantId) return;
+  try {
+    const { error } = await sb.from('tenants').select('id').eq('id', currentTenantId).single();
+    const ok = !error;
+    if (ok !== _connOk) {
+      _connOk = ok;
+      const el = document.getElementById('conn-indicator');
+      if (el) el.style.display = ok ? 'none' : 'block';
+      if (!ok) showToast('⚠️ אין חיבור לשרת — שינויים ישמרו בטעינה הבאה', 'error');
+      else      showToast('חיבור לשרת חודש ✓', 'info');
+    }
+  } catch(e) {
+    if (_connOk) {
+      _connOk = false;
+      const el = document.getElementById('conn-indicator');
+      if (el) el.style.display = 'block';
+    }
+  }
+}
+function startConnectionMonitor() {
+  if (_connInterval) return;
+  _connInterval = setInterval(_checkConnection, 60000);
+}
+function stopConnectionMonitor() {
+  clearInterval(_connInterval);
+  _connInterval = null;
+  _connOk = true;
+  const el = document.getElementById('conn-indicator');
+  if (el) el.style.display = 'none';
 }
 // ═══════════════════════════════════════════════════════════════════════════
 

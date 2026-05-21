@@ -269,6 +269,102 @@ ALTER TABLE tasks       ADD COLUMN IF NOT EXISTS client_phone TEXT DEFAULT '';
 ALTER TABLE clients     ADD COLUMN IF NOT EXISTS archived     BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE clients     ADD COLUMN IF NOT EXISTS archived_at  TIMESTAMPTZ;
 ALTER TABLE tasks       ADD COLUMN IF NOT EXISTS preferred_windows JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE tasks       ADD COLUMN IF NOT EXISTS checklist_done   JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+-- ═══════════════════════════════════════════════════════════════
+-- AUDIT LOG
+-- Permanent record of every INSERT / UPDATE / DELETE on all
+-- critical tables. Lives inside Supabase — unaffected by client
+-- cache, JS bugs, or app restarts. Use it to answer:
+-- "what happened to that zone / technician / task and when?"
+--
+-- Query example (find recent zone changes for Israel):
+--   SELECT created_at, operation,
+--          old_data->'cities' AS before,
+--          new_data->'cities' AS after
+--   FROM   audit_log
+--   WHERE  table_name = 'zones'
+--     AND  tenant_id  = '00000000-0000-0000-0000-000000000001'
+--   ORDER  BY created_at DESC LIMIT 20;
+-- ═══════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS audit_log (
+  id          UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  tenant_id   UUID,
+  table_name  TEXT        NOT NULL,
+  operation   TEXT        NOT NULL,  -- INSERT | UPDATE | DELETE
+  record_id   UUID,
+  old_data    JSONB,
+  new_data    JSONB
+);
+
+-- Index for fast per-tenant lookups
+CREATE INDEX IF NOT EXISTS idx_audit_tenant_table ON audit_log(tenant_id, table_name, created_at DESC);
+
+-- RLS: each tenant sees only their own audit rows; super_admin sees all
+ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "audit_read" ON audit_log;
+CREATE POLICY "audit_read" ON audit_log
+  FOR SELECT USING (tenant_id = get_tenant_id() OR is_super_admin());
+
+-- Grant read access to authenticated users (writes come only from the trigger, as SECURITY DEFINER)
+GRANT SELECT ON public.audit_log TO authenticated;
+GRANT ALL    ON public.audit_log TO service_role;
+
+-- Trigger function — runs as SECURITY DEFINER so it bypasses RLS on write
+CREATE OR REPLACE FUNCTION _maslul_audit_trigger()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  INSERT INTO public.audit_log (tenant_id, table_name, operation, record_id, old_data, new_data)
+  VALUES (
+    COALESCE(
+      (CASE WHEN TG_OP = 'DELETE' THEN OLD.tenant_id ELSE NEW.tenant_id END),
+      NULL
+    ),
+    TG_TABLE_NAME,
+    TG_OP,
+    COALESCE(
+      (CASE WHEN TG_OP = 'DELETE' THEN OLD.id ELSE NEW.id END),
+      NULL
+    ),
+    CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE to_jsonb(OLD) END,
+    CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE to_jsonb(NEW) END
+  );
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+-- Apply to all critical tables (idempotent — DROP IF EXISTS before CREATE)
+DROP TRIGGER IF EXISTS _audit_technicians ON technicians;
+CREATE TRIGGER _audit_technicians
+  AFTER INSERT OR UPDATE OR DELETE ON technicians
+  FOR EACH ROW EXECUTE FUNCTION _maslul_audit_trigger();
+
+DROP TRIGGER IF EXISTS _audit_tasks ON tasks;
+CREATE TRIGGER _audit_tasks
+  AFTER INSERT OR UPDATE OR DELETE ON tasks
+  FOR EACH ROW EXECUTE FUNCTION _maslul_audit_trigger();
+
+DROP TRIGGER IF EXISTS _audit_zones ON zones;
+CREATE TRIGGER _audit_zones
+  AFTER INSERT OR UPDATE OR DELETE ON zones
+  FOR EACH ROW EXECUTE FUNCTION _maslul_audit_trigger();
+
+DROP TRIGGER IF EXISTS _audit_categories ON categories;
+CREATE TRIGGER _audit_categories
+  AFTER INSERT OR UPDATE OR DELETE ON categories
+  FOR EACH ROW EXECUTE FUNCTION _maslul_audit_trigger();
+
+DROP TRIGGER IF EXISTS _audit_packages ON packages;
+CREATE TRIGGER _audit_packages
+  AFTER INSERT OR UPDATE OR DELETE ON packages
+  FOR EACH ROW EXECUTE FUNCTION _maslul_audit_trigger();
+
+DROP TRIGGER IF EXISTS _audit_day_offs ON day_offs;
+CREATE TRIGGER _audit_day_offs
+  AFTER INSERT OR UPDATE OR DELETE ON day_offs
+  FOR EACH ROW EXECUTE FUNCTION _maslul_audit_trigger();
 
 -- ═══════════════════════════════════════════════════════════════
 -- ONBOARD A NEW CLIENT (use the Master Admin panel in-app,
