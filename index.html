@@ -1620,6 +1620,14 @@ async function loadTenantFromUser() {
     .select('tenant_id, role, name, super_admin, permissions')
     .eq('id', currentUser.id)
     .single();
+  if (error) {
+    // Network or auth failure — log it and surface a clear message so saves don't silently break
+    console.error('loadTenantFromUser error:', error);
+    Sentry?.captureException(error);
+    document.getElementById('login-error').textContent = 'שגיאה בטעינת פרטי המשתמש — בדוק חיבור לרשת ונסה שנית.';
+    await sb.auth.signOut();
+    return;
+  }
   if (data) {
     currentTenantId = data.tenant_id;
     currentUserRole = data.role;
@@ -1902,7 +1910,7 @@ function _trackSave(delta) {
   if (el) el.style.display = _savesInFlight > 0 ? 'block' : 'none';
 }
 async function dbUpsert(table, row) {
-  if (!currentTenantId) return null;
+  if (!currentTenantId) { showToast('שגיאה: לא מחובר — יש להתחבר מחדש', 'error'); return null; }
   _trackSave(+1);
   const { data, error } = await sb.from(table)
     .upsert({ ...row, tenant_id: currentTenantId }, { onConflict: 'id' })
@@ -1917,7 +1925,7 @@ async function dbUpsert(table, row) {
   return data;
 }
 async function dbInsert(table, row) {
-  if (!currentTenantId) return null;
+  if (!currentTenantId) { showToast('שגיאה: לא מחובר — יש להתחבר מחדש', 'error'); return null; }
   _trackSave(+1);
   const { data, error } = await sb.from(table)
     .insert({ ...row, tenant_id: currentTenantId })
@@ -1981,15 +1989,29 @@ function _setZoneSaveStatus(msg, isError) {
   el.style.color = isError ? 'var(--red)' : 'var(--ink-3)';
   if (!isError && msg) setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 3000);
 }
+function _setZoneInlineStatus(zoneId, msg, isError) {
+  const el = document.getElementById('zone-status-' + zoneId);
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--red)' : 'var(--ink-3)';
+  if (!isError && msg) setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 3000);
+}
 async function saveZoneToSupabase(zone) {
   // Per-zone queue: serializes saves so rapid city edits don't race with the initial INSERT.
   const queueKey = zone.id;
   const prev = _zoneSaveQueues[queueKey] || Promise.resolve();
   const thisOp = prev.then(async () => {
     _setZoneSaveStatus('שומר…');
+    _setZoneInlineStatus(zone.id, 'שומר…', false);
     const data = await dbUpsert('zones', { id: zone.id, name: zone.name, cities: zone.cities });
-    if (data) { zone._dbId = data.id; save(); _setZoneSaveStatus('נשמר ✓'); }
-    else { _setZoneSaveStatus('⚠️ שגיאה בשמירה', true); }
+    if (data) {
+      zone._dbId = data.id; save();
+      _setZoneSaveStatus('נשמר ✓');
+      _setZoneInlineStatus(zone.id, 'נשמר ✓', false);
+    } else {
+      _setZoneSaveStatus('⚠️ שגיאה בשמירה', true);
+      _setZoneInlineStatus(zone.id, '⚠️ לא נשמר', true);
+    }
   }).catch(e => { console.error('zone save exception:', e); Sentry?.captureException(e); });
   _zoneSaveQueues[queueKey] = thisOp;
   await thisOp;
@@ -4429,9 +4451,12 @@ function renderZones(){
       </div>
       <div class="zone-cities">${z.cities.map((c,ci)=>`<span class="city-tag">${h(c)}<button onclick="removeCity('${z.id}',${ci})">×</button></span>`).join('')}</div>
       <div style="font-size:0.72rem;color:var(--ink-3);margin-bottom:6px;">הדבק ערים — <strong>סדר חשוב:</strong> הרחוקה מבסיס הטכנאי ראשונה, הקרובה ביותר אחרונה (קובע את מסלול השיבוץ)</div>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;align-items:flex-end;">
         <textarea class="fc" id="new-city-${z.id}" placeholder="תל אביב&#10;חולון&#10;בת ים" style="flex:1;height:60px;resize:vertical;font-size:0.875rem;"></textarea>
-        <button class="btn btn-outline btn-sm" onclick="addCities('${z.id}')" style="align-self:flex-end;">+ הוסף</button>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
+          <button class="btn btn-outline btn-sm" onclick="addCities('${z.id}')">+ הוסף</button>
+          <span id="zone-status-${z.id}" style="font-size:0.7rem;color:var(--ink-3);min-height:1em;"></span>
+        </div>
       </div>
     </div>`).join('')||'<div class="empty"><div class="empty-icon">🗺️</div><div>הוסף אזור ראשון</div></div>';
 }
@@ -4453,7 +4478,7 @@ function addCities(zoneId){
   const inp=document.getElementById('new-city-'+zoneId);const text=inp.value.trim();if(!text)return;
   const z=zones.find(x=>x.id===zoneId);if(!z)return;
   text.split(/[\n,]+/).map(c=>c.trim()).filter(c=>c).forEach(c=>{if(!z.cities.includes(c))z.cities.push(c);});
-  inp.value='';saveZoneToSupabase(z);save();renderZones();populateCitySelect();
+  inp.value='';save();renderZones();populateCitySelect();saveZoneToSupabase(z);
 }
 function removeCity(zoneId,ci){const z=zones.find(x=>x.id===zoneId);if(z){z.cities.splice(ci,1);saveZoneToSupabase(z);}save();renderZones();populateCitySelect();}
 
