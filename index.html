@@ -636,9 +636,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div class="flex-between" style="margin-bottom:1rem;">
       <button class="btn btn-outline btn-sm" onclick="closeWeeklyCal()">← חזרה לכל הטכנאים</button>
       <div class="week-nav">
-        <button class="week-nav-btn" onclick="changeWeek(-1)">›</button>
+        <button class="week-nav-btn" onclick="changeWeek(-1)">‹</button>
         <div class="week-title" id="week-title"></div>
-        <button class="week-nav-btn" onclick="changeWeek(1)">‹</button>
+        <button class="week-nav-btn" onclick="changeWeek(1)">›</button>
       </div>
       <button class="btn btn-outline btn-sm" onclick="window.print()">🖨️ הדפס</button>
     </div>
@@ -771,9 +771,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <button class="btn btn-outline btn-sm" onclick="plannerClearAll()" style="white-space:nowrap;">נקה הכל</button>
     </div>
     <div class="week-nav" style="margin-top:12px;">
-      <button class="week-nav-btn" onclick="changePlannerWeek(-1)" title="שבוע קודם">›</button>
+      <button class="week-nav-btn" onclick="changePlannerWeek(-1)" title="שבוע קודם">‹</button>
       <div class="week-title" id="planner-week-label" style="font-size:0.9375rem;flex:1;text-align:center;"></div>
-      <button class="week-nav-btn" onclick="changePlannerWeek(1)" title="שבוע הבא">‹</button>
+      <button class="week-nav-btn" onclick="changePlannerWeek(1)" title="שבוע הבא">›</button>
       <button class="btn btn-outline btn-sm" onclick="plannerWeekOffset=0;renderPlannerContent()" style="margin-right:4px;">היום</button>
     </div>
   </div>
