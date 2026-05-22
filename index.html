@@ -370,18 +370,35 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <!-- NAV -->
   <nav style="position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop-filter:blur(10px);border-bottom:1px solid #E5E7EB;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:60px;">
     <div style="font-size:1.375rem;font-weight:900;letter-spacing:-0.5px;color:#111827;"><span style="color:#2563EB;">מס</span>לול</div>
-    <button onclick="openLoginModal()" style="background:#2563EB;color:white;border:none;border-radius:8px;padding:9px 22px;font-size:0.875rem;font-weight:700;cursor:pointer;font-family:'Heebo',sans-serif;">כניסה</button>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <a href="?demo=1" style="background:#F3F4F6;color:#374151;text-decoration:none;padding:8px 18px;border-radius:8px;font-size:0.8rem;font-weight:700;font-family:'Heebo',sans-serif;">דמו חי</a>
+      <button onclick="openLoginModal()" style="background:#2563EB;color:white;border:none;border-radius:8px;padding:9px 22px;font-size:0.875rem;font-weight:700;cursor:pointer;font-family:'Heebo',sans-serif;">כניסה</button>
+    </div>
   </nav>
 
   <!-- HERO -->
   <section style="background:#F8FAFF;background-image:linear-gradient(rgba(37,99,235,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,0.05) 1px,transparent 1px);background-size:36px 36px;text-align:center;padding:5rem 1.5rem 4.5rem;">
-    <div style="display:inline-block;background:white;border:1px solid #BFDBFE;border-radius:30px;padding:5px 18px;font-size:0.68rem;font-weight:800;color:#2563EB;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:1.5rem;">ניהול שטח חכם לעסקים ישראליים</div>
+    <div style="display:inline-block;background:white;border:1px solid #BFDBFE;border-radius:30px;padding:5px 18px;font-size:0.68rem;font-weight:800;color:#2563EB;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:1.5rem;">מנוע שיבוץ חכם לעסקים ישראליים</div>
     <h1 style="font-size:clamp(2.25rem,6vw,3.75rem);font-weight:900;line-height:1.08;letter-spacing:-2px;margin:0 0 1.25rem;color:#111827;">שיבוץ טכנאים.<br><span style="color:#2563EB;">בלי הפתעות.</span></h1>
-    <p style="font-size:1.1rem;color:#6B7280;max-width:500px;margin:0 auto 2.25rem;line-height:1.7;">מסלול מתאם קריאות שירות, מנהל לוחות זמנים ומסנכרן את הצוות בשטח — הכל ממסך אחד.</p>
+    <p style="font-size:1.1rem;color:#6B7280;max-width:520px;margin:0 auto 2.25rem;line-height:1.7;">תפסיקו לנהל את הצוות מהוואטסאפ. מסלול מקצה טכנאים לפי אזור ועומס, מתזמן מסלולים אופטימליים, ועוקב אחרי הכל — ממסך אחד.</p>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
       <a href="mailto:infomaslul@gmail.com?subject=בקשת הדגמה - מסלול" style="background:#2563EB;color:white;text-decoration:none;padding:14px 30px;border-radius:10px;font-size:1rem;font-weight:700;display:inline-block;font-family:'Heebo',sans-serif;">בקש הדגמה ←</a>
+      <a href="?demo=1" style="background:white;color:#2563EB;text-decoration:none;padding:14px 30px;border-radius:10px;font-size:1rem;font-weight:700;border:2px solid #BFDBFE;display:inline-block;font-family:'Heebo',sans-serif;">נסה דמו חי ←</a>
     </div>
-    <div style="margin-top:1rem;font-size:0.8rem;color:#9CA3AF;">הטמעה מיידית לאחר שיחת אפיון · תמיכה בעברית</div>
+    <div style="margin-top:1rem;font-size:0.8rem;color:#9CA3AF;">ללא כרטיס אשראי · ללא חוזה · הטמעה ב-30 דקות · תמיכה בעברית</div>
+  </section>
+
+  <!-- INDUSTRIES STRIP -->
+  <section style="background:white;border-bottom:1px solid #E5E7EB;padding:1.125rem 1.5rem;">
+    <div style="max-width:920px;margin:0 auto;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;">
+      <span style="font-size:0.72rem;font-weight:800;color:#9CA3AF;text-transform:uppercase;letter-spacing:1px;margin-left:6px;">מתאים לכל עסק שטח:</span>
+      <span style="background:#F3F4F6;border-radius:20px;padding:5px 13px;font-size:0.8rem;font-weight:700;color:#374151;">🔧 טכנאי שירות</span>
+      <span style="background:#F3F4F6;border-radius:20px;padding:5px 13px;font-size:0.8rem;font-weight:700;color:#374151;">📦 שליחים ומשלוחים</span>
+      <span style="background:#F3F4F6;border-radius:20px;padding:5px 13px;font-size:0.8rem;font-weight:700;color:#374151;">🧹 חברות ניקיון</span>
+      <span style="background:#F3F4F6;border-radius:20px;padding:5px 13px;font-size:0.8rem;font-weight:700;color:#374151;">⚡ חשמל ואינסטלציה</span>
+      <span style="background:#F3F4F6;border-radius:20px;padding:5px 13px;font-size:0.8rem;font-weight:700;color:#374151;">📡 התקנות ושירות</span>
+      <span style="background:#F3F4F6;border-radius:20px;padding:5px 13px;font-size:0.8rem;font-weight:700;color:#374151;">🏪 נציגי שטח</span>
+    </div>
   </section>
 
   <!-- PROBLEM SECTION -->
@@ -451,47 +468,51 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     </div>
   </section>
 
-  <!-- COMPLETE PLATFORM -->
+  <!-- PLATFORM — 6 CARDS (Timing-style: colored icon container + title + description) -->
   <section style="background:#F9FAFB;border-top:1px solid #E5E7EB;border-bottom:1px solid #E5E7EB;padding:4.5rem 1.5rem;">
-    <div style="max-width:920px;margin:0 auto;">
+    <div style="max-width:960px;margin:0 auto;">
       <div style="text-align:center;margin-bottom:2.75rem;">
-        <div style="font-size:0.68rem;font-weight:800;color:#2563EB;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">פלטפורמה מלאה</div>
+        <div style="font-size:0.68rem;font-weight:800;color:#2563EB;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">מה כלול</div>
         <h2 style="font-size:clamp(1.625rem,3.5vw,2.375rem);font-weight:900;letter-spacing:-0.75px;margin:0;color:#111827;">כל מה שהצוות שלך צריך</h2>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.125rem;">
-        <div style="background:white;border:1px solid #E5E7EB;border-radius:16px;padding:1.875rem;box-shadow:0 1px 6px rgba(0,0,0,0.05);">
-          <div style="font-size:1.625rem;margin-bottom:0.875rem;">🎯</div>
-          <div style="font-size:0.62rem;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px;">שיבוץ חכם</div>
-          <div style="font-weight:800;font-size:1rem;margin-bottom:10px;color:#111827;">אופטימיזציה אוטומטית</div>
-          <ul style="font-size:0.8rem;color:#6B7280;line-height:1.75;padding-right:1.1rem;margin:0;">
-            <li>שיבוץ לפי אזור ועומס יומי</li>
-            <li>מגבלות קטגוריה לטכנאי</li>
-            <li>מילוי חריץ אחרי ביטול</li>
-            <li>חלונות זמן מועדפים ללקוח</li>
-          </ul>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.25rem;">
+
+        <div style="background:white;border:1px solid #E5E7EB;border-radius:18px;padding:1.875rem;box-shadow:0 1px 8px rgba(0,0,0,0.04);">
+          <div style="width:52px;height:52px;border-radius:14px;background:#DCFCE7;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:1.125rem;">🎯</div>
+          <div style="font-weight:800;font-size:1.0625rem;margin-bottom:8px;color:#111827;">שיבוץ חכם אוטומטי</div>
+          <div style="font-size:0.82rem;color:#6B7280;line-height:1.7;">האלגוריתם בוחר את הטכנאי, התאריך והשעה הנכונים — לפי אזור, עומס, כישורים ומגבלות קטגוריה. ביטול? הוא מוצא תחליף מיידית.</div>
         </div>
-        <div style="background:white;border:1px solid #E5E7EB;border-radius:16px;padding:1.875rem;box-shadow:0 1px 6px rgba(0,0,0,0.05);">
-          <div style="font-size:1.625rem;margin-bottom:0.875rem;">📅</div>
-          <div style="font-size:0.62rem;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px;">יומן</div>
-          <div style="font-weight:800;font-size:1rem;margin-bottom:10px;color:#111827;">תצוגה יומית ושבועית</div>
-          <ul style="font-size:0.8rem;color:#6B7280;line-height:1.75;padding-right:1.1rem;margin:0;">
-            <li>כל הטכנאים בתצוגה אחת</li>
-            <li>סינון לפי עובד</li>
-            <li>ניהול חופשות וחסימות</li>
-            <li>מעבר מהיר בין שבועות</li>
-          </ul>
+
+        <div style="background:white;border:1px solid #E5E7EB;border-radius:18px;padding:1.875rem;box-shadow:0 1px 8px rgba(0,0,0,0.04);">
+          <div style="width:52px;height:52px;border-radius:14px;background:#EDE9FE;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:1.125rem;">🔀</div>
+          <div style="font-weight:800;font-size:1.0625rem;margin-bottom:8px;color:#111827;">מסלול מיטבי</div>
+          <div style="font-size:0.82rem;color:#6B7280;line-height:1.7;">מנוע אופטימיזציה (OR-Tools) מסדר את הקריאות ביום לפי מסלול רחוק-קרוב — מינימום זמן נסיעה, מקסימום קריאות. חישוב שעות הגעה ריאליות.</div>
         </div>
-        <div style="background:white;border:1px solid #E5E7EB;border-radius:16px;padding:1.875rem;box-shadow:0 1px 6px rgba(0,0,0,0.05);">
-          <div style="font-size:1.625rem;margin-bottom:0.875rem;">📱</div>
-          <div style="font-size:0.62rem;font-weight:800;color:#2563EB;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px;">תצוגת טכנאי</div>
-          <div style="font-weight:800;font-size:1rem;margin-bottom:10px;color:#111827;">ממוטב למובייל</div>
-          <ul style="font-size:0.8rem;color:#6B7280;line-height:1.75;padding-right:1.1rem;margin:0;">
-            <li>קריאות היום לפי סדר מסלול</li>
-            <li>עדכון סטטוס בקליק</li>
-            <li>ניווט ישיר דרך Waze</li>
-            <li>הערות ופרטי לקוח מיידיים</li>
-          </ul>
+
+        <div style="background:white;border:1px solid #E5E7EB;border-radius:18px;padding:1.875rem;box-shadow:0 1px 8px rgba(0,0,0,0.04);">
+          <div style="width:52px;height:52px;border-radius:14px;background:#DBEAFE;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:1.125rem;">⏱️</div>
+          <div style="font-weight:800;font-size:1.0625rem;margin-bottom:8px;color:#111827;">מחשבון חלונות זמן</div>
+          <div style="font-size:0.82rem;color:#6B7280;line-height:1.7;">המערכת מציגה חלונות זמן ריאליים ללקוח לפי עומס הטכנאי, משך השירות ומרחק מהקריאות הקיימות. לא "08:00–18:00" — אלא "10:00–13:00".</div>
         </div>
+
+        <div style="background:white;border:1px solid #E5E7EB;border-radius:18px;padding:1.875rem;box-shadow:0 1px 8px rgba(0,0,0,0.04);">
+          <div style="width:52px;height:52px;border-radius:14px;background:#FEF3C7;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:1.125rem;">📱</div>
+          <div style="font-weight:800;font-size:1.0625rem;margin-bottom:8px;color:#111827;">תצוגת טכנאי במובייל</div>
+          <div style="font-size:0.82rem;color:#6B7280;line-height:1.7;">כל טכנאי רואה את הקריאות שלו לפי סדר מסלול, מעדכן סטטוס בקליק, מנווט ב-Waze ישירות, ויוצר קשר עם הלקוח — הכל מהנייד.</div>
+        </div>
+
+        <div style="background:white;border:1px solid #E5E7EB;border-radius:18px;padding:1.875rem;box-shadow:0 1px 8px rgba(0,0,0,0.04);">
+          <div style="width:52px;height:52px;border-radius:14px;background:#FCE7F3;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:1.125rem;">📊</div>
+          <div style="font-weight:800;font-size:1.0625rem;margin-bottom:8px;color:#111827;">דוחות ביצועים</div>
+          <div style="font-size:0.82rem;color:#6B7280;line-height:1.7;">עומס לפי טכנאי, שיעור השלמה, נפח לפי אזור וקטגוריה — מבט שבועי וחודשי שמאפשר לשפר את הצוות על בסיס נתונים.</div>
+        </div>
+
+        <div style="background:white;border:1px solid #E5E7EB;border-radius:18px;padding:1.875rem;box-shadow:0 1px 8px rgba(0,0,0,0.04);">
+          <div style="width:52px;height:52px;border-radius:14px;background:#D1FAE5;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:1.125rem;">💬</div>
+          <div style="font-weight:800;font-size:1.0625rem;margin-bottom:8px;color:#111827;">WhatsApp ישיר ללקוח</div>
+          <div style="font-size:0.82rem;color:#6B7280;line-height:1.7;">אחרי כל שיבוץ — הודעת WhatsApp מוכנה עם שם הטכנאי, חלון הזמן ומספר הקריאה. קליק אחד שולח אותה ישירות ללקוח.</div>
+        </div>
+
       </div>
     </div>
   </section>
@@ -524,11 +545,14 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <!-- FOOTER CTA -->
   <section style="background:#F9FAFB;border-top:1px solid #E5E7EB;text-align:center;padding:4rem 1.5rem;">
     <h2 style="font-size:clamp(1.5rem,4vw,2.25rem);font-weight:900;margin:0 0 0.75rem;letter-spacing:-0.5px;color:#111827;">מוכנים לנסות?</h2>
-    <p style="font-size:1rem;color:#6B7280;margin:0 0 2rem;line-height:1.6;">השאירו פרטים ונחזור אליכם תוך יום עסקים.</p>
-    <a href="mailto:infomaslul@gmail.com?subject=בקשת הדגמה - מסלול" style="background:#2563EB;color:white;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:1rem;font-weight:800;display:inline-block;font-family:'Heebo',sans-serif;">בקש הדגמה ←</a>
+    <p style="font-size:1rem;color:#6B7280;margin:0 0 2rem;line-height:1.6;">התחילו עם דמו חי ב-30 שניות, או השאירו פרטים ונחזור אליכם תוך יום עסקים.</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <a href="?demo=1" style="background:#2563EB;color:white;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:1rem;font-weight:800;display:inline-block;font-family:'Heebo',sans-serif;">נסה דמו חי ←</a>
+      <a href="mailto:infomaslul@gmail.com?subject=בקשת הדגמה - מסלול" style="background:white;color:#2563EB;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:1rem;font-weight:800;border:2px solid #BFDBFE;display:inline-block;font-family:'Heebo',sans-serif;">בקש הדגמה ←</a>
+    </div>
   </section>
   <footer style="background:#0F172A;text-align:center;padding:1.25rem;color:#64748B;font-size:0.78rem;font-family:'Heebo',sans-serif;">
-    © 2025 מסלול · מנוע שיבוץ חכם · <a href="mailto:infomaslul@gmail.com" style="color:#64748B;">infomaslul@gmail.com</a>
+    © 2026 מסלול · מנוע שיבוץ חכם · <a href="mailto:infomaslul@gmail.com" style="color:#64748B;">infomaslul@gmail.com</a>
   </footer>
 
 </div><!-- /landing-page -->
@@ -1459,6 +1483,13 @@ const CONFIG = {
   DEMO_TYPE: 'general',  // 'general' | 'cleaning' | 'delivery'
   OPTIMIZER_URL: 'https://maslul-production-77fa.up.railway.app',
 };
+
+// Allow ?demo=1 (or ?demo=general|cleaning|delivery) from landing page "try demo" button
+(function(){
+  const p = new URLSearchParams(window.location.search);
+  const d = p.get('demo');
+  if (d) { CONFIG.DEMO_MODE = true; CONFIG.DEMO_TYPE = ['general','cleaning','delivery'].includes(d) ? d : 'general'; }
+})();
 
 // ═══ STAGING CONFIG ═══
 // Fill in once you create the staging Supabase project (free tier).
