@@ -161,16 +161,16 @@ nav {
 
 /* ── TRUST BAR ── */
 .trust-bar {
-  padding: 1.5rem 4rem;
+  padding: 2rem 4rem;
   border-top: 1px solid rgba(255,255,255,0.04);
   border-bottom: 1px solid rgba(255,255,255,0.04);
   background: rgba(255,255,255,0.015);
 }
-.trust-inner { max-width: 900px; margin: 0 auto; display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; justify-content: center; }
-.trust-label { font-size: 0.75rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
-.trust-tags { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
-.trust-tag { font-size: 0.8125rem; color: #64748B; font-weight: 500; }
-.trust-sep { color: #1E293B; font-size: 0.75rem; }
+.trust-inner { max-width: 1000px; margin: 0 auto; display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; justify-content: center; }
+.trust-label { font-size: 0.875rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
+.trust-tags { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+.trust-tag { font-size: 0.9375rem; color: #64748B; font-weight: 500; }
+.trust-sep { color: #1E293B; font-size: 0.875rem; }
 
 /* ── SHARED SECTION STYLES ── */
 .section-label {
@@ -364,64 +364,18 @@ nav {
 }
 .pricing-cta.filled:hover { background: #1D4ED8; }
 
-/* ── WHO IT'S FOR ── */
-.for-section {
-  padding: 5rem 5rem;
-  max-width: 1200px; margin: 0 auto; text-align: center;
+/* ── CONTACT ── */
+.contact-section { padding: 5rem 2rem 6rem; text-align: center; }
+.contact-btns { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 2rem; }
+.contact-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 14px 28px; border-radius: 12px; font-size: 1rem; font-weight: 700;
+  font-family: 'Heebo', sans-serif; text-decoration: none; transition: all 0.15s; cursor: pointer; border: none;
 }
-.for-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 2rem; }
-.for-tag {
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
-  border-radius: 30px; padding: 9px 18px; font-size: 0.9rem; font-weight: 600;
-  transition: all 0.15s;
-}
-.for-tag:hover { border-color: var(--blue); background: rgba(37,99,235,0.1); color: #93C5FD; }
-
-/* ── LEAD FORM ── */
-.form-section { padding: 6rem 2rem; max-width: 640px; margin: 0 auto; text-align: center; }
-.form-card {
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 20px; padding: 2.5rem; margin-top: 2rem; position: relative; overflow: hidden;
-}
-.form-card::before {
-  content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-  width: 60%; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(59,130,246,0.6), transparent);
-}
-.form-group { margin-bottom: 0.875rem; text-align: start; }
-.form-label { display: block; font-size: 0.8125rem; font-weight: 700; color: #CBD5E1; margin-bottom: 5px; }
-.form-input {
-  width: 100%; padding: 10px 13px;
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 9px; font-size: 0.9375rem; font-family: 'Heebo', sans-serif;
-  color: white; transition: border-color 0.15s; outline: none;
-}
-.form-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
-.form-input::placeholder { color: #475569; }
-.form-select {
-  width: 100%; padding: 10px 13px;
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 9px; font-size: 0.9375rem; font-family: 'Heebo', sans-serif;
-  color: white; outline: none; cursor: pointer; -webkit-appearance: none;
-}
-.form-select option { background: #0F2040; color: white; }
-.submit-btn {
-  width: 100%; padding: 13px; background: var(--blue); color: white; border: none;
-  border-radius: 10px; font-size: 0.9375rem; font-weight: 800; cursor: pointer;
-  font-family: 'Heebo', sans-serif; margin-top: 8px; transition: all 0.15s;
-  box-shadow: 0 0 30px rgba(37,99,235,0.35);
-}
-.submit-btn:hover { background: #1D4ED8; box-shadow: 0 0 40px rgba(37,99,235,0.5); }
-.form-note { font-size: 0.75rem; color: #475569; margin-top: 10px; }
-.form-success { display: none; padding: 2rem; text-align: center; }
-.success-circle {
-  width: 60px; height: 60px;
-  background: rgba(16,185,129,0.15); border: 2px solid rgba(16,185,129,0.4);
-  border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-size: 1.375rem; margin: 0 auto 1rem;
-}
-.success-title { font-size: 1.25rem; font-weight: 800; margin-bottom: 8px; }
-.success-sub { font-size: 0.875rem; color: var(--gray); }
+.contact-btn-wa { background: #25D366; color: white; box-shadow: 0 0 24px rgba(37,211,102,0.3); }
+.contact-btn-wa:hover { background: #1ebe5c; transform: translateY(-2px); }
+.contact-btn-mail { background: rgba(255,255,255,0.08); color: white; border: 1px solid rgba(255,255,255,0.15); }
+.contact-btn-mail:hover { background: rgba(255,255,255,0.13); transform: translateY(-2px); }
 
 /* ── FOOTER ── */
 footer { border-top: 1px solid rgba(255,255,255,0.06); padding: 2rem; text-align: center; }
@@ -752,77 +706,16 @@ footer { border-top: 1px solid rgba(255,255,255,0.06); padding: 2rem; text-align
   </div>
 </section>
 
-<!-- WHO IT'S FOR -->
-<section class="for-section">
+<!-- CONTACT -->
+<section class="contact-section" id="lead-form">
   <div class="reveal">
-    <div class="section-label" data-t="for_label">קהל יעד</div>
-    <h2 class="section-title" data-t="for_title">בנוי בדיוק עבורך אם אתה...</h2>
-    <p class="section-sub" style="margin:0 auto;margin-top:0.75rem;" data-t="for_sub">כל עסק שמעסיק עובדי שטח ורוצה להפסיק לנהל דרך וואטסאפ.</p>
+    <div class="section-label" data-t="contact_label">צרו קשר</div>
+    <h2 class="section-title" data-t="contact_title">דברו<br><em>איתנו</em></h2>
+    <p class="section-sub" style="margin:0 auto;margin-top:0.75rem;" data-t="contact_sub">רוצים לראות הדגמה חיה? נשמח לדבר.</p>
   </div>
-  <div class="for-grid reveal" id="for-tags">
-    <div class="for-tag">🔧 מתקין מסנני מים</div>
-    <div class="for-tag">❄️ טכנאי מזגנים</div>
-    <div class="for-tag">🗑️ מתקין טוחני אשפה</div>
-    <div class="for-tag">📹 מתקין מצלמות</div>
-    <div class="for-tag">🧹 חברת ניקיון</div>
-    <div class="for-tag">📦 חברת משלוחים</div>
-    <div class="for-tag">⚡ חשמלאים</div>
-    <div class="for-tag">🔩 אינסטלטורים</div>
-    <div class="for-tag">🪟 מתקין סורגים וחלונות</div>
-    <div class="for-tag">🛠️ כל עסק עם עובדי שטח</div>
-  </div>
-</section>
-
-<!-- LEAD FORM -->
-<section class="form-section" id="lead-form">
-  <div class="reveal">
-    <div class="section-label" data-t="form_label">הצטרף לפיילוט</div>
-    <h2 class="section-title" data-t="form_title">חינם לחלוטין<br><em>לעסקים ראשונים</em></h2>
-    <p style="color:var(--gray);font-size:0.9375rem;margin-top:0.75rem;line-height:1.7;" data-t="form_sub">אנחנו מחפשים עסקים לפיילוט. תשתמש בחינם, תיתן פידבק, ותעצב את המוצר יחד איתנו.</p>
-  </div>
-  <div class="form-card reveal">
-    <div id="lead-form-inner">
-      <div class="form-group">
-        <label class="form-label" data-t="f_biz">שם העסק</label>
-        <input class="form-input" id="f-biz" data-pt="f_biz_ph" placeholder="לדוגמה: טכנאי מזגנים כהן">
-      </div>
-      <div class="form-group">
-        <label class="form-label" data-t="f_name">שם איש הקשר</label>
-        <input class="form-input" id="f-name" data-pt="f_name_ph" placeholder="שם פרטי ושם משפחה">
-      </div>
-      <div class="form-group">
-        <label class="form-label" data-t="f_phone">טלפון</label>
-        <input class="form-input" id="f-phone" data-pt="f_phone_ph" placeholder="05X-XXXXXXX" type="tel">
-      </div>
-      <div class="form-group">
-        <label class="form-label" data-t="f_type">סוג עסק</label>
-        <select class="form-select" id="f-type">
-          <option value="" data-t="f_type_ph">בחר סוג עסק...</option>
-          <option>מסנני מים / מערכות מים</option>
-          <option>טוחני אשפה</option>
-          <option>מזגנים</option>
-          <option>מצלמות ואבטחה</option>
-          <option>ניקיון</option>
-          <option>משלוחים</option>
-          <option>חשמל / אינסטלציה</option>
-          <option>אחר</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label" data-t="f_size">כמה עובדי שטח?</label>
-        <select class="form-select" id="f-size">
-          <option value="" data-t="f_size_ph">בחר...</option>
-          <option>2-3</option><option>4-6</option><option>7-10</option><option>11-20</option><option>20+</option>
-        </select>
-      </div>
-      <button class="submit-btn" onclick="submitForm()" data-t="submit_btn">אני רוצה להצטרף לפיילוט ←</button>
-      <p class="form-note" data-t="form_note">לא נשלח ספאם. ניצור קשר תוך 24 שעות.</p>
-    </div>
-    <div class="form-success" id="form-success">
-      <div class="success-circle">✓</div>
-      <div class="success-title" data-t="success_title">קיבלנו! 🎉</div>
-      <p class="success-sub" data-t="success_sub">ניצור איתך קשר תוך 24 שעות לתיאום הדגמה.<br>תודה על האמון!</p>
-    </div>
+  <div class="contact-btns reveal">
+    <a class="contact-btn contact-btn-wa" href="https://wa.me/972508911100?text=היי%2C%20ראיתי%20את%20מסלול%20ורוצה%20לשמוע%20עוד" target="_blank" data-t="contact_wa">💬 WhatsApp</a>
+    <a class="contact-btn contact-btn-mail" href="mailto:infomaslul@gmail.com" data-t="contact_mail">✉️ מייל</a>
   </div>
 </section>
 
@@ -880,15 +773,9 @@ const STRINGS = {
     price1_name: 'Starter', price1_desc: 'עד 5 עובדי שטח',
     price1_f1: 'שיבוץ אוטומטי חכם', price1_f2: 'לוח תכנון שבועי', price1_f3: 'אפליקציית עובד שטח', price1_f4: 'וואטסאפ אחרי שיבוץ', price1_f5: 'דוחות בסיסיים',
     pricing_cta_trial: 'דבר איתנו ←',
-    for_label: 'קהל יעד', for_title: 'בנוי בדיוק עבורך אם אתה...', for_sub: 'כל עסק שמעסיק עובדי שטח ורוצה להפסיק לנהל דרך וואטסאפ.',
-    form_label: 'הצטרף לפיילוט', form_title: 'חינם לחלוטין<br><em>לעסקים ראשונים</em>', form_sub: 'אנחנו מחפשים עסקים לפיילוט. תשתמש בחינם, תיתן פידבק, ותעצב את המוצר יחד איתנו.',
-    f_biz: 'שם העסק', f_name: 'שם איש הקשר', f_phone: 'טלפון', f_type: 'סוג עסק', f_size: 'כמה עובדי שטח?',
-    f_biz_ph: 'לדוגמה: טכנאי מזגנים כהן', f_name_ph: 'שם פרטי ושם משפחה', f_phone_ph: '05X-XXXXXXX',
-    f_type_ph: 'בחר סוג עסק...', f_size_ph: 'בחר...',
-    submit_btn: 'אני רוצה להצטרף לפיילוט ←', form_note: 'לא נשלח ספאם. ניצור קשר תוך 24 שעות.',
-    success_title: 'קיבלנו! 🎉', success_sub: 'ניצור איתך קשר תוך 24 שעות לתיאום הדגמה.<br>תודה על האמון!',
+    contact_label: 'צרו קשר', contact_title: 'דברו<br><em>איתנו</em>', contact_sub: 'רוצים לראות הדגמה חיה? נשמח לדבר.',
+    contact_wa: '💬 WhatsApp', contact_mail: '✉️ מייל',
     footer_sub: 'מנוע שיבוץ חכם לעסקים קטנים • ישראל 2026',
-    for_tags: ['🔧 מתקין מסנני מים','❄️ טכנאי מזגנים','🗑️ מתקין טוחני אשפה','📹 מתקין מצלמות','🧹 חברת ניקיון','📦 חברת משלוחים','⚡ חשמלאים','🔩 אינסטלטורים','🪟 מתקין סורגים וחלונות','🛠️ כל עסק עם עובדי שטח'],
   },
   en: {
     page_title: 'Maslul — Smart Field Service Scheduling',
@@ -935,15 +822,9 @@ const STRINGS = {
     price1_name: 'Starter', price1_desc: 'Up to 5 field workers',
     price1_f1: 'Smart auto-dispatch', price1_f2: 'Weekly planner', price1_f3: 'Field worker app', price1_f4: 'WhatsApp after dispatch', price1_f5: 'Basic reports',
     pricing_cta_trial: "Let's talk →",
-    for_label: "Who it's for", for_title: 'Built for you if you run...', for_sub: 'Any business with field workers that wants to stop managing through WhatsApp.',
-    form_label: 'Join the Pilot', form_title: 'Completely free<br><em>for early businesses</em>', form_sub: "We're looking for pilot businesses. Use it free, give feedback, and shape the product with us.",
-    f_biz: 'Business name', f_name: 'Contact name', f_phone: 'Phone', f_type: 'Business type', f_size: 'How many field workers?',
-    f_biz_ph: 'e.g. Cohen AC Services', f_name_ph: 'First and last name', f_phone_ph: '+972 5X-XXXXXXX',
-    f_type_ph: 'Select business type...', f_size_ph: 'Select...',
-    submit_btn: 'I want to join the pilot →', form_note: "No spam. We'll reach out within 24 hours.",
-    success_title: 'Got it! 🎉', success_sub: "We'll reach out within 24 hours to schedule a demo.<br>Thank you!",
+    contact_label: 'Contact', contact_title: "Let's<br><em>talk</em>", contact_sub: 'Want to see a live demo? We\'d love to chat.',
+    contact_wa: '💬 WhatsApp', contact_mail: '✉️ Email',
     footer_sub: 'Smart field service scheduling for small businesses • Israel 2026',
-    for_tags: ['🔧 Water filter installer','❄️ AC technician','🗑️ Garbage disposal installer','📹 Camera installer','🧹 Cleaning company','📦 Delivery company','⚡ Electrician','🔩 Plumber','🪟 Window & shutter installer','🛠️ Any field service business'],
   }
 };
 
@@ -978,11 +859,6 @@ function applyLang(lang) {
     if (s[key] !== undefined) el.placeholder = s[key];
   });
 
-  // re-render for-tags
-  const tagsEl = document.getElementById('for-tags');
-  if (tagsEl && s.for_tags) {
-    tagsEl.innerHTML = s.for_tags.map(t => `<div class="for-tag">${t}</div>`).join('');
-  }
 }
 
 // ── SCROLL REVEAL ────────────────────────────────────────────────────────────
@@ -993,29 +869,6 @@ const observer = new IntersectionObserver((entries) => {
 }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-// ── FORM SUBMIT ──────────────────────────────────────────────────────────────
-function submitForm() {
-  const biz = document.getElementById('f-biz').value.trim();
-  const name = document.getElementById('f-name').value.trim();
-  const phone = document.getElementById('f-phone').value.trim();
-  const type = document.getElementById('f-type').value;
-  const size = document.getElementById('f-size').value;
-
-  if (!name || !phone) {
-    alert(currentLang === 'he' ? 'נא למלא שם וטלפון' : 'Please fill in name and phone');
-    return;
-  }
-
-  const leads = JSON.parse(localStorage.getItem('maslul_leads') || '[]');
-  leads.push({ biz, name, phone, type, size, date: new Date().toISOString() });
-  localStorage.setItem('maslul_leads', JSON.stringify(leads));
-
-  document.getElementById('lead-form-inner').style.display = 'none';
-  document.getElementById('form-success').style.display = 'block';
-
-  const msg = encodeURIComponent(`ליד חדש ממסלול!\nעסק: ${biz}\nשם: ${name}\nטלפון: ${phone}\nסוג: ${type}\nגודל: ${size}`);
-  setTimeout(() => { window.open(`https://wa.me/972508911100?text=${msg}`, '_blank'); }, 800);
-}
 </script>
 </body>
 </html>
