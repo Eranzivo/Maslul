@@ -242,6 +242,16 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .mo-box{background:#fff;border:1px solid var(--border);border-radius:var(--r-xl);box-shadow:var(--sh-lg);padding:24px;max-width:480px;width:calc(100% - 32px);max-height:90vh;overflow-y:auto;position:relative;}
 .mo-title{font-size:1.0625rem;font-weight:700;color:var(--ink);margin-bottom:20px;}
 .mo-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:24px;padding-top:16px;border-top:1px solid var(--border);}
+/* ═══ DRAWER ═══ */
+.drawer-overlay{position:fixed;inset:0;z-index:499;background:rgba(0,0,0,0.25);opacity:0;pointer-events:none;transition:opacity 0.2s;}
+.drawer-overlay.open{opacity:1;pointer-events:auto;}
+.drawer{position:fixed;top:0;right:220px;width:360px;height:100vh;background:#fff;border-left:1px solid var(--border);box-shadow:var(--sh-lg);z-index:500;display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.22s cubic-bezier(0.4,0,0.2,1);}
+.drawer.open{transform:translateX(0);}
+.drawer-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.drawer-title{font-size:1rem;font-weight:700;color:var(--ink);}
+.drawer-body{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px;}
+.drawer-footer{padding:14px 20px;border-top:1px solid var(--border);flex-shrink:0;}
+@media(max-width:900px){.drawer{right:0;width:100%;}}
 /* CANCEL MODAL */
 .cancel-option{border:1.5px solid var(--line);border-radius:var(--r-lg);padding:1rem 1.25rem;cursor:pointer;margin-bottom:10px;transition:all 0.12s;}
 .cancel-option:hover{border-color:var(--blue);background:var(--blue-l);}
@@ -588,6 +598,21 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div style="text-align:center;margin-top:12px;">
       <button onclick="sendPasswordReset()" style="background:none;border:none;color:#9CA3AF;font-size:0.8rem;cursor:pointer;font-family:'Heebo',sans-serif;text-decoration:underline;">שכחתי סיסמה</button>
     </div>
+  </div>
+</div>
+
+<!-- ═══ CALL DRAWER ═══ -->
+<div id="drawer-overlay" class="drawer-overlay" onclick="closeCallDrawer()"></div>
+<div id="call-drawer" class="drawer" role="dialog" aria-label="קריאה חדשה">
+  <div class="drawer-header">
+    <span class="drawer-title" id="drawer-title">קריאה חדשה</span>
+    <button class="btn btn-ghost btn-sm" onclick="closeCallDrawer()" title="סגור">✕</button>
+  </div>
+  <div class="drawer-body" id="drawer-body">
+    <!-- populated by JS -->
+  </div>
+  <div class="drawer-footer" id="drawer-footer">
+    <!-- populated by JS -->
   </div>
 </div>
 
@@ -1838,6 +1863,25 @@ async function doResetPassword() {
   showToast('סיסמה עודכנה בהצלחה ✓');
   await sb.auth.signOut(); // sign out cleanly — user logs in fresh with new password
   showLogin();
+}
+
+// ═══ CALL DRAWER ═══
+function openCallDrawer(){
+  document.getElementById('call-drawer').classList.add('open');
+  document.getElementById('drawer-overlay').classList.add('open');
+  renderDrawerStep1();
+}
+function closeCallDrawer(){
+  document.getElementById('call-drawer').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('open');
+}
+function toggleClientDetails(rowId){
+  const el=document.getElementById('details-'+rowId);
+  if(!el)return;
+  const open=el.style.display==='none';
+  el.style.display=open?'block':'none';
+  const btn=el.previousElementSibling;
+  if(btn)btn.textContent=(open?'▲':'▼')+' פרטי לקוח';
 }
 
 function showApp() {
