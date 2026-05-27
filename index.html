@@ -370,9 +370,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div style="width:28px;height:28px;border:3px solid #E5E7EB;border-top-color:#2563EB;border-radius:50%;animation:spin 0.7s linear infinite;"></div>
 </div>
 
-<!-- LOGIN SCREEN -->
-<!-- ═══ LANDING PAGE ═══ -->
-<div id="landing-page" class="hidden">
+<!-- REMOVED: embedded landing page (was shown on logout/no-session). Now showLogin() goes straight to login form. Marketing page lives at /landing/ -->
+<div id="landing-page" class="hidden" style="display:none!important;">
 
   <!-- NAV -->
   <nav style="position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop-filter:blur(10px);border-bottom:1px solid #E5E7EB;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:60px;">
@@ -1787,9 +1786,10 @@ async function loadTenantFromUser() {
 }
 
 function showLogin() {
+  // Always show login form directly — marketing page is at /landing/
   document.getElementById('init-loader')?.classList.add('hidden');
-  document.getElementById('landing-page').classList.remove('hidden');
-  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('login-error').textContent='';
   document.getElementById('reset-screen').classList.add('hidden');
   document.getElementById('app-shell').classList.add('hidden');
   stopConnectionMonitor();
@@ -1926,14 +1926,7 @@ async function doLogout() {
   currentUser = null;
   currentTenantId = null;
   try { await sb.auth.signOut(); } catch(e) { console.warn('signOut error:', e); }
-  // Go straight to login form (not landing page) — user already knows the product
-  document.getElementById('init-loader')?.classList.add('hidden');
-  document.getElementById('landing-page')?.classList.add('hidden');
-  document.getElementById('login-screen').classList.remove('hidden');
-  document.getElementById('login-error').textContent='';
-  document.getElementById('reset-screen').classList.add('hidden');
-  document.getElementById('app-shell').classList.add('hidden');
-  stopConnectionMonitor();
+  showLogin();
 }
 
 // ═══ SUPABASE DATA LAYER ═══
