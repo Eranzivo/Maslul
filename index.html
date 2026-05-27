@@ -1949,7 +1949,8 @@ async function loadFromSupabase() {
     // Logs a warning + sends a Sentry event for every existing record with a missing required field.
     // Never blocks the app — purely diagnostic.
     (function _validateSchema() {
-      const check = (entities, fields, label) => entities.forEach(e => {
+      // Scalar check: field must be non-null, non-empty string
+      const checkScalar = (entities, fields, label) => entities.forEach(e => {
         fields.forEach(f => {
           if (e[f] == null || e[f] === '') {
             const msg = `schema drift: ${label}.${f} null on ${e.id}`;
@@ -1958,10 +1959,28 @@ async function loadFromSupabase() {
           }
         });
       });
-      check(technicians, ['name','max','rotation'], 'tech');
-      check(tasks,       ['assignId','status','city'], 'task');
-      check(zones,       ['name','cities'], 'zone');
-      check(categories,  ['name','time'], 'category');
+      // Array check: field must be an array (|| [] default masks null, so check raw type)
+      const checkArr = (entities, field, label) => entities.forEach(e => {
+        if (!Array.isArray(e[field])) {
+          const msg = `schema drift: ${label}.${field} not-array on ${e.id}`;
+          console.warn('[schema]', msg);
+          Sentry?.captureMessage(msg, 'warning');
+        }
+      });
+      // Object check: field must be a plain object (|| {} default masks null)
+      const checkObj = (entities, field, label) => entities.forEach(e => {
+        if (e[field] == null || typeof e[field] !== 'object' || Array.isArray(e[field])) {
+          const msg = `schema drift: ${label}.${field} not-object on ${e.id}`;
+          console.warn('[schema]', msg);
+          Sentry?.captureMessage(msg, 'warning');
+        }
+      });
+      checkScalar(technicians, ['name','max'], 'tech');
+      checkObj(technicians, 'rotation', 'tech');
+      checkScalar(tasks,       ['assignId','status','city'], 'task');
+      checkScalar(zones,       ['name'], 'zone');
+      checkArr(zones,          'cities', 'zone');
+      checkScalar(categories,  ['name','time'], 'category');
     })();
 
     // Keep localStorage in sync with Supabase so the fallback always reflects latest known-good state
@@ -2030,6 +2049,18 @@ async function _checkConnection() {
   if (!currentTenantId) return;
   try {
     const { error } = await sb.from('tenants').select('id').eq('id', currentTenantId).single();
+    // Auth errors (JWT expired, RLS denial) look like Supabase errors but are NOT network failures.
+    // Distinguish by error code: 401/403/PGRST* = auth issue, not connectivity.
+    const isAuthError = error && (
+      error.status === 401 || error.status === 403 ||
+      (error.code && error.code.startsWith('PGRST'))
+    );
+    if (isAuthError) {
+      // Session expired — prompt re-login, don't show network banner
+      showToast('פג תוקף ההתחברות — יש להתחבר מחדש', 'error');
+      showLogin();
+      return;
+    }
     const ok = !error;
     if (ok !== _connOk) {
       _connOk = ok;
@@ -2039,10 +2070,12 @@ async function _checkConnection() {
       else      showToast('חיבור לשרת חודש ✓', 'info');
     }
   } catch(e) {
+    // fetch() itself threw — genuine network failure
     if (_connOk) {
       _connOk = false;
       const el = document.getElementById('conn-indicator');
       if (el) el.style.display = 'block';
+      showToast('⚠️ אין חיבור לשרת — שינויים ישמרו בטעינה הבאה', 'error');
     }
   }
 }
@@ -2082,18 +2115,26 @@ async function dbUpsert(table, row) {
   if (!currentTenantId) { showToast('שגיאה: לא מחובר — יש להתחבר מחדש', 'error'); return null; }
   const walKey = _walWrite(table, { ...row, tenant_id: currentTenantId });
   _trackSave(+1);
-  const { data, error } = await sb.from(table)
-    .upsert({ ...row, tenant_id: currentTenantId }, { onConflict: 'id' })
-    .select().single();
-  _trackSave(-1);
-  if (error) {
-    console.error(`[db] ${table}:`, error);
-    Sentry?.captureException(error);
+  try {
+    const { data, error } = await sb.from(table)
+      .upsert({ ...row, tenant_id: currentTenantId }, { onConflict: 'id' })
+      .select().single();
+    _trackSave(-1);
+    if (error) {
+      console.error(`[db] ${table}:`, error);
+      Sentry?.captureException(error);
+      showToast('שגיאה בשמירה — השינוי שמור מקומית, ינסה שנית בטעינה הבאה', 'error');
+      return null; // walKey stays — replayed on next loadFromSupabase
+    }
+    _walClear(walKey);
+    return data;
+  } catch(e) {
+    _trackSave(-1); // prevent permanent leak if client throws instead of returning error
+    console.error(`[db] ${table} threw:`, e);
+    Sentry?.captureException(e);
     showToast('שגיאה בשמירה — השינוי שמור מקומית, ינסה שנית בטעינה הבאה', 'error');
-    return null; // walKey stays — replayed on next loadFromSupabase
+    return null;
   }
-  _walClear(walKey);
-  return data;
 }
 async function dbInsert(table, row) {
   if (!currentTenantId) { showToast('שגיאה: לא מחובר — יש להתחבר מחדש', 'error'); return null; }

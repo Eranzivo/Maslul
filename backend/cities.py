@@ -58,4 +58,6 @@ def get_coords(city: str) -> tuple[float, float]:
     for key, val in CITY_COORDS.items():
         if key in city or city in key:
             return val
+    import logging
+    logging.warning("[cities] Unknown city '%s' — falling back to Tel Aviv coords. Add it to CITY_COORDS.", city)
     return (32.0853, 34.7818)  # fallback: Tel Aviv

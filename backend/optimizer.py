@@ -146,12 +146,15 @@ def solve_route(
     solution = routing.SolveWithParameters(params)
 
     if not solution:
-        # Fallback: return original order
+        # Fallback: return original order with correct node-indexed travel times.
+        # Nodes: 0=depot, 1=task0, 2=task1, …, n_tasks=task_{n_tasks-1}
+        # Start by adding depot→task0 travel before recording the first arrival.
         arrivals = []
-        t = start_min
+        t = start_min + matrix[0][1]  # depot → first task travel
         for i, dur in enumerate(task_durations):
             arrivals.append(t)
-            travel = matrix[i][i + 1] if i + 1 < n_nodes else 0
+            next_node = i + 2  # task_i is node i+1; next task is node i+2
+            travel = matrix[i + 1][next_node] if next_node < n_nodes else 0
             t += dur + travel
         return list(range(n_tasks)), arrivals
 
