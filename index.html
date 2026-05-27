@@ -1867,6 +1867,68 @@ async function doResetPassword() {
 }
 
 // ═══ CALL DRAWER ═══
+function renderDrawerStep1(){
+  document.getElementById('drawer-title').textContent='קריאה חדשה';
+  const allCities=[...new Set(zones.flatMap(z=>z.cities||[]))].sort();
+  const cityOpts=allCities.length
+    ?allCities.map(c=>`<option value="${h(c)}">${h(c)}</option>`).join('')
+    :'<option value="">אין ערים מוגדרות</option>';
+  const catOpts=categories.map(c=>`<option value="${h(String(c.id))}">${h(c.name)}</option>`).join('');
+  document.getElementById('drawer-body').innerHTML=`
+    <div class="fg">
+      <label class="fl">שם לקוח <span style="color:var(--red)">*</span></label>
+      <input class="fc" id="dr-client" placeholder="שם מלא" list="dr-client-list" autocomplete="off">
+      <datalist id="dr-client-list">
+        ${clients.map(c=>`<option value="${h(c.name)}">`).join('')}
+      </datalist>
+    </div>
+    <div class="fg">
+      <label class="fl">טלפון</label>
+      <input class="fc" id="dr-phone" type="tel" placeholder="050-0000000" dir="ltr">
+    </div>
+    <div class="fg">
+      <label class="fl">עיר <span style="color:var(--red)">*</span></label>
+      <select class="fc" id="dr-city"><option value="">בחר עיר...</option>${cityOpts}</select>
+    </div>
+    <div class="fg">
+      <label class="fl">קטגוריה <span style="color:var(--red)">*</span></label>
+      <select class="fc" id="dr-cat"><option value="">בחר קטגוריה...</option>${catOpts}</select>
+    </div>
+    <div class="fg">
+      <label class="fl">הערות</label>
+      <input class="fc" id="dr-notes" placeholder="כניסה, קומה, הנחיות...">
+    </div>
+    <div id="dr-error" style="color:var(--red);font-size:0.8125rem;display:none;"></div>
+  `;
+  document.getElementById('dr-client').addEventListener('change',function(){
+    const name=this.value.trim();
+    const existing=clients.find(c=>c.name===name);
+    if(existing&&existing.phone) document.getElementById('dr-phone').value=existing.phone;
+  });
+  document.getElementById('drawer-footer').innerHTML=`
+    <button class="btn btn-blue btn-full btn-lg" onclick="drawerFindSlots()">מצא חלונות פנויים ←</button>
+  `;
+}
+function drawerFindSlots(){
+  const clientName=document.getElementById('dr-client').value.trim();
+  const phone=document.getElementById('dr-phone').value.trim();
+  const city=document.getElementById('dr-city').value;
+  const catId=document.getElementById('dr-cat').value;
+  const notes=document.getElementById('dr-notes').value.trim();
+  const errEl=document.getElementById('dr-error');
+  errEl.style.display='none';
+  if(!clientName){errEl.textContent='נא להזין שם לקוח';errEl.style.display='block';return;}
+  if(!city){errEl.textContent='נא לבחור עיר';errEl.style.display='block';return;}
+  if(!catId){errEl.textContent='נא לבחור קטגוריה';errEl.style.display='block';return;}
+  window._drawerData={clientName,phone,city,catId,notes};
+  const candidates=buildCandidates(city,catId);
+  if(!candidates||candidates.length===0){
+    errEl.textContent='לא נמצאו חלונות פנויים — נסה תאריך אחר או טכנאי אחר';
+    errEl.style.display='block';
+    return;
+  }
+  renderDrawerStep2(candidates.slice(0,2));
+}
 function openCallDrawer(){
   document.getElementById('call-drawer').classList.add('open');
   document.getElementById('drawer-overlay').classList.add('open');
