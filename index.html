@@ -1824,7 +1824,7 @@ async function doResetPassword() {
   if (btn) { btn.disabled = true; btn.textContent = 'שומר...'; }
   const { error } = await sb.auth.updateUser({ password: pw });
   if (btn) { btn.disabled = false; btn.textContent = 'שמור סיסמה חדשה'; }
-  if (error) { errEl.textContent = error.message || 'שגיאה בעדכון הסיסמה — נסה שנית'; return; }
+  if (error) { console.error('[resetPw]', error); errEl.textContent = 'שגיאה — נסה שנית'; return; }
   showToast('סיסמה עודכנה בהצלחה ✓');
   await sb.auth.signOut(); // sign out cleanly — user logs in fresh with new password
   showLogin();
@@ -2259,7 +2259,7 @@ async function dbInsert(table, row) {
   if (error) {
     console.error(`[db] ${table}:`, error);
     Sentry?.captureException(error);
-    showToast('שגיאה בשמירה: ' + (error.message || error.code || 'בדוק חיבור'), 'error');
+    showToast('שגיאה בשמירה — בדוק חיבור לרשת', 'error');
     return null;
   }
   return data;
@@ -2393,7 +2393,7 @@ async function saveSettingsToSupabase() {
   _trackSave(+1);
   const { error } = await sb.from('tenants').update({ name: settings.company, config: updatedConfig }).eq('id', currentTenantId);
   _trackSave(-1);
-  if (error) { console.error('settings save:', error); Sentry?.captureException(error); showToast('שגיאה בשמירת הגדרות: ' + (error.message || error.code), 'error'); return false; }
+  if (error) { console.error('settings save:', error); Sentry?.captureException(error); showToast('שגיאה בשמירת הגדרות', 'error'); return false; }
   tenantConfig = updatedConfig;
   return true;
 }
@@ -3114,7 +3114,8 @@ async function saveUser(){
     renderUsersPage();
     showToast(isNew?`נוצר ✓ — ${email} קיבל מייל אימות, יש לאשר לפני הכניסה הראשונה`:'משתמש עודכן ✓');
   }catch(e){
-    errEl.textContent=e.message||'שגיאה בשמירה';
+    console.error('[saveUser]', e);
+    errEl.textContent='שגיאה בשמירה — נסה שנית';
     errEl.style.display='block';
   }finally{
     btn.disabled=false;btn.textContent='שמור';
