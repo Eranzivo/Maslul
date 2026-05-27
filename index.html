@@ -14,6 +14,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://browser.sentry-cdn.com/8.0.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
+<!-- Leaflet.js — free open-source maps (OpenStreetMap tiles, no API key needed) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV/XN/WLcE=" crossorigin=""></script>
+<!-- Leaflet.draw — draw polygons on map for zone configuration (free, no API key) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 <style>
 :root{
   --ink:#111827;--ink-2:#374151;--ink-3:#6B7280;--ink-4:#9CA3AF;
@@ -643,9 +649,27 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div class="ph ph-row">
     <div><div class="ph-title">דף הבית</div><div class="ph-sub" id="home-date"></div></div>
     <div class="flex-gap">
+      <button class="btn btn-outline btn-sm" id="live-map-btn" onclick="toggleCoordinatorMap()" title="מפה חיה — מיקום טכנאים בשטח">🗺️ מפה חיה</button>
       <button class="btn btn-outline btn-sm" onclick="openDayoffModal()">📵 חופשות</button>
       <button class="btn btn-outline" onclick="openAddTaskModal()">+ הוסף קריאה</button>
       <button class="btn btn-blue" onclick="goPage('dispatch')">+ שיבוץ קריאה</button>
+    </div>
+  </div>
+  <!-- LIVE COORDINATOR MAP (hidden by default) -->
+  <div id="coord-map-wrap" class="hidden" style="margin-bottom:1.25rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div style="font-size:0.75rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:1px;">🗺️ מפה חיה — <span id="map-tech-count">0</span> טכנאים פעילים</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span id="map-last-update" style="font-size:0.7rem;color:var(--ink-4);"></span>
+        <button class="btn btn-outline btn-sm" onclick="refreshCoordinatorMap()" title="רענן">↻</button>
+        <button class="btn btn-outline btn-sm" onclick="toggleCoordinatorMap()">✕ סגור</button>
+      </div>
+    </div>
+    <div id="coordinator-map" style="height:420px;border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--line);"></div>
+    <div id="map-legend" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:0.75rem;color:var(--ink-3);">
+      <span>🔵 טכנאי (מיקום חי)</span>
+      <span>● קריאה ממתינה</span>
+      <span style="opacity:0.5;">● קריאה הושלמה</span>
     </div>
   </div>
   <!-- CLIENT SEARCH -->
@@ -1501,6 +1525,20 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   </div>
 </div>
 
+<!-- ZONE POLYGON DRAW MODAL -->
+<div class="mo hidden" id="mo-zone-draw">
+  <div class="mo-box" style="max-width:min(90vw,720px);">
+    <div class="mo-title" id="mo-zone-draw-title">צייר אזור על מפה</div>
+    <div style="font-size:0.8rem;color:var(--ink-3);margin-bottom:10px;">בחר את כלי הפוליגון בסרגל הצד, צייר את האזור על המפה — הערים שבתוכו יתווספו אוטומטית לאזור. נקודות כחולות = ערים קיימות באזור זה.</div>
+    <div id="zone-draw-map" style="height:400px;border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--line);"></div>
+    <div id="zone-draw-status" style="margin-top:10px;font-size:0.875rem;color:var(--ink-2);min-height:1.5em;text-align:center;font-weight:600;"></div>
+    <div class="mo-actions">
+      <button class="btn btn-blue" style="flex:1;" onclick="confirmZoneDraw()">✓ הוסף ערים לאזור</button>
+      <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-zone-draw');if(_zoneDrawMap){_zoneDrawMap.remove();_zoneDrawMap=null;}">ביטול</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════
 // MASLUL CONFIG
@@ -1515,6 +1553,10 @@ const CONFIG = {
   DEMO_MODE: false,      // true = bypass auth, load pre-seeded demo data
   DEMO_TYPE: 'general',  // 'general' | 'cleaning' | 'delivery'
   OPTIMIZER_URL: 'https://maslul-production-77fa.up.railway.app',
+  // Google Maps API key (optional — leave empty to use free OpenStreetMap instead)
+  // Get one at: https://console.cloud.google.com → Maps JavaScript API
+  // Add to tenants.config.features.google_maps_enabled=true when set
+  GOOGLE_MAPS_KEY: '',
 };
 
 // Allow ?demo=1 (or ?demo=general|cleaning|delivery) from landing page "try demo" button
@@ -2525,6 +2567,8 @@ function goPage(page){
   if(page==='dispatch')resetDispatch();
   if(page==='technicians'){renderTechs();buildRoleSelect();}
   if(page==='techview')renderTechView();
+  if(page!=='techview')stopGpsTracking(); // stop broadcasting when tech leaves their view
+  if(page!=='home'&&_coordMapInstance){destroyCoordinatorMap();} // free map memory when off home
   if(page==='zones')renderZones();
   if(page==='categories')renderCategories();
   if(page==='tasks')renderTasks();
@@ -4698,21 +4742,40 @@ function renderTechView(){
       </div>
     </div>`;
   };
+  const gpsActive = !!_gpsWatchId;
   document.getElementById('techview-content').innerHTML=`<div class="page">
     <div style="display:flex;align-items:center;gap:14px;padding-bottom:1.25rem;border-bottom:1px solid var(--line);margin-bottom:1.25rem;">
       <div style="width:48px;height:48px;border-radius:50%;background:${tech.color};color:white;font-size:1rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${h(initials(tech.name))}</div>
       <div>
         <div style="font-size:1.25rem;font-weight:900;">${h(tech.name)}</div>
         <div style="font-size:0.8125rem;color:var(--ink-3);">יום ${DAYS_HE[d.getDay()]} · ${d.toLocaleDateString('he-IL')}</div>
+        ${tech.last_seen?`<div style="font-size:0.7rem;color:var(--green);margin-top:2px;">📡 מיקום עודכן ${new Date(tech.last_seen).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</div>`:''}
       </div>
-      <div style="margin-right:auto;text-align:center;background:var(--blue-l);border-radius:var(--r);padding:8px 14px;">
-        <div style="font-size:1.5rem;font-weight:900;color:var(--blue-d);">${todayTasks.length}</div>
-        <div style="font-size:0.6rem;font-weight:700;color:var(--blue-d);text-transform:uppercase;">קריאות היום</div>
+      <div style="margin-right:auto;display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+        <div style="text-align:center;background:var(--blue-l);border-radius:var(--r);padding:8px 14px;">
+          <div style="font-size:1.5rem;font-weight:900;color:var(--blue-d);">${todayTasks.length}</div>
+          <div style="font-size:0.6rem;font-weight:700;color:var(--blue-d);text-transform:uppercase;">קריאות היום</div>
+        </div>
+        <button class="btn btn-sm ${gpsActive?'btn-green':'btn-outline'}" onclick="toggleGpsTracking()" id="gps-toggle-btn" style="${gpsActive?'background:var(--green);color:white;border-color:var(--green);':''}">
+          ${gpsActive?'📡 GPS פעיל':'📡 שתף מיקום'}
+        </button>
       </div>
     </div>
+    ${todayTasks.length>0?`
+    <div style="margin-bottom:1rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div style="font-size:0.7rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:1px;">🗺️ מסלול היום</div>
+        <button class="btn btn-outline btn-sm" onclick="toggleTechMap()" id="tech-map-toggle">הצג מפה</button>
+      </div>
+      <div id="tech-route-map" class="hidden" style="height:280px;border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--line);margin-bottom:0.75rem;"></div>
+    </div>`:''}
     <div style="font-size:0.7rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.75rem;">היום</div>
     ${todayTasks.map(techCard).join('')||'<div class="empty" style="padding:2rem;"><div class="empty-icon">🎉</div><div>אין קריאות להיום</div></div>'}
     ${tomorrowTasks.length?`<div style="font-size:0.7rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:1px;margin:1.25rem 0 0.75rem;">מחר (${tomorrowTasks.length} קריאות)</div>${tomorrowTasks.map(t=>{const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;return`<div style="background:var(--line-2);border:1px solid var(--line);border-radius:var(--r-lg);padding:0.75rem 1rem;margin-bottom:8px;opacity:0.85;display:flex;gap:10px;align-items:flex-start;"><div style="font-weight:800;min-width:48px;padding-top:2px;">${t.time||'—'}</div><div style="flex:1;"><div style="font-weight:700;">${h(t.cat)}</div><div style="font-size:0.8125rem;color:var(--ink-3);">${h(t.client)} · ${h(t.city)}</div>${t.notes?`<div style="font-size:0.75rem;color:var(--ink-4);margin-top:2px;font-style:italic;">💬 ${h(t.notes)}</div>`:''}</div><span class="badge ${s.badge}">${s.label}</span></div>`;}).join('')}`:''}
+    <div style="margin-top:1.5rem;border-top:1px solid var(--line);padding-top:1rem;">
+      <button class="btn btn-outline btn-sm" onclick="toggleTechHistory('${tech.id}')" id="history-toggle-btn">📋 היסטוריה</button>
+      <div id="tech-history-content" style="display:none;margin-top:12px;"></div>
+    </div>
   </div>`;
 }
 function techSetStatus(taskId,ns){
@@ -4933,7 +4996,10 @@ function renderZones(){
     <div class="zone-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
         <input class="fc" value="${h(z.name)}" onchange="zones[${zi}].name=this.value;saveZoneToSupabase(zones[${zi}]);save();" style="font-weight:800;font-size:0.9375rem;border:none;padding:0;background:transparent;flex:1;">
-        <button class="btn btn-ghost btn-sm" onclick="deleteZone('${z.id}')" style="color:var(--red);">הסר</button>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button class="btn btn-outline btn-sm" onclick="openZoneDraw('${z.id}')">🗺️ צייר</button>
+          <button class="btn btn-ghost btn-sm" onclick="deleteZone('${z.id}')" style="color:var(--red);">הסר</button>
+        </div>
       </div>
       <div class="zone-cities">${z.cities.map((c,ci)=>`<span class="city-tag">${h(c)}<button onclick="removeCity('${z.id}',${ci})">×</button></span>`).join('')}</div>
       <div style="font-size:0.72rem;color:var(--ink-3);margin-bottom:6px;">הדבק ערים — <strong>סדר חשוב:</strong> הרחוקה מבסיס הטכנאי ראשונה, הקרובה ביותר אחרונה (קובע את מסלול השיבוץ)</div>
@@ -5325,6 +5391,457 @@ async function saveTaskDetail(){
   save();
   closeMo('mo-task-detail');
   showToast('נשמר ✓');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GPS TRACKING + LIVE MAP  (Leaflet.js + OpenStreetMap — 100% free, no API key)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let _gpsWatchId = null;       // navigator.geolocation watchId
+let _myGpsMarker = null;      // tech's own position marker on route map
+let _techRouteMap = null;     // Leaflet map instance in tech view
+let _coordMapInstance = null; // Leaflet map instance in coordinator home view
+let _coordTechMarkers = {};   // { techId → L.marker } for coordinator map
+let _coordTaskMarkers = [];   // task markers on coordinator map
+let _realtimeSub = null;      // Supabase Realtime channel for live updates
+let _lastGpsWrite = 0;        // throttle DB writes
+
+// ── Shared OSM tile layer factory ───────────────────────────────────────────
+function _osmTiles(){
+  return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom:19
+  });
+}
+
+// ── Haversine helper (reuse for map bounds) ──────────────────────────────────
+function _coordsForCity(city){
+  if(!city)return null;
+  if(CITY_COORDS_JS[city])return CITY_COORDS_JS[city]; // [lat,lon]
+  // fuzzy match
+  const k=Object.keys(CITY_COORDS_JS).find(c=>c.includes(city)||city.includes(c));
+  return k?CITY_COORDS_JS[k]:null;
+}
+
+// ── Tech GPS: toggle on/off ──────────────────────────────────────────────────
+function toggleGpsTracking(){
+  if(_gpsWatchId){stopGpsTracking();}
+  else{startGpsTracking();}
+}
+
+function startGpsTracking(){
+  if(!navigator.geolocation){showToast('GPS אינו זמין בדפדפן זה');return;}
+  if(_gpsWatchId)return;
+  showToast('📡 שיתוף מיקום הופעל');
+  _gpsWatchId=navigator.geolocation.watchPosition(
+    async(pos)=>{
+      const lat=pos.coords.latitude, lon=pos.coords.longitude;
+      // Update marker on route map if open
+      if(_myGpsMarker){_myGpsMarker.setLatLng([lat,lon]);}
+      else if(_techRouteMap){
+        _myGpsMarker=_makeMyMarker(lat,lon).addTo(_techRouteMap);
+        _techRouteMap.panTo([lat,lon]);
+      }
+      // Throttle Supabase writes to every 30s
+      const now=Date.now();
+      if(now-_lastGpsWrite<30000)return;
+      _lastGpsWrite=now;
+      if(!currentTenantId||!currentTechView)return;
+      const tech=currentTechView;
+      tech.last_lat=lat; tech.last_lon=lon; tech.last_seen=new Date().toISOString();
+      // Update button label without full re-render
+      const btn=document.getElementById('gps-toggle-btn');
+      if(btn){btn.textContent='📡 GPS פעיל'; btn.style.background='var(--green)'; btn.style.color='white'; btn.style.borderColor='var(--green)';}
+      await dbUpsert('technicians',{id:tech._dbId||tech.id,last_lat:lat,last_lon:lon,last_seen:tech.last_seen});
+    },
+    (err)=>{console.warn('[GPS]',err.message); showToast('לא ניתן לקבל מיקום GPS');},
+    {enableHighAccuracy:true, maximumAge:15000, timeout:15000}
+  );
+}
+
+function stopGpsTracking(){
+  if(_gpsWatchId){navigator.geolocation.clearWatch(_gpsWatchId); _gpsWatchId=null;}
+  const btn=document.getElementById('gps-toggle-btn');
+  if(btn){btn.textContent='📡 שתף מיקום'; btn.style.background=''; btn.style.color=''; btn.style.borderColor='';}
+}
+
+function _makeMyMarker(lat,lon){
+  const icon=L.divIcon({
+    html:`<div style="width:16px;height:16px;background:#10B981;border:3px solid white;border-radius:50%;box-shadow:0 0 8px rgba(16,185,129,0.8);"></div>`,
+    className:'',iconSize:[16,16],iconAnchor:[8,8]
+  });
+  return L.marker([lat,lon],{icon,title:'המיקום שלי',zIndexOffset:1000});
+}
+
+// ── Tech Route Map ───────────────────────────────────────────────────────────
+function toggleTechMap(){
+  const mapEl=document.getElementById('tech-route-map');
+  const btn=document.getElementById('tech-map-toggle');
+  if(!mapEl)return;
+  const isHidden=mapEl.classList.contains('hidden');
+  mapEl.classList.toggle('hidden',!isHidden);
+  if(btn)btn.textContent=isHidden?'הסתר מפה':'הצג מפה';
+  if(isHidden){
+    // init map now (needs container to be visible for sizing)
+    setTimeout(()=>_initTechRouteMap(),50);
+  } else {
+    if(_techRouteMap){_techRouteMap.remove();_techRouteMap=null;_myGpsMarker=null;}
+  }
+}
+
+function _initTechRouteMap(){
+  const containerId='tech-route-map';
+  if(_techRouteMap){_techRouteMap.invalidateSize();return;}
+  const today=todayStr();
+  const tech=currentTechView;
+  if(!tech)return;
+  const todayTasks=tasks.filter(t=>String(t.techId)===String(tech.id)&&t.date===today&&t.status!=='cancelled')
+    .sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+
+  const map=L.map(containerId,{zoomControl:true,attributionControl:true}).setView([31.8,35.0],8);
+  _osmTiles().addTo(map);
+  _techRouteMap=map;
+
+  const bounds=[];
+  // Number markers for each task
+  todayTasks.forEach((task,i)=>{
+    const coords=_coordsForCity(task.city);
+    if(!coords)return;
+    const isDone=task.status==='completed';
+    const isEnRoute=task.status==='en_route';
+    const bg=isDone?'#94A3B8':isEnRoute?'#F59E0B':'#2563EB';
+    const icon=L.divIcon({
+      html:`<div style="background:${bg};color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);${isDone?'opacity:0.6;':''}">${i+1}</div>`,
+      className:'',iconSize:[28,28],iconAnchor:[14,14]
+    });
+    bounds.push(coords);
+    L.marker(coords,{icon}).addTo(map)
+      .bindPopup(`<div style="direction:rtl;min-width:150px;"><b>${task.client||''}</b><br><span style="color:#64748B;">${task.city}${task.street?', '+task.street:''}</span><br>${task.cat||''} · ${task.time||''}<br><span style="color:${isDone?'#10B981':'#2563EB'}">${STATUS_MAP[task.status]?.label||''}</span></div>`);
+  });
+
+  // Base city marker
+  const baseCoords=_coordsForCity(tech.base);
+  if(baseCoords){
+    const homeIcon=L.divIcon({
+      html:`<div style="background:#8B5CF6;color:white;border-radius:6px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);">🏠</div>`,
+      className:'',iconSize:[26,26],iconAnchor:[13,13]
+    });
+    bounds.push(baseCoords);
+    L.marker(baseCoords,{icon:homeIcon}).addTo(map).bindPopup(`<b>יציאה: ${tech.base}</b>`);
+  }
+
+  // My GPS position
+  if(tech.last_lat&&tech.last_lon){
+    _myGpsMarker=_makeMyMarker(tech.last_lat,tech.last_lon).addTo(map)
+      .bindPopup(`<b>המיקום שלי</b><br>${new Date(tech.last_seen||'').toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}`);
+    bounds.push([tech.last_lat,tech.last_lon]);
+  }
+
+  // Draw dashed route line between stops
+  if(bounds.length>1){
+    L.polyline(bounds,{color:'#2563EB',weight:2,opacity:0.4,dashArray:'6,6'}).addTo(map);
+  }
+
+  if(bounds.length>0){map.fitBounds(bounds,{padding:[30,30]});}
+}
+
+// ── Coordinator Live Map ─────────────────────────────────────────────────────
+function toggleCoordinatorMap(){
+  const wrap=document.getElementById('coord-map-wrap');
+  if(!wrap)return;
+  const isHidden=wrap.classList.contains('hidden');
+  wrap.classList.toggle('hidden',!isHidden);
+  const btn=document.getElementById('live-map-btn');
+  if(btn)btn.style.background=isHidden?'var(--blue-l)':'';
+  if(isHidden){
+    setTimeout(()=>_initCoordinatorMap(),80);
+  } else {
+    destroyCoordinatorMap();
+  }
+}
+
+function refreshCoordinatorMap(){
+  destroyCoordinatorMap();
+  setTimeout(()=>_initCoordinatorMap(),80);
+}
+
+function destroyCoordinatorMap(){
+  if(_realtimeSub){sb.removeChannel(_realtimeSub);_realtimeSub=null;}
+  if(_coordMapInstance){_coordMapInstance.remove();_coordMapInstance=null;}
+  _coordTechMarkers={};_coordTaskMarkers=[];
+}
+
+function _initCoordinatorMap(){
+  const containerId='coordinator-map';
+  const el=document.getElementById(containerId);
+  if(!el||!el.offsetWidth)return;
+  if(_coordMapInstance){_coordMapInstance.invalidateSize();return;}
+
+  const map=L.map(containerId,{zoomControl:true,attributionControl:true}).setView([31.5,35.0],8);
+  _osmTiles().addTo(map);
+  _coordMapInstance=map;
+
+  const today=todayStr();
+  let activeTechCount=0;
+
+  // Plot technicians with known GPS position
+  technicians.forEach(tech=>{
+    if(!tech.last_lat||!tech.last_lon)return;
+    activeTechCount++;
+    _addTechMarker(map,tech);
+  });
+
+  // Plot today's task markers (colored by tech, sized by status)
+  const todayTasks=tasks.filter(t=>t.date===today&&t.status!=='cancelled');
+  todayTasks.forEach(task=>{
+    const coords=_coordsForCity(task.city);
+    if(!coords)return;
+    const tech=technicians.find(t=>String(t.id)===String(task.techId));
+    const color=tech?.color||'#64748B';
+    const isDone=task.status==='completed';
+    const isEnRoute=task.status==='en_route';
+    const dot=isDone?'✓':isEnRoute?'↗':'●';
+    const size=isDone?18:22;
+    const icon=L.divIcon({
+      html:`<div style="background:${isDone?'#94A3B8':color};color:white;border-radius:4px;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-size:${isDone?9:11}px;font-weight:800;border:1.5px solid rgba(0,0,0,0.15);opacity:${isDone?0.55:1};box-shadow:0 1px 4px rgba(0,0,0,0.25);">${dot}</div>`,
+      className:'',iconSize:[size,size],iconAnchor:[size/2,size/2]
+    });
+    const m=L.marker(coords,{icon}).addTo(map)
+      .bindPopup(`<div style="direction:rtl;min-width:160px;"><b>${task.client||''}</b><br>${task.city}<br>${task.cat||''}<br>${tech?.name||''} · ${task.time||''}<br><span style="color:${isDone?'#10B981':'#2563EB'}">${STATUS_MAP[task.status]?.label||''}</span></div>`);
+    _coordTaskMarkers.push(m);
+  });
+
+  // Update counter
+  const cntEl=document.getElementById('map-tech-count');
+  if(cntEl)cntEl.textContent=activeTechCount;
+  const updEl=document.getElementById('map-last-update');
+  if(updEl)updEl.textContent='עודכן '+new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+
+  // Supabase Realtime — live tech location updates
+  if(currentTenantId){
+    _realtimeSub=sb.channel('ml-tech-gps-'+currentTenantId)
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'technicians',filter:`tenant_id=eq.${currentTenantId}`},(payload)=>{
+        const {id,last_lat:lat,last_lon:lon,last_seen}=payload.new;
+        if(!lat||!lon)return;
+        const tech=technicians.find(t=>String(t._dbId||t.id)===String(id));
+        if(!tech)return;
+        tech.last_lat=lat; tech.last_lon=lon; tech.last_seen=last_seen;
+        if(_coordTechMarkers[tech.id]){
+          _coordTechMarkers[tech.id].setLatLng([lat,lon]);
+          _coordTechMarkers[tech.id].setPopupContent(`<div style="direction:rtl;"><b>${tech.name}</b><br>📡 ${new Date(last_seen).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</div>`);
+        } else {
+          _addTechMarker(_coordMapInstance,tech);
+          const cnt=document.getElementById('map-tech-count');
+          if(cnt)cnt.textContent=parseInt(cnt.textContent||0)+1;
+        }
+        const upd=document.getElementById('map-last-update');
+        if(upd)upd.textContent='עודכן '+new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+      })
+      .subscribe();
+  }
+}
+
+function _addTechMarker(map,tech){
+  if(!tech.last_lat||!tech.last_lon)return;
+  const ago=tech.last_seen?Math.round((Date.now()-new Date(tech.last_seen))/60000):null;
+  const isStale=ago!==null&&ago>60; // >1 hour old = grey out
+  const icon=L.divIcon({
+    html:`<div style="background:${isStale?'#94A3B8':tech.color};color:white;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);opacity:${isStale?0.6:1};">${initials(tech.name)}</div>`,
+    className:'',iconSize:[34,34],iconAnchor:[17,17]
+  });
+  const marker=L.marker([tech.last_lat,tech.last_lon],{icon,zIndexOffset:500}).addTo(map)
+    .bindPopup(`<div style="direction:rtl;min-width:140px;"><b>${tech.name}</b><br>${tech.base?'🏠 '+tech.base:''}<br>📡 ${ago!==null?(ago<1?'עכשיו':ago+'ד׳ לפני'):'לא ידוע'}</div>`);
+  _coordTechMarkers[tech.id]=marker;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POLYGON ZONE DRAWING  (Leaflet.draw — free, no API key)
+// Draw a polygon on the map → auto-detect which cities fall inside → add to zone
+// ═══════════════════════════════════════════════════════════════════════════════
+let _zoneDrawMap = null;
+let _zoneDrawId  = null;
+let _zoneDrawFeatureGroup = null;
+let _drawnPolygon = null;
+
+function openZoneDraw(zoneId) {
+  _zoneDrawId = zoneId;
+  _drawnPolygon = null;
+  const z = zones.find(x => x.id === zoneId);
+  document.getElementById('mo-zone-draw-title').textContent = `צייר אזור — ${z ? z.name : ''}`;
+  document.getElementById('zone-draw-status').textContent = '';
+  document.getElementById('mo-zone-draw').classList.remove('hidden');
+  setTimeout(() => _initZoneDrawMap(), 180); // wait for modal to render
+}
+
+function _initZoneDrawMap() {
+  const el = document.getElementById('zone-draw-map');
+  if (!el) return;
+  if (_zoneDrawMap) { _zoneDrawMap.remove(); _zoneDrawMap = null; }
+  _zoneDrawMap = L.map(el).setView([31.5, 34.85], 8);
+  _osmTiles().addTo(_zoneDrawMap);
+
+  // Show existing zone cities as reference dots
+  const z = zones.find(x => x.id === _zoneDrawId);
+  if (z) {
+    z.cities.forEach(city => {
+      const coords = CITY_COORDS_JS[city];
+      if (coords) L.circleMarker(coords, {radius:6,color:'#4f46e5',fillColor:'#4f46e5',fillOpacity:0.75,weight:2})
+        .bindTooltip(city, {direction:'top',permanent:false}).addTo(_zoneDrawMap);
+    });
+  }
+
+  // Draw control — polygon only
+  _zoneDrawFeatureGroup = new L.FeatureGroup().addTo(_zoneDrawMap);
+  const drawCtrl = new L.Control.Draw({
+    draw: {
+      polygon: { allowIntersection: false, showArea: false,
+        shapeOptions: { color:'#2563eb', fillColor:'#2563eb', fillOpacity:0.15, weight:2 } },
+      polyline:false, rectangle:false, circle:false, circlemarker:false, marker:false
+    },
+    edit: { featureGroup: _zoneDrawFeatureGroup, remove: true }
+  });
+  _zoneDrawMap.addControl(drawCtrl);
+
+  _zoneDrawMap.on(L.Draw.Event.CREATED, e => {
+    _zoneDrawFeatureGroup.clearLayers();
+    _zoneDrawFeatureGroup.addLayer(e.layer);
+    _drawnPolygon = e.layer.getLatLngs()[0];
+    _updateZoneDrawStatus();
+  });
+  _zoneDrawMap.on(L.Draw.Event.EDITED, () => {
+    _drawnPolygon = null;
+    _zoneDrawFeatureGroup.eachLayer(l => { if(l.getLatLngs) _drawnPolygon = l.getLatLngs()[0]; });
+    _updateZoneDrawStatus();
+  });
+  _zoneDrawMap.on(L.Draw.Event.DELETED, () => {
+    _drawnPolygon = null;
+    document.getElementById('zone-draw-status').textContent = '';
+  });
+
+  setTimeout(() => _zoneDrawMap.invalidateSize(), 250);
+}
+
+function _updateZoneDrawStatus() {
+  if (!_drawnPolygon) return;
+  const found = _detectCitiesInPolygon(_drawnPolygon);
+  const z = zones.find(x => x.id === _zoneDrawId);
+  const existing = z ? z.cities : [];
+  const newCities = found.filter(c => !existing.includes(c));
+  const statusEl = document.getElementById('zone-draw-status');
+  if (!found.length) {
+    statusEl.textContent = 'לא נמצאו ערים ידועות בתוך האזור — נסה לצייר אזור גדול יותר';
+    statusEl.style.color = 'var(--amber)';
+  } else {
+    statusEl.textContent = newCities.length
+      ? `נמצאו ${found.length} ערים · ${newCities.length} חדשות: ${newCities.join(', ')}`
+      : `נמצאו ${found.length} ערים (כולן כבר קיימות באזור)`;
+    statusEl.style.color = newCities.length ? 'var(--green)' : 'var(--ink-3)';
+  }
+}
+
+// Ray-casting point-in-polygon (works with L.LatLng objects)
+function _pointInPolygon(lat, lon, polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].lat, yi = polygon[i].lng;
+    const xj = polygon[j].lat, yj = polygon[j].lng;
+    const intersect = ((yi > lon) !== (yj > lon)) &&
+      (lat < (xj - xi) * (lon - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function _detectCitiesInPolygon(latlngs) {
+  return Object.entries(CITY_COORDS_JS)
+    .filter(([, coords]) => _pointInPolygon(coords[0], coords[1], latlngs))
+    .map(([city]) => city);
+}
+
+function confirmZoneDraw() {
+  if (!_drawnPolygon) { showToast('לא צויר פוליגון עדיין', 'error'); return; }
+  const found = _detectCitiesInPolygon(_drawnPolygon);
+  if (!found.length) { showToast('לא נמצאו ערים ידועות בתוך האזור', 'error'); return; }
+  const z = zones.find(x => x.id === _zoneDrawId);
+  if (!z) return;
+  let added = 0;
+  found.forEach(c => { if (!z.cities.includes(c)) { z.cities.push(c); added++; } });
+  save(); renderZones(); populateCitySelect(); saveZoneToSupabase(z);
+  closeMo('mo-zone-draw');
+  if (_zoneDrawMap) { _zoneDrawMap.remove(); _zoneDrawMap = null; }
+  showToast(added > 0 ? `נוספו ${added} ערים לאזור ✓` : 'כל הערים כבר קיימות באזור');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TECH JOB HISTORY
+// Shows past completed/issue tasks for the logged-in tech — read-only
+// ═══════════════════════════════════════════════════════════════════════════════
+function toggleTechHistory(techId) {
+  const container = document.getElementById('tech-history-content');
+  const btn = document.getElementById('history-toggle-btn');
+  if (!container) return;
+  const isHidden = container.style.display === 'none' || container.style.display === '';
+  if (!isHidden) {
+    container.style.display = 'none';
+    if (btn) btn.textContent = '📋 היסטוריה';
+    return;
+  }
+  const today = todayStr();
+  const histTasks = tasks
+    .filter(t => String(t.techId) === String(techId) && t.date < today && (t.status === 'completed' || t.status === 'issue'))
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 80);
+
+  if (!histTasks.length) {
+    container.innerHTML = '<div style="color:var(--ink-4);font-size:0.875rem;padding:1.5rem 0;text-align:center;">אין היסטוריה זמינה</div>';
+    container.style.display = 'block';
+    if (btn) btn.textContent = '📋 סגור היסטוריה';
+    return;
+  }
+
+  // Summary stats
+  const totalDone  = histTasks.filter(t => t.status === 'completed').length;
+  const totalIssue = histTasks.filter(t => t.status === 'issue').length;
+  const days       = new Set(histTasks.map(t => t.date)).size;
+
+  // Group by date
+  const byDate = {};
+  histTasks.forEach(t => { if (!byDate[t.date]) byDate[t.date] = []; byDate[t.date].push(t); });
+
+  container.innerHTML = `
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+      <div style="background:var(--green-l);border-radius:var(--r);padding:8px 14px;text-align:center;flex:1;min-width:70px;">
+        <div style="font-size:1.375rem;font-weight:900;color:var(--green);">${totalDone}</div>
+        <div style="font-size:0.65rem;font-weight:700;color:var(--green);text-transform:uppercase;">הושלמו</div>
+      </div>
+      <div style="background:var(--amber-l);border-radius:var(--r);padding:8px 14px;text-align:center;flex:1;min-width:70px;">
+        <div style="font-size:1.375rem;font-weight:900;color:var(--amber);">${totalIssue}</div>
+        <div style="font-size:0.65rem;font-weight:700;color:var(--amber);text-transform:uppercase;">בעיות</div>
+      </div>
+      <div style="background:var(--blue-l);border-radius:var(--r);padding:8px 14px;text-align:center;flex:1;min-width:70px;">
+        <div style="font-size:1.375rem;font-weight:900;color:var(--blue-d);">${days}</div>
+        <div style="font-size:0.65rem;font-weight:700;color:var(--blue-d);text-transform:uppercase;">ימי עבודה</div>
+      </div>
+    </div>
+    ${Object.entries(byDate).map(([date, dayTasks]) => {
+      const dateLabel = new Date(date + 'T12:00:00').toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+      return `<div style="margin-bottom:12px;">
+        <div style="font-size:0.68rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;">${dateLabel} · ${dayTasks.length} קריאות</div>
+        ${dayTasks.map(t => `
+          <div style="background:${t.status==='issue'?'var(--amber-l)':'var(--line-2)'};border:1px solid var(--line);border-radius:var(--r-lg);padding:0.6rem 0.875rem;margin-bottom:4px;display:flex;gap:10px;align-items:flex-start;">
+            <div style="font-weight:800;min-width:40px;font-size:0.875rem;color:var(--ink-3);">${t.time||'—'}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:700;font-size:0.875rem;">${h(t.cat)}</div>
+              <div style="font-size:0.78rem;color:var(--ink-3);">${h(t.client)}${t.city?' · 📍'+h(t.city):''}</div>
+            </div>
+            <span class="badge ${t.status==='completed'?'badge-gray':'badge-red'}">${t.status==='completed'?'הושלם':'בעיה'}</span>
+          </div>
+        `).join('')}
+      </div>`;
+    }).join('')}
+  `;
+  container.style.display = 'block';
+  if (btn) btn.textContent = '📋 סגור היסטוריה';
 }
 </script>
 

@@ -29,7 +29,7 @@
 | `PRODUCT_GUIDE.md` | Section-by-section product brief + 15-min demo script |
 | `backend/main.py` | FastAPI app — /health and /optimize endpoints |
 | `backend/optimizer.py` | OR-Tools TSP solver + Google Maps / haversine distance matrix |
-| `backend/cities.py` | 50 Israeli city coordinates (haversine fallback) |
+| `backend/cities.py` | 200+ Israeli city coordinates (haversine fallback, logs unknown cities) |
 
 ## Internal HTML Structure
 ```

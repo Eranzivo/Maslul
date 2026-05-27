@@ -167,10 +167,23 @@ in-memory tasks referencing the old local integer id are updated.
 | `context/new-entity-checklist.md` | 8-step checklist for every new Supabase table |
 | `CLAUDE.md` | This file |
 
+## GPS + Live Map (added May 2026)
+- **Leaflet.js** loaded from CDN (free, no API key) — renders OpenStreetMap tiles
+- **Tech route map**: `toggleTechMap()` shows route map in tech view — numbered stop pins, home base marker, GPS dot
+- **GPS tracking**: `startGpsTracking()` / `stopGpsTracking()` — `navigator.geolocation.watchPosition`, throttled to 1 DB write per 30s
+- **Coordinator live map**: `toggleCoordinatorMap()` on home page — all techs with last GPS + today's tasks colored by tech
+- **Supabase Realtime**: channel `ml-tech-gps-{tenantId}` — coordinator map updates in real-time as techs move
+- **GPS columns**: `last_lat`, `last_lon`, `last_seen` on `technicians` table — run `outputs/migration-gps-columns_2026-05-27.sql`
+- `CONFIG.GOOGLE_MAPS_KEY`: optional upgrade — leave empty to use free OpenStreetMap tiles
+
 ## Known Backlog / Open Items
-- [ ] pytest suite for `backend/` (currently only manual `test_optimizer.py`)
-- [ ] Connect OR-Tools `/optimize` endpoint from `index.html` (endpoint built, not yet called from frontend)
-- [ ] Expand `cities.py` with more Israeli cities (currently ~50, unknown → Tel Aviv fallback with warning)
-- [ ] GPS Phase 1 — live coordinator map (low priority until Israel/client requests)
-- [ ] min_daily enforcement: currently only checks future dates; past underfull days are not visible to `buildCandidates`
-- [ ] WAL tenant isolation: replay does not re-verify tenant_id ownership (low risk at single-tenant pilot stage)
+- [x] **GPS migration done** — `last_lat`, `last_lon`, `last_seen` columns live on `technicians` table (applied 2026-05-27 via MCP)
+- [ ] Add Google Maps API key to `CONFIG.GOOGLE_MAPS_KEY` (optional — app works without it)
+- [ ] Photo upload on task completion (Supabase Storage, free 1GB tier)
+- [ ] Digital signature capture (canvas-based, no library needed)
+- [x] Tech job history — "📋 היסטוריה" toggle in tech view, groups by date, summary stats (done 2026-05-27)
+- [x] Polygon zone drawing — "🗺️ צייר" button per zone, Leaflet.draw, ray-cast city detection (done 2026-05-27)
+- [ ] Break time management (lunch block on tech schedule)
+- [ ] pytest suite: tests written — run `cd backend && pytest tests/ -v`
+- [ ] min_daily enforcement: currently only checks future dates; past underfull days not visible to `buildCandidates`
+- [ ] WAL tenant isolation: replay does not re-verify tenant_id (low risk at single-tenant pilot stage)
