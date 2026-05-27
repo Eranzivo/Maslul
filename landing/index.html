@@ -318,7 +318,8 @@ nav {
   border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 .pricing-inner { max-width: 1000px; margin: 0 auto; }
-.pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 2.5rem; }
+.pricing-grid { display: flex; justify-content: center; margin-top: 2.5rem; }
+.pricing-grid .pricing-card { max-width: 420px; width: 100%; }
 .pricing-card {
   background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
   border-radius: 16px; padding: 2rem; position: relative; transition: all 0.2s;
@@ -439,7 +440,7 @@ footer { border-top: 1px solid rgba(255,255,255,0.06); padding: 2rem; text-align
   .hero-stats { justify-content: center; }
   .geo-inner { grid-template-columns: 1fr; gap: 3rem; }
   .zone-visual { height: 300px; }
-  .pricing-grid { grid-template-columns: 1fr; max-width: 400px; margin-left: auto; margin-right: auto; }
+  .pricing-grid .pricing-card { max-width: 100%; }
   .pain-section, .how-section, .features-section, .pricing-inner, .geo-section { padding-left: 1.5rem; padding-right: 1.5rem; }
   .trust-bar { padding: 1.25rem 1.5rem; }
   nav { padding: 0 1rem; gap: 0.75rem; }
@@ -609,7 +610,7 @@ footer { border-top: 1px solid rgba(255,255,255,0.06); padding: 2rem; text-align
         </div>
         <div class="geo-feature">
           <div class="geo-feature-icon">🔀</div>
-          <div class="geo-feature-text"><strong data-t="geo_f3_title">מסלול אופטימלי בתוך האזור</strong><span data-t="geo_f3_desc">OR-Tools מחשב את סדר הקריאות הטוב ביותר.</span></div>
+          <div class="geo-feature-text"><strong data-t="geo_f3_title">מסלול אופטימלי בתוך האזור</strong><span data-t="geo_f3_desc">האלגוריתם מחשב את סדר הקריאות הטוב ביותר.</span></div>
         </div>
         <div class="geo-feature">
           <div class="geo-feature-icon">⚡</div>
@@ -691,7 +692,7 @@ footer { border-top: 1px solid rgba(255,255,255,0.06); padding: 2rem; text-align
       <div class="feature-icon-wrap">🔀</div>
       <div>
         <div class="feature-title" data-t="feat2_title">מסלול מיטבי עם AI</div>
-        <div class="feature-desc" data-t="feat2_desc">מחשב את סדר הקריאות האופטימלי לפי מרחק נסיעה אמיתי — OR-Tools + Google Maps.</div>
+        <div class="feature-desc" data-t="feat2_desc">מחשב את סדר הקריאות האופטימלי לפי מרחק נסיעה אמיתי.</div>
       </div>
     </div>
     <div class="feature-card reveal">
@@ -736,11 +737,7 @@ footer { border-top: 1px solid rgba(255,255,255,0.06); padding: 2rem; text-align
 
       <div class="pricing-card reveal">
         <div class="pricing-name" data-t="price1_name">Starter</div>
-        <div class="pricing-amount">
-          <span class="price-num" data-t="price1_num">₪149</span>
-          <span class="price-per" data-t="price1_per">/חודש</span>
-        </div>
-        <div class="pricing-desc" data-t="price1_desc">עד 5 עובדי שטח</div>
+        <div class="pricing-desc" style="margin-top:0.5rem;" data-t="price1_desc">עד 5 עובדי שטח</div>
         <ul class="pricing-features">
           <li data-t="price1_f1">שיבוץ אוטומטי חכם</li>
           <li data-t="price1_f2">לוח תכנון שבועי</li>
@@ -748,42 +745,7 @@ footer { border-top: 1px solid rgba(255,255,255,0.06); padding: 2rem; text-align
           <li data-t="price1_f4">וואטסאפ אחרי שיבוץ</li>
           <li data-t="price1_f5">דוחות בסיסיים</li>
         </ul>
-        <a href="#lead-form" class="pricing-cta outline" data-t="pricing_cta_trial">התחל ניסיון</a>
-      </div>
-
-      <div class="pricing-card popular reveal">
-        <div class="popular-badge" data-t="popular_badge">הכי פופולרי</div>
-        <div class="pricing-name" data-t="price2_name">Growth</div>
-        <div class="pricing-amount">
-          <span class="price-num" data-t="price2_num">₪299</span>
-          <span class="price-per" data-t="price2_per">/חודש</span>
-        </div>
-        <div class="pricing-desc" data-t="price2_desc">עד 20 עובדי שטח</div>
-        <ul class="pricing-features">
-          <li data-t="price2_f1">הכל ב-Starter, ועוד:</li>
-          <li data-t="price2_f2">מסלול מיטבי (OR-Tools AI)</li>
-          <li data-t="price2_f3">ניהול לקוחות (CRM)</li>
-          <li data-t="price2_f4">דוחות מלאים + CSV</li>
-          <li data-t="price2_f5">הגבלות קטגוריה לעובד</li>
-          <li data-t="price2_f6">מעקב סטטוס בזמן אמת</li>
-        </ul>
-        <a href="#lead-form" class="pricing-cta filled" data-t="pricing_cta_start">התחל עכשיו</a>
-      </div>
-
-      <div class="pricing-card reveal">
-        <div class="pricing-name" data-t="price3_name">Enterprise</div>
-        <div class="pricing-amount">
-          <span class="price-num" style="font-size:1.625rem" data-t="price3_num">בואו נדבר</span>
-        </div>
-        <div class="pricing-desc" data-t="price3_desc">20+ עובדים, אינטגרציות, מותאם אישית</div>
-        <ul class="pricing-features">
-          <li data-t="price3_f1">הכל ב-Growth, ועוד:</li>
-          <li data-t="price3_f2">אינטגרציית Odoo / ERP</li>
-          <li data-t="price3_f3">API מלא</li>
-          <li data-t="price3_f4">הדרכה ועלייה לאוויר</li>
-          <li data-t="price3_f5">SLA ותמיכה ייעודית</li>
-        </ul>
-        <a href="#lead-form" class="pricing-cta outline" data-t="pricing_cta_contact">צור קשר</a>
+        <a href="#lead-form" class="pricing-cta filled" data-t="pricing_cta_trial">דבר איתנו ←</a>
       </div>
 
     </div>
@@ -901,7 +863,7 @@ const STRINGS = {
     geo_label: 'ניהול גיאוגרפי חכם', geo_title: 'כל עובד עובד<br><em>באזור שלו</em>', geo_sub: 'מסלול יודע מי מטפל באיזה אזור ובאיזה יום. לא ישלח טכנאי מחיפה לאשקלון.',
     geo_f1_title: 'הגדרת אזורים גמישה', geo_f1_desc: 'כל עיר שייכת לאזור. הוספה בלחיצה.',
     geo_f2_title: 'רוטציה אוטומטית לפי ימים', geo_f2_desc: 'טכנאי א\' בצפון בשני, במרכז ברביעי.',
-    geo_f3_title: 'מסלול אופטימלי בתוך האזור', geo_f3_desc: 'OR-Tools מחשב את סדר הקריאות הטוב ביותר.',
+    geo_f3_title: 'מסלול אופטימלי בתוך האזור', geo_f3_desc: 'האלגוריתם מחשב את סדר הקריאות הטוב ביותר.',
     geo_f4_title: 'גיבוי לאזורים סמוכים', geo_f4_desc: 'כשיש עומס — המערכת מציעה אזורים שכנים.',
     geo_badge_north: 'צפון', geo_badge_center: 'מרכז', geo_badge_jm: 'ירושלים', geo_badge_south: 'דרום',
     geo_tech1: 'אלי לוי', geo_tech2: 'דן כהן', geo_tech3: 'מיכל פרץ', geo_tech4: 'רון אביבי',
@@ -909,19 +871,15 @@ const STRINGS = {
     geo_status_active: 'פעיל', geo_status_active2: 'פעיל',
     feat_label: "פיצ'רים", feat_title: 'כל מה שצריך.<br><em>כלום מיותר.</em>',
     feat1_title: 'מנוע שיבוץ חכם', feat1_desc: 'מחשב אזורים, עומסים, מיומנויות ורוטציה. לא ינסה לשלוח עובד לאזור שלא מתאים לו.',
-    feat2_title: 'מסלול מיטבי עם AI', feat2_desc: 'מחשב את סדר הקריאות האופטימלי לפי מרחק נסיעה אמיתי — OR-Tools + Google Maps.',
+    feat2_title: 'מסלול מיטבי עם AI', feat2_desc: 'מחשב את סדר הקריאות האופטימלי לפי מרחק נסיעה אמיתי.',
     feat3_title: 'לוח תכנון שבועי', feat3_desc: 'תצוגה מלאה של כל העובדים לפי ימים. סורקים פערים ועומסים לפני שהשבוע מתחיל.',
     feat4_title: 'אפליקציית עובד שטח', feat4_desc: 'העובד רואה רק את הקריאות שלו. ניווט לוויז, חיוג ללקוח, עדכון סטטוס בלחיצה.',
     feat5_title: 'חוקים גמישים לכל עסק', feat5_desc: 'מקסימום קריאות לפי קטגוריה, ערים חסומות, חופשות חלקיות, גבולות גיאוגרפיים ועוד.',
     feat6_title: 'דוחות ומעקב', feat6_desc: 'דוחות ביצועים, ייצוא CSV, מעקב קריאות לפי סטטוס, נפח חודשי לפי עובד.',
     pricing_label: 'תמחור', pricing_title: 'שקוף, פשוט,<br><em>צמוד לצרכים שלך</em>',
-    price1_name: 'Starter', price1_num: '₪149', price1_per: '/חודש', price1_desc: 'עד 5 עובדי שטח',
+    price1_name: 'Starter', price1_desc: 'עד 5 עובדי שטח',
     price1_f1: 'שיבוץ אוטומטי חכם', price1_f2: 'לוח תכנון שבועי', price1_f3: 'אפליקציית עובד שטח', price1_f4: 'וואטסאפ אחרי שיבוץ', price1_f5: 'דוחות בסיסיים',
-    price2_name: 'Growth', price2_num: '₪299', price2_per: '/חודש', price2_desc: 'עד 20 עובדי שטח',
-    price2_f1: 'הכל ב-Starter, ועוד:', price2_f2: 'מסלול מיטבי (OR-Tools AI)', price2_f3: 'ניהול לקוחות (CRM)', price2_f4: 'דוחות מלאים + CSV', price2_f5: 'הגבלות קטגוריה לעובד', price2_f6: 'מעקב סטטוס בזמן אמת',
-    price3_name: 'Enterprise', price3_num: 'בואו נדבר', price3_desc: '20+ עובדים, אינטגרציות, מותאם אישית',
-    price3_f1: 'הכל ב-Growth, ועוד:', price3_f2: 'אינטגרציית Odoo / ERP', price3_f3: 'API מלא', price3_f4: 'הדרכה ועלייה לאוויר', price3_f5: 'SLA ותמיכה ייעודית',
-    popular_badge: 'הכי פופולרי', pricing_cta_trial: 'התחל ניסיון', pricing_cta_start: 'התחל עכשיו', pricing_cta_contact: 'צור קשר',
+    pricing_cta_trial: 'דבר איתנו ←',
     for_label: 'קהל יעד', for_title: 'בנוי בדיוק עבורך אם אתה...', for_sub: 'כל עסק שמעסיק עובדי שטח ורוצה להפסיק לנהל דרך וואטסאפ.',
     form_label: 'הצטרף לפיילוט', form_title: 'חינם לחלוטין<br><em>לעסקים ראשונים</em>', form_sub: 'אנחנו מחפשים עסקים לפיילוט. תשתמש בחינם, תיתן פידבק, ותעצב את המוצר יחד איתנו.',
     f_biz: 'שם העסק', f_name: 'שם איש הקשר', f_phone: 'טלפון', f_type: 'סוג עסק', f_size: 'כמה עובדי שטח?',
@@ -960,7 +918,7 @@ const STRINGS = {
     geo_label: 'Smart Geographic Management', geo_title: 'Every worker stays<br><em>in their zone</em>', geo_sub: 'Maslul knows who handles which area, on which day. It won\'t send a Haifa tech to Ashkelon.',
     geo_f1_title: 'Flexible zone configuration', geo_f1_desc: 'Each city belongs to a zone. Add with a click.',
     geo_f2_title: 'Automatic day-of-week rotation', geo_f2_desc: 'Worker A covers north on Mondays, center on Wednesdays.',
-    geo_f3_title: 'Optimal route within zone', geo_f3_desc: 'OR-Tools calculates the most efficient job order.',
+    geo_f3_title: 'Optimal route within zone', geo_f3_desc: 'The algorithm calculates the most efficient job order.',
     geo_f4_title: 'Overflow to adjacent zones', geo_f4_desc: 'When overloaded — system suggests nearby zones.',
     geo_badge_north: 'North', geo_badge_center: 'Center', geo_badge_jm: 'Jerusalem', geo_badge_south: 'South',
     geo_tech1: 'Eli Levi', geo_tech2: 'Dan Cohen', geo_tech3: 'Michal Peretz', geo_tech4: 'Ron Avivi',
@@ -968,19 +926,15 @@ const STRINGS = {
     geo_status_active: 'Active', geo_status_active2: 'Active',
     feat_label: 'Features', feat_title: 'Everything you need.<br><em>Nothing you don\'t.</em>',
     feat1_title: 'Smart Dispatch Engine', feat1_desc: 'Calculates zones, workloads, skills and rotation. Won\'t send a worker to the wrong area.',
-    feat2_title: 'AI Route Optimization', feat2_desc: 'Calculates the optimal job order by actual drive time — OR-Tools + Google Maps.',
+    feat2_title: 'AI Route Optimization', feat2_desc: 'Calculates the optimal job order by actual drive time.',
     feat3_title: 'Weekly Planner', feat3_desc: 'Full view of all workers by day. Spot gaps and overloads before the week starts.',
     feat4_title: 'Field Worker App', feat4_desc: 'Worker sees only their jobs. Waze navigation, call client, update status — one tap.',
     feat5_title: 'Flexible Business Rules', feat5_desc: 'Max jobs per category, blocked cities, partial days off, geographic limits and more.',
     feat6_title: 'Reports & Tracking', feat6_desc: 'Performance reports, CSV export, status tracking, monthly volume by worker.',
     pricing_label: 'Pricing', pricing_title: 'Transparent, simple,<br><em>built for your size</em>',
-    price1_name: 'Starter', price1_num: '$40', price1_per: '/month', price1_desc: 'Up to 5 field workers',
+    price1_name: 'Starter', price1_desc: 'Up to 5 field workers',
     price1_f1: 'Smart auto-dispatch', price1_f2: 'Weekly planner', price1_f3: 'Field worker app', price1_f4: 'WhatsApp after dispatch', price1_f5: 'Basic reports',
-    price2_name: 'Growth', price2_num: '$79', price2_per: '/month', price2_desc: 'Up to 20 field workers',
-    price2_f1: 'Everything in Starter, plus:', price2_f2: 'Route optimizer (OR-Tools AI)', price2_f3: 'Client management (CRM)', price2_f4: 'Full reports + CSV export', price2_f5: 'Category limits per worker', price2_f6: 'Real-time status tracking',
-    price3_name: 'Enterprise', price3_num: "Let's talk", price3_desc: '20+ workers, integrations, custom',
-    price3_f1: 'Everything in Growth, plus:', price3_f2: 'Odoo / ERP integration', price3_f3: 'Full API access', price3_f4: 'Onboarding & training', price3_f5: 'SLA & dedicated support',
-    popular_badge: 'Most popular', pricing_cta_trial: 'Start trial', pricing_cta_start: 'Get started', pricing_cta_contact: 'Contact us',
+    pricing_cta_trial: "Let's talk →",
     for_label: "Who it's for", for_title: 'Built for you if you run...', for_sub: 'Any business with field workers that wants to stop managing through WhatsApp.',
     form_label: 'Join the Pilot', form_title: 'Completely free<br><em>for early businesses</em>', form_sub: "We're looking for pilot businesses. Use it free, give feedback, and shape the product with us.",
     f_biz: 'Business name', f_name: 'Contact name', f_phone: 'Phone', f_type: 'Business type', f_size: 'How many field workers?',
