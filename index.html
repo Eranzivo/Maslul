@@ -46,7 +46,7 @@
 body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direction:rtl;min-height:100vh;-webkit-font-smoothing:antialiased;}
 .shell{display:flex;min-height:100vh;}
 .sidebar{width:220px;background:var(--surface-1);border-left:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:fixed;right:0;top:0;z-index:100;overflow:hidden;}
-.content{margin-right:232px;flex:1;}
+.content{margin-right:220px;flex:1;}
 .page{padding:2rem 2.5rem;max-width:1200px;animation:fi 0.2s ease;}
 @keyframes fi{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 .sb-top{padding:16px 14px 12px;flex-shrink:0;}
@@ -245,7 +245,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 /* ═══ DRAWER ═══ */
 .drawer-overlay{position:fixed;inset:0;z-index:499;background:rgba(0,0,0,0.25);opacity:0;pointer-events:none;transition:opacity 0.2s;}
 .drawer-overlay.open{opacity:1;pointer-events:auto;}
-.drawer{position:fixed;top:0;right:220px;width:360px;height:100vh;background:#fff;border-left:1px solid var(--border);box-shadow:var(--sh-lg);z-index:500;display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.22s cubic-bezier(0.4,0,0.2,1);}
+.drawer{position:fixed;top:0;right:220px;width:360px;height:100vh;background:#fff;border-left:1px solid var(--border);box-shadow:var(--sh-lg);z-index:500;display:flex;flex-direction:column;transform:translateX(calc(100% + 220px));transition:transform 0.22s cubic-bezier(0.4,0,0.2,1);}
 .drawer.open{transform:translateX(0);}
 .drawer-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
 .drawer-title{font-size:1rem;font-weight:700;color:var(--ink);}
@@ -671,6 +671,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div id="save-indicator" style="display:none;font-size:0.7rem;color:var(--ink-3);text-align:center;padding:2px 0 4px;letter-spacing:0.3px;">⟳ שומר…</div>
     <div id="conn-indicator" style="display:none;font-size:0.7rem;text-align:center;padding:2px 0 4px;letter-spacing:0.3px;color:var(--red);">⚠️ אין חיבור לרשת</div>
     <button class="btn btn-blue btn-full" style="margin-bottom:10px;" onclick="openCallDrawer()">+ קריאה חדשה</button>
+    <div id="client-chips" style="display:none;margin-bottom:6px;"></div>
     <div id="role-chips" class="role-chips"></div>
     <div class="sb-user">
       <div class="sb-user-av" id="user-av-sb">?</div>
@@ -1973,7 +1974,7 @@ function drawerSelectSlot(idx){
   const btn=document.getElementById('drawer-confirm-btn');
   if(btn)btn.disabled=false;
 }
-function drawerConfirmSlot(){
+async function drawerConfirmSlot(){
   const idx=window._drawerSelectedIdx;
   if(idx===null||idx===undefined)return;
   const c=window._drawerCandidates[idx];
@@ -1981,6 +1982,8 @@ function drawerConfirmSlot(){
   if(!c||!d)return;
   const slot=c.slots&&c.slots[0];
   if(!slot)return;
+  const btn=document.getElementById('drawer-confirm-btn');
+  if(btn){btn.disabled=true;btn.textContent='שומר…';}
   const assignId='ML-'+Math.random().toString(36).slice(2,7).toUpperCase();
   const catObj=categories.find(cat=>String(cat.id)===String(d.catId));
   const catName=catObj?catObj.name:'';
@@ -2003,10 +2006,16 @@ function drawerConfirmSlot(){
   };
   tasks.push(newTask);
   save();
-  saveTaskToSupabase(newTask);
+  const saved=await saveTaskToSupabase(newTask);
+  if(btn){btn.disabled=false;btn.textContent='אשר שיבוץ ←';}
+  if(!saved){
+    // task is in localStorage; show a softer toast — WAL not available for new inserts,
+    // so warn the user their data is local-only until network recovers
+    showToast('קריאה נוספה מקומית — בדוק חיבור לרשת לאישור סופי','error');
+  }
   closeCallDrawer();
   const dateLabel=c.date.d.toLocaleDateString('he-IL',{weekday:'short',day:'numeric',month:'numeric'});
-  showToast(`קריאה שובצה ✓ — ${h(c.tech.name)} · ${dateLabel} ${slot.start}`);
+  if(saved)showToast(`קריאה שובצה ✓ — ${h(c.tech.name)} · ${dateLabel} ${slot.start}`);
   if(currentPage==='home')renderHome();
   else if(currentPage==='tasks')renderTasks();
   else if(currentPage==='planner')renderPlanner();
@@ -2723,6 +2732,7 @@ async function initApp() {
   }
   applyLabels();
   buildRoleSelect(); populateTimeSels(); populateCitySelect();
+  loadClientChips();
   setDateLabel(); renderCatChips(); renderTasks(); renderHomeTechCards();
   renderTechs(); renderZones(); renderCategories(); renderSettings();
   applyFeatureVisibility();
@@ -2773,6 +2783,23 @@ function buildRoleSelect(){
   });
   container.innerHTML=parts.join('');
 }
+// ─── Tenant quick-switcher (super_admin only) ─────────────────────────────
+// Shows one chip per tenant in the sidebar so Eran can jump into any
+// client's view without navigating to the admin panel first.
+async function loadClientChips(){
+  const wrap=document.getElementById('client-chips');
+  if(!wrap||!currentUserSuperAdmin)return;
+  const inSession=!!sessionStorage.getItem('ma_session');
+  if(inSession){wrap.style.display='none';return;}
+  const{data}=await sb.from('tenants').select('id,name').order('name');
+  if(!data||!data.length){wrap.style.display='none';return;}
+  wrap.innerHTML=data.map(t=>
+    `<div class="role-chip" onclick="enterTenantSession('${t.id}','${h(t.name)}')" title="כנס לסשן ${h(t.name)}" style="color:var(--purple);border-color:rgba(139,92,246,0.35);">🔀 ${h(t.name)}</div>`
+  ).join('');
+  wrap.style.display='flex';
+}
+// ──────────────────────────────────────────────────────────────────────────
+
 function switchRoleTo(val){
   currentRole=val;
   if(val!=='admin'){const techId=val.replace('tech_','');currentTechView=technicians.find(t=>String(t.id)===techId);goPage('techview');}
@@ -3569,6 +3596,7 @@ async function exitTenantSession(origTenantId){
   setDateLabel();renderCatChips();renderTasks();renderHomeTechCards();
   renderTechs();renderZones();renderCategories();renderSettings();
   applyFeatureVisibility();
+  loadClientChips(); // restore tenant chips after exiting impersonation
   goPage('admin');
 }
 
