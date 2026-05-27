@@ -177,13 +177,31 @@ in-memory tasks referencing the old local integer id are updated.
 - `CONFIG.GOOGLE_MAPS_KEY`: optional upgrade — leave empty to use free OpenStreetMap tiles
 
 ## Known Backlog / Open Items
-- [x] **GPS migration done** — `last_lat`, `last_lon`, `last_seen` columns live on `technicians` table (applied 2026-05-27 via MCP)
-- [ ] Add Google Maps API key to `CONFIG.GOOGLE_MAPS_KEY` (optional — app works without it)
-- [x] Photo upload on task completion — `task-photos` bucket, RLS, signed URL, thumbnail in tech view (done 2026-05-27)
-- [ ] Digital signature capture (canvas-based, no library needed)
-- [x] Tech job history — "📋 היסטוריה" toggle in tech view, groups by date, summary stats (done 2026-05-27)
-- [x] Polygon zone drawing — "🗺️ צייר" button per zone, Leaflet.draw, ray-cast city detection (done 2026-05-27)
-- [ ] Break time management (lunch block on tech schedule)
-- [ ] pytest suite: tests written — run `cd backend && pytest tests/ -v`
-- [ ] min_daily enforcement: currently only checks future dates; past underfull days not visible to `buildCandidates`
-- [ ] WAL tenant isolation: replay does not re-verify tenant_id (low risk at single-tenant pilot stage)
+
+### ✅ Done
+- [x] GPS migration — `last_lat`, `last_lon`, `last_seen` on `technicians` (2026-05-27)
+- [x] Photo upload on task completion — `task-photos` bucket, RLS, signed URL, thumbnail (2026-05-27)
+- [x] Tech job history — "📋 היסטוריה" toggle, groups by date, stats (2026-05-27)
+- [x] Polygon zone drawing — "🗺️ צייר" + Leaflet.draw + ray-cast city detection (2026-05-27)
+- [x] GPS tracking + live coordinator map — Leaflet + OpenStreetMap + Supabase Realtime (2026-05-27)
+
+### 🔴 Next Session — Priority Order
+- [ ] **Digital signature capture** — canvas-based, save to Supabase Storage, show in tech view (HIGH)
+- [ ] **WhatsApp message template** — pre-fill wa.me link with task ID + tech name + ETA (HIGH, ~30min)
+- [ ] **Break time / lunch block** — block 1hr slot in tech schedule via day_offs UI (Medium)
+- [ ] **Recurring jobs** — `repeat_interval` field on tasks, generate next task on completion (Medium)
+- [ ] **Web Push notifications** — Web Push API (free) — alert tech when new task assigned (Medium)
+- [ ] **pytest backend** — `cd backend && pytest tests/ -v` — fix any failures (Low, ~30min)
+
+### 🟡 After Client #2
+- [ ] **Custom domain + Cloudflare** — register `maslul.co.il`, GitHub Pages custom domain, Cloudflare free plan (memory saved)
+- [ ] **Client #2 onboarding** — create `context/client-[name].md`, run SQL onboarding script
+- [ ] **Google Maps API key** — add to `CONFIG.GOOGLE_MAPS_KEY` for real drive-time distances (optional)
+- [ ] **SMS auto-send** — Twilio pay-per-use, ~$5/mo for 100 msgs
+
+### 🔵 Future
+- [ ] Customer self-booking portal (large)
+- [ ] Polygon AI auto-optimizer — cluster past task coords → suggest zone boundaries
+- [ ] Native mobile app (PWA first)
+- [ ] min_daily enforcement — past underfull days not visible to `buildCandidates`
+- [ ] WAL tenant isolation — replay doesn't re-verify tenant_id (low risk, single-tenant now)
