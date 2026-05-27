@@ -11,6 +11,15 @@ Never start coding without reading context first.
 
 **New entity / new table rule:** Before adding any new Supabase table or entity, run every step in `context/new-entity-checklist.md`. All 8 steps are required. Do not ship without completing the checklist.
 
+**Data persistence rule (CRITICAL):** Every write operation that modifies user data MUST:
+1. Verify `currentTenantId` is not null before any Supabase write — if null, do not proceed; show a clear error
+2. `await` all `saveXToSupabase()` calls in user-facing flows (drawer, modals, forms) — never fire-and-forget on a confirmed action
+3. Show an explicit error toast if `saveTaskToSupabase()`/`saveTechToSupabase()` returns false/null
+4. After any "save" action, the user must see either ✓ success or ✗ error — never silent failure
+5. For new entities (first insert, no `_dbId`): the WAL does NOT cover them; they rely on the Supabase call completing. Always `await` these.
+
+**Supabase user row invariant:** Every Supabase Auth user (auth.users) MUST have a matching row in public.users with correct `tenant_id`. Missing row = `currentTenantId` stays null = all saves silently fail. Before any client goes live, verify: `SELECT id, tenant_id, role FROM users WHERE id = '<auth_user_id>'`
+
 **Outputs rule:** Every command or generated artifact (summaries, reports, plans, drafts) must be saved to `outputs/[task-name]_[YYYY-MM-DD].md`. Never save in a random location.
 
 **Connections:** See `connections/registry.json` for all external services. Secrets live only in `.env` (root) — never in `context/`, `connections/`, or `commands/`.
