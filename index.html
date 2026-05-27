@@ -4988,49 +4988,68 @@ function renderTechView(){
   const todayTasks=tasks.filter(t=>String(t.techId)===String(tech.id)&&t.date===today&&t.status!=='cancelled').sort((a,b)=>(a.time||'').localeCompare(b.time||''));
   const tomorrowTasks=tasks.filter(t=>String(t.techId)===String(tech.id)&&t.date===tomorrowStr&&t.status!=='cancelled').sort((a,b)=>(a.time||'').localeCompare(b.time||''));
   const d=new Date();
+  const firstName=tech.name?tech.name.split(' ')[0]:'';
+  const greeting=`שלום ${h(firstName)} 👋`;
+  const dayLabel=`יום ${DAYS_HE[d.getDay()]} · ${d.toLocaleDateString('he-IL')}`;
+  const todayCount=todayTasks.length;
   const techCard=(t)=>{
-    const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;
+    const statusDot={
+      'assigned':'#94A3B8',
+      'en_route':'#6366F1',
+      'arrived':'#F59E0B',
+      'completed':'#10B981',
+      'issue':'#EF4444',
+      'cancelled':'#EF4444'
+    }[t.status]||'#94A3B8';
+    const phoneClean=t.phone?t.phone.replace(/[^0-9+]/g,''):'';
+    const addrStr=(t.street?t.street+', ':'')+h(t.city||'');
+    const wazeUrl=t.city?`waze://?q=${encodeURIComponent((t.street?t.street+', ':'')+t.city)}`:'';
+    const rowId='trow-'+t.id;
     const nextStatuses={assigned:['en_route'],en_route:['arrived'],arrived:['completed','issue']};
     const nextBtns=(nextStatuses[t.status]||[]).map(ns=>{
       const ni=STATUS_MAP[ns];
       return`<button class="btn btn-sm" style="background:${ns==='completed'?'var(--green)':ns==='en_route'?'var(--blue)':'var(--amber)'};color:white;border:none;" onclick="techSetStatus('${t.id}','${ns}')">${ni.label}</button>`;
     }).join('');
-    return`<div style="background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-bottom:10px;box-shadow:var(--sh);">
-      <div style="display:flex;gap:12px;">
-        <div style="min-width:52px;text-align:center;padding-top:2px;"><div style="font-size:1.25rem;font-weight:900;color:var(--ink);">${t.time||'—'}</div><div style="font-size:0.6rem;color:var(--ink-4);">שעה</div></div>
-        <div style="width:1px;background:var(--line);flex-shrink:0;"></div>
+    const isDone=t.status==='completed'||t.status==='cancelled';
+    return`<div class="card" style="margin-bottom:10px;padding:16px;">
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <div style="width:10px;height:10px;border-radius:50%;background:${statusDot};flex-shrink:0;margin-top:5px;"></div>
         <div style="flex:1;min-width:0;">
-          <div style="font-weight:800;font-size:0.9375rem;">${h(t.cat)}</div>
-          <div style="font-size:0.875rem;font-weight:600;color:var(--ink-2);margin-top:2px;">${h(t.client)}${t.phone?` · <a href="tel:${t.phone}" style="color:var(--blue);text-decoration:none;">${h(t.phone)}</a>`:''}</div>
-          <div style="font-size:0.8125rem;color:var(--ink-3);margin-top:2px;">📍 ${[t.street,t.city].filter(Boolean).map(h).join(', ')}</div>
-          ${t.notes?`<div style="font-size:0.75rem;color:var(--ink-3);margin-top:3px;font-style:italic;">💬 ${h(t.notes)}</div>`:''}
-          <div class="tv-action-row" style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center;">
-            <span class="badge ${s.badge}">${s.label}</span>
+          <div style="font-size:0.8125rem;color:var(--ink-3);margin-bottom:2px;">${h(t.time||'')}${t.timeEnd?' – '+h(t.timeEnd):''}${t.time||t.city?' · ':''}${h(t.city||'')}</div>
+          <div style="font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:1px;">${h(t.client||'')}</div>
+          <div style="font-size:0.8125rem;color:var(--ink-3);">${h(t.cat||'')}${t.notes?' · '+h(t.notes):''}</div>
+          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center;">
+            ${phoneClean?`<a href="tel:${phoneClean}" class="btn btn-outline btn-sm">📞 התקשר</a>`:''}
+            ${t.city?`<a href="${h(wazeUrl)}" target="_blank" class="btn btn-outline btn-sm">📍 נווט</a>`:''}
+            ${phoneClean?`<a class="btn btn-outline btn-sm" href="https://wa.me/${waPhone(t.phone)}?text=${waMsg(t)}" target="_blank">💬 WhatsApp</a>`:''}
             ${nextBtns}
-            <a class="btn btn-outline btn-sm" href="https://waze.com/ul?q=${encodeURIComponent((t.street||'')+' '+t.city)}" target="_blank">🗺️ וייז</a>
-            ${t.phone?`<a class="btn btn-outline btn-sm" href="tel:${t.phone}">📞 התקשר</a><a class="btn btn-outline btn-sm" href="https://wa.me/${waPhone(t.phone)}?text=${waMsg(t)}" target="_blank">💬 WhatsApp</a>`:''}
+            ${isDone?'<span class="badge badge-gray">'+h((STATUS_MAP[t.status]||{label:''}).label)+'</span>':''}
             <label class="btn btn-outline btn-sm" style="cursor:pointer;" title="העלה תמונה">📷 צלם<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="uploadTaskPhoto('${t.id}',this)"></label>
             <button class="btn btn-outline btn-sm ${t.signatureUrl?'btn-green':''}" onclick="openSignature('${t.id}')" title="חתימת לקוח" style="${t.signatureUrl?'background:var(--green-l);color:var(--green);border-color:var(--green);':''}">✍️${t.signatureUrl?' חתום':' חתימה'}</button>
           </div>
           ${t.photoUrl?`<div style="margin-top:8px;"><img src="${h(t.photoUrl)}" style="max-width:100%;max-height:180px;border-radius:var(--r-lg);border:1px solid var(--line);cursor:pointer;" onclick="window.open('${h(t.photoUrl)}','_blank')" title="לחץ להגדלה"></div>`:''}
           ${t.signatureUrl?`<div style="margin-top:6px;display:flex;align-items:center;gap:8px;"><span style="font-size:0.72rem;color:var(--green);font-weight:700;">✅ חתימה התקבלה</span><img src="${h(t.signatureUrl)}" style="height:40px;border-radius:4px;border:1px solid var(--line);background:white;cursor:pointer;" onclick="window.open('${h(t.signatureUrl)}','_blank')" title="לחץ להגדלה"></div>`:''}
+          <div style="margin-top:10px;">
+            <button class="btn btn-ghost btn-sm" onclick="toggleClientDetails('${rowId}')" style="padding:0;font-size:0.8125rem;color:var(--ink-3);">▼ פרטי לקוח</button>
+            <div id="details-${rowId}" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+              ${phoneClean?`<div style="font-size:0.875rem;margin-bottom:4px;">📞 <a href="tel:${phoneClean}" style="color:var(--accent);text-decoration:none;">${h(t.phone)}</a></div>`:''}
+              ${t.city?`<div style="font-size:0.875rem;margin-bottom:4px;">📍 ${(t.street?h(t.street)+', ':'')+h(t.city)}</div>`:''}
+              ${t.notes?`<div style="font-size:0.875rem;color:var(--ink-3);">📝 ${h(t.notes)}</div>`:''}
+            </div>
+          </div>
         </div>
       </div>
     </div>`;
   };
   const gpsActive = !!_gpsWatchId;
   document.getElementById('techview-content').innerHTML=`<div class="page">
-    <div style="display:flex;align-items:center;gap:14px;padding-bottom:1.25rem;border-bottom:1px solid var(--line);margin-bottom:1.25rem;">
-      <div style="width:48px;height:48px;border-radius:50%;background:${tech.color};color:white;font-size:1rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${h(initials(tech.name))}</div>
-      <div>
-        <div style="font-size:1.25rem;font-weight:900;">${h(tech.name)}</div>
-        <div style="font-size:0.8125rem;color:var(--ink-3);">יום ${DAYS_HE[d.getDay()]} · ${d.toLocaleDateString('he-IL')}</div>
-        ${tech.last_seen?`<div style="font-size:0.7rem;color:var(--green);margin-top:2px;">📡 מיקום עודכן ${new Date(tech.last_seen).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</div>`:''}
-      </div>
-      <div style="margin-right:auto;display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
-        <div style="text-align:center;background:var(--blue-l);border-radius:var(--r);padding:8px 14px;">
-          <div style="font-size:1.5rem;font-weight:900;color:var(--blue-d);">${todayTasks.length}</div>
-          <div style="font-size:0.6rem;font-weight:700;color:var(--blue-d);text-transform:uppercase;">קריאות היום</div>
+    <div style="margin-bottom:20px;padding-bottom:1.25rem;border-bottom:1px solid var(--line);">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
+        <div style="width:48px;height:48px;border-radius:50%;background:${tech.color};color:white;font-size:1rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${h(initials(tech.name))}</div>
+        <div style="flex:1;">
+          <div style="font-size:1.25rem;font-weight:700;color:var(--ink);margin-bottom:2px;">${greeting}</div>
+          <div style="font-size:0.875rem;color:var(--ink-3);">${dayLabel} · ${todayCount} קריאות היום</div>
+          ${tech.last_seen?`<div style="font-size:0.7rem;color:var(--green);margin-top:2px;">📡 מיקום עודכן ${new Date(tech.last_seen).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</div>`:''}
         </div>
         <button class="btn btn-sm ${gpsActive?'btn-green':'btn-outline'}" onclick="toggleGpsTracking()" id="gps-toggle-btn" style="${gpsActive?'background:var(--green);color:white;border-color:var(--green);':''}">
           ${gpsActive?'📡 GPS פעיל':'📡 שתף מיקום'}
@@ -5054,6 +5073,7 @@ function renderTechView(){
     </div>
   </div>`;
 }
+function openCompleteTask(taskId){openStatusModal(taskId);}
 function techSetStatus(taskId,ns){
   const t=tasks.find(x=>String(x.id)===String(taskId));
   if(!t)return;
