@@ -5002,7 +5002,6 @@ function renderTechView(){
       'cancelled':'#EF4444'
     }[t.status]||'#94A3B8';
     const phoneClean=t.phone?t.phone.replace(/[^0-9+]/g,''):'';
-    const addrStr=(t.street?t.street+', ':'')+h(t.city||'');
     const navUrl=t.city?`https://waze.com/ul?q=${encodeURIComponent((t.street?t.street+', ':'')+t.city)}&navigate=yes`:'';
     const rowId='trow-'+t.id;
     const nextStatuses={assigned:['en_route'],en_route:['arrived'],arrived:['completed','issue']};
@@ -5010,7 +5009,7 @@ function renderTechView(){
       const ni=STATUS_MAP[ns];
       return`<button class="btn btn-sm" style="background:${ns==='completed'?'var(--green)':ns==='en_route'?'var(--blue)':'var(--amber)'};color:white;border:none;" onclick="techSetStatus('${t.id}','${ns}')">${ni.label}</button>`;
     }).join('');
-    const isDone=t.status==='completed'||t.status==='cancelled';
+    const isDone=t.status==='completed'||t.status==='cancelled'||t.status==='issue';
     return`<div class="card" style="margin-bottom:10px;padding:16px;">
       <div style="display:flex;align-items:flex-start;gap:10px;">
         <div style="width:10px;height:10px;border-radius:50%;background:${statusDot};flex-shrink:0;margin-top:5px;"></div>
@@ -5023,7 +5022,7 @@ function renderTechView(){
             ${t.city?`<a href="${h(navUrl)}" target="_blank" class="btn btn-outline btn-sm">📍 נווט</a>`:''}
             ${phoneClean?`<a class="btn btn-outline btn-sm" href="https://wa.me/${waPhone(t.phone)}?text=${waMsg(t)}" target="_blank">💬 WhatsApp</a>`:''}
             ${nextBtns}
-            ${!isDone?`<button class="btn btn-blue btn-sm" onclick="openCompleteTask(${t.id})">✓ סיים</button>`:''}
+            ${!isDone?`<button class="btn btn-blue btn-sm" onclick="openCompleteTask('${t.id}')">✓ סיים</button>`:''}
             ${isDone?'<span class="badge badge-gray">'+h((STATUS_MAP[t.status]||{label:''}).label)+'</span>':''}
             <label class="btn btn-outline btn-sm" style="cursor:pointer;" title="העלה תמונה">📷 צלם<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="uploadTaskPhoto('${t.id}',this)"></label>
             <button class="btn btn-outline btn-sm ${t.signatureUrl?'btn-green':''}" onclick="openSignature('${t.id}')" title="חתימת לקוח" style="${t.signatureUrl?'background:var(--green-l);color:var(--green);border-color:var(--green);':''}">✍️${t.signatureUrl?' חתום':' חתימה'}</button>
