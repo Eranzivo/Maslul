@@ -50,16 +50,17 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .ni-btn:hover{background:var(--line-2);color:var(--ink);}
 .ni-btn.active{background:var(--blue-l);color:var(--blue-d);font-weight:700;border-left-color:var(--blue);}
 .sb-bot{padding:0.75rem 1rem;border-top:1px solid var(--line-2);}
-.sb-view-sel{width:100%;border:1px solid var(--line);border-radius:var(--r);padding:5px 8px;font-size:0.8rem;font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);margin-bottom:8px;outline:none;cursor:pointer;}
+.role-chips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;}
+.role-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;border:1px solid var(--line);background:var(--bg);cursor:pointer;font-size:0.72rem;font-weight:600;color:var(--ink-3);transition:all 0.15s;white-space:nowrap;}
+.role-chip:hover{border-color:var(--blue);color:var(--blue-d);background:var(--blue-l);}
+.role-chip.active{background:var(--blue-l);border-color:var(--blue);color:var(--blue-d);}
+.role-chip-av{width:16px;height:16px;border-radius:50%;color:white;display:flex;align-items:center;justify-content:center;font-size:0.55rem;font-weight:800;flex-shrink:0;}
 .sb-user{display:flex;align-items:center;gap:8px;}
 .sb-user-av{width:30px;height:30px;border-radius:50%;background:var(--blue);color:white;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0;}
 .sb-user-name{font-size:0.8rem;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .sb-user-role{font-size:0.68rem;color:var(--ink-4);margin-top:1px;}
 .sb-logout{background:none;border:none;cursor:pointer;color:var(--ink-4);font-size:0.9rem;padding:5px;border-radius:var(--r);flex-shrink:0;}
 .sb-logout:hover{background:var(--red-l);color:var(--red);}
-.role-box{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;}
-.role-lbl{font-size:0.6rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;}
-.role-sel{width:100%;border:none;background:transparent;font-size:0.875rem;font-family:'Heebo',sans-serif;font-weight:600;color:var(--ink);outline:none;cursor:pointer;}
 .ph{margin-bottom:1.75rem;}
 .ph-row{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;}
 .ph-title{font-size:1.625rem;font-weight:900;letter-spacing:-0.8px;color:var(--ink);}
@@ -629,9 +630,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div class="sb-bot">
     <div id="save-indicator" style="display:none;font-size:0.7rem;color:var(--ink-3);text-align:center;padding:2px 0 4px;letter-spacing:0.3px;">⟳ שומר…</div>
     <div id="conn-indicator" style="display:none;font-size:0.7rem;text-align:center;padding:2px 0 4px;letter-spacing:0.3px;color:var(--red);">⚠️ אין חיבור לרשת</div>
-    <select class="sb-view-sel" id="role-sel" onchange="switchRole()">
-      <option value="admin">מתאמת / מנהל</option>
-    </select>
+    <div id="role-chips" class="role-chips"></div>
     <div class="sb-user">
       <div class="sb-user-av" id="user-av-sb">?</div>
       <div style="flex:1;min-width:0;">
@@ -1927,7 +1926,14 @@ async function doLogout() {
   currentUser = null;
   currentTenantId = null;
   try { await sb.auth.signOut(); } catch(e) { console.warn('signOut error:', e); }
-  showLogin();
+  // Go straight to login form (not landing page) — user already knows the product
+  document.getElementById('init-loader')?.classList.add('hidden');
+  document.getElementById('landing-page')?.classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('login-error').textContent='';
+  document.getElementById('reset-screen').classList.add('hidden');
+  document.getElementById('app-shell').classList.add('hidden');
+  stopConnectionMonitor();
 }
 
 // ═══ SUPABASE DATA LAYER ═══
@@ -2557,9 +2563,24 @@ function populateCitySelect(){
   if(prev)sel.value=prev;
 }
 function buildRoleSelect(){
-  const sel=document.getElementById('role-sel');
-  sel.innerHTML='<option value="admin">מתאמת / מנהל</option>'+
-    technicians.map(t=>`<option value="tech_${t.id}">${t.name}</option>`).join('');
+  const container=document.getElementById('role-chips');
+  if(!container)return;
+  const isAdmin=currentRole==='admin';
+  const parts=[`<div class="role-chip${isAdmin?' active':''}" onclick="switchRoleTo('admin')" title="תצוגת מנהל / מתאמת"><span>📋 מנהל</span></div>`];
+  technicians.forEach(t=>{
+    const active=currentRole===`tech_${t.id}`;
+    const firstName=t.name.trim().split(' ')[0];
+    const initials=t.name.trim().split(' ').map(w=>w[0]).slice(0,2).join('');
+    const color=t.color||'#6366F1';
+    parts.push(`<div class="role-chip${active?' active':''}" onclick="switchRoleTo('tech_${t.id}')" title="${h(t.name)}"><div class="role-chip-av" style="background:${color};">${h(initials)}</div><span>${h(firstName)}</span></div>`);
+  });
+  container.innerHTML=parts.join('');
+}
+function switchRoleTo(val){
+  currentRole=val;
+  if(val!=='admin'){const techId=val.replace('tech_','');currentTechView=technicians.find(t=>String(t.id)===techId);goPage('techview');}
+  else goPage('home');
+  buildRoleSelect();
 }
 function renderSettings(){
   document.getElementById('set-company').value=settings.company;
@@ -2674,7 +2695,7 @@ function routeTechLogin(){
   ['nav-home','nav-dispatch','nav-tasks','nav-planner','nav-reports','nav-clients',
    'nav-sec-crm','nav-technicians','nav-zones','nav-categories','nav-settings','nav-users',
    'nav-sec-admin','nav-admin'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('hidden');});
-  document.getElementById('role-sel').closest('.role-box')?.classList.add('hidden');
+  document.getElementById('role-chips')?.classList.add('hidden');
   // Match tech by user_id first, then fall back to name
   const uid=currentUser?.id;
   const matched=technicians.find(t=>t.userId&&t.userId===uid)
@@ -2875,9 +2896,8 @@ function closeMobMore(){
   document.getElementById('mob-sheet').classList.add('hidden');
 }
 function switchRole(){
-  const val=document.getElementById('role-sel').value;currentRole=val;
-  if(val!=='admin'){const techId=val.replace('tech_','');currentTechView=technicians.find(t=>String(t.id)===techId);goPage('techview');}
-  else goPage('home');
+  // legacy — role switching now handled by switchRoleTo() via chip clicks
+  buildRoleSelect();
 }
 
 // ═══ FEATURE FLAGS ═══
