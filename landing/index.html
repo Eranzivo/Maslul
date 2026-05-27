@@ -90,16 +90,15 @@ nav {
 }
 .nav-cta:hover { background: #1D4ED8; transform: translateY(-1px); }
 
-/* ── HERO SPLIT ── */
+/* ── HERO ── */
 .hero {
   position: relative; min-height: 100vh;
-  display: grid; grid-template-columns: 1fr 1fr;
-  align-items: center; gap: 4rem;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  text-align: center;
   padding: 8rem 5rem 5rem;
   overflow: hidden;
 }
-.hero-content { position: relative; z-index: 1; text-align: start; }
-.hero-visual { position: relative; z-index: 1; }
+.hero-content { position: relative; z-index: 1; max-width: 720px; }
 
 .hero-badge {
   display: inline-flex; align-items: center; gap: 8px;
@@ -159,38 +158,6 @@ nav {
 
 @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-/* ── APP WINDOW ── */
-.app-window {
-  background: rgba(15,32,64,0.85); border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 14px; overflow: hidden;
-  box-shadow: 0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
-  animation: fadeUp 0.8s ease 0.5s both;
-}
-.window-bar {
-  background: rgba(0,0,0,0.3); padding: 10px 14px;
-  display: flex; align-items: center; gap: 7px;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-}
-.dot { width: 10px; height: 10px; border-radius: 50%; }
-.dot-red { background: #FF5F57; }
-.dot-yellow { background: #FFBD2E; }
-.dot-green { background: #28CA42; }
-.window-title { font-size: 0.7rem; color: var(--gray); margin: 0 auto; }
-.app-preview-body { padding: 1.25rem; }
-.mock-header { font-size: 0.6rem; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
-.mock-cats { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
-.mock-cat { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; border: 1.5px solid rgba(255,255,255,0.1); color: #94A3B8; }
-.mock-cat.active { border-color: var(--blue); background: rgba(37,99,235,0.15); color: #93C5FD; }
-.mock-search-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-.mock-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 7px; padding: 7px 10px; font-size: 0.75rem; color: #94A3B8; flex: 1; min-width: 80px; }
-.mock-btn-find { background: var(--blue); color: white; border: none; border-radius: 7px; padding: 7px 14px; font-size: 0.75rem; font-weight: 700; cursor: default; font-family: 'Heebo', sans-serif; white-space: nowrap; }
-.mock-date-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin-top: 10px; }
-.mock-date-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 9px; padding: 10px; text-align: center; }
-.mock-date-card.best { border-color: var(--blue); background: rgba(37,99,235,0.1); }
-.mock-dc-merge { font-size: 0.575rem; color: var(--green); font-weight: 700; margin-bottom: 2px; }
-.mock-dc-day { font-size: 0.6rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.4px; }
-.mock-dc-date { font-size: 0.9rem; font-weight: 900; color: white; margin: 2px 0; }
-.mock-dc-tech { font-size: 0.65rem; color: #93C5FD; font-weight: 600; }
 
 /* ── TRUST BAR ── */
 .trust-bar {
@@ -467,8 +434,7 @@ footer { border-top: 1px solid rgba(255,255,255,0.06); padding: 2rem; text-align
 
 /* ── RESPONSIVE ── */
 @media(max-width: 900px) {
-  .hero { grid-template-columns: 1fr; padding: 7rem 2rem 4rem; gap: 3rem; }
-  .hero-content { text-align: center; }
+  .hero { padding: 7rem 2rem 4rem; }
   .hero-actions { justify-content: center; }
   .hero-stats { justify-content: center; }
   .geo-inner { grid-template-columns: 1fr; gap: 3rem; }
@@ -481,7 +447,6 @@ footer { border-top: 1px solid rgba(255,255,255,0.06); padding: 2rem; text-align
   .steps-grid::before { display: none; }
 }
 @media(max-width: 640px) {
-  .mock-date-cards { grid-template-columns: 1fr 1fr; }
   .hero-sub { max-width: 100%; }
   .zone-card.zj { transform: translateY(-50%) translateY(50px); }
 }
@@ -535,47 +500,6 @@ footer { border-top: 1px solid rgba(255,255,255,0.06); padding: 2rem; text-align
     </div>
   </div>
 
-  <div class="hero-visual">
-    <div class="app-window">
-      <div class="window-bar">
-        <div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div>
-        <span class="window-title" data-t="preview_title">מסלול — שיבוץ קריאה</span>
-      </div>
-      <div class="app-preview-body">
-        <div class="mock-header" data-t="preview_new_call">קריאה חדשה</div>
-        <div class="mock-cats">
-          <div class="mock-cat active" data-t="cat1">טוחן אשפה</div>
-          <div class="mock-cat" data-t="cat2">מערכת מים</div>
-          <div class="mock-cat" data-t="cat3">מרכך אבנית</div>
-          <div class="mock-cat" data-t="cat4">קריאת שירות</div>
-        </div>
-        <div class="mock-search-row">
-          <div class="mock-input" data-t="mock_city">חולון</div>
-          <div class="mock-input" data-t="mock_street">הרצל 15</div>
-          <div class="mock-btn-find" data-t="mock_find">מצא תורים ←</div>
-        </div>
-        <div class="mock-header" style="margin-top:12px;" data-t="mock_slots">3 מועדים קרובים</div>
-        <div class="mock-date-cards">
-          <div class="mock-date-card best">
-            <div class="mock-dc-merge" data-t="mock_fill">⚡ ממלא יום קיים</div>
-            <div class="mock-dc-day" data-t="mock_day1">יום שני</div>
-            <div class="mock-dc-date">18/6</div>
-            <div class="mock-dc-tech">אלירן כהן</div>
-          </div>
-          <div class="mock-date-card">
-            <div class="mock-dc-day" data-t="mock_day2">יום רביעי</div>
-            <div class="mock-dc-date">20/6</div>
-            <div class="mock-dc-tech">יוסי מזרחי</div>
-          </div>
-          <div class="mock-date-card">
-            <div class="mock-dc-day" data-t="mock_day3">יום חמישי</div>
-            <div class="mock-dc-date">21/6</div>
-            <div class="mock-dc-tech">רון אביבי</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 </section>
 
 <!-- TRUST BAR -->
