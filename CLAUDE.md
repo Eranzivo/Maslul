@@ -179,7 +179,7 @@ in-memory tasks referencing the old local integer id are updated.
 ## Known Backlog / Open Items
 - [x] **GPS migration done** — `last_lat`, `last_lon`, `last_seen` columns live on `technicians` table (applied 2026-05-27 via MCP)
 - [ ] Add Google Maps API key to `CONFIG.GOOGLE_MAPS_KEY` (optional — app works without it)
-- [ ] Photo upload on task completion (Supabase Storage, free 1GB tier)
+- [x] Photo upload on task completion — `task-photos` bucket, RLS, signed URL, thumbnail in tech view (done 2026-05-27)
 - [ ] Digital signature capture (canvas-based, no library needed)
 - [x] Tech job history — "📋 היסטוריה" toggle in tech view, groups by date, summary stats (done 2026-05-27)
 - [x] Polygon zone drawing — "🗺️ צייר" button per zone, Leaflet.draw, ray-cast city detection (done 2026-05-27)

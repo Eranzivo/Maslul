@@ -1948,6 +1948,7 @@ async function loadFromSupabase() {
       notes: t.notes || '', assignId: t.assign_id || '',
       preferredWindows: t.preferred_windows || [],
       checklistDone: t.checklist_done || {},
+      photoUrl: t.photo_url || null,
       _dbId: t.id
     }));
 
@@ -2237,6 +2238,7 @@ async function saveTaskToSupabase(task) {
     notes: task.notes || '', cancelled_at: task.cancelledAt || null,
     preferred_windows: task.preferredWindows || [],
     checklist_done: task.checklistDone || {},
+    photo_url: task.photoUrl || null,
   };
   if (task._dbId) return (await dbUpsert('tasks', { id: task._dbId, ...row })) !== null;
   const data = await dbInsert('tasks', row);
@@ -4737,7 +4739,9 @@ function renderTechView(){
             ${nextBtns}
             <a class="btn btn-outline btn-sm" href="https://waze.com/ul?q=${encodeURIComponent((t.street||'')+' '+t.city)}" target="_blank">🗺️ וייז</a>
             ${t.phone?`<a class="btn btn-outline btn-sm" href="tel:${t.phone}">📞 התקשר</a><a class="btn btn-outline btn-sm" href="https://wa.me/${waPhone(t.phone)}?text=${waMsg(t)}" target="_blank">💬 WhatsApp</a>`:''}
+            <label class="btn btn-outline btn-sm" style="cursor:pointer;" title="העלה תמונה">📷 צלם<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="uploadTaskPhoto('${t.id}',this)"></label>
           </div>
+          ${t.photoUrl?`<div style="margin-top:8px;"><img src="${h(t.photoUrl)}" style="max-width:100%;max-height:180px;border-radius:var(--r-lg);border:1px solid var(--line);cursor:pointer;" onclick="window.open('${h(t.photoUrl)}','_blank')" title="לחץ להגדלה"></div>`:''}
         </div>
       </div>
     </div>`;
@@ -5652,6 +5656,32 @@ function _addTechMarker(map,tech){
   const marker=L.marker([tech.last_lat,tech.last_lon],{icon,zIndexOffset:500}).addTo(map)
     .bindPopup(`<div style="direction:rtl;min-width:140px;"><b>${tech.name}</b><br>${tech.base?'🏠 '+tech.base:''}<br>📡 ${ago!==null?(ago<1?'עכשיו':ago+'ד׳ לפני'):'לא ידוע'}</div>`);
   _coordTechMarkers[tech.id]=marker;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PHOTO UPLOAD  (Supabase Storage — task-photos bucket, private, tenant-isolated)
+// ═══════════════════════════════════════════════════════════════════════════════
+async function uploadTaskPhoto(taskId, inputEl) {
+  const file = inputEl.files[0];
+  if (!file || !currentTenantId) return;
+  if (file.size > 5 * 1024 * 1024) { showToast('תמונה גדולה מדי (מקסימום 5MB)', 'error'); return; }
+
+  showToast('מעלה תמונה...', 'info');
+  const ext = file.name.split('.').pop() || 'jpg';
+  const path = `${currentTenantId}/${taskId}_${Date.now()}.${ext}`;
+
+  const { data, error } = await sb.storage.from('task-photos').upload(path, file, { upsert: true });
+  if (error) { showToast('שגיאה בהעלאת תמונה', 'error'); Sentry?.captureException(error); return; }
+
+  // Get signed URL (valid 10 years — effectively permanent for our use)
+  const { data: urlData } = await sb.storage.from('task-photos').createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+  const photoUrl = urlData?.signedUrl;
+  if (!photoUrl) { showToast('שגיאה בקבלת קישור תמונה', 'error'); return; }
+
+  const t = tasks.find(x => String(x.id) === String(taskId));
+  if (t) { t.photoUrl = photoUrl; save(); saveTaskToSupabase(t); }
+  renderTechView();
+  showToast('תמונה הועלתה ✓');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
