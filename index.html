@@ -5003,7 +5003,7 @@ function renderTechView(){
     }[t.status]||'#94A3B8';
     const phoneClean=t.phone?t.phone.replace(/[^0-9+]/g,''):'';
     const addrStr=(t.street?t.street+', ':'')+h(t.city||'');
-    const navUrl=t.city?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((t.street?t.street+', ':'')+t.city)}`:'';
+    const navUrl=t.city?`https://waze.com/ul?q=${encodeURIComponent((t.street?t.street+', ':'')+t.city)}&navigate=yes`:'';
     const rowId='trow-'+t.id;
     const nextStatuses={assigned:['en_route'],en_route:['arrived'],arrived:['completed','issue']};
     const nextBtns=(nextStatuses[t.status]||[]).map(ns=>{
