@@ -638,7 +638,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
         <div id="current-user-name" class="sb-user-name"></div>
         <div id="current-user-role" class="sb-user-role">מנהל</div>
       </div>
-      <button id="logout-btn" class="sb-logout" onclick="doLogout()" title="התנתק">↩</button>
+      <button id="logout-btn" class="sb-logout" onclick="smartLogout()" title="התנתק / יציאה">↩</button>
     </div>
   </div>
 </nav>
@@ -1908,6 +1908,18 @@ async function sendPasswordReset() {
   if (error) { errEl.textContent = 'שגיאה בשליחת קישור — בדוק את האימייל ונסה שוב'; return; }
   errEl.style.color = 'var(--green)';
   errEl.textContent = 'קישור לאיפוס נשלח לאימייל ✓';
+}
+function smartLogout() {
+  // If super_admin is currently viewing a tenant session → exit back to admin panel
+  const session = sessionStorage.getItem('ma_session');
+  if (session) {
+    try {
+      const s = JSON.parse(session);
+      exitTenantSession(s.origTenantId);
+      return;
+    } catch(e) { sessionStorage.removeItem('ma_session'); }
+  }
+  doLogout();
 }
 async function doLogout() {
   if(typeof Sentry !== 'undefined' && typeof Sentry.setUser === 'function') Sentry.setUser(null);
@@ -5041,7 +5053,7 @@ function renderZones(){
   document.getElementById('zones-list').innerHTML=zones.map((z,zi)=>`
     <div class="zone-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <input class="fc" value="${h(z.name)}" onchange="zones[${zi}].name=this.value;saveZoneToSupabase(zones[${zi}]);save();" style="font-weight:800;font-size:0.9375rem;border:none;padding:0;background:transparent;flex:1;">
+        <input class="fc" value="${h(z.name)}" onchange="(function(v,id){const z=zones.find(x=>x.id===id);if(z){z.name=v;saveZoneToSupabase(z);save();}})(this.value,'${z.id}')" style="font-weight:800;font-size:0.9375rem;border:none;padding:0;background:transparent;flex:1;">
         <div style="display:flex;gap:6px;flex-shrink:0;">
           <button class="btn btn-outline btn-sm" onclick="openZoneDraw('${z.id}')">🗺️ צייר</button>
           <button class="btn btn-ghost btn-sm" onclick="deleteZone('${z.id}')" style="color:var(--red);">הסר</button>
@@ -5829,7 +5841,8 @@ function openZoneDraw(zoneId) {
   document.getElementById('mo-zone-draw-title').textContent = `צייר אזור — ${z ? z.name : ''}`;
   document.getElementById('zone-draw-status').textContent = '';
   document.getElementById('mo-zone-draw').classList.remove('hidden');
-  setTimeout(() => _initZoneDrawMap(), 300); // wait for modal + CSS transition to render
+  // Two rAF calls: first lets the browser process display:flex, second lets layout settle
+  requestAnimationFrame(() => requestAnimationFrame(() => _initZoneDrawMap()));
 }
 
 function _initZoneDrawMap() {
@@ -5877,9 +5890,9 @@ function _initZoneDrawMap() {
     document.getElementById('zone-draw-status').textContent = '';
   });
 
-  // Force size recalculation — needed when map is inside overflow:auto container
-  setTimeout(() => _zoneDrawMap.invalidateSize(), 150);
-  setTimeout(() => { _zoneDrawMap.invalidateSize(); _zoneDrawMap.setView([31.5,34.85],8); }, 500);
+  // Force size recalculation with rAF + fallback timeout
+  requestAnimationFrame(() => _zoneDrawMap.invalidateSize(true));
+  setTimeout(() => { if(_zoneDrawMap){ _zoneDrawMap.invalidateSize(true); _zoneDrawMap.setView([31.5,34.85],8); } }, 400);
 }
 
 function _updateZoneDrawStatus() {
