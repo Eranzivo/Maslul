@@ -1303,9 +1303,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div class="fg"><label class="fl">תאריך</label><input class="fc" type="date" id="do-date"></div>
     </div>
     <div class="fg"><label class="fl">סוג</label>
-      <select class="fc" id="do-type" onchange="document.getElementById('do-times').classList.toggle('hidden',this.value!=='partial')">
-        <option value="full">כל היום</option><option value="partial">שעות מסוימות</option>
-      </select>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <select class="fc" id="do-type" onchange="document.getElementById('do-times').classList.toggle('hidden',this.value!=='partial')" style="flex:1;">
+          <option value="full">כל היום</option><option value="partial">שעות מסוימות</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="setLunchBreak()" title="הפסקת צהריים 13:00-14:00" style="white-space:nowrap;">🍽️ הפסקת צהריים</button>
+      </div>
     </div>
     <div class="fg-2 hidden" id="do-times">
       <div class="fg"><label class="fl">משעה</label><select class="fc" id="do-from"></select></div>
@@ -5121,6 +5124,15 @@ function savePkg(){
 function openDayoffModal(){
   document.getElementById('do-tech').innerHTML=technicians.map(t=>`<option value="${t.id}">${h(t.name)}</option>`).join('');
   renderDayoffList();document.getElementById('mo-dayoff').classList.remove('hidden');
+}
+function setLunchBreak(){
+  const sel=document.getElementById('do-type');
+  sel.value='partial';
+  document.getElementById('do-times').classList.remove('hidden');
+  const f=document.getElementById('do-from'),t=document.getElementById('do-to');
+  if(f)[...f.options].forEach(o=>{if(o.value==='13:00')o.selected=true;});
+  if(t)[...t.options].forEach(o=>{if(o.value==='14:00')o.selected=true;});
+  document.getElementById('do-reason').value='הפסקת צהריים';
 }
 function addDayoff(){
   const techId=document.getElementById('do-tech').value;
