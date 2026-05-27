@@ -5003,7 +5003,7 @@ function renderTechView(){
     }[t.status]||'#94A3B8';
     const phoneClean=t.phone?t.phone.replace(/[^0-9+]/g,''):'';
     const addrStr=(t.street?t.street+', ':'')+h(t.city||'');
-    const wazeUrl=t.city?`waze://?q=${encodeURIComponent((t.street?t.street+', ':'')+t.city)}`:'';
+    const navUrl=t.city?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((t.street?t.street+', ':'')+t.city)}`:'';
     const rowId='trow-'+t.id;
     const nextStatuses={assigned:['en_route'],en_route:['arrived'],arrived:['completed','issue']};
     const nextBtns=(nextStatuses[t.status]||[]).map(ns=>{
@@ -5020,9 +5020,10 @@ function renderTechView(){
           <div style="font-size:0.8125rem;color:var(--ink-3);">${h(t.cat||'')}${t.notes?' · '+h(t.notes):''}</div>
           <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center;">
             ${phoneClean?`<a href="tel:${phoneClean}" class="btn btn-outline btn-sm">📞 התקשר</a>`:''}
-            ${t.city?`<a href="${h(wazeUrl)}" target="_blank" class="btn btn-outline btn-sm">📍 נווט</a>`:''}
+            ${t.city?`<a href="${h(navUrl)}" target="_blank" class="btn btn-outline btn-sm">📍 נווט</a>`:''}
             ${phoneClean?`<a class="btn btn-outline btn-sm" href="https://wa.me/${waPhone(t.phone)}?text=${waMsg(t)}" target="_blank">💬 WhatsApp</a>`:''}
             ${nextBtns}
+            ${!isDone?`<button class="btn btn-blue btn-sm" onclick="openCompleteTask(${t.id})">✓ סיים</button>`:''}
             ${isDone?'<span class="badge badge-gray">'+h((STATUS_MAP[t.status]||{label:''}).label)+'</span>':''}
             <label class="btn btn-outline btn-sm" style="cursor:pointer;" title="העלה תמונה">📷 צלם<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="uploadTaskPhoto('${t.id}',this)"></label>
             <button class="btn btn-outline btn-sm ${t.signatureUrl?'btn-green':''}" onclick="openSignature('${t.id}')" title="חתימת לקוח" style="${t.signatureUrl?'background:var(--green-l);color:var(--green);border-color:var(--green);':''}">✍️${t.signatureUrl?' חתום':' חתימה'}</button>
