@@ -2,7 +2,7 @@ import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Dict, Any
 from dotenv import load_dotenv
 from optimizer import optimize_routes
 
@@ -38,9 +38,16 @@ class Technician(BaseModel):
     tasks: list[Task] = []
 
 
+class SchedulingConfig(BaseModel):
+    mode: str = "zone"           # "zone" | "open" | "radius"
+    zone_strict: bool = True
+    fill_first: bool = True
+    route_logic: bool = True
+
 class OptimizeRequest(BaseModel):
     date: str
     technicians: list[Technician]
+    scheduling: Optional[SchedulingConfig] = None  # forwarded for future solver hints
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────

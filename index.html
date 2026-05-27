@@ -913,6 +913,31 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       </div>
       <button class="btn btn-outline" style="margin-top:14px;" onclick="saveFeatureFlags()">שמור תכונות</button>
     </div>
+    <div id="sec-scheduling" class="set-sec hidden">
+      <div class="set-title">🗺️ אופן שיבוץ</div>
+      <div style="font-size:0.75rem;color:var(--ink-4);margin-bottom:12px;">קובע את הלוגיקה לבחירת טכנאי ותזמון. משפיע על כל הדיספאצ'.</div>
+      <div class="fg" style="margin-bottom:14px;">
+        <label class="fl">מצב שיבוץ</label>
+        <select class="fc" id="sched-mode">
+          <option value="zone">🗂️ אזורים (ברירת מחדל) — כל טכנאי מכסה אזורים קבועים לפי ימי שבוע</option>
+          <option value="open">🌐 פתוח — כל טכנאי יכול לקחת כל קריאה, איזון עומסים בלבד</option>
+          <option value="radius">📍 רדיוס — עדיפות לטכנאי הקרוב ביותר לעיר הקריאה</option>
+        </select>
+      </div>
+      <div class="toggle-row" id="sched-row-zone-strict">
+        <div><div class="toggle-label">🔒 אזורים קשיחים</div><div class="toggle-sub">טכנאי לא יקבל קריאות מחוץ לאזור שלו באותו יום</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="sched-zone-strict" checked><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">📥 מלא לפני פתיחה</div><div class="toggle-sub">השלם ימים קיימים לפני פתיחת יום חדש לטכנאי</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="sched-fill-first" checked><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row" id="sched-row-route-logic">
+        <div><div class="toggle-label">🔀 לוגיקת מסלול (רחוק→קרוב)</div><div class="toggle-sub">אכוף סדר גיאוגרפי — מנע נסיעה חזרה לעיר שכבר עברו ממנה</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="sched-route-logic" checked><span class="toggle-slider"></span></label>
+      </div>
+      <button class="btn btn-outline" style="margin-top:14px;" onclick="saveSchedulingConfig()">שמור הגדרות שיבוץ</button>
+    </div>
     <button class="btn btn-blue btn-lg" onclick="saveSettings()">שמור הגדרות</button>
   </div>
 </div>
@@ -1003,11 +1028,19 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div class="ph">
     <div class="ph-row">
       <div><div class="ph-title">📊 דוחות ביצועים</div><div class="ph-sub" id="reports-sub"></div></div>
-      <div class="flex-gap">
+      <div class="flex-gap" style="flex-wrap:wrap;gap:6px;">
         <button id="rp-week" class="btn btn-outline btn-sm" onclick="setReportPeriod('week')">שבוע זה</button>
         <button id="rp-month" class="btn btn-blue btn-sm" onclick="setReportPeriod('month')">חודש זה</button>
         <button id="rp-all" class="btn btn-outline btn-sm" onclick="setReportPeriod('all')">הכל</button>
+        <button id="rp-custom" class="btn btn-outline btn-sm" onclick="setReportPeriod('custom')">טווח תאריכים</button>
+        <button class="btn btn-outline btn-sm" onclick="exportReportsCSV()">📥 ייצא CSV</button>
       </div>
+    </div>
+    <div id="rp-custom-range" style="display:none;margin-top:10px;display:none;gap:10px;align-items:center;flex-wrap:wrap;">
+      <label style="font-size:0.8rem;font-weight:700;">מ:</label>
+      <input type="date" id="rp-from" class="fc" style="width:auto;padding:5px 10px;font-size:0.8rem;" onchange="renderReports()">
+      <label style="font-size:0.8rem;font-weight:700;">עד:</label>
+      <input type="date" id="rp-to" class="fc" style="width:auto;padding:5px 10px;font-size:0.8rem;" onchange="renderReports()">
     </div>
   </div>
   <div id="reports-content"></div>
@@ -2695,7 +2728,8 @@ async function createWizardTenant(){
     labels,
     business_type:type,
     defaults:{regular_job_minutes:30,package_job_minutes:45,arrival_window_hours:3,max_daily_jobs:9,lookahead_days:30,work_start:start,work_end:end},
-    features:{crm_enabled:false,reports_enabled:false,files_enabled:false,checklists_enabled:false,whatsapp_enabled:false,demo_mode:false,google_maps_enabled:false}
+    features:{crm_enabled:false,reports_enabled:false,files_enabled:false,checklists_enabled:false,whatsapp_enabled:false,demo_mode:false,google_maps_enabled:false},
+    scheduling:{mode:'zone',zone_strict:true,fill_first:true,route_logic:true}
   };
   const{data:tenant,error:te}=await sb.from('tenants').insert({name,plan,config}).select().single();
   if(te){showToast('שגיאה ביצירת הלקוח','error');console.error(te);btn.disabled=false;btn.textContent='🚀 צור לקוח';return;}
@@ -2772,6 +2806,24 @@ function applyFeatureVisibility(){
   const navReports=document.getElementById('nav-reports');
   if(navReports)navReports.classList.toggle('hidden',!showReports);
 
+  // Scheduling config section — super_admin only
+  const secSched=document.getElementById('sec-scheduling');
+  if(secSched)secSched.classList.toggle('hidden',!currentUserSuperAdmin);
+  if(currentUserSuperAdmin){
+    const sc=tenantConfig.scheduling||{};
+    const modeEl=document.getElementById('sched-mode');
+    if(modeEl)modeEl.value=sc.mode||'zone';
+    const zs=document.getElementById('sched-zone-strict');
+    if(zs)zs.checked=sc.zone_strict!==false;
+    const ff=document.getElementById('sched-fill-first');
+    if(ff)ff.checked=sc.fill_first!==false;
+    const rl=document.getElementById('sched-route-logic');
+    if(rl)rl.checked=sc.route_logic!==false;
+    // show/hide zone-specific rows based on mode
+    const mode=sc.mode||'zone';
+    const zoneRows=['sched-row-zone-strict','sched-row-route-logic'];
+    zoneRows.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=mode==='open'?'none':'';});
+  }
   // Settings section — admins only
   const secSettings=document.getElementById('nav-sec-settings');
   if(secSettings)secSettings.classList.toggle('hidden',!isAdmin);
@@ -2983,6 +3035,23 @@ async function saveFeatureFlags(){
   tenantConfig=updatedConfig;
   applyFeatureVisibility();
   showToast('תכונות עודכנו ✓');
+}
+
+async function saveSchedulingConfig(){
+  if(!currentTenantId||!currentUserSuperAdmin)return;
+  const mode=document.getElementById('sched-mode')?.value||'zone';
+  const scheduling={
+    mode,
+    zone_strict:mode==='open'?false:!!(document.getElementById('sched-zone-strict')?.checked),
+    fill_first:!!(document.getElementById('sched-fill-first')?.checked),
+    route_logic:mode==='open'?false:!!(document.getElementById('sched-route-logic')?.checked),
+  };
+  const updatedConfig={...tenantConfig,scheduling};
+  const{error}=await sb.from('tenants').update({config:updatedConfig}).eq('id',currentTenantId);
+  if(error){console.error(error);showToast('שגיאה בשמירת הגדרות שיבוץ','error');return;}
+  tenantConfig=updatedConfig;
+  applyFeatureVisibility();
+  showToast('הגדרות שיבוץ עודכנו ✓');
 }
 
 // ═══ MASTER ADMIN PANEL ═══
@@ -3219,10 +3288,20 @@ async function createTenant(){
 // ═══ REPORTS ═══
 function setReportPeriod(p){
   reportPeriod=p;
-  ['week','month','all'].forEach(x=>{
+  ['week','month','all','custom'].forEach(x=>{
     const el=document.getElementById('rp-'+x);
     if(el)el.className='btn btn-sm'+(x===p?' btn-blue':' btn-outline');
   });
+  const customRange=document.getElementById('rp-custom-range');
+  if(customRange)customRange.style.display=p==='custom'?'flex':'none';
+  if(p==='custom'){
+    // Default range: current month
+    const now=new Date();
+    const fromEl=document.getElementById('rp-from');
+    const toEl=document.getElementById('rp-to');
+    if(fromEl&&!fromEl.value)fromEl.value=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-01';
+    if(toEl&&!toEl.value)toEl.value=now.toISOString().split('T')[0];
+  }
   renderReports();
 }
 function getReportTasks(){
@@ -3236,7 +3315,29 @@ function getReportTasks(){
     const ms=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-01';
     return tasks.filter(t=>t.date&&t.date>=ms&&t.date<=today);
   }
+  if(reportPeriod==='custom'){
+    const from=document.getElementById('rp-from')?.value;
+    const to=document.getElementById('rp-to')?.value;
+    if(from&&to)return tasks.filter(t=>t.date&&t.date>=from&&t.date<=to);
+  }
   return tasks.filter(t=>t.date);
+}
+function exportReportsCSV(){
+  const filtered=getReportTasks();
+  if(!filtered.length){showToast('אין נתונים לייצוא','error');return;}
+  const rows=[['תאריך','לקוח','עיר','קטגוריה','טכנאי','סטטוס','מזהה']];
+  filtered.forEach(t=>{
+    const techName=technicians.find(x=>x.id===t.techId)?.name||'';
+    const catName=categories.find(c=>c.id===t.catId)?.name||t.catName||'';
+    rows.push([t.date||'',t.client||'',t.city||'',catName,techName,t.status||'',t.assignId||'']);
+  });
+  const csv=rows.map(r=>r.map(cell=>'"'+String(cell).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='maslul-report-'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();URL.revokeObjectURL(url);
+  showToast('קובץ CSV יוצא ✓');
 }
 function renderReports(){
   const el=document.getElementById('reports-content');if(!el)return;
@@ -3280,7 +3381,24 @@ function renderReports(){
       }).join(''):'<div style="color:var(--ink-4);font-size:0.875rem;padding:1rem 0;text-align:center;">אין נתונים לתקופה זו</div>'}
     </div>
     ${zoneStats.length?`<div class="card" style="margin-bottom:1rem;"><div class="card-title">${L('zones')} — חלוקה גיאוגרפית</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:8px;">${zoneStats.map(({zone,total:t,done})=>`<div style="background:var(--blue-l);border-radius:var(--r);padding:12px;"><div style="font-weight:700;font-size:0.9rem;">${h(zone.name)}</div><div style="font-size:1.75rem;font-weight:900;color:var(--blue-d);margin-top:4px;">${t}</div><div style="font-size:0.7rem;color:var(--ink-3);">${done} הושלמו</div></div>`).join('')}</div></div>`:''}
-    ${catStats.length?`<div class="card"><div class="card-title">קטגוריות — נפח קריאות</div>${catStats.map(({cat,total:t})=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-2);"><div style="font-size:0.875rem;font-weight:600;">${h(cat.name)}</div><span class="badge badge-blue">${t}</span></div>`).join('')}</div>`:''}
+    ${catStats.length?`<div class="card" style="margin-bottom:1rem;"><div class="card-title">קטגוריות — נפח קריאות</div>${catStats.map(({cat,total:t})=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-2);"><div style="font-size:0.875rem;font-weight:600;">${h(cat.name)}</div><span class="badge badge-blue">${t}</span></div>`).join('')}</div>`:''}
+    ${(()=>{
+      const dayNames=['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
+      const dayCounts=Array(6).fill(0);
+      filtered.forEach(t=>{if(t.date){const d=new Date(t.date);const dow=d.getDay();if(dow<6)dayCounts[dow]++;}});
+      const maxDay=Math.max(1,...dayCounts);
+      if(filtered.length<3)return '';
+      return`<div class="card"><div class="card-title">עומס לפי יום בשבוע</div><div style="display:flex;align-items:flex-end;gap:8px;height:80px;padding:12px 0 4px;">
+        ${dayCounts.map((c,i)=>{
+          const pct=Math.round((c/maxDay)*100);
+          return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+            <div style="font-size:0.65rem;font-weight:700;color:var(--ink-3);">${c||''}</div>
+            <div style="width:100%;background:var(--blue);border-radius:3px 3px 0 0;height:${Math.max(4,pct*0.56)}px;opacity:${pct>0?0.4+pct*0.006:0.15};"></div>
+            <div style="font-size:0.65rem;color:var(--ink-3);white-space:nowrap;">${dayNames[i]}</div>
+          </div>`;
+        }).join('')}
+      </div></div>`;
+    })()}
   `;
 }
 
@@ -3713,19 +3831,38 @@ function isRouteLogical(tech,dateStr,newCity){
     return true;
   });
 }
+// ── Scheduling strategy dispatcher ──────────────────────────────────────────
+// Reads tenantConfig.scheduling.mode and routes to the right implementation.
+// Israel (and all new tenants) default to 'zone' — existing behaviour unchanged.
+// Adding Client #2/#3 = change their scheduling.mode in config, zero code changes.
 function buildCandidates(city,catId){
-  const dates=getNextDates();const candidates=[];
+  const sc=tenantConfig.scheduling||{};
+  const mode=sc.mode||'zone';
+  const dates=getNextDates();
+  if(mode==='open')   return _candidatesOpen(city,catId,dates,sc);
+  if(mode==='radius') return _candidatesRadius(city,catId,dates,sc);
+  return _candidatesZone(city,catId,dates,sc); // default — 'zone'
+}
+
+// ── Strategy: zone (Israel default) ─────────────────────────────────────────
+// Zone-strict: tech only receives jobs in their rotation zone for that weekday.
+// Scoring: fill existing zone-days before opening new ones (existingInZone*100+load).
+// Route logic: far-to-near geographic ordering enforced.
+function _candidatesZone(city,catId,dates,sc){
+  const candidates=[];
+  const zoneStrict=sc.zone_strict!==false; // default true
+  const fillFirst=sc.fill_first!==false;
+  const routeLogic=sc.route_logic!==false;
   for(const date of dates){
     for(const tech of technicians){
-      if(!isCityInTechZone(tech,city,date.str))continue;
+      if(zoneStrict&&!isCityInTechZone(tech,city,date.str))continue;
       if(!isTechAvailable(tech,date.str))continue;
       if(isCityBlocked(tech,city))continue;
       if(!techHasSkill(tech,catId))continue;
       if(!getCatLimitOk(tech,catId,date.str))continue;
       const load=getTechLoad(tech,date.str);
       if(load>=tech.max)continue;
-      // min_daily hard enforcement: don't open a fresh day while any existing day is underfull
-      if(load===0&&(tech.min||0)>1){
+      if(fillFirst&&load===0&&(tech.min||0)>1){
         const hasUnderfull=dates.some(d2=>{
           if(d2.str===date.str)return false;
           const l2=getTechLoad(tech,d2.str);
@@ -3733,12 +3870,119 @@ function buildCandidates(city,catId){
         });
         if(hasUnderfull)continue;
       }
-      if(!isRouteLogical(tech,date.str,city))continue;
+      if(routeLogic&&!isRouteLogical(tech,date.str,city))continue;
       const optTime=calcOptimalTime(tech,date.str,city);
-      if(!optTime)continue; // no room in day
+      if(!optTime)continue;
       const existingInZone=tasks.filter(t=>t.techId===tech.id&&t.date===date.str&&getCityZone(t.city)?.id===getTechZoneId(tech,date.str)&&t.status!=='cancelled').length;
       const fillScore=existingInZone*100+load;
       candidates.push({tech,date,load,existingInZone,fillScore,dateScore:dates.indexOf(date),optTime});
+    }
+  }
+  candidates.sort((a,b)=>{if(b.fillScore!==a.fillScore)return b.fillScore-a.fillScore;return a.dateScore-b.dateScore;});
+  return candidates;
+}
+
+// ── Strategy: open (delivery / cleaning) ────────────────────────────────────
+// No zone check. Any tech can serve any city. Score = load (fill busiest first).
+// Route logic disabled — no geographic ordering assumed.
+function _candidatesOpen(city,catId,dates,sc){
+  const candidates=[];
+  const fillFirst=sc.fill_first!==false;
+  for(const date of dates){
+    for(const tech of technicians){
+      if(!isTechAvailable(tech,date.str))continue;
+      if(isCityBlocked(tech,city))continue;
+      if(!techHasSkill(tech,catId))continue;
+      if(!getCatLimitOk(tech,catId,date.str))continue;
+      const load=getTechLoad(tech,date.str);
+      if(load>=tech.max)continue;
+      if(fillFirst&&load===0&&(tech.min||0)>1){
+        const hasUnderfull=dates.some(d2=>{
+          if(d2.str===date.str)return false;
+          const l2=getTechLoad(tech,d2.str);
+          return l2>0&&l2<tech.min;
+        });
+        if(hasUnderfull)continue;
+      }
+      // Simple sequential time slot — append after last task
+      const sched=getTechDaySchedule(tech,date.str);
+      const sh=timeToMins(sched.start);
+      const eh=timeToMins(sched.end);
+      const dur=settings.regularTime||30;
+      const buf=10;
+      const dayTasks=getTechDayTasks(tech,date.str).sort((a,b)=>timeToMins(a.time)-timeToMins(b.time));
+      let slot=sh;
+      if(dayTasks.length){const last=dayTasks[dayTasks.length-1];slot=timeToMins(last.time)+dur+buf;}
+      if(slot+dur>eh)continue;
+      const optTime=minsToTime(slot);
+      const fillScore=load*100+dates.indexOf(date);
+      candidates.push({tech,date,load,existingInZone:0,fillScore,dateScore:dates.indexOf(date),optTime});
+    }
+  }
+  candidates.sort((a,b)=>{if(b.fillScore!==a.fillScore)return b.fillScore-a.fillScore;return a.dateScore-b.dateScore;});
+  return candidates;
+}
+
+// ── Strategy: radius (no fixed zones, prefer closest tech to job city) ───────
+// Proximity score: based on tech.base vs job city using CITY_COORDS_JS lookup.
+// Falls back to load-balance if coords not found for either city.
+// Zone and route logic disabled — client manages geographic rules via cat_limits / blocked_cities.
+const CITY_COORDS_JS={
+  'תל אביב':[32.0853,34.7818],'ירושלים':[31.7683,35.2137],'חיפה':[32.7940,34.9896],
+  'ראשון לציון':[31.9730,34.7925],'פתח תקווה':[32.0840,34.8878],'אשדוד':[31.8044,34.6553],
+  'נתניה':[32.3215,34.8532],'באר שבע':[31.2524,34.7912],'בני ברק':[32.0843,34.8337],
+  'חולון':[32.0108,34.7800],'רמת גן':[32.0682,34.8246],'אשקלון':[31.6688,34.5742],
+  'בת ים':[32.0234,34.7506],'רחובות':[31.8949,34.8117],'הרצליה':[32.1624,34.8443],
+  'כפר סבא':[32.1753,34.9066],'מודיעין':[31.8930,35.0108],'חדרה':[32.4348,34.9196],
+  'רמת השרון':[32.1461,34.8383],'ראש העין':[32.0956,34.9578],'נס ציונה':[31.9305,34.7980],
+  'גבעתיים':[32.0731,34.8124],'לוד':[31.9516,34.8949],'רמלה':[31.9302,34.8667],
+  'הוד השרון':[32.1513,34.8862],'יבנה':[31.8778,34.7407],'אילת':[29.5569,34.9519],
+  'נהריה':[33.0030,35.0965],'עפולה':[32.6074,35.2901],'עכו':[32.9228,35.0759],
+  'נצרת':[32.6996,35.3035],'רעננה':[32.1835,34.8717],'גבעת שמואל':[32.0811,34.8472],
+  'כפר יונה':[32.3072,34.9369],'טבריה':[32.7921,35.5319],'צפת':[32.9645,35.4967],
+  'דימונה':[31.0690,35.0325],'אופקים':[31.3109,34.6201],'ירוחם':[30.9851,34.9293],
+  'ערד':[31.2567,35.2135],'קרית גת':[31.6064,34.7742],'שדרות':[31.5280,34.5974],
+  'קרית מלאכי':[31.7264,34.7418],'מגדל העמק':[32.6786,35.2398],'עתלית':[32.6924,34.9424],
+};
+function _cityDistKm(cityA,cityB){
+  const a=CITY_COORDS_JS[cityA],b=CITY_COORDS_JS[cityB];
+  if(!a||!b)return null;
+  const R=6371,dLat=(b[0]-a[0])*Math.PI/180,dLon=(b[1]-a[1])*Math.PI/180;
+  const h=Math.sin(dLat/2)**2+Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.asin(Math.sqrt(h));
+}
+function _candidatesRadius(city,catId,dates,sc){
+  const candidates=[];
+  const fillFirst=sc.fill_first!==false;
+  for(const date of dates){
+    for(const tech of technicians){
+      if(!isTechAvailable(tech,date.str))continue;
+      if(isCityBlocked(tech,city))continue;
+      if(!techHasSkill(tech,catId))continue;
+      if(!getCatLimitOk(tech,catId,date.str))continue;
+      const load=getTechLoad(tech,date.str);
+      if(load>=tech.max)continue;
+      if(fillFirst&&load===0&&(tech.min||0)>1){
+        const hasUnderfull=dates.some(d2=>{
+          if(d2.str===date.str)return false;
+          const l2=getTechLoad(tech,d2.str);
+          return l2>0&&l2<tech.min;
+        });
+        if(hasUnderfull)continue;
+      }
+      const sched=getTechDaySchedule(tech,date.str);
+      const sh=timeToMins(sched.start),eh=timeToMins(sched.end);
+      const dur=settings.regularTime||30,buf=10;
+      const dayTasks=getTechDayTasks(tech,date.str).sort((a,b)=>timeToMins(a.time)-timeToMins(b.time));
+      let slot=sh;
+      if(dayTasks.length){const last=dayTasks[dayTasks.length-1];slot=timeToMins(last.time)+dur+buf;}
+      if(slot+dur>eh)continue;
+      const optTime=minsToTime(slot);
+      // Proximity score: closer tech = higher fillScore bonus
+      const distKm=_cityDistKm(tech.base||'',city);
+      const proxBonus=distKm!=null?Math.max(0,200-Math.round(distKm)):0; // 200 = max bonus for 0 km
+      const fillScore=load*100+proxBonus+dates.indexOf(date);
+      candidates.push({tech,date,load,existingInZone:0,fillScore,dateScore:dates.indexOf(date),optTime});
     }
   }
   candidates.sort((a,b)=>{if(b.fillScore!==a.fillScore)return b.fillScore-a.fillScore;return a.dateScore-b.dateScore;});
@@ -3770,6 +4014,7 @@ async function optimizeDay(techId, date) {
   try {
     const body = {
       date,
+      scheduling: tenantConfig.scheduling || { mode: 'zone' },
       technicians: [{
         id: String(tech.id),
         name: tech.name,
@@ -3802,18 +4047,21 @@ async function optimizeDay(techId, date) {
     return null;
   }
 }
-async function runOptimize(techId){
-  const btn=document.getElementById('opt-btn-'+techId);
+async function runOptimize(techId, date){
+  // date defaults to today — home view passes no date, planner passes a specific date
+  const targetDate = date || todayStr();
+  const btnId = date ? `opt-btn-${techId}-${date}` : `opt-btn-${techId}`;
+  const btn=document.getElementById(btnId);
   if(btn){btn.disabled=true;btn.textContent='מחשב...';}
-  const result=await optimizeDay(techId,todayStr());
-  if(btn){btn.disabled=false;btn.textContent='🔀 מסלול מיטבי';}
+  const result=await optimizeDay(techId, targetDate);
+  if(btn){btn.disabled=false;btn.textContent='🔀';}
   if(!result){showToast('לא ניתן לבצע אופטימיזציה — בדוק חיבור לשרת','error');return;}
   result.ordered_tasks.forEach(taskId=>{
     const t=tasks.find(x=>String(x.id)===taskId||String(x._dbId)===taskId);
     const arrival=result.estimated_times?.[taskId];
     if(t&&arrival){t.time=arrival;saveTaskToSupabase(t);}
   });
-  save();renderHomeTechCards();renderTasks();
+  save();renderHomeTechCards();renderTasks();if(date)renderPlannerContent();
   showToast(`מסלול מיטבי ${result.mode==='gmaps'?'(Google Maps)':'(הערכה)'}  ✓ — ${result.total_drive_minutes} דק׳ נסיעה`);
 }
 
@@ -4957,7 +5205,9 @@ function renderPlannerWeekly(days){
       const extra=sorted.length-3;
       const cellId=`pc-${tech.id}-${ds}`;
       const chips=visible.map(_plannerTaskChip).join('')+(extra>0?`<button id="${cellId}" onclick="expandPlannerCell(this,'${tech.id}','${ds}')" style="display:block;width:100%;text-align:right;background:var(--line-2);border:none;border-radius:4px;font-size:0.65rem;color:var(--blue);padding:3px 6px;cursor:pointer;font-family:'Heebo',sans-serif;font-weight:700;margin-top:2px;">+${extra} נוספות ▾</button>`:'');
-      return`<td style="vertical-align:top;padding:5px;border-left:1px solid var(--line-2);${bg?'background:'+bg+';':''}min-width:110px;">${chips||'<div style="height:32px;"></div>'}</td>`;
+      const canOptimize=CONFIG.OPTIMIZER_URL&&techTasks.length>=2&&ds>=todayStr();
+      const optBtn=canOptimize?`<button id="opt-btn-${tech.id}-${ds}" onclick="runOptimize('${tech.id}','${ds}')" title="מסלול מיטבי" style="display:block;width:100%;text-align:center;background:var(--blue-l);border:1px solid var(--blue);border-radius:4px;font-size:0.65rem;color:var(--blue-d);padding:2px 4px;cursor:pointer;font-family:'Heebo',sans-serif;font-weight:700;margin-top:3px;">🔀 מסלול מיטבי</button>`:'';
+      return`<td style="vertical-align:top;padding:5px;border-left:1px solid var(--line-2);${bg?'background:'+bg+';':''}min-width:110px;">${chips||'<div style="height:32px;"></div>'}${optBtn}</td>`;
     }).join('');
     return`<tr style="border-bottom:1px solid var(--line-2);">
       <td style="padding:10px 14px;white-space:nowrap;vertical-align:middle;background:var(--white);position:sticky;right:0;z-index:1;border-left:2px solid var(--line-2);box-shadow:-2px 0 4px rgba(0,0,0,0.04);">
