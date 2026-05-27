@@ -1742,6 +1742,7 @@ async function initAuth() {
   }
   sb.auth.onAuthStateChange(async (_event, session) => {
     if (_event === 'PASSWORD_RECOVERY') { showResetScreen(); return; }
+    if (_event === 'USER_UPDATED') { return; } // handled by doResetPassword() — don't auto-showApp
     if (session) {
       currentUser = session.user;
       await loadTenantFromUser();
@@ -1816,12 +1817,16 @@ async function doResetPassword() {
   const pw = document.getElementById('reset-pw').value;
   const pw2 = document.getElementById('reset-pw2').value;
   const errEl = document.getElementById('reset-error');
+  const btn = document.querySelector('#reset-screen .btn-blue');
   errEl.textContent = '';
   if (pw.length < 6) { errEl.textContent = 'סיסמה חייבת להכיל לפחות 6 תווים'; return; }
   if (pw !== pw2) { errEl.textContent = 'הסיסמאות אינן תואמות'; return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'שומר...'; }
   const { error } = await sb.auth.updateUser({ password: pw });
-  if (error) { errEl.textContent = 'שגיאה בעדכון הסיסמה — נסה שוב'; return; }
+  if (btn) { btn.disabled = false; btn.textContent = 'שמור סיסמה חדשה'; }
+  if (error) { errEl.textContent = error.message || 'שגיאה בעדכון הסיסמה — נסה שנית'; return; }
   showToast('סיסמה עודכנה בהצלחה ✓');
+  await sb.auth.signOut(); // sign out cleanly — user logs in fresh with new password
   showLogin();
 }
 
