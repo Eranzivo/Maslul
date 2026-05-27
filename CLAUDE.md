@@ -186,7 +186,7 @@ in-memory tasks referencing the old local integer id are updated.
 - [x] GPS tracking + live coordinator map — Leaflet + OpenStreetMap + Supabase Realtime (2026-05-27)
 
 ### 🔴 Next Session — Priority Order
-- [ ] **Digital signature capture** — canvas-based, save to Supabase Storage, show in tech view (HIGH)
+- [x] **Digital signature capture** — canvas `toDataURL` → Supabase Storage, thumbnail + green badge in tech view (2026-05-27)
 - [ ] **WhatsApp message template** — pre-fill wa.me link with task ID + tech name + ETA (HIGH, ~30min)
 - [ ] **Break time / lunch block** — block 1hr slot in tech schedule via day_offs UI (Medium)
 - [ ] **Recurring jobs** — `repeat_interval` field on tasks, generate next task on completion (Medium)

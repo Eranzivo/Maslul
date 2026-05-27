@@ -1525,6 +1525,23 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   </div>
 </div>
 
+<!-- DIGITAL SIGNATURE MODAL -->
+<div class="mo hidden" id="mo-signature">
+  <div class="mo-box" style="max-width:min(90vw,500px);">
+    <div class="mo-title">✍️ חתימת לקוח</div>
+    <div style="font-size:0.8rem;color:var(--ink-3);margin-bottom:10px;">בקש מהלקוח לחתום עם האצבע על המסך לאישור השלמת העבודה.</div>
+    <canvas id="sig-canvas" style="width:100%;height:200px;border:2px solid var(--line);border-radius:var(--r-lg);background:white;touch-action:none;cursor:crosshair;display:block;"></canvas>
+    <div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
+      <button class="btn btn-ghost btn-sm" onclick="clearSignature()" style="color:var(--red);">🗑️ נקה</button>
+      <span id="sig-hint" style="font-size:0.75rem;color:var(--ink-4);flex:1;text-align:center;">חתמו כאן 👆</span>
+    </div>
+    <div class="mo-actions">
+      <button class="btn btn-blue" style="flex:1;" onclick="saveSignature()">✓ שמור חתימה</button>
+      <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-signature')">ביטול</button>
+    </div>
+  </div>
+</div>
+
 <!-- ZONE POLYGON DRAW MODAL -->
 <div class="mo hidden" id="mo-zone-draw">
   <div class="mo-box" style="max-width:min(90vw,720px);">
@@ -1949,6 +1966,7 @@ async function loadFromSupabase() {
       preferredWindows: t.preferred_windows || [],
       checklistDone: t.checklist_done || {},
       photoUrl: t.photo_url || null,
+      signatureUrl: t.signature_url || null,
       _dbId: t.id
     }));
 
@@ -2239,6 +2257,7 @@ async function saveTaskToSupabase(task) {
     preferred_windows: task.preferredWindows || [],
     checklist_done: task.checklistDone || {},
     photo_url: task.photoUrl || null,
+    signature_url: task.signatureUrl || null,
   };
   if (task._dbId) return (await dbUpsert('tasks', { id: task._dbId, ...row })) !== null;
   const data = await dbInsert('tasks', row);
@@ -4740,8 +4759,10 @@ function renderTechView(){
             <a class="btn btn-outline btn-sm" href="https://waze.com/ul?q=${encodeURIComponent((t.street||'')+' '+t.city)}" target="_blank">🗺️ וייז</a>
             ${t.phone?`<a class="btn btn-outline btn-sm" href="tel:${t.phone}">📞 התקשר</a><a class="btn btn-outline btn-sm" href="https://wa.me/${waPhone(t.phone)}?text=${waMsg(t)}" target="_blank">💬 WhatsApp</a>`:''}
             <label class="btn btn-outline btn-sm" style="cursor:pointer;" title="העלה תמונה">📷 צלם<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="uploadTaskPhoto('${t.id}',this)"></label>
+            <button class="btn btn-outline btn-sm ${t.signatureUrl?'btn-green':''}" onclick="openSignature('${t.id}')" title="חתימת לקוח" style="${t.signatureUrl?'background:var(--green-l);color:var(--green);border-color:var(--green);':''}">✍️${t.signatureUrl?' חתום':' חתימה'}</button>
           </div>
           ${t.photoUrl?`<div style="margin-top:8px;"><img src="${h(t.photoUrl)}" style="max-width:100%;max-height:180px;border-radius:var(--r-lg);border:1px solid var(--line);cursor:pointer;" onclick="window.open('${h(t.photoUrl)}','_blank')" title="לחץ להגדלה"></div>`:''}
+          ${t.signatureUrl?`<div style="margin-top:6px;display:flex;align-items:center;gap:8px;"><span style="font-size:0.72rem;color:var(--green);font-weight:700;">✅ חתימה התקבלה</span><img src="${h(t.signatureUrl)}" style="height:40px;border-radius:4px;border:1px solid var(--line);background:white;cursor:pointer;" onclick="window.open('${h(t.signatureUrl)}','_blank')" title="לחץ להגדלה"></div>`:''}
         </div>
       </div>
     </div>`;
@@ -5656,6 +5677,84 @@ function _addTechMarker(map,tech){
   const marker=L.marker([tech.last_lat,tech.last_lon],{icon,zIndexOffset:500}).addTo(map)
     .bindPopup(`<div style="direction:rtl;min-width:140px;"><b>${tech.name}</b><br>${tech.base?'🏠 '+tech.base:''}<br>📡 ${ago!==null?(ago<1?'עכשיו':ago+'ד׳ לפני'):'לא ידוע'}</div>`);
   _coordTechMarkers[tech.id]=marker;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DIGITAL SIGNATURE  (HTML5 Canvas — no library, save to Supabase Storage)
+// ═══════════════════════════════════════════════════════════════════════════════
+let _sigTaskId = null;
+let _sigDrawing = false;
+let _sigCanvas  = null;
+let _sigCtx     = null;
+let _sigHasMark = false;
+
+function openSignature(taskId) {
+  _sigTaskId = taskId;
+  _sigHasMark = false;
+  document.getElementById('mo-signature').classList.remove('hidden');
+  setTimeout(_initSigCanvas, 80);
+}
+
+function _initSigCanvas() {
+  _sigCanvas = document.getElementById('sig-canvas');
+  if (!_sigCanvas) return;
+  // Match CSS size to physical pixels for crisp rendering
+  const rect = _sigCanvas.getBoundingClientRect();
+  _sigCanvas.width  = rect.width  * window.devicePixelRatio;
+  _sigCanvas.height = rect.height * window.devicePixelRatio;
+  _sigCtx = _sigCanvas.getContext('2d');
+  _sigCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  _sigCtx.strokeStyle = '#0f172a';
+  _sigCtx.lineWidth   = 2.5;
+  _sigCtx.lineCap     = 'round';
+  _sigCtx.lineJoin    = 'round';
+  _sigCtx.clearRect(0, 0, rect.width, rect.height);
+  _sigHasMark = false;
+  document.getElementById('sig-hint').textContent = 'חתמו כאן 👆';
+
+  const getPos = e => {
+    const r = _sigCanvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - r.left, y: src.clientY - r.top };
+  };
+  const start = e => { e.preventDefault(); _sigDrawing = true; const p = getPos(e); _sigCtx.beginPath(); _sigCtx.moveTo(p.x, p.y); };
+  const move  = e => { e.preventDefault(); if (!_sigDrawing) return; _sigHasMark = true; const p = getPos(e); _sigCtx.lineTo(p.x, p.y); _sigCtx.stroke(); document.getElementById('sig-hint').textContent = ''; };
+  const end   = e => { e.preventDefault(); _sigDrawing = false; };
+
+  _sigCanvas.onmousedown  = start; _sigCanvas.onmousemove  = move; _sigCanvas.onmouseup    = end;
+  _sigCanvas.ontouchstart = start; _sigCanvas.ontouchmove  = move; _sigCanvas.ontouchend   = end;
+}
+
+function clearSignature() {
+  if (!_sigCtx || !_sigCanvas) return;
+  _sigCtx.clearRect(0, 0, _sigCanvas.width / window.devicePixelRatio, _sigCanvas.height / window.devicePixelRatio);
+  _sigHasMark = false;
+  document.getElementById('sig-hint').textContent = 'חתמו כאן 👆';
+}
+
+async function saveSignature() {
+  if (!_sigHasMark) { showToast('לא נחתם — בקש מהלקוח לחתום תחילה', 'error'); return; }
+  if (!currentTenantId || !_sigTaskId) return;
+  showToast('שומר חתימה...', 'info');
+
+  // Convert canvas to PNG blob
+  const dataUrl = _sigCanvas.toDataURL('image/png');
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  const path = `${currentTenantId}/sig_${_sigTaskId}_${Date.now()}.png`;
+
+  const { error } = await sb.storage.from('task-photos').upload(path, blob, { contentType: 'image/png', upsert: true });
+  if (error) { showToast('שגיאה בשמירת חתימה', 'error'); Sentry?.captureException(error); return; }
+
+  const { data: urlData } = await sb.storage.from('task-photos').createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+  const signatureUrl = urlData?.signedUrl;
+  if (!signatureUrl) { showToast('שגיאה בקבלת קישור', 'error'); return; }
+
+  const t = tasks.find(x => String(x.id) === String(_sigTaskId));
+  if (t) { t.signatureUrl = signatureUrl; save(); saveTaskToSupabase(t); }
+  closeMo('mo-signature');
+  renderTechView();
+  showToast('חתימה נשמרה ✓');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
