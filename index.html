@@ -1693,7 +1693,14 @@ if(typeof Sentry !== 'undefined'){
 // ═══ SUPABASE CLIENT ═══
 const _sbUrl = _isStaging ? STAGING_CONFIG.SUPABASE_URL : CONFIG.SUPABASE_URL;
 const _sbKey = _isStaging ? STAGING_CONFIG.SUPABASE_KEY : CONFIG.SUPABASE_KEY;
-const sb = supabase.createClient(_sbUrl, _sbKey);
+// Custom no-op lock: supabase-js v2 uses the Web Locks API (navigator.locks) by default,
+// which is shared ACROSS TABS on the same origin. If one tab is refreshing its token, all
+// other tabs' getSession() and signInWithPassword() calls queue behind it and hang.
+// Replacing with a per-tab in-memory no-op lock eliminates cross-tab blocking.
+// Safe for our app: auth calls are sequential (we always await them), so no intra-tab races.
+const sb = supabase.createClient(_sbUrl, _sbKey, {
+  auth: { lock: async (_name, _timeout, fn) => fn() }
+});
 let currentUser = null;
 let currentTenantId = null;
 
