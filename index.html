@@ -1703,6 +1703,7 @@ const sb = supabase.createClient(_sbUrl, _sbKey, {
 });
 let currentUser = null;
 let currentTenantId = null;
+let _suppressSignedOut = false; // set true before our own signOut so SIGNED_OUT event doesn't kick user out if they quickly re-login
 
 // ═══ TERMINOLOGY / LABELS ═══
 // All UI strings that differ by tenant come from here.
@@ -1879,6 +1880,9 @@ async function initAuth() {
         // loadTenantFromUser() already handled the failure — do not call showApp()
       }
     } else {
+      // _suppressSignedOut: set by doLogout() so a fire-and-forget signOut completing
+      // later doesn't kick the user out if they already re-logged in.
+      if (_suppressSignedOut) { _suppressSignedOut = false; return; }
       currentUser = null;
       currentTenantId = null;
       // Only navigate to login if the app is currently showing.
@@ -2242,8 +2246,11 @@ async function doLogout() {
   sessionStorage.removeItem('ma_session');
   currentUser = null;
   currentTenantId = null;
-  try { await sb.auth.signOut(); } catch(e) { console.warn('signOut error:', e); }
-  showLogin();
+  showLogin(); // show immediately — don't wait for the network call
+  // Fire-and-forget signOut. Flag ensures SIGNED_OUT event doesn't kick the user out
+  // if they manage to re-login before the network call completes.
+  _suppressSignedOut = true;
+  sb.auth.signOut().catch(e => console.warn('[logout] signOut error:', e));
 }
 
 // ═══ SUPABASE DATA LAYER ═══
