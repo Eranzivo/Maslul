@@ -1668,6 +1668,27 @@ if(typeof Sentry !== 'undefined'){
   });
 }
 
+// ═══ PRE-FLIGHT: Clear expired session BEFORE creating Supabase client ═══
+// supabase-js v2 runs _recoverAndRefresh() inside its constructor. If the stored
+// session is expired, it immediately starts a token-refresh network call that can
+// hang indefinitely on slow connections. This holds supabase-js's internal auth lock,
+// blocking every subsequent auth call (including getSession()) for 10+ seconds.
+// FIX: detect and remove the expired session NOW — before createClient() — so
+// supabase-js finds nothing to refresh and skips the network call entirely.
+(function(){
+  try {
+    const sbKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+    if (sbKey) {
+      const stored = JSON.parse(localStorage.getItem(sbKey) || '{}');
+      const expiresAt = stored?.expires_at; // Unix seconds, written by supabase-js
+      if (!expiresAt || (expiresAt * 1000) < Date.now()) {
+        localStorage.removeItem(sbKey);
+        console.warn('[pre-flight] expired Supabase session cleared before createClient()');
+      }
+    }
+  } catch(e) { console.warn('[pre-flight] session check error:', e); }
+})();
+
 // ═══ SUPABASE CLIENT ═══
 const _sbUrl = _isStaging ? STAGING_CONFIG.SUPABASE_URL : CONFIG.SUPABASE_URL;
 const _sbKey = _isStaging ? STAGING_CONFIG.SUPABASE_KEY : CONFIG.SUPABASE_KEY;
@@ -1796,33 +1817,15 @@ function showDemoBanner(){
 async function initAuth() {
   if (CONFIG.DEMO_MODE) { showApp(); return; }
 
-  // PRE-FLIGHT: If the stored Supabase access token is already expired, clear it before
-  // calling getSession(). supabase-js would otherwise attempt a token-refresh network call
-  // that hangs on slow connections, blocking the spinner for 10+ seconds.
-  // — Valid session (not expired): getSession() reads from localStorage, no network call needed.
-  // — Expired session: we clear it here; getSession() returns null immediately; user logs in manually.
-  // Tradeoff: user re-enters credentials after ~1h token expiry instead of auto-refresh.
-  // Acceptable for a field-service app where reliability > seamless auto-refresh.
-  try {
-    const sbKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
-    if (sbKey) {
-      const stored = JSON.parse(localStorage.getItem(sbKey) || '{}');
-      const expiresAt = stored?.expires_at; // Unix seconds
-      if (expiresAt && (expiresAt * 1000) < Date.now()) {
-        localStorage.removeItem(sbKey);
-        console.warn('[initAuth] expired Supabase session cleared — user will log in manually');
-      }
-    }
-  } catch(e) {}
-
-  // Watchdog safety net: if getSession() still hangs (valid session, network unreachable),
-  // set authDone=true FIRST so the late resolver is completely ignored, clear sb-* keys,
-  // then show login. CRITICAL: without setting authDone here, the late resolver runs after
-  // the user has already logged in and calls showLogin() — wiping the live app.
+  // Watchdog: if getSession() still hangs despite the pre-flight check (e.g. valid session
+  // but network is unreachable), set authDone=true FIRST so any late resolver is completely
+  // ignored, clear sb-* keys, then show login.
+  // CRITICAL: authDone=true must be the very first line — without it, a late getSession()
+  // result can call showLogin() after the user has already logged in, wiping the live app.
   let authDone = false;
   const authTimeout = setTimeout(() => {
     if (!authDone) {
-      authDone = true; // Must be first — prevents late resolver from running
+      authDone = true;
       console.warn('[initAuth] getSession still hanging after 10s — clearing and showing login');
       Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
       showLogin();
@@ -1830,13 +1833,17 @@ async function initAuth() {
   }, 10000);
   try {
     const { data: { session } } = await sb.auth.getSession();
-    if (authDone) return; // Watchdog already ran — ignore this stale result
+    if (authDone) return; // Watchdog already ran — ignore stale result
     authDone = true;
     clearTimeout(authTimeout);
     if (session) {
       currentUser = session.user;
-      await loadTenantFromUser();
-      showApp();
+      try {
+        await loadTenantFromUser();
+        showApp();
+      } catch(e) {
+        // loadTenantFromUser() already called showLogin() and set the error message — stop here
+      }
     } else {
       showLogin();
     }
@@ -1851,18 +1858,28 @@ async function initAuth() {
     if (_event === 'PASSWORD_RECOVERY') { showResetScreen(); return; }
     if (_event === 'USER_UPDATED') { return; } // handled by doResetPassword() — don't auto-showApp
     // TOKEN_REFRESHED and INITIAL_SESSION must not re-initialize the app.
-    // TOKEN_REFRESHED fires every ~1h and would re-show the loading spinner on a live session.
-    // INITIAL_SESSION is handled by the getSession() call above — reacting here causes a double-init race.
+    // TOKEN_REFRESHED fires every ~1h — re-calling showApp() would restart the spinner on a live session.
+    // INITIAL_SESSION is handled by the getSession() call above — reacting here causes double-init.
     if (_event === 'TOKEN_REFRESHED') { if (session) currentUser = session.user; return; }
     if (_event === 'INITIAL_SESSION') { return; }
     if (session) {
       currentUser = session.user;
-      await loadTenantFromUser();
-      showApp();
+      try {
+        await loadTenantFromUser();
+        showApp();
+      } catch(e) {
+        // loadTenantFromUser() already handled the failure — do not call showApp()
+      }
     } else {
       currentUser = null;
       currentTenantId = null;
-      showLogin();
+      // Only navigate to login if the app is currently showing.
+      // If login screen is already visible, calling showLogin() again would clear any error
+      // message that loadTenantFromUser() just set (e.g. "user not found").
+      const loginEl = document.getElementById('login-screen');
+      if (!loginEl || loginEl.classList.contains('hidden')) {
+        showLogin();
+      }
     }
   });
 }
@@ -1873,12 +1890,19 @@ async function loadTenantFromUser() {
     .eq('id', currentUser.id)
     .single();
   if (error) {
-    // Network or auth failure — log it and surface a clear message so saves don't silently break
+    // Network or auth failure — show login with error, then sign out.
+    // IMPORTANT: call showLogin() first (it clears login-error), THEN set error text.
+    // Fire-and-forget signOut — the SIGNED_OUT handler will see login is already showing
+    // and skip calling showLogin() again, preserving the error message.
+    // Throw so the caller (onAuthStateChange / initAuth) never reaches showApp().
     console.error('loadTenantFromUser error:', error);
     Sentry?.captureException(error);
+    currentUser = null;
+    currentTenantId = null;
+    showLogin();
     document.getElementById('login-error').textContent = 'שגיאה בטעינת פרטי המשתמש — בדוק חיבור לרשת ונסה שנית.';
-    await sb.auth.signOut();
-    return;
+    sb.auth.signOut().catch(e => console.warn('[loadTenantFromUser] signOut error:', e));
+    throw error;
   }
   if (data) {
     currentTenantId = data.tenant_id;
@@ -1892,9 +1916,13 @@ async function loadTenantFromUser() {
     const av=document.getElementById('user-av-sb');
     if(av)av.textContent=initials(data.name);
   } else {
-    // User exists in Auth but not in our users table yet
+    // User exists in Auth but not in our users table yet — show clear error, throw to stop caller.
+    currentUser = null;
+    currentTenantId = null;
+    showLogin();
     document.getElementById('login-error').textContent = 'המשתמש לא מוגדר במערכת. פנה למנהל.';
-    await sb.auth.signOut();
+    sb.auth.signOut().catch(e => {});
+    throw new Error('user not in users table');
   }
 }
 
