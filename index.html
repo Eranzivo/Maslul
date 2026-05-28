@@ -1601,6 +1601,24 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 </div>
 
 <script>
+// ═══ EMERGENCY ESCAPE HATCH ════════════════════════════════════════════════
+// Visit ?clearwal=1 to wipe a stuck WAL entry and reload cleanly.
+// ?clearall=1 also clears all ml_* localStorage keys (full reset).
+(function(){
+  const p = new URLSearchParams(location.search);
+  if (p.get('clearwal')) {
+    localStorage.removeItem('ml_wal_v1');
+    console.warn('[escape] WAL cleared via ?clearwal=1');
+    location.replace(location.pathname);
+  }
+  if (p.get('clearall')) {
+    Object.keys(localStorage).filter(k => k.startsWith('ml_')).forEach(k => localStorage.removeItem(k));
+    console.warn('[escape] all ml_* localStorage keys cleared via ?clearall=1');
+    location.replace(location.pathname);
+  }
+})();
+// ═══════════════════════════════════════════════════════════════════════════
+
 // ═══════════════════════════════════════════
 // MASLUL CONFIG
 // One URL for all tenants — auth handles isolation
@@ -2353,10 +2371,21 @@ async function _replayWAL() {
     console.log(`[WAL] replaying ${entries.length} pending save(s)`);
     let ok = 0, fail = 0;
     for (const [key, {table, row}] of entries) {
-      const { error } = await sb.from(table)
-        .upsert({ ...row, tenant_id: currentTenantId }, { onConflict: 'id' });
-      if (!error) { _walClear(key); ok++; }
-      else { console.warn('[WAL] replay failed:', table, row.id, error.message); fail++; }
+      try {
+        // Wrap each upsert in a 5-second timeout so a hanging network call
+        // never blocks the entire app load indefinitely.
+        const timeout = new Promise((_,rej) => setTimeout(() => rej(new Error('WAL replay timeout')), 5000));
+        const upsert  = sb.from(table).upsert({ ...row, tenant_id: currentTenantId }, { onConflict: 'id' });
+        const { error } = await Promise.race([upsert, timeout]);
+        if (!error) { _walClear(key); ok++; }
+        else { console.warn('[WAL] replay failed:', table, row.id, error.message); fail++; }
+      } catch(entryErr) {
+        console.warn('[WAL] replay entry timed out or threw:', key, entryErr.message);
+        fail++;
+        // Remove the stuck entry so it doesn't block future loads.
+        // Data may be lost, but app health takes priority.
+        _walClear(key);
+      }
     }
     if (ok)   showToast(`${ok} שינוי${ok>1?'ים':''} שוחזר${ok>1?'ו':''} מגיבוי ✓`, 'info');
     if (fail) showToast(`⚠️ ${fail} שינוי${fail>1?'ים':''} לא הצליח${fail>1?'ו':''} להישמר — בדוק חיבור`, 'error');
