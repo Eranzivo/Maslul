@@ -1795,25 +1795,42 @@ function showDemoBanner(){
 // ═══ AUTH ═══
 async function initAuth() {
   if (CONFIG.DEMO_MODE) { showApp(); return; }
-  // Wrap the entire auth init in a safety net — if getSession() or loadTenantFromUser()
-  // Watchdog: if getSession hangs (stale token refresh stuck on network),
-  // sign out properly to release supabase's internal lock, then show login.
-  // CRITICAL: we do NOT use Promise.race to cancel getSession — that orphans the
-  // internal token-refresh fetch and blocks all subsequent auth calls (signInWithPassword queues behind it).
-  // Instead we let getSession run, and if it takes >10s the watchdog calls signOut()
-  // first (releasing the lock) then shows login so the user can sign in cleanly.
+
+  // PRE-FLIGHT: If the stored Supabase access token is already expired, clear it before
+  // calling getSession(). supabase-js would otherwise attempt a token-refresh network call
+  // that hangs on slow connections, blocking the spinner for 10+ seconds.
+  // — Valid session (not expired): getSession() reads from localStorage, no network call needed.
+  // — Expired session: we clear it here; getSession() returns null immediately; user logs in manually.
+  // Tradeoff: user re-enters credentials after ~1h token expiry instead of auto-refresh.
+  // Acceptable for a field-service app where reliability > seamless auto-refresh.
+  try {
+    const sbKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+    if (sbKey) {
+      const stored = JSON.parse(localStorage.getItem(sbKey) || '{}');
+      const expiresAt = stored?.expires_at; // Unix seconds
+      if (expiresAt && (expiresAt * 1000) < Date.now()) {
+        localStorage.removeItem(sbKey);
+        console.warn('[initAuth] expired Supabase session cleared — user will log in manually');
+      }
+    }
+  } catch(e) {}
+
+  // Watchdog safety net: if getSession() still hangs (valid session, network unreachable),
+  // set authDone=true FIRST so the late resolver is completely ignored, clear sb-* keys,
+  // then show login. CRITICAL: without setting authDone here, the late resolver runs after
+  // the user has already logged in and calls showLogin() — wiping the live app.
   let authDone = false;
-  const authTimeout = setTimeout(async () => {
+  const authTimeout = setTimeout(() => {
     if (!authDone) {
-      console.warn('[initAuth] getSession taking >10s — signing out to clear lock, then showing login');
-      try { await Promise.race([sb.auth.signOut(), new Promise(r => setTimeout(r, 3000))]); } catch(e) {}
+      authDone = true; // Must be first — prevents late resolver from running
+      console.warn('[initAuth] getSession still hanging after 10s — clearing and showing login');
+      Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
       showLogin();
     }
   }, 10000);
   try {
     const { data: { session } } = await sb.auth.getSession();
-    // Mark done BEFORE loadTenantFromUser so the watchdog cannot fire during the
-    // tenant query and call showLogin() on top of a partially-rendered app.
+    if (authDone) return; // Watchdog already ran — ignore this stale result
     authDone = true;
     clearTimeout(authTimeout);
     if (session) {
@@ -1824,6 +1841,7 @@ async function initAuth() {
       showLogin();
     }
   } catch(e) {
+    if (authDone) return;
     authDone = true;
     clearTimeout(authTimeout);
     console.error('[initAuth] error:', e);
