@@ -1786,6 +1786,11 @@ async function initAuth() {
   sb.auth.onAuthStateChange(async (_event, session) => {
     if (_event === 'PASSWORD_RECOVERY') { showResetScreen(); return; }
     if (_event === 'USER_UPDATED') { return; } // handled by doResetPassword() — don't auto-showApp
+    // TOKEN_REFRESHED and INITIAL_SESSION must not re-initialize the app.
+    // TOKEN_REFRESHED fires every ~1h and would re-show the loading spinner on a live session.
+    // INITIAL_SESSION is handled by the getSession() call above — reacting here causes a double-init race.
+    if (_event === 'TOKEN_REFRESHED') { if (session) currentUser = session.user; return; }
+    if (_event === 'INITIAL_SESSION') { return; }
     if (session) {
       currentUser = session.user;
       await loadTenantFromUser();
@@ -2709,7 +2714,12 @@ document.addEventListener('DOMContentLoaded', () => {
   initAuth();
 });
 
+let _appInitializing = false;
 async function initApp() {
+  // Guard against concurrent calls (e.g. SIGNED_IN + INITIAL_SESSION firing simultaneously).
+  if (_appInitializing) { console.warn('[initApp] already running — skipped duplicate call'); return; }
+  _appInitializing = true;
+  try {
   if (_isStaging) {
     const b = document.createElement('div');
     b.id = 'staging-banner';
@@ -2742,6 +2752,7 @@ async function initApp() {
   if(currentUserRole==='tech'){routeTechLogin();return;}
   const savedPage=sessionStorage.getItem('ml_page');
   if(savedPage)goPage(savedPage);
+  } finally { _appInitializing = false; }
 }
 function setDateLabel(){
   const d=new Date(),label='יום '+DAYS_HE[d.getDay()]+' — '+d.toLocaleDateString('he-IL');
