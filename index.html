@@ -15,8 +15,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 <script src="https://browser.sentry-cdn.com/8.0.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
 <!-- Leaflet.js — free open-source maps (OpenStreetMap tiles, no API key needed) -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV/XN/WLcE=" crossorigin=""></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <!-- Leaflet.draw — draw polygons on map for zone configuration (free, no API key) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
@@ -1612,8 +1612,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     location.replace(location.pathname);
   }
   if (p.get('clearall')) {
-    Object.keys(localStorage).filter(k => k.startsWith('ml_')).forEach(k => localStorage.removeItem(k));
-    console.warn('[escape] all ml_* localStorage keys cleared via ?clearall=1');
+    // Clear our ml_* keys AND Supabase's own session key so getSession() doesn't
+    // try to refresh a stale token and hang on the next load.
+    Object.keys(localStorage).filter(k => k.startsWith('ml_') || k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
+    console.warn('[escape] all ml_* and sb-* localStorage keys cleared via ?clearall=1');
     location.replace(location.pathname);
   }
 })();
@@ -1794,20 +1796,22 @@ function showDemoBanner(){
 async function initAuth() {
   if (CONFIG.DEMO_MODE) { showApp(); return; }
   // Wrap the entire auth init in a safety net — if getSession() or loadTenantFromUser()
-  // hangs (Supabase unreachable, token refresh deadlock, etc.), force-show login after 10s.
+  // Watchdog: if getSession hangs (stale token refresh stuck on network),
+  // sign out properly to release supabase's internal lock, then show login.
+  // CRITICAL: we do NOT use Promise.race to cancel getSession — that orphans the
+  // internal token-refresh fetch and blocks all subsequent auth calls (signInWithPassword queues behind it).
+  // Instead we let getSession run, and if it takes >10s the watchdog calls signOut()
+  // first (releasing the lock) then shows login so the user can sign in cleanly.
   let authDone = false;
-  const authTimeout = setTimeout(() => {
+  const authTimeout = setTimeout(async () => {
     if (!authDone) {
-      console.error('[initAuth] timed out after 10s — forcing login screen');
+      console.warn('[initAuth] getSession taking >10s — signing out to clear lock, then showing login');
+      try { await Promise.race([sb.auth.signOut(), new Promise(r => setTimeout(r, 3000))]); } catch(e) {}
       showLogin();
     }
   }, 10000);
   try {
-    const sessionRes = await Promise.race([
-      sb.auth.getSession(),
-      new Promise((_,rej) => setTimeout(() => rej(new Error('getSession timeout')), 8000)),
-    ]);
-    const session = sessionRes?.data?.session;
+    const { data: { session } } = await sb.auth.getSession();
     if (session) {
       currentUser = session.user;
       await loadTenantFromUser();
