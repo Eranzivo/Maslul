@@ -4535,7 +4535,7 @@ function showCandidate(idx){
         <div class="fg"><label class="fl">הערות</label><input class="fc" id="c-notes" placeholder="הערות..."></div>
         <div style="display:flex;gap:8px;margin-top:4px;">
           <button class="btn btn-outline" onclick="clearDispatch()">← חזרה</button>
-          <button class="btn btn-blue btn-lg" style="flex:1;" onclick="confirmAssign(${idx},'${assignId}')">אשר שיבוץ ✓</button>
+          <button id="confirm-assign-btn" class="btn btn-blue btn-lg" style="flex:1;" onclick="confirmAssign(${idx},'${assignId}')">אשר שיבוץ ✓</button>
         </div>
       </div>
     </div>`;
@@ -4548,7 +4548,7 @@ function selectTimeSlot(si){
   const formEl=document.getElementById('cform-'+window._currentIdx);
   if(formEl)formEl.style.display='block';
 }
-function confirmAssign(idx,assignId){
+async function confirmAssign(idx,assignId){
   if(selectedTimeSlot===null){alert('נא לבחור חלון זמן');return;}
   const slots=window._currentSlots;if(!slots||slots[selectedTimeSlot]?.full)return;
   const c=allCandidates[idx];if(!c)return;
@@ -4577,7 +4577,12 @@ function confirmAssign(idx,assignId){
   const newTask={id:nextTaskId++,client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows]};
   tasks.push(newTask);
   save();
-  saveTaskToSupabase(newTask);
+  // Await save — no fire-and-forget (new tasks not covered by WAL)
+  const btn=document.getElementById('confirm-assign-btn');
+  if(btn){btn.disabled=true;btn.textContent='שומר…';}
+  const saved=await saveTaskToSupabase(newTask);
+  if(btn){btn.disabled=false;btn.textContent='אשר שיבוץ ✓';}
+  if(!saved){showToast('קריאה נוספה מקומית — בדוק חיבור לרשת לאישור סופי','error');}
   clearDispatchDraft();
   document.getElementById('dispatch-result').classList.add('hidden');
   document.getElementById('suc-id').textContent=assignId;
@@ -4588,9 +4593,8 @@ function confirmAssign(idx,assignId){
     <div class="cr"><span class="ck">תאריך</span><span class="cv">${c.date.d.toLocaleDateString('he-IL')}</span></div>
     <div class="cr"><span class="ck">שעות</span><span class="cv">${slot.start} — ${slot.end}</span></div>
     <div class="cr"><span class="ck">טכנאי</span><span class="cv">${c.tech.name}</span></div>`;
-  const wm=encodeURIComponent(`שלום ${client}, ${L('task')} שובצה ב${city} בתאריך ${c.date.d.toLocaleDateString('he-IL')} בין השעות ${slot.start}-${slot.end}. מספר ${L('task')}: ${assignId}. לפרטים: ${c.tech.phone}`);
-  const wp=phone.replace(/[^0-9]/g,'').replace(/^0/,'972');
-  document.getElementById('wa-link').href=phone?`https://wa.me/${wp}?text=${wm}`:'#';
+  // WhatsApp link — use full rich template (waMsg) for consistency with task list
+  document.getElementById('wa-link').href=phone?`https://wa.me/${waPhone(phone)}?text=${waMsg(newTask)}`:'#';
   document.getElementById('wa-link').style.display=phone?'inline-flex':'none';
   // Store for recurring
   window._lastDispatched={client,phone,city,street,catId,catName,notes,date:c.date.str,techId:c.tech.id};
