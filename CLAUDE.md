@@ -63,10 +63,10 @@ Deployed as a single HTML file: https://eranzivo.github.io/Maslul/
 - **Always use jsDelivr** (`cdn.jsdelivr.net`) — never unpkg. unpkg can change file content for the same version URL, breaking integrity hashes.
 - **Never add `integrity=` attributes to CDN script/link tags** — version pinning is sufficient; integrity hashes go stale when CDNs update build artifacts.
 - Supabase JS is pinned to `2.49.4`. Leaflet pinned to `1.9.4`. Do not change without testing.
-- Emergency escape hatches: `?clearwal=1` (clear stuck WAL), `?clearall=1` (full reset: ml_* + sb_* localStorage keys)
+- Emergency escape hatches: `?clearwal=1` (clear stuck WAL), `?clearall=1` (full reset: `ml_*` + `sb-*` localStorage keys)
 
 ## Auth Flow Rules (hard-learned — do not break)
-- **Never use `Promise.race` to cancel a Supabase auth call** (`getSession`, `signInWithPassword`, etc.).
+- **Never use `Promise.race` to cancel a Supabase auth call** (`getSession`, `signInWithPassword`, `signOut`, etc.). Read-only queries (`sb.from(...).select(...)`) are lower risk since they hold no lock, but auth calls must never be orphaned.
   `Promise.race` only abandons the *await* — the underlying fetch keeps running and holds supabase-js's
   internal lock. Any subsequent auth call (e.g. login) queues behind the orphaned operation and hangs.
 - **Watchdog pattern for auth timeout**: use a `setTimeout` that calls `sb.auth.signOut()` *then*
