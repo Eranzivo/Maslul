@@ -145,15 +145,21 @@ ALTER TABLE day_offs    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clients     ENABLE ROW LEVEL SECURITY;
 
 -- Resolves the calling user's tenant_id (SECURITY DEFINER bypasses RLS on users table)
-CREATE OR REPLACE FUNCTION get_tenant_id()
-RETURNS UUID LANGUAGE sql SECURITY DEFINER STABLE AS $$
-  SELECT tenant_id FROM users WHERE id = auth.uid();
+-- search_path='' prevents search-path injection; table must be fully qualified as public.users
+CREATE OR REPLACE FUNCTION public.get_tenant_id()
+RETURNS UUID LANGUAGE sql SECURITY DEFINER STABLE
+SET search_path = ''
+AS $$
+  SELECT tenant_id FROM public.users WHERE id = auth.uid();
 $$;
 
 -- Returns true if the calling user has super_admin = true
-CREATE OR REPLACE FUNCTION is_super_admin()
-RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER STABLE AS $$
-  SELECT COALESCE((SELECT super_admin FROM users WHERE id = auth.uid()), false);
+-- search_path='' prevents search-path injection; table must be fully qualified as public.users
+CREATE OR REPLACE FUNCTION public.is_super_admin()
+RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER STABLE
+SET search_path = ''
+AS $$
+  SELECT COALESCE((SELECT super_admin FROM public.users WHERE id = auth.uid()), false);
 $$;
 
 -- Tenants: own row only, OR super_admin sees all
