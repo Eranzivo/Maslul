@@ -2791,7 +2791,7 @@ async function loadClientChips(){
   if(!wrap||!currentUserSuperAdmin)return;
   const inSession=!!sessionStorage.getItem('ma_session');
   if(inSession){wrap.style.display='none';return;}
-  const{data}=await sb.from('tenants').select('id,name').order('name');
+  const{data}=await sb.from('tenants').select('id,name').neq('id',currentTenantId).order('name');
   if(!data||!data.length){wrap.style.display='none';return;}
   wrap.innerHTML=data.map(t=>
     `<div class="role-chip" onclick="enterTenantSession('${t.id}','${h(t.name)}')" title="כנס לסשן ${h(t.name)}" style="color:var(--purple);border-color:rgba(139,92,246,0.35);">🔀 ${h(t.name)}</div>`
