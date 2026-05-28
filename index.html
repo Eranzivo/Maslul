@@ -1668,22 +1668,23 @@ if(typeof Sentry !== 'undefined'){
   });
 }
 
-// ═══ PRE-FLIGHT: Clear expired session BEFORE creating Supabase client ═══
-// supabase-js v2 runs _recoverAndRefresh() inside its constructor. If the stored
-// session is expired, it immediately starts a token-refresh network call that can
-// hang indefinitely on slow connections. This holds supabase-js's internal auth lock,
-// blocking every subsequent auth call (including getSession()) for 10+ seconds.
-// FIX: detect and remove the expired session NOW — before createClient() — so
-// supabase-js finds nothing to refresh and skips the network call entirely.
+// ═══ PRE-FLIGHT: Clear near-expiry session BEFORE creating Supabase client ═══
+// supabase-js v2 runs _recoverAndRefresh() in its constructor. If the stored session
+// is expired OR about to expire, it starts a token-refresh network call immediately.
+// That call can hang for 10+ seconds on slow connections, blocking the entire auth flow.
+// FIX: clear the session if it expires within 5 minutes — supabase-js finds nothing,
+// skips the network refresh, and getSession() returns null instantly. User re-logs in.
+// The 5-minute buffer covers supabase-js's 30-second proactive-refresh window with margin.
 (function(){
   try {
     const sbKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
     if (sbKey) {
       const stored = JSON.parse(localStorage.getItem(sbKey) || '{}');
       const expiresAt = stored?.expires_at; // Unix seconds, written by supabase-js
-      if (!expiresAt || (expiresAt * 1000) < Date.now()) {
+      const fiveMin = 5 * 60 * 1000;
+      if (!expiresAt || (expiresAt * 1000) < Date.now() + fiveMin) {
         localStorage.removeItem(sbKey);
-        console.warn('[pre-flight] expired Supabase session cleared before createClient()');
+        console.warn('[pre-flight] session cleared (expired or expiring soon) — user will log in fresh');
       }
     }
   } catch(e) { console.warn('[pre-flight] session check error:', e); }

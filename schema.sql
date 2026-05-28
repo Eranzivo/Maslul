@@ -162,6 +162,23 @@ AS $$
   SELECT COALESCE((SELECT super_admin FROM public.users WHERE id = auth.uid()), false);
 $$;
 
+-- Supabase-generated startup functions (run on every authenticated role connection).
+-- IMPORTANT: search_path='' was applied by Supabase's security hardening — body MUST
+-- use public.users (fully qualified) or it fails with "relation users does not exist".
+CREATE OR REPLACE FUNCTION public.current_tenant_id()
+RETURNS UUID LANGUAGE sql SECURITY DEFINER STABLE
+SET search_path = ''
+AS $$
+  SELECT tenant_id FROM public.users WHERE id = auth.uid();
+$$;
+
+CREATE OR REPLACE FUNCTION public.current_user_role()
+RETURNS text LANGUAGE sql SECURITY DEFINER STABLE
+SET search_path = ''
+AS $$
+  SELECT role FROM public.users WHERE id = auth.uid();
+$$;
+
 -- Tenants: own row only, OR super_admin sees all
 DROP POLICY IF EXISTS "tenant_select" ON tenants;
 CREATE POLICY "tenant_select" ON tenants
