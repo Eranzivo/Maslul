@@ -2131,11 +2131,12 @@ async function doLogin() {
   try {
     result = await Promise.race([
       sb.auth.signInWithPassword({ email, password }),
-      new Promise((_,reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+      new Promise((_,reject) => setTimeout(() => reject(new Error('timeout')), 30000))
     ]);
   } catch(e) {
     btn.textContent = 'כניסה';
     btn.disabled = false;
+    console.error('[doLogin] catch:', e.message, e);
     errEl.textContent = e.message === 'timeout'
       ? 'השרת לא מגיב — נסה שוב בעוד מספר שניות'
       : 'שגיאת רשת — בדוק חיבור לאינטרנט';
