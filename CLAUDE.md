@@ -66,14 +66,24 @@ Deployed as a single HTML file: https://eranzivo.github.io/Maslul/
 - Emergency escape hatches: `?clearwal=1` (clear stuck WAL), `?clearall=1` (full reset: `ml_*` + `sb-*` localStorage keys)
 
 ## Auth Flow Rules (hard-learned — do not break)
-- **Never use `Promise.race` to cancel a Supabase auth call** (`getSession`, `signInWithPassword`, `signOut`, etc.). Read-only queries (`sb.from(...).select(...)`) are lower risk since they hold no lock, but auth calls must never be orphaned.
-  `Promise.race` only abandons the *await* — the underlying fetch keeps running and holds supabase-js's
-  internal lock. Any subsequent auth call (e.g. login) queues behind the orphaned operation and hangs.
-- **Watchdog pattern for auth timeout**: use a `setTimeout` that calls `sb.auth.signOut()` *then*
-  `showLogin()`. `signOut()` releases the internal lock so the next login attempt works cleanly.
-- **`initAuth` watchdog** is already implemented this way — do not refactor it back to `Promise.race`.
-- **`?clearall=1` clears both `ml_*` and `sb-*` keys** — required to clear Supabase's stored session
-  so `getSession()` doesn't try to refresh a stale token and hang on the next page load.
+- **Never use `Promise.race` to cancel a Supabase auth call.** `Promise.race` only abandons the `await` — the underlying fetch keeps running and holds supabase-js's internal lock. Any subsequent auth call queues behind the orphaned operation and hangs indefinitely.
+- **`createClient()` uses a no-op auth lock** — `auth: { lock: async (_n, _t, fn) => fn() }`. supabase-js v2 uses `navigator.locks` (Web Locks API) by default, shared across all tabs of the same origin. If one tab holds the lock, every other tab's `getSession()` and `signInWithPassword()` hangs. The no-op lock gives each tab independence. Do not remove this option.
+- **Pre-flight runs BEFORE `createClient()`** — clears sessions expiring within 5 minutes so supabase-js doesn't attempt a blocking token refresh in its constructor. Do not move the pre-flight inside `initAuth()` — by then the lock is already held.
+- **`initAuth` watchdog** — `authDone = true` is the FIRST line in the watchdog callback. Without it, a late `getSession()` result runs after the user has already logged in and calls `showLogin()` on top of the live app.
+- **`loadTenantFromUser()` must `throw` on failure** — if it `return`s normally after an error, the caller still calls `showApp()` (millisecond flash). It must: (1) call `showLogin()`, (2) set the error text AFTER `showLogin`, (3) fire-and-forget `signOut()`, (4) `throw`.
+- **`SIGNED_OUT` handler skips `showLogin()` if login is already visible** — prevents the fire-and-forget `signOut()` from clearing error messages set by `loadTenantFromUser()`.
+- **`?clearall=1` clears both `ml_*` and `sb-*` keys** — required to clear Supabase's stored session so `getSession()` doesn't try to refresh a stale token and hang on the next page load.
+
+## Supabase SECURITY DEFINER Function Rules (hard-learned — do not break)
+- **`SET search_path = ''` requires `public.` prefix on ALL table references.** Any function with `SET search_path = ''` that references `users` instead of `public.users` fails with `42P01: relation "users" does not exist` at runtime. This silently breaks ALL RLS policies and all REST API queries return 404.
+- **Supabase auto-creates startup functions** — `current_tenant_id()` and `current_user_role()` run on every `authenticated` role connection. Supabase's security hardening sets `search_path = ''` on them without updating table refs. After any security advisor run, immediately check and fix:
+  ```sql
+  SELECT proname, prosrc FROM pg_proc
+  WHERE pronamespace = 'public'::regnamespace AND proconfig @> ARRAY['search_path=""']
+  ORDER BY proname;
+  ```
+  Every function body must use `public.users`, `public.audit_log`, etc. — never bare `users`.
+- **Our four functions that query `public.users`:** `get_tenant_id()`, `is_super_admin()`, `current_tenant_id()`, `current_user_role()`. All must have `public.` prefix and `SET search_path = ''`.
 
 ## Architecture Principles
 - Multi-tenant: every table row has `tenant_id`, enforced by Supabase RLS
