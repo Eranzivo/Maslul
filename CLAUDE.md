@@ -60,8 +60,20 @@ Deployed as a single HTML file: https://eranzivo.github.io/Maslul/
 ## CDN / Supabase Key Rules
 - **Always use the JWT anon key** (`eyJ...` format) — never `sb_publishable_...` with supabase-js@2
 - **Pin every CDN library to an exact version** — never use `@2` or `latest`; use `@2.49.4` etc.
+- **Always use jsDelivr** (`cdn.jsdelivr.net`) — never unpkg. unpkg can change file content for the same version URL, breaking integrity hashes.
+- **Never add `integrity=` attributes to CDN script/link tags** — version pinning is sufficient; integrity hashes go stale when CDNs update build artifacts.
 - Supabase JS is pinned to `2.49.4`. Leaflet pinned to `1.9.4`. Do not change without testing.
-- Emergency escape hatches: `?clearwal=1` (clear stuck WAL), `?clearall=1` (full localStorage reset)
+- Emergency escape hatches: `?clearwal=1` (clear stuck WAL), `?clearall=1` (full reset: ml_* + sb_* localStorage keys)
+
+## Auth Flow Rules (hard-learned — do not break)
+- **Never use `Promise.race` to cancel a Supabase auth call** (`getSession`, `signInWithPassword`, etc.).
+  `Promise.race` only abandons the *await* — the underlying fetch keeps running and holds supabase-js's
+  internal lock. Any subsequent auth call (e.g. login) queues behind the orphaned operation and hangs.
+- **Watchdog pattern for auth timeout**: use a `setTimeout` that calls `sb.auth.signOut()` *then*
+  `showLogin()`. `signOut()` releases the internal lock so the next login attempt works cleanly.
+- **`initAuth` watchdog** is already implemented this way — do not refactor it back to `Promise.race`.
+- **`?clearall=1` clears both `ml_*` and `sb-*` keys** — required to clear Supabase's stored session
+  so `getSession()` doesn't try to refresh a stale token and hang on the next page load.
 
 ## Architecture Principles
 - Multi-tenant: every table row has `tenant_id`, enforced by Supabase RLS
