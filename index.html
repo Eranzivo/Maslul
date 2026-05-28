@@ -1793,13 +1793,34 @@ function showDemoBanner(){
 // ═══ AUTH ═══
 async function initAuth() {
   if (CONFIG.DEMO_MODE) { showApp(); return; }
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    currentUser = session.user;
-    await loadTenantFromUser();
-    showApp();
-  } else {
+  // Wrap the entire auth init in a safety net — if getSession() or loadTenantFromUser()
+  // hangs (Supabase unreachable, token refresh deadlock, etc.), force-show login after 10s.
+  let authDone = false;
+  const authTimeout = setTimeout(() => {
+    if (!authDone) {
+      console.error('[initAuth] timed out after 10s — forcing login screen');
+      showLogin();
+    }
+  }, 10000);
+  try {
+    const sessionRes = await Promise.race([
+      sb.auth.getSession(),
+      new Promise((_,rej) => setTimeout(() => rej(new Error('getSession timeout')), 8000)),
+    ]);
+    const session = sessionRes?.data?.session;
+    if (session) {
+      currentUser = session.user;
+      await loadTenantFromUser();
+      showApp();
+    } else {
+      showLogin();
+    }
+  } catch(e) {
+    console.error('[initAuth] error:', e);
     showLogin();
+  } finally {
+    authDone = true;
+    clearTimeout(authTimeout);
   }
   sb.auth.onAuthStateChange(async (_event, session) => {
     if (_event === 'PASSWORD_RECOVERY') { showResetScreen(); return; }
@@ -2172,15 +2193,21 @@ async function loadFromSupabase() {
   // Must run BEFORE fetching, so replayed changes are included in the fresh load.
   await _replayWAL();
   try {
-    const [techRes, taskRes, zoneRes, catRes, pkgRes, dayoffRes, tenantRes, clientRes] = await Promise.all([
-      sb.from('technicians').select('*').eq('tenant_id', currentTenantId),
-      sb.from('tasks').select('*').eq('tenant_id', currentTenantId),
-      sb.from('zones').select('*').eq('tenant_id', currentTenantId),
-      sb.from('categories').select('*').eq('tenant_id', currentTenantId),
-      sb.from('packages').select('*').eq('tenant_id', currentTenantId),
-      sb.from('day_offs').select('*').eq('tenant_id', currentTenantId),
-      sb.from('tenants').select('*').eq('id', currentTenantId).single(),
-      sb.from('clients').select('*').eq('tenant_id', currentTenantId),
+    // Hard 15-second timeout for the entire Supabase fetch batch.
+    // If Supabase is unreachable or a query hangs, the spinner must not stay forever.
+    const _loadTimeout = new Promise((_,rej) => setTimeout(() => rej(new Error('loadFromSupabase timeout after 15s')), 15000));
+    const [techRes, taskRes, zoneRes, catRes, pkgRes, dayoffRes, tenantRes, clientRes] = await Promise.race([
+      Promise.all([
+        sb.from('technicians').select('*').eq('tenant_id', currentTenantId),
+        sb.from('tasks').select('*').eq('tenant_id', currentTenantId),
+        sb.from('zones').select('*').eq('tenant_id', currentTenantId),
+        sb.from('categories').select('*').eq('tenant_id', currentTenantId),
+        sb.from('packages').select('*').eq('tenant_id', currentTenantId),
+        sb.from('day_offs').select('*').eq('tenant_id', currentTenantId),
+        sb.from('tenants').select('*').eq('id', currentTenantId).single(),
+        sb.from('clients').select('*').eq('tenant_id', currentTenantId),
+      ]),
+      _loadTimeout,
     ]);
 
     // Check for auth/critical errors — any failure means we can't trust the data
