@@ -161,7 +161,10 @@ in-memory tasks referencing the old local integer id are updated.
 ## Clients
 | Client | tenant_id | Business |
 |---|---|---|
-| Israel (pilot) | `00000000-0000-0000-0000-000000000001` | Garbage disposal + water systems, 4 technicians |
+| Israel / PureWater (pilot) | `00000000-0000-0000-0000-000000000001` | Garbage disposal + water systems, 4 technicians |
+| Maslul Admin (Eran) | `642ad6e6-a093-46a4-8489-ce49a966d77c` | Internal admin tenant — empty, used for cross-tenant management |
+
+**Tenant architecture note:** Eran (infomaslul@gmail.com) logs in to Maslul Admin, which is empty. He uses the `🔀 PureWater` sidebar chip to enter an impersonation session of Israel's tenant. `super_admin = true` on Eran's user row allows RLS to pass for any tenant's data. Israel logs in directly to PureWater and sees only his data.
 
 ## Files
 | File | Purpose |
