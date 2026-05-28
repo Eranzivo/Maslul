@@ -199,7 +199,8 @@ in-memory tasks referencing the old local integer id are updated.
 
 ### 🔴 Next Session — Priority Order
 - [x] **Digital signature capture** — canvas `toDataURL` → Supabase Storage, thumbnail + green badge in tech view (2026-05-27)
-- [ ] **WhatsApp message template** — pre-fill wa.me link with task ID + tech name + ETA (HIGH, ~30min)
+- [x] **WhatsApp message template** — rich waMsg() template with emoji, tech name, arrival window, assignId; buttons in task list + tech view + search + dispatch confirm (2026-05-28)
+- [x] **Tenant separation** — Eran → Maslul Admin tenant; Israel → PureWater; 🔀 sidebar chip for cross-tenant access; session persists on refresh (2026-05-28)
 - [ ] **Break time / lunch block** — block 1hr slot in tech schedule via day_offs UI (Medium)
 - [ ] **Recurring jobs** — `repeat_interval` field on tasks, generate next task on completion (Medium)
 - [ ] **Web Push notifications** — Web Push API (free) — alert tech when new task assigned (Medium)
