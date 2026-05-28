@@ -50,6 +50,19 @@ Deployed as a single HTML file: https://eranzivo.github.io/Maslul/
 - **Known gap:** No pytest suite yet. `test_optimizer.py` is a manual run script only.
 - **Known gap:** `cities.py` has ~50 cities — any city not listed falls back silently to Tel Aviv coords (logs warning since 2026-05-22 fix).
 
+## Deployment Checklist (every push)
+1. `git push origin main`
+2. Wait 60s for GitHub Pages to deploy
+3. Open **incognito tab** → `https://eranzivo.github.io/Maslul/`
+4. Confirm: login screen appears within 3s, login succeeds, home page loads
+5. If anything hangs: `https://eranzivo.github.io/Maslul/?clearall=1` resets localStorage
+
+## CDN / Supabase Key Rules
+- **Always use the JWT anon key** (`eyJ...` format) — never `sb_publishable_...` with supabase-js@2
+- **Pin every CDN library to an exact version** — never use `@2` or `latest`; use `@2.49.4` etc.
+- Supabase JS is pinned to `2.49.4`. Leaflet pinned to `1.9.4`. Do not change without testing.
+- Emergency escape hatches: `?clearwal=1` (clear stuck WAL), `?clearall=1` (full localStorage reset)
+
 ## Architecture Principles
 - Multi-tenant: every table row has `tenant_id`, enforced by Supabase RLS
 - Adding a client: 1 SQL insert into `tenants` + 1 Supabase Auth user + 1 insert into `users`
