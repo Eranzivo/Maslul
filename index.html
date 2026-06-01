@@ -758,7 +758,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div class="fg">
         <label class="fl"><span class="req">*</span> עיר / יישוב</label>
         <div style="display:flex;gap:6px;align-items:center;">
-          <select class="fc" id="s-city" style="flex:1;"><option value="">בחר עיר...</option></select>
+          <input class="fc" id="s-city" list="il-cities-list" placeholder="הקלד שם עיר..." autocomplete="off" style="flex:1;" oninput="saveDispatchDraft()">
           <button type="button" onclick="openAddCityModal()" title="הוסף עיר חדשה לאזור" style="background:var(--blue-l);color:var(--blue-d);border:1px solid var(--blue-m);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:1rem;flex-shrink:0;font-weight:700;">⊕</button>
         </div>
       </div>
@@ -1301,6 +1301,11 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   </div>
 </div>
 
+<!-- Shared Israeli cities datalist — used by dispatch s-city and add-task at-city -->
+<datalist id="il-cities-list">
+<option value="אבו גוש"><option value="אבו סנאן"><option value="אביגדור"><option value="אביחיל"><option value="אבן יהודה"><option value="אבן שמואל"><option value="אגמון"><option value="אום אל-פחם"><option value="אופקים"><option value="אור יהודה"><option value="אור עקיבא"><option value="אורנית"><option value="אזור"><option value="אחיהוד"><option value="אחיסמך"><option value="אייל"><option value="אילת"><option value="אילות"><option value="אירוס"><option value="אכסאל"><option value="אלד"><option value="אלון הגליל"><option value="אלון שבות"><option value="אלוני אבא"><option value="אלוני יצחק"><option value="אלונים"><option value="אלעזר"><option value="אלעד"><option value="אלפי מנשה"><option value="אמירים"><option value="אמנון"><option value="אמציה"><option value="אנן"><option value="ערד"><option value="ערערה"><option value="אפרת"><option value="ארבל"><option value="ארסוף"><option value="אשדוד"><option value="אשדות יעקב"><option value="אשקלון"><option value="אשרת"><option value="באקה אל-גרביה"><option value="באר טוביה"><option value="באר יעקב"><option value="באר שבע"><option value="בארות יצחק"><option value="בארותיים"><option value="בגין"><option value="בית אל"><option value="בית אריה"><option value="בית ברל"><option value="בית גוברין"><option value="בית דגן"><option value="בית הלל"><option value="בית הנסיה"><option value="בית זית"><option value="בית חורון"><option value="בית חנן"><option value="בית חנניה"><option value="בית יהושע"><option value="בית יצחק-שער חפר"><option value="בית ינאי"><option value="בית לחם הגלילית"><option value="בית נקופה"><option value="בית עובד"><option value="בית עזרא"><option value="בית שאן"><option value="בית שמש"><option value="בית שערים"><option value="ביתר עילית"><option value="בנימינה-גבעת עדה"><option value="בני ברק"><option value="בני דרום"><option value="בני עיש"><option value="בני ציון"><option value="בסמ"><option value="בסמת טבעון"><option value="בת חפר"><option value="בת ים"><option value="בת שלמה"><option value="גאולה"><option value="גאולים"><option value="גבע"><option value="גבע כרמל"><option value="גבעת אדה"><option value="גבעת אלה"><option value="גבעת האם"><option value="גבעת הש לשה"><option value="גבעת וינגייט"><option value="גבעת ח יים"><option value="גבעת זאב"><option value="גבעת יערים"><option value="גבעת כח"><option value="גבעת נילי"><option value="גבעת עוז"><option value="גבעת שמואל"><option value="גבעתיים"><option value="גדרה"><option value="גן יבנה"><option value="גן שמואל"><option value="גנות"><option value="גני עם"><option value="גני תקווה"><option value="גנות הדר"><option value="גשר הזיו"><option value="דאלית אל-כרמל"><option value="דברת"><option value="דגניה א"><option value="דגניה ב"><option value="דימונה"><option value="דלייה"><option value="דלתון"><option value="דמיידה"><option value="דפנה"><option value="הוד השרון"><option value="הושעיה"><option value="הזורעים"><option value="החותרים"><option value="הרצליה"><option value="ורדון"><option value="זבולון"><option value="זיכרון יעקב"><option value="זכרון יעקב"><option value="זמר"><option value="חבצלת השרון"><option value="חגור"><option value="חדרה"><option value="חוף כרמל"><option value="חולון"><option value="חורפיש"><option value="חיפה"><option value="חצור הגלילית"><option value="חצרים"><option value="טבריה"><option value="טייבה"><option value="טירה"><option value="טירת הכרמל"><option value="טירת יהודה"><option value="טמרה"><option value="יבנה"><option value="יהוד-מונוסון"><option value="יוקנעם עילית"><option value="יזרעאל"><option value="יסוד המעלה"><option value="יפיע"><option value="יפית"><option value="יקנעם מושבה"><option value="ירוחם"><option value="ירושלים"><option value="ישרש"><option value="כאוכב אבו אל-היג'א"><option value="כברי"><option value="כוכב יאיר"><option value="כוכב יעקב"><option value="כסרא-סמיע"><option value="כעביה-טבאש-חג'אג'רה"><option value="כפר בלום"><option value="כפר ברא"><option value="כפר גלים"><option value="כפר גלעדי"><option value="כפר הרא"><option value="כפר הרוא"><option value="כפר ורדים"><option value="כפר חב"><option value="כפר חיטים"><option value="כפר חרוב"><option value="כפר יונה"><option value="כפר יסיף"><option value="כפר מל"><option value="כפר מנדא"><option value="כפר מסריק"><option value="כפר ציון"><option value="כפר קאסם"><option value="כפר קרע"><option value="כפר ראש הנקרה"><option value="כפר סבא"><option value="כפר שמריהו"><option value="כפר תבור"><option value="כרכור"><option value="כרמיאל"><option value="לוד"><option value="לח י"><option value="לכיש"><option value="מבשרת ציון"><option value="מגאר"><option value="מגדל"><option value="מגדל העמק"><option value="מגדל תפן"><option value="מודיעין-מכבים-רעות"><option value="מודיעין עילית"><option value="מועלה"><option value="מזכרת בתיה"><option value="מזרח תל אביב"><option value="מחניים"><option value="מטולה"><option value="מיתר"><option value="מכמורת"><option value="מכנסיה"><option value="מנחמיה"><option value="מנשית זבדה"><option value="מסגר"><option value="מסילות"><option value="מע לה אדומים"><option value="מעלה אדומים"><option value="מעלה אפרים"><option value="מעלה גלבוע"><option value="מעלות-תרשיחא"><option value="מעלות תרשיחא"><option value="מצפה רמון"><option value="מרכז שפירא"><option value="משגב"><option value="משמר דוד"><option value="משמר הירדן"><option value="משמר העמק"><option value="משמר השרון"><option value="נהריה"><option value="נוף הגליל"><option value="נורדיה"><option value="נחל שורק"><option value="נחשון"><option value="נחשונים"><option value="ניר גלים"><option value="ניר דוד"><option value="ניר עם"><option value="ניר עציון"><option value="ניר צבי"><option value="נס ציונה"><option value="נעמי"><option value="נצרת"><option value="נשר"><option value="נתיבות"><option value="נתניה"><option value="סכנין"><option value="סלמה"><option value="סלמית"><option value="ספיר"><option value="עומר"><option value="עילבון"><option value="עין גב"><option value="עין גדי"><option value="עין הוד"><option value="עין חרוד"><option value="עין כרם"><option value="עין נצרים"><option value="עין שמר"><option value="עכו"><option value="עפולה"><option value="עצמון שגב"><option value="עראבה"><option value="עראר"><option value="עתלית"><option value="פוריה"><option value="פורת"><option value="פרדס חנה-כרכור"><option value="פרדסיה"><option value="פתח תקווה"><option value="צפת"><option value="קדימה-צורן"><option value="קדרון"><option value="קיסריה"><option value="קציר-חריש"><option value="קרית אונו"><option value="קרית אתא"><option value="קרית ביאליק"><option value="קרית גת"><option value="קרית טבעון"><option value="קרית יושביה"><option value="קרית ים"><option value="קרית מוצקין"><option value="קרית מלאכי"><option value="קרית שמונה"><option value="קרית תבון"><option value="ראש העין"><option value="ראש פינה"><option value="ראשון לציון"><option value="רהט"><option value="רובע ו"><option value="רוחמה"><option value="רחובות"><option value="רכסים"><option value="רמות"><option value="רמלה"><option value="רמת גן"><option value="רמת השרון"><option value="רמת ישי"><option value="רמת רחל"><option value="רמת שרת"><option value="רעננה"><option value="שדות ים"><option value="שדרות"><option value="שועפט"><option value="שחר"><option value="שלומי"><option value="שפרעם"><option value="שריגים"><option value="תל אביב"><option value="תל מונד"><option value="תל שבע"><option value="תלמי אליהו"><option value="תלמי יחיאל"><option value="תלמי יפה"><option value="תמרת"><option value="תקומה">
+</datalist>
+
 </main>
 </div>
 
@@ -1396,7 +1401,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div class="fg"><label class="fl"><span class="req">*</span> טלפון</label><input class="fc" id="at-phone" placeholder="05X-XXXXXXX" type="tel"></div>
     </div>
     <div class="fg-2">
-      <div class="fg"><label class="fl"><span class="req">*</span> עיר</label><select class="fc" id="at-city"><option value="">בחר עיר...</option></select></div>
+      <div class="fg"><label class="fl"><span class="req">*</span> עיר</label><input class="fc" id="at-city" list="il-cities-list" placeholder="הקלד שם עיר..." autocomplete="off"></div>
       <div class="fg"><label class="fl">רחוב</label><input class="fc" id="at-street" placeholder="לדוגמה: הרצל 15"></div>
     </div>
     <div class="fg"><label class="fl">הערות</label><input class="fc" id="at-notes" placeholder="הערות, בקשות מיוחדות..."></div>
@@ -3030,7 +3035,7 @@ async function initApp() {
   setDateLabel(); renderCatChips(); renderTasks(); renderHomeTechCards();
   renderTechs(); renderZones(); renderCategories(); renderSettings();
   applyFeatureVisibility();
-  _DDFIELDS.forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener(id==='s-city'?'change':'input',saveDispatchDraft);});
+  _DDFIELDS.forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('input',saveDispatchDraft);});
   document.getElementById('do-date').value = todayStr();
   document.getElementById('specific-date').value = todayStr();
   if(currentUserRole==='tech'){routeTechLogin();return;}
@@ -3053,16 +3058,20 @@ function populateTimeSels(){
   document.getElementById('set-end').value=settings.endTime;
 }
 function populateCitySelect(){
+  // s-city is now a text input with datalist — no population needed
+  // Zone enforcement happens in the engine (buildCandidates), not in the input
   const sel=document.getElementById('s-city');if(!sel)return;
   const prev=sel.value;
-  sel.innerHTML='<option value="">בחר עיר...</option>';
-  zones.forEach(z=>{
-    if(!z.cities.length)return;
-    const grp=document.createElement('optgroup');grp.label=z.name;
-    z.cities.forEach(c=>{const o=new Option(c,c);grp.appendChild(o);});
-    sel.appendChild(grp);
-  });
-  if(prev)sel.value=prev;
+  if(sel.tagName==='SELECT'){
+    sel.innerHTML='<option value="">בחר עיר...</option>';
+    zones.forEach(z=>{
+      if(!z.cities.length)return;
+      const grp=document.createElement('optgroup');grp.label=z.name;
+      z.cities.forEach(c=>{const o=new Option(c,c);grp.appendChild(o);});
+      sel.appendChild(grp);
+    });
+    if(prev)sel.value=prev;
+  }
 }
 function buildRoleSelect(){
   const container=document.getElementById('role-chips');
@@ -5211,10 +5220,7 @@ function confirmReplace(){
 function openAddTaskModal(){
   const catSel=document.getElementById('at-cat');
   catSel.innerHTML='<option value="">בחר קטגוריה...</option>'+categories.map(c=>`<option value="${c.id}">${h(c.name)}</option>`).join('');
-  const allCities=[...new Set(zones.flatMap(z=>z.cities))].sort();
-  const citySel=document.getElementById('at-city');
-  citySel.innerHTML='<option value="">בחר עיר...</option>'+allCities.map(c=>`<option value="${c}">${h(c)}</option>`).join('');
-  ['at-name','at-phone','at-street','at-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['at-name','at-phone','at-city','at-street','at-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('at-error').textContent='';
   document.getElementById('mo-add-task').classList.remove('hidden');
 }
