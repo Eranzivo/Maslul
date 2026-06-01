@@ -772,7 +772,46 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div id="pref-windows-list"></div>
       <button type="button" onclick="addPrefWindow()" style="margin-top:4px;font-size:0.8125rem;color:var(--blue);background:none;border:none;cursor:pointer;padding:0;font-weight:700;">+ הוסף חלון זמן</button>
     </div>
-    <button class="find-btn" onclick="findBestSlot()">מצא שיבוץ אופטימלי ←</button>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:4px;margin-bottom:-4px;">
+      <label id="recurring-toggle-lbl" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.875rem;font-weight:700;color:var(--ink-2);user-select:none;">
+        <input type="checkbox" id="recurring-toggle" onchange="toggleRecurringMode()" style="width:16px;height:16px;cursor:pointer;accent-color:var(--blue);">
+        🔁 קריאה חוזרת (שבועית / דו-שבועית)
+      </label>
+    </div>
+    <div id="recurring-config" class="hidden" style="background:var(--line-2);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-top:8px;">
+      <div style="font-size:0.8rem;font-weight:800;color:var(--ink-2);margin-bottom:12px;">הגדרות חזרה</div>
+      <div class="fg-2">
+        <div class="fg"><label class="fl">יום בשבוע</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+            <label class="wiz-type-opt" style="padding:6px 10px;"><input type="radio" name="rec-dow" value="0" checked><span>א׳</span></label>
+            <label class="wiz-type-opt" style="padding:6px 10px;"><input type="radio" name="rec-dow" value="1"><span>ב׳</span></label>
+            <label class="wiz-type-opt" style="padding:6px 10px;"><input type="radio" name="rec-dow" value="2"><span>ג׳</span></label>
+            <label class="wiz-type-opt" style="padding:6px 10px;"><input type="radio" name="rec-dow" value="3"><span>ד׳</span></label>
+            <label class="wiz-type-opt" style="padding:6px 10px;"><input type="radio" name="rec-dow" value="4"><span>ה׳</span></label>
+            <label class="wiz-type-opt" style="padding:6px 10px;"><input type="radio" name="rec-dow" value="5"><span>ו׳</span></label>
+          </div>
+        </div>
+        <div class="fg"><label class="fl">שעה קבועה</label><input class="fc" id="rec-time" type="time" value="09:00"></div>
+      </div>
+      <div class="fg-2">
+        <div class="fg"><label class="fl">תדירות</label>
+          <select class="fc" id="rec-interval">
+            <option value="1">שבועי</option>
+            <option value="2">דו-שבועי</option>
+            <option value="4">כל 4 שבועות</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">צור קדימה (שבועות)</label><input class="fc" id="rec-lookahead" type="number" value="6" min="1" max="12"></div>
+      </div>
+      <div class="fg"><label class="fl">טכנאי מועדף (אופציונלי)</label>
+        <select class="fc" id="rec-tech">
+          <option value="">אוטומטי — ללא העדפה</option>
+        </select>
+      </div>
+      <div id="rec-preview" style="margin-top:10px;font-size:0.8125rem;color:var(--ink-3);"></div>
+    </div>
+    <button class="find-btn" id="find-btn-normal" onclick="findBestSlot()">מצא שיבוץ אופטימלי ←</button>
+    <button class="find-btn hidden" id="find-btn-recurring" onclick="createRecurringTask()" style="background:var(--blue);">🔁 צור קריאות חוזרות</button>
   </div>
   <div id="dispatch-result" class="hidden">
     <div id="d-alert" class="hidden"></div>
@@ -836,11 +875,20 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <span class="badge badge-gray" id="tf-assigned" onclick="filterTasks('assigned')" style="cursor:pointer;padding:5px 12px;">משובצות</span>
       <span class="badge badge-gray" id="tf-completed" onclick="filterTasks('completed')" style="cursor:pointer;padding:5px 12px;">הושלמו</span>
       <span class="badge badge-gray" id="tf-cancelled" onclick="filterTasks('cancelled')" style="cursor:pointer;padding:5px 12px;">בוטלו</span>
+      <span class="badge badge-gray" id="tf-recurring_unassigned" onclick="filterTasks('recurring_unassigned')" style="cursor:pointer;padding:5px 12px;">⚠️ חוזרות ממתינות</span>
+      <span class="badge badge-gray" id="tf-recurring_templates" onclick="showRecurringTemplates()" style="cursor:pointer;padding:5px 12px;">🔁 תבניות</span>
     </div>
   </div>
   <div class="card">
     <div class="sb-bar"><span style="color:var(--ink-4);">🔍</span><input class="fc" id="task-search" placeholder="חיפוש..." oninput="renderTasks()" style="border:none;padding:6px 0;font-size:0.875rem;"></div>
     <div id="tasks-list"></div>
+  </div>
+  <div id="recurring-templates-section" class="hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div style="font-size:1rem;font-weight:800;">🔁 תבניות קריאות חוזרות</div>
+      <button class="btn btn-blue btn-sm" onclick="goPage('dispatch');setTimeout(()=>{document.getElementById('recurring-toggle').checked=true;toggleRecurringMode();},200)">+ תבנית חדשה</button>
+    </div>
+    <div id="recurring-templates-list"></div>
   </div>
 </div>
 
@@ -1178,6 +1226,21 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div class="fg"><label class="fl">שעת התחלה</label><input class="fc" id="wc-start" type="time" value="07:00"></div>
       <div class="fg"><label class="fl">שעת סיום</label><input class="fc" id="wc-end" type="time" value="18:00"></div>
     </div>
+    <div class="fg">
+      <label class="fl">🗺️ אסטרטגיית ניתוב גיאוגרפי</label>
+      <div style="display:grid;gap:8px;margin-top:8px;">
+        <label class="wiz-type-opt"><input type="radio" name="wc-route" value="far_to_near" checked><span>↔️ רחוק → קרוב — מונע נסיעות חזרה <span style="color:var(--ink-3);font-size:0.8rem;">(מומלץ לשירות שטח)</span></span></label>
+        <label class="wiz-type-opt"><input type="radio" name="wc-route" value="nearest_first"><span>📍 קרוב → רחוק — מתאים לאזורים עירוניים צפופים</span></label>
+        <label class="wiz-type-opt"><input type="radio" name="wc-route" value="flexible"><span>🔓 גמיש — ממלא לפי זמינות, ללא אילוץ גיאוגרפי</span></label>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">⏱️ זמן ביצוע לפי עובד</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+        <label class="wiz-type-opt"><input type="radio" name="wc-duration" value="uniform" checked><span>זהה לכולם (לפי קטגוריה בלבד)</span></label>
+        <label class="wiz-type-opt"><input type="radio" name="wc-duration" value="per_tech"><span>👷 משתנה לפי עובד — יש הבדל בין עובדים</span></label>
+      </div>
+    </div>
     <div class="fg-2">
       <div class="fg"><label class="fl">Supabase Auth UUID של מנהל <span class="req">*</span></label><input class="fc" id="wc-uuid" dir="ltr" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
       <div class="fg"><label class="fl">שם המנהל <span class="req">*</span></label><input class="fc" id="wc-uname" placeholder="ישראל כהן"></div>
@@ -1260,6 +1323,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div class="skill-checks" id="ti-skills-container"></div>
     </div>
     <div class="fg"><label class="fl">הגבלת קריאות לפי קטגוריה ביום</label><div id="ti-cat-limits"></div></div>
+    <div class="fg" id="ti-dur-override-wrap" style="display:none;"><label class="fl">⏱️ זמן ביצוע מותאם אישית (דקות) — השאר ריק לברירת המחדל של הקטגוריה</label><div id="ti-dur-overrides"></div></div>
     <div class="fg">
       <label class="fl"><span class="req">*</span> רוטציה אזורים (ראשון–שישי)</label>
       <div class="field-error hidden" id="e-ti-rotation">יש להגדיר לפחות יום אחד</div>
@@ -2263,7 +2327,7 @@ async function loadFromSupabase() {
     // Hard 15-second timeout for the entire Supabase fetch batch.
     // If Supabase is unreachable or a query hangs, the spinner must not stay forever.
     const _loadTimeout = new Promise((_,rej) => setTimeout(() => rej(new Error('loadFromSupabase timeout after 15s')), 15000));
-    const [techRes, taskRes, zoneRes, catRes, pkgRes, dayoffRes, tenantRes, clientRes] = await Promise.race([
+    const [techRes, taskRes, zoneRes, catRes, pkgRes, dayoffRes, tenantRes, clientRes, recurringRes] = await Promise.race([
       Promise.all([
         sb.from('technicians').select('*').eq('tenant_id', currentTenantId),
         sb.from('tasks').select('*').eq('tenant_id', currentTenantId),
@@ -2273,6 +2337,7 @@ async function loadFromSupabase() {
         sb.from('day_offs').select('*').eq('tenant_id', currentTenantId),
         sb.from('tenants').select('*').eq('id', currentTenantId).single(),
         sb.from('clients').select('*').eq('tenant_id', currentTenantId),
+        sb.from('recurring_templates').select('*').eq('tenant_id', currentTenantId),
       ]),
       _loadTimeout,
     ]);
@@ -2294,6 +2359,7 @@ async function loadFromSupabase() {
       blocked: (t.blocked_cities || []).join(','),
       skills: t.skills || [],
       catLimits: t.cat_limits || {},
+      durationOverrides: t.duration_overrides || {},
       rotation: t.rotation || {},
       weekly_schedule: t.weekly_schedule || {},
       userId: t.user_id || null,
@@ -2311,6 +2377,7 @@ async function loadFromSupabase() {
       checklistDone: t.checklist_done || {},
       photoUrl: t.photo_url || null,
       signatureUrl: t.signature_url || null,
+      recurringTemplateId: t.recurring_template_id || null,
       _dbId: t.id
     }));
 
@@ -2345,6 +2412,16 @@ async function loadFromSupabase() {
       id: d.id, techId: d.technician_id, date: d.date,
       type: d.type || 'full', from: d.from_time || '', to: d.to_time || '',
       reason: d.reason || '', _dbId: d.id
+    }));
+
+    recurringTemplates = (recurringRes?.data || []).map(r => ({
+      id: r.id, clientName: r.client_name, clientPhone: r.client_phone || '',
+      city: r.city, street: r.street || '', categoryId: r.category_id || null,
+      categoryName: r.category_name || '', notes: r.notes || '',
+      dayOfWeek: r.day_of_week, scheduledTime: r.scheduled_time,
+      intervalWeeks: r.interval_weeks || 1, preferredTechId: r.preferred_technician_id || null,
+      lookaheadWeeks: r.lookahead_weeks || 6, active: r.active !== false,
+      lastGeneratedDate: r.last_generated_date || null, _dbId: r.id
     }));
 
     if (!clientRes.error && clientRes.data) {
@@ -2421,12 +2498,86 @@ async function loadFromSupabase() {
       checkScalar(categories,  ['name','time'], 'category');
     })();
 
+    // Generate any missing recurring task instances (silent, non-blocking)
+    await _generateRecurringInstances();
+
     // Keep localStorage in sync with Supabase so the fallback always reflects latest known-good state
     save();
     return true;
   } catch(e) {
     console.error('Supabase load error:', e);
     return false;
+  }
+}
+
+// ═══ RECURRING JOBS ═══════════════════════════════════════════════════════
+function _nextOccurrence(fromDate,dayOfWeek){
+  const d=new Date(fromDate);
+  const diff=(dayOfWeek-d.getDay()+7)%7;
+  d.setDate(d.getDate()+(diff===0?0:diff));
+  return d;
+}
+function _dateStr(d){return d.toISOString().split('T')[0];}
+async function _generateRecurringInstances(){
+  if(!currentTenantId||!recurringTemplates.length)return;
+  const today=new Date(new Date().toDateString());
+  for(const tmpl of recurringTemplates){
+    if(!tmpl.active)continue;
+    try{
+      const lookaheadEnd=new Date(today);lookaheadEnd.setDate(lookaheadEnd.getDate()+tmpl.lookaheadWeeks*7);
+      // Start generating from day after last generated, or today
+      let fromDate=new Date(today);
+      if(tmpl.lastGeneratedDate){
+        const last=new Date(tmpl.lastGeneratedDate);
+        last.setDate(last.getDate()+tmpl.intervalWeeks*7);
+        if(last>fromDate)fromDate=last;
+      }
+      // Walk forward stepping by intervalWeeks, only on the correct dayOfWeek
+      let cursor=_nextOccurrence(fromDate,tmpl.dayOfWeek);
+      let lastGenerated=tmpl.lastGeneratedDate;
+      while(cursor<=lookaheadEnd){
+        const ds=_dateStr(cursor);
+        // Idempotency: skip if a task already exists for this template on this date
+        const exists=tasks.some(t=>t.recurringTemplateId===tmpl.id&&t.date===ds);
+        if(!exists){
+          const row={
+            tenant_id:currentTenantId,
+            client_name:tmpl.clientName, client_phone:tmpl.clientPhone||null,
+            city:tmpl.city, street:tmpl.street||null,
+            category_id:tmpl.categoryId||null, category_name:tmpl.categoryName||null,
+            notes:tmpl.notes||null,
+            technician_id:tmpl.preferredTechId||null,
+            status:'pending',
+            scheduled_date:ds, scheduled_time:tmpl.scheduledTime,
+            recurring_template_id:tmpl.id,
+            assign_id:'MSL-'+String(nextTaskId++).padStart(5,'0'),
+          };
+          const data=await dbInsert('tasks',row);
+          if(data){
+            tasks.push({
+              id:data.id, client:tmpl.clientName, phone:tmpl.clientPhone||'',
+              city:tmpl.city, street:tmpl.street||'',
+              cat:tmpl.categoryName||'', catId:tmpl.categoryId||null,
+              techId:tmpl.preferredTechId||null, status:'pending',
+              time:tmpl.scheduledTime, date:ds,
+              notes:tmpl.notes||'', assignId:row.assign_id,
+              preferredWindows:[], checklistDone:{}, photoUrl:null, signatureUrl:null,
+              recurringTemplateId:tmpl.id, _dbId:data.id
+            });
+            lastGenerated=ds;
+          }
+        } else {
+          lastGenerated=ds;
+        }
+        cursor.setDate(cursor.getDate()+tmpl.intervalWeeks*7);
+      }
+      if(lastGenerated&&lastGenerated!==tmpl.lastGeneratedDate){
+        await dbUpsert('recurring_templates',{id:tmpl._dbId,last_generated_date:lastGenerated});
+        tmpl.lastGeneratedDate=lastGenerated;
+      }
+    } catch(e){
+      console.warn('[recurring] generation failed for template',tmpl.id,e);
+    }
   }
 }
 
@@ -2631,6 +2782,7 @@ async function saveTechToSupabase(tech) {
     start_time: tech.start, end_time: tech.end,
     blocked_cities: tech.blocked ? tech.blocked.split(',').map(c=>c.trim()).filter(c=>c) : [],
     skills: tech.skills || [], cat_limits: tech.catLimits || {},
+    duration_overrides: tech.durationOverrides || {},
     rotation: tech.rotation || {}, weekly_schedule: tech.weekly_schedule || {},
   };
   if (tech._dbId) return (await dbUpsert('technicians', { id: tech._dbId, ...row })) !== null;
@@ -2751,7 +2903,7 @@ const STATUS_MAP={
 };
 
 // ═══ STATE ═══
-let technicians=[],tasks=[],dayoffs=[],zones=[],categories=[],packages=[],clients=[];
+let technicians=[],tasks=[],dayoffs=[],zones=[],categories=[],packages=[],clients=[],recurringTemplates=[];
 let tenantConfig={};
 let currentUserRole='coordinator';
 let currentUserSuperAdmin=false;
@@ -3080,6 +3232,8 @@ function initWizard(){
   document.getElementById('wc-end').value='18:00';
   document.getElementById('wc-plan').value='pilot';
   document.querySelector('input[name="wc-type"][value="field"]').checked=true;
+  document.querySelector('input[name="wc-route"][value="far_to_near"]').checked=true;
+  document.querySelector('input[name="wc-duration"][value="uniform"]').checked=true;
   document.getElementById('wiz-custom-labels').classList.add('hidden');
   document.getElementById('wiz-techs').innerHTML='';
   document.getElementById('wiz-zones').innerHTML='';
@@ -3201,12 +3355,14 @@ async function createWizardTenant(){
   } else {
     labels=WIZ_LABELS[type];
   }
+  const routeStrategy=document.querySelector('input[name="wc-route"]:checked')?.value||'far_to_near';
+  const durationMode=document.querySelector('input[name="wc-duration"]:checked')?.value||'uniform';
   const config={
     labels,
     business_type:type,
     defaults:{regular_job_minutes:30,package_job_minutes:45,arrival_window_hours:3,max_daily_jobs:9,lookahead_days:30,work_start:start,work_end:end},
-    features:{crm_enabled:false,reports_enabled:false,files_enabled:false,checklists_enabled:false,whatsapp_enabled:false,demo_mode:false,google_maps_enabled:false},
-    scheduling:{mode:'zone',zone_strict:true,fill_first:true,route_logic:true}
+    features:{crm_enabled:false,reports_enabled:false,files_enabled:false,checklists_enabled:false,whatsapp_enabled:false,demo_mode:false,google_maps_enabled:false,tech_duration_overrides:durationMode==='per_tech'},
+    scheduling:{mode:'zone',zone_strict:true,fill_first:true,route_logic:routeStrategy==='far_to_near',route_strategy:routeStrategy}
   };
   const{data:tenant,error:te}=await sb.from('tenants').insert({name,plan,config}).select().single();
   if(te){showToast('שגיאה ביצירת הלקוח','error');console.error(te);btn.disabled=false;btn.textContent='🚀 צור לקוח';return;}
@@ -4198,6 +4354,17 @@ function isTechAvailable(tech,dateStr){
   if(dayoffs.some(d=>d.techId===tech.id&&d.date===dateStr&&d.type==='full'))return false;
   return getTechDaySchedule(tech,dateStr).work!==false;
 }
+// Returns partial blocks for a tech on a given date as [{from:mins, to:mins}]
+function getTechPartialBlocks(tech,dateStr){
+  return dayoffs
+    .filter(d=>d.techId===tech.id&&d.date===dateStr&&d.type==='partial'&&d.from&&d.to)
+    .map(d=>({from:timeToMins(d.from),to:timeToMins(d.to)}));
+}
+// Returns true if a slot [startMins, startMins+dur] overlaps any partial block
+function slotOverlapsBlock(startMins,dur,blocks){
+  const end=startMins+dur;
+  return blocks.some(b=>startMins<b.to&&end>b.from);
+}
 function getTechDayTasks(tech,dateStr){
   return tasks.filter(t=>t.techId===tech.id&&t.date===dateStr&&['assigned','en_route','arrived'].includes(t.status)).sort((a,b)=>a.time.localeCompare(b.time));
 }
@@ -4247,16 +4414,20 @@ function getCityIndexInZone(city,zoneId){
 // Calculate optimal time for new task using far-to-near logic.
 // Zone cities array: index 0 = FARTHEST from tech base, last index = CLOSEST.
 // New task is inserted between all "farther" tasks (lower index) and all "closer" tasks (higher index).
-function calcOptimalTime(tech,dateStr,city){
+function calcOptimalTime(tech,dateStr,city,catId){
   const zid=getTechZoneId(tech,dateStr);
   const dayTasks=getTechDayTasks(tech,dateStr); // already sorted by time
   const sched=getTechDaySchedule(tech,dateStr);
   const[sh]=sched.start.split(':').map(Number);
   const[eh]=sched.end.split(':').map(Number);
-  const dur=settings.regularTime||30;
+  const catDur=catId?(categories.find(c=>c.id===catId)?.time||null):null;
+  const techOverride=catId?((tech.durationOverrides||{})[catId]||null):null;
+  const dur=techOverride||catDur||settings.regularTime||30;
   const buf=10;
   const newIdx=getCityIndexInZone(city,zid);
   const totalCities=zones.find(x=>x.id===zid)?.cities.length||1;
+
+  const partialBlocks=getTechPartialBlocks(tech,dateStr);
 
   if(!dayTasks.length){
     // Late-start principle: nearby cities (high index) start later so farther ones can precede them.
@@ -4265,7 +4436,15 @@ function calcOptimalTime(tech,dateStr,city){
     const relativeNear=newIdx/Math.max(totalCities-1,1); // 0=far 1=near
     const lateOffset=Math.round(relativeNear*(dur+buf)*Math.ceil(totalCities*0.4));
     const reserveOffset=getSlotReservationOffset(dateStr,newIdx,totalCities);
-    return minsToTime(sh*60+lateOffset+reserveOffset);
+    let candidate=sh*60+lateOffset+reserveOffset;
+    // Nudge past any partial block overlap
+    if(partialBlocks.length){
+      for(const blk of partialBlocks){
+        if(candidate<blk.to&&candidate+dur>blk.from)candidate=blk.to+buf;
+      }
+    }
+    if(candidate+dur>eh*60)return null;
+    return minsToTime(candidate);
   }
 
   // Separate existing tasks into those that must come BEFORE (farther/same) and AFTER (closer).
@@ -4279,6 +4458,12 @@ function calcOptimalTime(tech,dateStr,city){
     const lastBefore=tasksBefore.reduce((a,b)=>timeToMins(a.time)>timeToMins(b.time)?a:b);
     earliest=timeToMins(lastBefore.time)+dur+buf;
   }
+  // Nudge earliest past any partial block overlap
+  if(partialBlocks.length){
+    let nudged=earliest;
+    for(const blk of partialBlocks){if(nudged<blk.to&&nudged+dur>blk.from)nudged=blk.to+buf;}
+    earliest=nudged;
+  }
   // Latest we can start = must finish before the first "after" task begins.
   let latest=eh*60-dur;
   if(tasksAfter.length){
@@ -4291,8 +4476,8 @@ function calcOptimalTime(tech,dateStr,city){
 
 // Route is logical if calcOptimalTime finds a valid geographic insertion point
 // AND inserting at that time doesn't create a far-near-far backtrack.
-function isRouteLogical(tech,dateStr,newCity){
-  const optTime=calcOptimalTime(tech,dateStr,newCity);
+function isRouteLogical(tech,dateStr,newCity,catId){
+  const optTime=calcOptimalTime(tech,dateStr,newCity,catId);
   if(!optTime)return false;
   const zid=getTechZoneId(tech,dateStr);
   const newIdx=getCityIndexInZone(newCity,zid);
@@ -4330,7 +4515,9 @@ function _candidatesZone(city,catId,dates,sc){
   const candidates=[];
   const zoneStrict=sc.zone_strict!==false; // default true
   const fillFirst=sc.fill_first!==false;
-  const routeLogic=sc.route_logic!==false;
+  // route_strategy takes precedence over legacy route_logic boolean
+  const routeStrategy=sc.route_strategy||(sc.route_logic!==false?'far_to_near':'flexible');
+  const routeLogic=routeStrategy==='far_to_near';
   for(const date of dates){
     for(const tech of technicians){
       if(zoneStrict&&!isCityInTechZone(tech,city,date.str))continue;
@@ -4348,8 +4535,8 @@ function _candidatesZone(city,catId,dates,sc){
         });
         if(hasUnderfull)continue;
       }
-      if(routeLogic&&!isRouteLogical(tech,date.str,city))continue;
-      const optTime=calcOptimalTime(tech,date.str,city);
+      if(routeLogic&&!isRouteLogical(tech,date.str,city,catId))continue;
+      const optTime=calcOptimalTime(tech,date.str,city,catId);
       if(!optTime)continue;
       const existingInZone=tasks.filter(t=>t.techId===tech.id&&t.date===date.str&&getCityZone(t.city)?.id===getTechZoneId(tech,date.str)&&t.status!=='cancelled').length;
       const fillScore=existingInZone*100+load;
@@ -4576,8 +4763,8 @@ function checkSpecificDate(dateStr){
     if(!techHasSkill(tech,catId))continue;
     if(!getCatLimitOk(tech,catId,dateStr))continue;
     if(getTechLoad(tech,dateStr)>=tech.max)continue;
-    if(!isRouteLogical(tech,dateStr,city))continue;
-    const optTime=calcOptimalTime(tech,dateStr,city);if(!optTime)continue;
+    if(!isRouteLogical(tech,dateStr,city,catId))continue;
+    const optTime=calcOptimalTime(tech,dateStr,city,catId);if(!optTime)continue;
     const d=new Date(dateStr);
     allCandidates.splice(currentCandidateIdx,0,{tech,date:{str:dateStr,d},load:getTechLoad(tech,dateStr),existingInZone:0,fillScore:0,dateScore:0,optTime});
     showCandidate(currentCandidateIdx);return;
@@ -4740,6 +4927,84 @@ function clearDispatch(){
   document.getElementById('dispatch-search-card').style.pointerEvents='';
   document.getElementById('dispatch-result').classList.add('hidden');
   selectedTimeSlot=null;allCandidates=[];currentCandidateIdx=0;
+}
+// ─── Recurring dispatch ────────────────────────────────────────────────────
+function toggleRecurringMode(){
+  const on=document.getElementById('recurring-toggle').checked;
+  document.getElementById('recurring-config').classList.toggle('hidden',!on);
+  document.getElementById('find-btn-normal').classList.toggle('hidden',on);
+  document.getElementById('find-btn-recurring').classList.toggle('hidden',!on);
+  if(on){
+    // Populate tech dropdown
+    const sel=document.getElementById('rec-tech');
+    sel.innerHTML='<option value="">אוטומטי — ללא העדפה</option>'+
+      technicians.map(t=>`<option value="${t.id}">${h(t.name)}</option>`).join('');
+    updateRecurringPreview();
+    document.querySelectorAll('input[name="rec-dow"]').forEach(r=>r.addEventListener('change',updateRecurringPreview));
+    document.getElementById('rec-interval').addEventListener('change',updateRecurringPreview);
+    document.getElementById('rec-lookahead').addEventListener('input',updateRecurringPreview);
+  }
+}
+function updateRecurringPreview(){
+  const dow=parseInt(document.querySelector('input[name="rec-dow"]:checked')?.value||0);
+  const interval=parseInt(document.getElementById('rec-interval')?.value||1);
+  const lookahead=parseInt(document.getElementById('rec-lookahead')?.value||6);
+  const time=document.getElementById('rec-time')?.value||'09:00';
+  const DAYS=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+  const today=new Date(new Date().toDateString());
+  const dates=[];let cursor=_nextOccurrence(today,dow);
+  const end=new Date(today);end.setDate(end.getDate()+lookahead*7);
+  while(cursor<=end&&dates.length<12){dates.push(new Date(cursor));cursor.setDate(cursor.getDate()+interval*7);}
+  const preview=document.getElementById('rec-preview');
+  if(preview){
+    preview.innerHTML=`<div style="font-weight:700;margin-bottom:4px;">יוצרים ${dates.length} קריאות — כל ${interval===1?'שבוע':interval===2?'שבועיים':'4 שבועות'} ב${DAYS[dow]}:</div>`+
+      dates.slice(0,4).map(d=>`<div>${_dateStr(d)} · ${time}</div>`).join('')+
+      (dates.length>4?`<div style="color:var(--ink-3);">...ועוד ${dates.length-4}</div>`:'');
+  }
+}
+async function createRecurringTask(){
+  if(!currentTenantId){showToast('שגיאה: לא מחובר לחברה','error');return;}
+  const city=document.getElementById('s-city').value;
+  const street=document.getElementById('s-street').value.trim();
+  if(!city){showToast('נא לבחור עיר','error');return;}
+  if(!street){showToast('נא למלא רחוב','error');return;}
+  if(!selectedCat){showToast('נא לבחור קטגוריה','error');return;}
+  const catId=getCatId();const catName=getCatName();
+  const dow=parseInt(document.querySelector('input[name="rec-dow"]:checked')?.value||0);
+  const time=document.getElementById('rec-time')?.value||'09:00';
+  const interval=parseInt(document.getElementById('rec-interval')?.value||1);
+  const lookahead=parseInt(document.getElementById('rec-lookahead')?.value||6);
+  const prefTechId=document.getElementById('rec-tech')?.value||null;
+  const btn=document.getElementById('find-btn-recurring');
+  btn.disabled=true;btn.textContent='יוצר...';
+  const tmplRow={
+    tenant_id:currentTenantId,
+    client_name:'ממתין לפרטים', client_phone:null,
+    city, street:street||null,
+    category_id:catId||null, category_name:catName||null,
+    notes:null,
+    day_of_week:dow, scheduled_time:time,
+    interval_weeks:interval, preferred_technician_id:prefTechId||null,
+    lookahead_weeks:lookahead, active:true, last_generated_date:null,
+  };
+  const tmplData=await dbInsert('recurring_templates',tmplRow);
+  if(!tmplData){btn.disabled=false;btn.textContent='🔁 צור קריאות חוזרות';showToast('שגיאה ביצירת תבנית','error');return;}
+  const tmpl={
+    id:tmplData.id, clientName:tmplRow.client_name, clientPhone:'',
+    city, street:street||'', categoryId:catId||null, categoryName:catName||'',
+    notes:'', dayOfWeek:dow, scheduledTime:time,
+    intervalWeeks:interval, preferredTechId:prefTechId||null,
+    lookaheadWeeks:lookahead, active:true, lastGeneratedDate:null, _dbId:tmplData.id
+  };
+  recurringTemplates.push(tmpl);
+  await _generateRecurringInstances();
+  const count=tasks.filter(t=>t.recurringTemplateId===tmpl.id).length;
+  showToast(`נוצרו ${count} קריאות חוזרות ✓`);
+  btn.disabled=false;btn.textContent='🔁 צור קריאות חוזרות';
+  document.getElementById('recurring-toggle').checked=false;
+  toggleRecurringMode();
+  renderTasks();renderHomeTechCards();
+  setTimeout(()=>goPage('tasks'),1200);
 }
 function addPrefWindow(){
   prefWindows.push({from:'09:00',to:'13:00'});
@@ -5075,19 +5340,82 @@ async function importCsvRows(){
 // ═══ TASKS ═══
 function filterTasks(f){
   currentFilter=f;
-  const map={all:'badge-blue',pending:'badge-amber',assigned:'badge-blue',completed:'badge-gray',cancelled:'badge-red'};
-  ['all','pending','assigned','completed','cancelled'].forEach(x=>{
+  const map={all:'badge-blue',pending:'badge-amber',assigned:'badge-blue',completed:'badge-gray',cancelled:'badge-red',recurring_unassigned:'badge-amber'};
+  ['all','pending','assigned','completed','cancelled','recurring_unassigned'].forEach(x=>{
     const el=document.getElementById('tf-'+x);if(!el)return;
     el.className='badge '+(x===f?map[x]:'badge-gray');
     el.style.cssText='cursor:pointer;padding:5px 12px;';
   });
   renderTasks();
 }
+function showRecurringTemplates(){
+  currentFilter='recurring_templates';
+  const map={all:'badge-blue',pending:'badge-amber',assigned:'badge-blue',completed:'badge-gray',cancelled:'badge-red',recurring_unassigned:'badge-amber',recurring_templates:'badge-blue'};
+  ['all','pending','assigned','completed','cancelled','recurring_unassigned','recurring_templates'].forEach(x=>{
+    const el=document.getElementById('tf-'+x);if(!el)return;
+    el.className='badge '+(x==='recurring_templates'?'badge-blue':'badge-gray');
+  });
+  document.getElementById('tasks-list')?.closest('.card')?.classList.add('hidden');
+  document.getElementById('recurring-templates-section').classList.remove('hidden');
+  renderRecurringTemplates();
+}
+function renderRecurringTemplates(){
+  const el=document.getElementById('recurring-templates-list');if(!el)return;
+  const DAYS=['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
+  const FREQ={1:'שבועי',2:'דו-שבועי',4:'כל 4 שבועות'};
+  if(!recurringTemplates.length){el.innerHTML='<div class="empty"><div class="empty-icon">🔁</div><div>אין תבניות חוזרות. צור תבנית חדשה מדף השיבוץ.</div></div>';return;}
+  el.innerHTML=recurringTemplates.map(tmpl=>{
+    const tech=tmpl.preferredTechId?technicians.find(t=>t.id===tmpl.preferredTechId):null;
+    const pendingCount=tasks.filter(t=>t.recurringTemplateId===tmpl.id&&!t.techId&&t.status==='pending').length;
+    return`<div class="card" style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+        <div style="flex:1;">
+          <div style="font-weight:800;font-size:1rem;">🔁 ${h(tmpl.clientName)} — ${h(tmpl.city)}</div>
+          <div style="font-size:0.8125rem;color:var(--ink-3);margin-top:3px;">${DAYS[tmpl.dayOfWeek]} · ${tmpl.scheduledTime} · ${FREQ[tmpl.intervalWeeks]||'שבועי'} · ${tmpl.lookaheadWeeks} שבועות קדימה</div>
+          <div style="font-size:0.8125rem;color:var(--ink-3);">טכנאי מועדף: ${tech?h(tech.name):'אוטומטי'}</div>
+          ${pendingCount?`<div style="font-size:0.8125rem;color:var(--amber);font-weight:700;margin-top:4px;">⚠️ ${pendingCount} קריאות ממתינות לשיבוץ</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+          <span class="badge ${tmpl.active?'badge-green':'badge-gray'}">${tmpl.active?'פעיל':'מושהה'}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+        <button class="btn btn-outline btn-sm" onclick="pauseRecurringTemplate('${tmpl.id}')">${tmpl.active?'השהה':'הפעל'}</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="deleteRecurringTemplate('${tmpl.id}')">מחק</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function pauseRecurringTemplate(id){
+  const tmpl=recurringTemplates.find(t=>t.id===id);if(!tmpl)return;
+  tmpl.active=!tmpl.active;
+  await dbUpsert('recurring_templates',{id:tmpl._dbId,active:tmpl.active});
+  renderRecurringTemplates();
+  showToast(tmpl.active?'תבנית הופעלה ✓':'תבנית הושהתה ✓');
+}
+async function deleteRecurringTemplate(id){
+  if(!confirm('למחוק את התבנית? הקריאות הממתינות ישארו כקריאות רגילות.'))return;
+  const tmpl=recurringTemplates.find(t=>t.id===id);if(!tmpl)return;
+  await sb.from('recurring_templates').delete().eq('id',tmpl._dbId);
+  recurringTemplates=recurringTemplates.filter(t=>t.id!==id);
+  tasks.forEach(t=>{if(t.recurringTemplateId===id)t.recurringTemplateId=null;});
+  renderRecurringTemplates();
+  showToast('תבנית נמחקה ✓');
+}
 function renderTasks(){
+  // If templates tab is active, show that section instead
+  if(currentFilter==='recurring_templates'){
+    const taskCard=document.getElementById('tasks-list')?.closest('.card');if(taskCard)taskCard.classList.add('hidden');
+    document.getElementById('recurring-templates-section').classList.remove('hidden');
+    renderRecurringTemplates();return;
+  }
+  document.getElementById('tasks-list')?.closest('.card')?.classList.remove('hidden');
+  document.getElementById('recurring-templates-section').classList.add('hidden');
   const q=(document.getElementById('task-search').value||'').toLowerCase();
   const fMap={all:null,pending:'pending',assigned:'assigned',completed:'completed',cancelled:'cancelled'};
   const fs=fMap[currentFilter];
   let filtered=tasks.filter(t=>{
+    if(currentFilter==='recurring_unassigned')return t.recurringTemplateId&&!t.techId&&t.status==='pending';
     if(fs&&t.status!==fs)return false;
     if(!fs&&t.status==='cancelled')return false; // hide cancelled in "all"
     if(q)return(t.client+t.city+t.cat).toLowerCase().includes(q);
@@ -5105,7 +5433,7 @@ function renderTasks(){
     const canCancel=['assigned','en_route','arrived'].includes(t.status);
     return`<div class="task-row">
       <div class="task-main">
-        <div class="task-client">${h(t.client)} ${t.assignId?`<span class="assign-id-tag">${h(t.assignId)}</span>`:''}</div>
+        <div class="task-client">${h(t.client)} ${t.assignId?`<span class="assign-id-tag">${h(t.assignId)}</span>`:''}${t.recurringTemplateId?(t.techId?'<span style="font-size:0.7rem;background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;border-radius:4px;padding:1px 5px;margin-right:4px;">🔄 חוזרת</span>':'<span style="font-size:0.7rem;background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;border-radius:4px;padding:1px 5px;margin-right:4px;">⚠️ ממתין לשיבוץ</span>'):''}</div>
         <div class="task-detail">${h(t.cat)} • ${t.street?h(t.street)+', ':''}${h(t.city)}${t.date?' • '+new Date(t.date+'T12:00:00').toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'}):''}${t.time?' '+t.time:''}${tech?' • '+h(tech.name):''}</div>
         ${t.notes?`<div style="font-size:0.75rem;color:var(--ink-4);margin-top:2px;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px;">💬 ${h(t.notes)}</div>`:''}
       </div>
@@ -5281,6 +5609,14 @@ function buildTechModalUI(){
   document.getElementById('ti-cat-limits').innerHTML=categories.map(c=>
     `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:0.875rem;flex:1;">${h(c.name)}</span><input class="fc" id="catlim-${c.id}" type="number" min="0" placeholder="ללא הגבלה" style="width:130px;"></div>`
   ).join('');
+  const durOverridesEnabled=(tenantConfig.features||{}).tech_duration_overrides;
+  const durWrap=document.getElementById('ti-dur-override-wrap');
+  if(durWrap)durWrap.style.display=durOverridesEnabled?'':'none';
+  if(durOverridesEnabled){
+    document.getElementById('ti-dur-overrides').innerHTML=categories.map(c=>
+      `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:0.875rem;flex:1;">${h(c.name)} <span style="color:var(--ink-3);font-size:0.75rem;">(ברירה: ${c.time} דק')</span></span><input class="fc" id="durov-${c.id}" type="number" min="5" max="480" placeholder="${c.time}" style="width:100px;"></div>`
+    ).join('');
+  }
   const rotDays=['א׳','ב׳','ג׳','ד׳','ה׳','ו׳'];
   document.getElementById('ti-rotation').innerHTML=rotDays.map((day,i)=>
     `<div class="rotation-day"><div class="day-name">${day}</div><select id="rot-${i}">${[{id:'',name:'—'},...zones].map(z=>`<option value="${z.id}">${h(z.name||'—')}</option>`).join('')}</select></div>`
@@ -5346,6 +5682,7 @@ function editTech(id){
   buildWeekSchedGrid(existingWs);
   (tech.skills||[]).forEach(sid=>{const inp=document.getElementById('skill-'+sid),lbl=document.getElementById('skill-lbl-'+sid);if(inp){inp.checked=true;lbl?.classList.add('checked');}});
   Object.entries(tech.catLimits||{}).forEach(([catId,val])=>{const inp=document.getElementById('catlim-'+catId);if(inp)inp.value=val;});
+  Object.entries(tech.durationOverrides||{}).forEach(([catId,val])=>{const inp=document.getElementById('durov-'+catId);if(inp)inp.value=val;});
   Object.entries(tech.rotation||{}).forEach(([day,zid])=>{const sel=document.getElementById('rot-'+day);if(sel)sel.value=zid||'';});
   document.getElementById('ti-save-btn').textContent='שמור';
   document.getElementById('mo-tech').classList.remove('hidden');
@@ -5367,10 +5704,14 @@ function saveTech(){
   if(!valid)return;
   const catLimits={};
   categories.forEach(c=>{const v=parseInt(document.getElementById('catlim-'+c.id)?.value);if(v>0)catLimits[c.id]=v;});
+  const durationOverrides={};
+  if((tenantConfig.features||{}).tech_duration_overrides){
+    categories.forEach(c=>{const v=parseInt(document.getElementById('durov-'+c.id)?.value);if(v>0)durationOverrides[c.id]=v;});
+  }
   const weekly_schedule=readWeekSched();
   const firstWorkDay=Object.values(weekly_schedule).find(d=>d.work!==false)||{start:'07:00',end:'17:00'};
   const existingTech=editingTechId?technicians.find(t=>t.id===editingTechId):null;
-  const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),return_city:document.getElementById('ti-return').value.trim(),address:existingTech?.address||'',min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:firstWorkDay.start,end:firstWorkDay.end,weekly_schedule,blocked:document.getElementById('ti-blocked').value.trim(),skills,catLimits,rotation};
+  const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),return_city:document.getElementById('ti-return').value.trim(),address:existingTech?.address||'',min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:firstWorkDay.start,end:firstWorkDay.end,weekly_schedule,blocked:document.getElementById('ti-blocked').value.trim(),skills,catLimits,durationOverrides,rotation};
   let techForSave;
   if(editingTechId){const tech=technicians.find(t=>t.id===editingTechId);if(tech){Object.assign(tech,data);techForSave=tech;}}
   else{const tech={id:nextTechId++,...data,color:COLORS[technicians.length%COLORS.length]};technicians.push(tech);techForSave=tech;}

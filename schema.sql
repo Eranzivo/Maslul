@@ -284,8 +284,9 @@ ALTER TABLE technicians ADD COLUMN IF NOT EXISTS user_id        UUID REFERENCES 
 ALTER TABLE technicians ADD COLUMN IF NOT EXISTS cat_limits     JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE technicians ADD COLUMN IF NOT EXISTS rotation       JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE technicians ADD COLUMN IF NOT EXISTS skills          TEXT[] NOT NULL DEFAULT '{}';
-ALTER TABLE technicians ADD COLUMN IF NOT EXISTS weekly_schedule JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE technicians ADD COLUMN IF NOT EXISTS blocked_cities TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE technicians ADD COLUMN IF NOT EXISTS weekly_schedule      JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE technicians ADD COLUMN IF NOT EXISTS blocked_cities       TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE technicians ADD COLUMN IF NOT EXISTS duration_overrides   JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE tasks       ADD COLUMN IF NOT EXISTS assign_id    TEXT;
 ALTER TABLE tasks       ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ;
 ALTER TABLE tasks       ADD COLUMN IF NOT EXISTS client_phone TEXT DEFAULT '';
