@@ -824,6 +824,15 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       </div>
     </div>
   </div>
+  <!-- PENDING QUEUE — 15 closest unassigned calls -->
+  <div id="pending-queue" style="margin-top:1rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div style="font-size:0.8rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;">📋 קריאות ממתינות לשיבוץ</div>
+      <button class="btn btn-outline btn-sm" onclick="openAddTaskModal()">+ הוסף קריאה</button>
+    </div>
+    <div id="pending-queue-list"></div>
+  </div>
+
   <div id="dispatch-success" class="hidden">
     <div class="success-card">
       <div class="success-icon">✓</div>
@@ -4861,6 +4870,16 @@ function showCandidate(idx){
       </div>
     </div>`;
   selectedTimeSlot=null;
+  // Pre-fill client details from queued task
+  if(window._queueTask){
+    const qt=window._queueTask;
+    const nameEl=document.getElementById('c-name');
+    const phoneEl=document.getElementById('c-phone');
+    const notesEl=document.getElementById('c-notes');
+    if(nameEl&&qt.client)nameEl.value=qt.client;
+    if(phoneEl&&qt.phone)phoneEl.value=qt.phone;
+    if(notesEl&&qt.notes)notesEl.value=qt.notes;
+  }
 }
 function selectTimeSlot(si){
   if(window._currentSlots&&window._currentSlots[si]?.full)return;
@@ -4895,13 +4914,21 @@ async function confirmAssign(idx,assignId){
     const jobMins=((_assignCat?.time)||settings.regularTime||30)+10;
     taskTime=minsToTime(timeToMins(slot.start)+inSlot.length*jobMins);
   }
-  const newTask={id:nextTaskId++,client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows]};
-  tasks.push(newTask);
-  save();
-  // Await save — no fire-and-forget (new tasks not covered by WAL)
+  // If dispatching a task from the pending queue — update in place, don't create new
+  const qt=window._queueTask;
+  let newTask,saved;
   const btn=document.getElementById('confirm-assign-btn');
   if(btn){btn.disabled=true;btn.textContent='שומר…';}
-  const saved=await saveTaskToSupabase(newTask);
+  if(qt){
+    Object.assign(qt,{client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows]});
+    newTask=qt;save();
+    saved=await saveTaskToSupabase(qt);
+    window._queueTask=null;
+  } else {
+    newTask={id:nextTaskId++,client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows]};
+    tasks.push(newTask);save();
+    saved=await saveTaskToSupabase(newTask);
+  }
   if(btn){btn.disabled=false;btn.textContent='אשר שיבוץ ✓';}
   if(!saved){showToast('קריאה נוספה מקומית — בדוק חיבור לרשת לאישור סופי','error');}
   clearDispatchDraft();
@@ -4921,12 +4948,57 @@ async function confirmAssign(idx,assignId){
   window._lastDispatched={client,phone,city,street,catId,catName,notes,date:c.date.str,techId:c.tech.id};
   document.getElementById('recur-section').classList.remove('hidden');
   document.getElementById('dispatch-success').classList.remove('hidden');
+  renderPendingQueue(); // refresh queue after assignment
 }
 function clearDispatch(){
   document.getElementById('dispatch-search-card').style.opacity='1';
   document.getElementById('dispatch-search-card').style.pointerEvents='';
   document.getElementById('dispatch-result').classList.add('hidden');
   selectedTimeSlot=null;allCandidates=[];currentCandidateIdx=0;
+}
+// ─── Pending queue panel ──────────────────────────────────────────────────
+function renderPendingQueue(){
+  const el=document.getElementById('pending-queue-list');if(!el)return;
+  const today=todayStr();
+  const pending=tasks
+    .filter(t=>t.status==='pending'&&!t.techId)
+    .sort((a,b)=>{
+      // Tasks with a date: sort ascending from today; no-date tasks go to the bottom
+      if(a.date&&b.date)return a.date.localeCompare(b.date);
+      if(a.date)return -1;if(b.date)return 1;return 0;
+    })
+    .slice(0,15);
+  if(!pending.length){
+    el.innerHTML='<div style="font-size:0.8125rem;color:var(--ink-4);padding:12px 0;text-align:center;">אין קריאות ממתינות לשיבוץ</div>';
+    return;
+  }
+  el.innerHTML=pending.map(t=>{
+    const isOverdue=t.date&&t.date<today;
+    const dateLabel=t.date?new Date(t.date+'T12:00:00').toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'}):'ללא תאריך';
+    const recurBadge=t.recurringTemplateId?'<span style="font-size:0.65rem;background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;border-radius:3px;padding:1px 4px;margin-right:3px;">🔄</span>':'';
+    return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line-2);">
+      <span style="font-size:0.75rem;font-weight:700;background:${isOverdue?'var(--red-l)':'var(--bg)'};color:${isOverdue?'var(--red)':'var(--ink-3)'};border:1px solid ${isOverdue?'#FECACA':'var(--line)'};border-radius:6px;padding:2px 7px;white-space:nowrap;">${dateLabel}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:0.875rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${recurBadge}${h(t.client||'—')}</div>
+        <div style="font-size:0.75rem;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${h(t.cat||'—')} · ${h(t.city||'—')}</div>
+      </div>
+      <button class="btn btn-blue btn-sm" style="flex-shrink:0;" onclick="queueAssign('${t.id}')">שבץ →</button>
+    </div>`;
+  }).join('');
+}
+function queueAssign(id){
+  const t=tasks.find(x=>String(x.id)===String(id));if(!t)return;
+  // Pre-fill dispatch form with this task's details
+  document.getElementById('s-city').value=t.city||'';
+  document.getElementById('s-street').value=t.street||'';
+  // Pre-select category chip
+  if(t.catId){selectedCat='cat_'+t.catId;renderCatChips();renderPkgSection();}
+  // Scroll form into view and run the engine
+  document.getElementById('dispatch-search-card').scrollIntoView({behavior:'smooth',block:'start'});
+  // Pre-fill client details that will be used on confirm
+  window._queueTask=t; // remember so confirmAssign can update instead of creating new
+  // Run engine immediately if city + cat are set
+  if(t.city&&t.catId)setTimeout(()=>findBestSlot(),100);
 }
 // ─── Recurring dispatch ────────────────────────────────────────────────────
 function toggleRecurringMode(){
@@ -5029,7 +5101,9 @@ function resetDispatch(){
   prefWindows=[];renderPrefWindows();
   document.getElementById('pkg-section').classList.add('hidden');
   document.getElementById('dispatch-success').classList.add('hidden');
+  window._queueTask=null;
   restoreDispatchDraft();
+  renderPendingQueue();
 }
 const _DDKEY='dispatch_draft';
 const _DDFIELDS=['s-city','s-street','c-name','c-phone','c-notes'];
