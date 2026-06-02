@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m 'fix: no-op auth lock to prevent cross-tab getSession hang *)",
+      "Bash(git commit -m 'fix: logout shows login immediately, don'\\\\''t await signOut network call *)"
+    ]
+  }
+}
