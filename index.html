@@ -114,6 +114,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .alert-green{background:var(--green-l);color:var(--green);}
 .alert-red{background:var(--red-l);color:var(--red);}
 /* DISPATCH */
+.dispatch-cols{display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start;}
+.dispatch-col-queue{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:1.125rem 1.25rem;box-shadow:var(--sh);position:sticky;top:1rem;}
+.dispatch-col-queue .pq-title{font-size:0.75rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;}
 .dispatch-search{background:var(--white);border:1.5px solid var(--line);border-radius:var(--r-xl);padding:1.75rem 2rem;box-shadow:var(--sh-md);margin-bottom:1.5rem;}
 .dispatch-search h2{font-size:1.125rem;font-weight:800;margin-bottom:1.25rem;}
 .cat-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;}
@@ -327,6 +330,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   .mob-sheet-sep{height:1px;background:var(--line);margin:4px 0;}
   @keyframes slideup{from{transform:translateY(100%);}to{transform:translateY(0);}}
   .mob-sheet.open{animation:slideup 0.2s ease;}
+  .dispatch-cols{grid-template-columns:1fr;}
+  .dispatch-col-queue{position:static;}
 }
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:white;padding:10px 22px;border-radius:var(--r-lg);font-size:0.875rem;font-weight:600;z-index:9999;opacity:0;transition:all 0.25s;pointer-events:none;white-space:nowrap;}
 @media(max-width:900px){.toast{bottom:72px;}}
@@ -747,6 +752,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div><div class="ph-title" data-label="dispatch">שיבוץ קריאה</div><div class="ph-sub" id="dispatch-date"></div></div>
     <button class="btn btn-outline btn-sm" onclick="goPage('home')">← דף הבית</button>
   </div>
+  <div class="dispatch-cols">
+  <div class="dispatch-col-main">
   <div id="dispatch-search-card" class="dispatch-search">
     <h2>קריאה חדשה</h2>
     <div class="fg">
@@ -834,15 +841,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       </div>
     </div>
   </div>
-  <!-- PENDING QUEUE — 15 closest unassigned calls -->
-  <div id="pending-queue" style="margin-top:1rem;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <div style="font-size:0.8rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;">📋 קריאות ממתינות לשיבוץ</div>
-      <button class="btn btn-outline btn-sm" onclick="openAddTaskModal()">+ הוסף קריאה</button>
-    </div>
-    <div id="pending-queue-list"></div>
-  </div>
-
   <div id="dispatch-success" class="hidden">
     <div class="success-card">
       <div class="success-icon">✓</div>
@@ -880,6 +878,14 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <button class="btn btn-outline btn-full" onclick="createRecurring()">📅 צור סדרה</button>
     </div>
   </div>
+  </div><!-- /dispatch-col-main -->
+  <div class="dispatch-col-queue">
+    <div class="pq-title">קריאות ממתינות</div>
+    <div id="pending-queue">
+      <div id="pending-queue-list"></div>
+    </div>
+  </div><!-- /dispatch-col-queue -->
+  </div><!-- /dispatch-cols -->
 </div>
 
 <!-- TASKS -->
