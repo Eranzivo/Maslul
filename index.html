@@ -2696,6 +2696,17 @@ async function _checkConnection() {
 function startConnectionMonitor() {
   if (_connInterval) return;
   _connInterval = setInterval(_checkConnection, 60000);
+  // One-time optimizer health check — warns admin if Google Maps key is missing
+  if (CONFIG.OPTIMIZER_URL && (currentUserRole === 'admin' || currentUserSuperAdmin)) {
+    fetch(`${CONFIG.OPTIMIZER_URL}/health`).then(r => r.json()).then(data => {
+      if (data.gmaps && data.gmaps !== 'configured') {
+        console.warn('[optimizer] Google Maps not configured — using haversine fallback');
+        showToast('⚠️ אופטימייזר פועל ללא Google Maps — מסלולים הם הערכה בלבד', 'error');
+      }
+    }).catch(() => {
+      console.warn('[optimizer] health check failed — optimizer may be down');
+    });
+  }
 }
 function stopConnectionMonitor() {
   clearInterval(_connInterval);

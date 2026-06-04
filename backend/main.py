@@ -54,7 +54,13 @@ class OptimizeRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "maslul-optimizer", "version": "1.0.0"}
+    gmaps_key = os.getenv("GOOGLE_MAPS_API_KEY")
+    return {
+        "status": "ok",
+        "service": "maslul-optimizer",
+        "version": "1.0.0",
+        "gmaps": "configured" if gmaps_key else "missing — using haversine fallback",
+    }
 
 
 @app.post("/optimize")
