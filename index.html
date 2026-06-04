@@ -3099,7 +3099,7 @@ function setDateLabel(){
   const d=new Date(),label='יום '+DAYS_HE[d.getDay()]+' — '+d.toLocaleDateString('he-IL');
   document.getElementById('dispatch-date').textContent=label;
   const activeTechCount=technicians.filter(t=>getTechLoad(t,todayStr())>0).length;
-  document.getElementById('home-date').textContent=activeTechCount+' טכנאים פעילים · '+d.toLocaleDateString('he-IL');
+  document.getElementById('home-date').textContent=`${activeTechCount} ${L('workers')} פעילים · ${label}`;
 }
 function populateTimeSels(){
   const times=[];for(let h=5;h<=22;h++){['00','30'].forEach(m=>times.push(pad(h)+':'+m));}
