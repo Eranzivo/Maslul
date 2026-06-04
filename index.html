@@ -3202,6 +3202,7 @@ function renderSettings(){
 function goPage(page){
   if(page==='wizard'&&!currentUserSuperAdmin){goPage('home');return;}
   if(page==='users'&&currentUserRole!=='admin'&&!currentUserSuperAdmin){goPage('home');return;}
+  if(page!=='home')kpiFilter=null;
   if(!CONFIG.DEMO_MODE)sessionStorage.setItem('ml_page',page);
   ['home','dispatch','tasks','planner','reports','clients','admin','techview','technicians','zones','categories','settings','wizard','users'].forEach(p=>{
     document.getElementById('page-'+p).classList.toggle('hidden',p!==page);
@@ -4335,7 +4336,10 @@ function renderHomeTechCards(){
     const optBtn=CONFIG.OPTIMIZER_URL&&cnt>=2
       ?`<button class="btn btn-outline btn-sm" style="font-size:0.72rem;" onclick="event.stopPropagation();runOptimize('${tech.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> מסלול</button>`:'';
     let dimmed='';
-    if(kpiFilter==='active'){
+    if(kpiFilter==='today'){
+      const hasToday=tasks.some(t=>t.techId===tech.id&&t.date===today);
+      if(!hasToday)dimmed=' dimmed';
+    } else if(kpiFilter==='active'){
       const hasActive=tasks.some(t=>t.techId===tech.id&&t.date===today&&['en_route','arrived'].includes(t.status));
       if(!hasActive)dimmed=' dimmed';
     } else if(kpiFilter==='done'){
