@@ -1003,6 +1003,20 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       </div>
     </div>
     <div class="set-sec">
+      <div class="set-title">☕ הפסקת צהריים</div>
+      <div style="font-size:0.8125rem;color:var(--ink-3);margin-bottom:12px;">ברירת מחדל לכל הטכנאים — ניתן לדרוס לכל טכנאי בנפרד בהגדרות הטכנאי.</div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">הפסקה יומית קבועה</div><div class="toggle-sub">חוסמת חלון זמן בשיבוץ — לא ישובצו קריאות בשעות אלו</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="set-break-enabled" onchange="document.getElementById('set-break-fields').classList.toggle('hidden',!this.checked)"><span class="toggle-slider"></span></label>
+      </div>
+      <div id="set-break-fields" class="hidden" style="margin-top:10px;">
+        <div class="fg-2">
+          <div class="fg"><label class="fl">התחלת הפסקה</label><select class="fc" id="set-break-start"></select></div>
+          <div class="fg"><label class="fl">סיום הפסקה</label><select class="fc" id="set-break-end"></select></div>
+        </div>
+      </div>
+    </div>
+    <div class="set-sec">
       <div class="set-title">גיבוי הגדרות</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn btn-outline" onclick="exportSettings()">📤 ייצא הגדרות</button>
@@ -1342,6 +1356,19 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <label class="fl"><span class="req">*</span> רוטציה אזורים (ראשון–שישי)</label>
       <div class="field-error hidden" id="e-ti-rotation">יש להגדיר לפחות יום אחד</div>
       <div class="rotation-grid" id="ti-rotation"></div>
+    </div>
+    <div class="fg">
+      <label class="fl">☕ הפסקת צהריים אישית</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+        <label class="wiz-type-opt"><input type="radio" name="ti-break-mode" value="default" checked><span>כברירת החברה</span></label>
+        <label class="wiz-type-opt"><input type="radio" name="ti-break-mode" value="custom" onchange="document.getElementById('ti-break-custom').classList.remove('hidden')"><span>מותאם אישית</span></label>
+        <label class="wiz-type-opt"><input type="radio" name="ti-break-mode" value="none" onchange="document.getElementById('ti-break-custom').classList.add('hidden')"><span>ללא הפסקה</span></label>
+      </div>
+      <div id="ti-break-custom" class="hidden" style="display:flex;gap:8px;margin-top:8px;">
+        <select class="fc" id="ti-break-start" style="flex:1;"></select>
+        <span style="align-self:center;color:var(--ink-3);">עד</span>
+        <select class="fc" id="ti-break-end" style="flex:1;"></select>
+      </div>
     </div>
     <div class="fg"><label class="fl">ערים חסומות (מופרד בפסיק)</label><input class="fc" id="ti-blocked"></div>
     <div class="mo-actions">
@@ -2905,7 +2932,7 @@ async function deleteDayoffFromSupabase(dbId) {
 async function saveSettingsToSupabase() {
   if (!currentTenantId) return false;
   const { startTime, endTime, window, maxDaily, lookahead, monthlyVolume, regularTime, packageTime } = settings;
-  const updatedConfig = { ...tenantConfig, defaults: { startTime, endTime, window, maxDaily, lookahead, monthlyVolume, regularTime, packageTime } };
+  const updatedConfig = { ...tenantConfig, defaults: { ...tenantConfig.defaults, startTime, endTime, window, maxDaily, lookahead, monthlyVolume, regularTime, packageTime } };
   _trackSave(+1);
   const { error } = await sb.from('tenants').update({ name: settings.company, config: updatedConfig }).eq('id', currentTenantId);
   _trackSave(-1);
@@ -3064,7 +3091,7 @@ function setDateLabel(){
 }
 function populateTimeSels(){
   const times=[];for(let h=5;h<=22;h++){['00','30'].forEach(m=>times.push(pad(h)+':'+m));}
-  ['set-start','set-end','do-from','do-to'].forEach(id=>{
+  ['set-start','set-end','do-from','do-to','set-break-start','set-break-end'].forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
     times.forEach(t=>{el.appendChild(new Option(t,t));});
   });
@@ -3131,6 +3158,14 @@ function renderSettings(){
   document.getElementById('set-lookahead').value=settings.lookahead;
   document.getElementById('set-regular-time').value=settings.regularTime||30;
   document.getElementById('set-package-time').value=settings.packageTime||45;
+  const brk=tenantConfig.defaults?.break||{};
+  const brkEnabled=!!brk.enabled;
+  const brkStart=brk.start||'12:00';
+  const brkEnd=brk.end||'13:00';
+  const brkChk=document.getElementById('set-break-enabled');
+  if(brkChk){brkChk.checked=brkEnabled;document.getElementById('set-break-fields').classList.toggle('hidden',!brkEnabled);}
+  const brkS=document.getElementById('set-break-start');const brkE=document.getElementById('set-break-end');
+  if(brkS)brkS.value=brkStart;if(brkE)brkE.value=brkEnd;
   const f=tenantConfig.features||{};
   const sec=document.getElementById('sec-features');
   if(sec){
@@ -4387,10 +4422,21 @@ function isTechAvailable(tech,dateStr){
   return getTechDaySchedule(tech,dateStr).work!==false;
 }
 // Returns partial blocks for a tech on a given date as [{from:mins, to:mins}]
+// Includes: manual day_off partial entries + recurring break (tenant default or tech override)
 function getTechPartialBlocks(tech,dateStr){
-  return dayoffs
+  const blocks=dayoffs
     .filter(d=>d.techId===tech.id&&d.date===dateStr&&d.type==='partial'&&d.from&&d.to)
     .map(d=>({from:timeToMins(d.from),to:timeToMins(d.to)}));
+  // Resolve break config: tech override → tenant default
+  const techBrk=(tech.weekly_schedule||{})._break;
+  let brk=null;
+  if(techBrk){
+    if(techBrk.mode==='none')return blocks; // explicitly disabled for this tech
+    if(techBrk.mode==='custom')brk={enabled:true,start:techBrk.start,end:techBrk.end};
+  }
+  if(!brk)brk=tenantConfig.defaults?.break;
+  if(brk?.enabled&&brk.start&&brk.end)blocks.push({from:timeToMins(brk.start),to:timeToMins(brk.end)});
+  return blocks;
 }
 // Returns true if a slot [startMins, startMins+dur] overlaps any partial block
 function slotOverlapsBlock(startMins,dur,blocks){
@@ -5703,6 +5749,12 @@ function buildTechModalUI(){
   document.getElementById('ti-cat-limits').innerHTML=categories.map(c=>
     `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:0.875rem;flex:1;">${h(c.name)}</span><input class="fc" id="catlim-${c.id}" type="number" min="0" placeholder="ללא הגבלה" style="width:130px;"></div>`
   ).join('');
+  // Populate break time selects
+  const brkTimes=[];for(let h=5;h<=22;h++){['00','30'].forEach(m=>brkTimes.push(pad(h)+':'+m));}
+  ['ti-break-start','ti-break-end'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    el.innerHTML=brkTimes.map(t=>`<option value="${t}">${t}</option>`).join('');
+  });
   const durOverridesEnabled=(tenantConfig.features||{}).tech_duration_overrides;
   const durWrap=document.getElementById('ti-dur-override-wrap');
   if(durWrap)durWrap.style.display=durOverridesEnabled?'':'none';
@@ -5777,6 +5829,15 @@ function editTech(id){
   (tech.skills||[]).forEach(sid=>{const inp=document.getElementById('skill-'+sid),lbl=document.getElementById('skill-lbl-'+sid);if(inp){inp.checked=true;lbl?.classList.add('checked');}});
   Object.entries(tech.catLimits||{}).forEach(([catId,val])=>{const inp=document.getElementById('catlim-'+catId);if(inp)inp.value=val;});
   Object.entries(tech.durationOverrides||{}).forEach(([catId,val])=>{const inp=document.getElementById('durov-'+catId);if(inp)inp.value=val;});
+  const techBrk=(tech.weekly_schedule||{})._break||{};
+  const brkMode=techBrk.mode||'default';
+  const brkRadio=document.querySelector(`input[name="ti-break-mode"][value="${brkMode}"]`);
+  if(brkRadio)brkRadio.checked=true;
+  document.getElementById('ti-break-custom').classList.toggle('hidden',brkMode!=='custom');
+  if(brkMode==='custom'){
+    const s=document.getElementById('ti-break-start');const e=document.getElementById('ti-break-end');
+    if(s)s.value=techBrk.start||'12:00';if(e)e.value=techBrk.end||'13:00';
+  }
   Object.entries(tech.rotation||{}).forEach(([day,zid])=>{const sel=document.getElementById('rot-'+day);if(sel)sel.value=zid||'';});
   document.getElementById('ti-save-btn').textContent='שמור';
   document.getElementById('mo-tech').classList.remove('hidden');
@@ -5803,7 +5864,11 @@ function saveTech(){
     categories.forEach(c=>{const v=parseInt(document.getElementById('durov-'+c.id)?.value);if(v>0)durationOverrides[c.id]=v;});
   }
   const weekly_schedule=readWeekSched();
-  const firstWorkDay=Object.values(weekly_schedule).find(d=>d.work!==false)||{start:'07:00',end:'17:00'};
+  const brkMode=document.querySelector('input[name="ti-break-mode"]:checked')?.value||'default';
+  if(brkMode==='default'){delete weekly_schedule._break;}
+  else if(brkMode==='none'){weekly_schedule._break={mode:'none'};}
+  else{weekly_schedule._break={mode:'custom',start:document.getElementById('ti-break-start')?.value||'12:00',end:document.getElementById('ti-break-end')?.value||'13:00'};}
+  const firstWorkDay=Object.values(weekly_schedule).filter(d=>typeof d==='object'&&d.work!==false).find(Boolean)||{start:'07:00',end:'17:00'};
   const existingTech=editingTechId?technicians.find(t=>t.id===editingTechId):null;
   const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),return_city:document.getElementById('ti-return').value.trim(),address:existingTech?.address||'',min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:firstWorkDay.start,end:firstWorkDay.end,weekly_schedule,blocked:document.getElementById('ti-blocked').value.trim(),skills,catLimits,durationOverrides,rotation};
   let techForSave;
@@ -6014,6 +6079,11 @@ function saveSettings(){
   settings.monthlyVolume=parseInt(document.getElementById('set-monthly').value)||300;
   settings.regularTime=parseInt(document.getElementById('set-regular-time').value)||30;
   settings.packageTime=parseInt(document.getElementById('set-package-time').value)||45;
+  const brkEnabled=!!document.getElementById('set-break-enabled')?.checked;
+  const brkStart=document.getElementById('set-break-start')?.value||'12:00';
+  const brkEnd=document.getElementById('set-break-end')?.value||'13:00';
+  if(!tenantConfig.defaults)tenantConfig.defaults={};
+  tenantConfig.defaults.break={enabled:brkEnabled,start:brkStart,end:brkEnd};
   save();saveSettingsToSupabase().then(ok=>{if(ok!==false)showToast('הגדרות נשמרו ✓');});
 }
 function exportSettings(){
