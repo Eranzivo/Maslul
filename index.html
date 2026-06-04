@@ -2702,6 +2702,9 @@ function startConnectionMonitor() {
       if (data.gmaps && data.gmaps !== 'configured') {
         console.warn('[optimizer] Google Maps not configured — using haversine fallback');
         showToast('⚠️ אופטימייזר פועל ללא Google Maps — מסלולים הם הערכה בלבד', 'error');
+      } else if (data.daily_elements_remaining !== undefined && data.daily_elements_remaining < 200) {
+        console.warn(`[optimizer] quota low — ${data.daily_elements_remaining} elements remaining today`);
+        showToast(`⚠️ מכסת Google Maps נמוכה היום — ${data.daily_elements_remaining} אלמנטים נותרו`, 'error');
       }
     }).catch(() => {
       console.warn('[optimizer] health check failed — optimizer may be down');
