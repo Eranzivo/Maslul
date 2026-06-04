@@ -808,6 +808,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
           <option value="">אוטומטי — ללא העדפה</option>
         </select>
       </div>
+      <div class="fg-2" style="margin-top:4px;">
+        <div class="fg"><label class="fl"><span class="req">*</span> שם לקוח</label><input class="fc" id="rec-client-name" placeholder="שם מלא"></div>
+        <div class="fg"><label class="fl">טלפון לקוח</label><input class="fc" id="rec-client-phone" placeholder="05X-XXXXXXX" type="tel"></div>
+      </div>
       <div id="rec-preview" style="margin-top:10px;font-size:0.8125rem;color:var(--ink-3);"></div>
     </div>
     <button class="find-btn" id="find-btn-normal" onclick="findBestSlot()">מצא שיבוץ אופטימלי ←</button>
@@ -1360,7 +1364,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div class="fg">
       <label class="fl">☕ הפסקת צהריים אישית</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
-        <label class="wiz-type-opt"><input type="radio" name="ti-break-mode" value="default" checked><span>כברירת החברה</span></label>
+        <label class="wiz-type-opt"><input type="radio" name="ti-break-mode" value="default" checked onchange="document.getElementById('ti-break-custom').classList.add('hidden')"><span>כברירת החברה</span></label>
         <label class="wiz-type-opt"><input type="radio" name="ti-break-mode" value="custom" onchange="document.getElementById('ti-break-custom').classList.remove('hidden')"><span>מותאם אישית</span></label>
         <label class="wiz-type-opt"><input type="radio" name="ti-break-mode" value="none" onchange="document.getElementById('ti-break-custom').classList.add('hidden')"><span>ללא הפסקה</span></label>
       </div>
@@ -2591,10 +2595,11 @@ async function _generateRecurringInstances(){
             status:'pending',
             scheduled_date:ds, scheduled_time:tmpl.scheduledTime,
             recurring_template_id:tmpl.id,
-            assign_id:'MSL-'+String(nextTaskId++).padStart(5,'0'),
+            assign_id:'MSL-'+String(nextTaskId).padStart(5,'0'), // don't increment until insert succeeds
           };
           const data=await dbInsert('tasks',row);
           if(data){
+            nextTaskId++; // only advance after confirmed insert
             tasks.push({
               id:data.id, client:tmpl.clientName, phone:tmpl.clientPhone||'',
               city:tmpl.city, street:tmpl.street||'',
@@ -2605,10 +2610,9 @@ async function _generateRecurringInstances(){
               preferredWindows:[], checklistDone:{}, photoUrl:null, signatureUrl:null,
               recurringTemplateId:tmpl.id, _dbId:data.id
             });
-            lastGenerated=ds;
+            lastGenerated=ds; // only advance frontier on successful creation
           }
-        } else {
-          lastGenerated=ds;
+          // else: insert failed — don't advance lastGenerated so we retry this date next login
         }
         cursor.setDate(cursor.getDate()+tmpl.intervalWeeks*7);
       }
@@ -4515,11 +4519,10 @@ function calcOptimalTime(tech,dateStr,city,catId){
     const lateOffset=Math.round(relativeNear*(dur+buf)*Math.ceil(totalCities*0.4));
     const reserveOffset=getSlotReservationOffset(dateStr,newIdx,totalCities);
     let candidate=sh*60+lateOffset+reserveOffset;
-    // Nudge past any partial block overlap
+    // Nudge past any partial block — loop until no more overlaps (handles adjacent blocks)
     if(partialBlocks.length){
-      for(const blk of partialBlocks){
-        if(candidate<blk.to&&candidate+dur>blk.from)candidate=blk.to+buf;
-      }
+      let changed=true;
+      while(changed){changed=false;for(const blk of partialBlocks){if(candidate<blk.to&&candidate+dur>blk.from){candidate=blk.to+buf;changed=true;}}}
     }
     if(candidate+dur>eh*60)return null;
     return minsToTime(candidate);
@@ -4536,11 +4539,10 @@ function calcOptimalTime(tech,dateStr,city,catId){
     const lastBefore=tasksBefore.reduce((a,b)=>timeToMins(a.time)>timeToMins(b.time)?a:b);
     earliest=timeToMins(lastBefore.time)+dur+buf;
   }
-  // Nudge earliest past any partial block overlap
+  // Nudge earliest past any partial block — loop until no more overlaps (handles adjacent blocks)
   if(partialBlocks.length){
-    let nudged=earliest;
-    for(const blk of partialBlocks){if(nudged<blk.to&&nudged+dur>blk.from)nudged=blk.to+buf;}
-    earliest=nudged;
+    let changed=true;
+    while(changed){changed=false;for(const blk of partialBlocks){if(earliest<blk.to&&earliest+dur>blk.from){earliest=blk.to+buf;changed=true;}}}
   }
   // Latest we can start = must finish before the first "after" task begins.
   let latest=eh*60-dur;
@@ -4647,7 +4649,7 @@ function _candidatesOpen(city,catId,dates,sc){
         });
         if(hasUnderfull)continue;
       }
-      // Simple sequential time slot — append after last task
+      // Simple sequential time slot — append after last task, skip over any break blocks
       const sched=getTechDaySchedule(tech,date.str);
       const sh=timeToMins(sched.start);
       const eh=timeToMins(sched.end);
@@ -4656,6 +4658,10 @@ function _candidatesOpen(city,catId,dates,sc){
       const dayTasks=getTechDayTasks(tech,date.str).sort((a,b)=>timeToMins(a.time)-timeToMins(b.time));
       let slot=sh;
       if(dayTasks.length){const last=dayTasks[dayTasks.length-1];slot=timeToMins(last.time)+dur+buf;}
+      const pBlocks=getTechPartialBlocks(tech,date.str);
+      let nudged=slot;
+      for(let _i=0;_i<pBlocks.length*2+1;_i++){const b=pBlocks.find(b=>nudged<b.to&&nudged+dur>b.from);if(!b)break;nudged=b.to+buf;}
+      slot=nudged;
       if(slot+dur>eh)continue;
       const optTime=minsToTime(slot);
       const fillScore=load*100+dates.indexOf(date);
@@ -4719,6 +4725,10 @@ function _candidatesRadius(city,catId,dates,sc){
       const dayTasks=getTechDayTasks(tech,date.str).sort((a,b)=>timeToMins(a.time)-timeToMins(b.time));
       let slot=sh;
       if(dayTasks.length){const last=dayTasks[dayTasks.length-1];slot=timeToMins(last.time)+dur+buf;}
+      const pBlocks2=getTechPartialBlocks(tech,date.str);
+      let nudged2=slot;
+      for(let _i=0;_i<pBlocks2.length*2+1;_i++){const b=pBlocks2.find(b=>nudged2<b.to&&nudged2+dur>b.from);if(!b)break;nudged2=b.to+buf;}
+      slot=nudged2;
       if(slot+dur>eh)continue;
       const optTime=minsToTime(slot);
       // Proximity score: closer tech = higher fillScore bonus
@@ -4989,9 +4999,12 @@ async function confirmAssign(idx,assignId){
   const btn=document.getElementById('confirm-assign-btn');
   if(btn){btn.disabled=true;btn.textContent='שומר…';}
   if(qt){
+    // Snapshot original state so we can roll back if the save fails
+    const _orig={client:qt.client,phone:qt.phone,city:qt.city,street:qt.street,cat:qt.cat,catId:qt.catId,techId:qt.techId,status:qt.status,time:qt.time,date:qt.date,notes:qt.notes,assignId:qt.assignId,preferredWindows:qt.preferredWindows};
     Object.assign(qt,{client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows]});
     newTask=qt;save();
     saved=await saveTaskToSupabase(qt);
+    if(!saved)Object.assign(qt,_orig); // roll back in-memory state on failure
     window._queueTask=null;
   } else {
     newTask={id:nextTaskId++,client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows]};
@@ -5030,7 +5043,7 @@ function renderPendingQueue(){
   const el=document.getElementById('pending-queue-list');if(!el)return;
   const today=todayStr();
   const pending=tasks
-    .filter(t=>t.status==='pending'&&!t.techId)
+    .filter(t=>t.status==='pending')
     .sort((a,b)=>{
       // Tasks with a date: sort ascending from today; no-date tasks go to the bottom
       if(a.date&&b.date)return a.date.localeCompare(b.date);
@@ -5066,8 +5079,8 @@ function queueAssign(id){
   document.getElementById('dispatch-search-card').scrollIntoView({behavior:'smooth',block:'start'});
   // Pre-fill client details that will be used on confirm
   window._queueTask=t; // remember so confirmAssign can update instead of creating new
-  // Run engine immediately if city + cat are set
-  if(t.city&&t.catId)setTimeout(()=>findBestSlot(),100);
+  // Run engine immediately — capture expected catId to guard against race if user clicks another chip
+  if(t.city&&t.catId){const expectedCat='cat_'+t.catId;setTimeout(()=>{if(selectedCat===expectedCat)findBestSlot();},100);}
 }
 // ─── Recurring dispatch ────────────────────────────────────────────────────
 function toggleRecurringMode(){
@@ -5107,8 +5120,11 @@ async function createRecurringTask(){
   if(!currentTenantId){showToast('שגיאה: לא מחובר לחברה','error');return;}
   const city=document.getElementById('s-city').value;
   const street=document.getElementById('s-street').value.trim();
+  const clientName=document.getElementById('rec-client-name')?.value.trim()||'';
+  const clientPhone=document.getElementById('rec-client-phone')?.value.trim()||'';
   if(!city){showToast('נא לבחור עיר','error');return;}
   if(!street){showToast('נא למלא רחוב','error');return;}
+  if(!clientName){showToast('נא למלא שם לקוח','error');return;}
   if(!selectedCat){showToast('נא לבחור קטגוריה','error');return;}
   const catId=getCatId();const catName=getCatName();
   const dow=parseInt(document.querySelector('input[name="rec-dow"]:checked')?.value||0);
@@ -5120,7 +5136,7 @@ async function createRecurringTask(){
   btn.disabled=true;btn.textContent='יוצר...';
   const tmplRow={
     tenant_id:currentTenantId,
-    client_name:'ממתין לפרטים', client_phone:null,
+    client_name:clientName, client_phone:clientPhone||null,
     city, street:street||null,
     category_id:catId||null, category_name:catName||null,
     notes:null,
@@ -5131,7 +5147,7 @@ async function createRecurringTask(){
   const tmplData=await dbInsert('recurring_templates',tmplRow);
   if(!tmplData){btn.disabled=false;btn.textContent='🔁 צור קריאות חוזרות';showToast('שגיאה ביצירת תבנית','error');return;}
   const tmpl={
-    id:tmplData.id, clientName:tmplRow.client_name, clientPhone:'',
+    id:tmplData.id, clientName:clientName, clientPhone:clientPhone||'',
     city, street:street||'', categoryId:catId||null, categoryName:catName||'',
     notes:'', dayOfWeek:dow, scheduledTime:time,
     intervalWeeks:interval, preferredTechId:prefTechId||null,
@@ -5142,10 +5158,13 @@ async function createRecurringTask(){
   const count=tasks.filter(t=>t.recurringTemplateId===tmpl.id).length;
   showToast(`נוצרו ${count} קריאות חוזרות ✓`);
   btn.disabled=false;btn.textContent='🔁 צור קריאות חוזרות';
+  const rcn=document.getElementById('rec-client-name');if(rcn)rcn.value='';
+  const rcp=document.getElementById('rec-client-phone');if(rcp)rcp.value='';
   document.getElementById('recurring-toggle').checked=false;
   toggleRecurringMode();
+  currentFilter='pending'; // reset filter before navigating to tasks
   renderTasks();renderHomeTechCards();
-  setTimeout(()=>goPage('tasks'),1200);
+  setTimeout(()=>{filterTasks('pending');goPage('tasks');},1200);
 }
 function addPrefWindow(){
   prefWindows.push({from:'09:00',to:'13:00'});
@@ -5536,7 +5555,13 @@ async function pauseRecurringTemplate(id){
 async function deleteRecurringTemplate(id){
   if(!confirm('למחוק את התבנית? הקריאות הממתינות ישארו כקריאות רגילות.'))return;
   const tmpl=recurringTemplates.find(t=>t.id===id);if(!tmpl)return;
-  await sb.from('recurring_templates').delete().eq('id',tmpl._dbId);
+  const{error}=await sb.from('recurring_templates').delete().eq('id',tmpl._dbId);
+  if(error){
+    console.error('delete recurring template:',error);
+    Sentry?.captureException(error);
+    showToast('שגיאה במחיקת התבנית — נסה שוב','error');
+    return;
+  }
   recurringTemplates=recurringTemplates.filter(t=>t.id!==id);
   tasks.forEach(t=>{if(t.recurringTemplateId===id)t.recurringTemplateId=null;});
   renderRecurringTemplates();
@@ -5811,6 +5836,14 @@ function openAddTechModal(){
   ['ti-name','ti-phone','ti-base','ti-return','ti-blocked'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ti-min').value='2';document.getElementById('ti-max').value='9';
   buildWeekSchedGrid({});
+  // Reset break radio to default and hide custom fields
+  const defRadio=document.querySelector('input[name="ti-break-mode"][value="default"]');
+  if(defRadio){defRadio.checked=true;}
+  const brkCustom=document.getElementById('ti-break-custom');
+  if(brkCustom)brkCustom.classList.add('hidden');
+  // Reset break selects to 12:00–13:00 defaults
+  const bs=document.getElementById('ti-break-start');const be=document.getElementById('ti-break-end');
+  if(bs)bs.value='12:00';if(be)be.value='13:00';
   document.getElementById('ti-save-btn').textContent='הוסף';
   document.querySelectorAll('.field-error').forEach(e=>e.classList.add('hidden'));
   document.getElementById('mo-tech').classList.remove('hidden');
@@ -5834,10 +5867,10 @@ function editTech(id){
   const brkRadio=document.querySelector(`input[name="ti-break-mode"][value="${brkMode}"]`);
   if(brkRadio)brkRadio.checked=true;
   document.getElementById('ti-break-custom').classList.toggle('hidden',brkMode!=='custom');
-  if(brkMode==='custom'){
-    const s=document.getElementById('ti-break-start');const e=document.getElementById('ti-break-end');
-    if(s)s.value=techBrk.start||'12:00';if(e)e.value=techBrk.end||'13:00';
-  }
+  // Always set break select values (avoids stale values from previously edited tech)
+  const brkS=document.getElementById('ti-break-start');const brkE=document.getElementById('ti-break-end');
+  if(brkS)brkS.value=brkMode==='custom'?(techBrk.start||'12:00'):'12:00';
+  if(brkE)brkE.value=brkMode==='custom'?(techBrk.end||'13:00'):'13:00';
   Object.entries(tech.rotation||{}).forEach(([day,zid])=>{const sel=document.getElementById('rot-'+day);if(sel)sel.value=zid||'';});
   document.getElementById('ti-save-btn').textContent='שמור';
   document.getElementById('mo-tech').classList.remove('hidden');
@@ -5868,7 +5901,8 @@ function saveTech(){
   if(brkMode==='default'){delete weekly_schedule._break;}
   else if(brkMode==='none'){weekly_schedule._break={mode:'none'};}
   else{weekly_schedule._break={mode:'custom',start:document.getElementById('ti-break-start')?.value||'12:00',end:document.getElementById('ti-break-end')?.value||'13:00'};}
-  const firstWorkDay=Object.values(weekly_schedule).filter(d=>typeof d==='object'&&d.work!==false).find(Boolean)||{start:'07:00',end:'17:00'};
+  // Only consider day-indexed entries (keys '0'-'5'), never _break or other metadata keys
+  const firstWorkDay=[0,1,2,3,4,5].map(i=>weekly_schedule[String(i)]).filter(d=>d&&d.work!==false).find(Boolean)||{start:'07:00',end:'17:00'};
   const existingTech=editingTechId?technicians.find(t=>t.id===editingTechId):null;
   const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),return_city:document.getElementById('ti-return').value.trim(),address:existingTech?.address||'',min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:firstWorkDay.start,end:firstWorkDay.end,weekly_schedule,blocked:document.getElementById('ti-blocked').value.trim(),skills,catLimits,durationOverrides,rotation};
   let techForSave;
@@ -6080,8 +6114,11 @@ function saveSettings(){
   settings.regularTime=parseInt(document.getElementById('set-regular-time').value)||30;
   settings.packageTime=parseInt(document.getElementById('set-package-time').value)||45;
   const brkEnabled=!!document.getElementById('set-break-enabled')?.checked;
-  const brkStart=document.getElementById('set-break-start')?.value||'12:00';
-  const brkEnd=document.getElementById('set-break-end')?.value||'13:00';
+  const brkStartEl=document.getElementById('set-break-start');
+  const brkEndEl=document.getElementById('set-break-end');
+  // Only read select values if options are populated (guard against saving before populateTimeSels runs)
+  const brkStart=(brkStartEl?.options?.length>0?brkStartEl.value:null)||tenantConfig.defaults?.break?.start||'12:00';
+  const brkEnd=(brkEndEl?.options?.length>0?brkEndEl.value:null)||tenantConfig.defaults?.break?.end||'13:00';
   if(!tenantConfig.defaults)tenantConfig.defaults={};
   tenantConfig.defaults.break={enabled:brkEnabled,start:brkStart,end:brkEnd};
   save();saveSettingsToSupabase().then(ok=>{if(ok!==false)showToast('הגדרות נשמרו ✓');});

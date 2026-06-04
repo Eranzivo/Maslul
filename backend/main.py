@@ -27,6 +27,9 @@ app.add_middleware(
 
 _DAILY_LIMIT = int(os.getenv("GMAPS_DAILY_ELEMENT_LIMIT", "1200"))
 _counter: dict = {"day": None, "elements": 0}
+# NOTE: _counter is per-process. With multiple Railway workers each worker enforces
+# the limit independently, so effective daily limit = _DAILY_LIMIT × worker_count.
+# Hobby plan runs 1 worker by default; set RAILWAY_NUMREPLICAS=1 to be explicit.
 
 def _gmaps_quota_ok(elements_needed: int) -> bool:
     today = str(date.today())
