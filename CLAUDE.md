@@ -1,255 +1,88 @@
 # Maslul — Claude Code Context
 
-## Working Rule
-**Before every task — read all files in `context/` first:**
-- `context/business.md` — what the product is, who it's for, the goal
-- `context/architecture.md` — tech stack, file map, hard rules, gotchas
-- `context/scheduling-rules.md` — the core scheduling logic (do not break)
-- `context/client-israel.md` — current pilot client details and constraints
+## Before Every Task — Read Context First
+Read ALL files in `context/` before touching any code:
+- `context/business.md` — product vision, target clients, goals
+- `context/architecture.md` — stack, schema, hard rules, auth, safety, GPS, labels, features
+- `context/scheduling-rules.md` — scheduling engine, zones, break time, configurable modes
+- `context/style.md` — CSS tokens, component classes, spacing rules, RTL conventions
+- `context/client-israel.md` — pilot client details and constraints
 
-Never start coding without reading context first.
+**New entity / table rule:** Run all steps in `context/new-entity-checklist.md` before adding any Supabase table.
 
-**New entity / new table rule:** Before adding any new Supabase table or entity, run every step in `context/new-entity-checklist.md`. All 8 steps are required. Do not ship without completing the checklist.
+**Outputs rule:** Every artifact (reports, plans, summaries, migrations) → `outputs/[task-name]_[YYYY-MM-DD].md`.
 
-**Data persistence rule (CRITICAL):** Every write operation that modifies user data MUST:
-1. Verify `currentTenantId` is not null before any Supabase write — if null, do not proceed; show a clear error
-2. `await` all `saveXToSupabase()` calls in user-facing flows (drawer, modals, forms) — never fire-and-forget on a confirmed action
-3. Show an explicit error toast if `saveTaskToSupabase()`/`saveTechToSupabase()` returns false/null
-4. After any "save" action, the user must see either ✓ success or ✗ error — never silent failure
-5. For new entities (first insert, no `_dbId`): the WAL does NOT cover them; they rely on the Supabase call completing. Always `await` these.
-
-**Supabase user row invariant:** Every Supabase Auth user (auth.users) MUST have a matching row in public.users with correct `tenant_id`. Missing row = `currentTenantId` stays null = all saves silently fail. Before any client goes live, verify: `SELECT id, tenant_id, role FROM users WHERE id = '<auth_user_id>'`
-
-**Outputs rule:** Every command or generated artifact (summaries, reports, plans, drafts) must be saved to `outputs/[task-name]_[YYYY-MM-DD].md`. Never save in a random location.
-
-**Connections:** See `connections/registry.json` for all external services. Secrets live only in `.env` (root) — never in `context/`, `connections/`, or `commands/`.
+**Connections:** `connections/registry.json` lists all external services. Secrets only in `.env` (root) — never in `context/`, `connections/`, or `commands/`.
 
 ---
 
 ## What This Is
 Hebrew-first SaaS scheduling engine for Israeli SMBs with field workers.
-Deployed as a single HTML file: https://eranzivo.github.io/Maslul/
+- App: https://eranzivo.github.io/Maslul/
+- Optimizer API: https://maslul-production-77fa.up.railway.app
 
-## Tech Stack (Current)
-- **Frontend:** Single `index.html` — all JS and CSS inline, no build step
-- **Backend (DB):** Supabase (PostgreSQL + Auth + RLS) — direct from browser
-- **Backend (Optimizer):** FastAPI + OR-Tools in `backend/` — deployed to Railway
-- **Hosting:** GitHub Pages (static HTML), Railway (FastAPI)
-- **Font:** Heebo (Google Fonts)
-
-## Tech Stack (Roadmap)
-- **Frontend:** Modular ES modules, Vercel (when 2+ paying clients or 2nd developer)
-- **Keep vanilla JS** — no React/Vue/TypeScript
-
-## Backend — FastAPI Optimizer (`backend/`)
-- `backend/main.py` — FastAPI app, `/optimize` POST endpoint, `/health` GET
-- `backend/optimizer.py` — OR-Tools TSP solver with time windows; haversine fallback when no Google Maps key
-- `backend/cities.py` — Hebrew city name → (lat, lon) lookup; ~50 Israeli cities; unknown city logs warning + falls back to Tel Aviv
-- `backend/test_optimizer.py` — local smoke test (no pytest yet — see backlog)
-- `backend/requirements.txt` — fastapi, uvicorn, ortools==9.10.4067, httpx, python-dotenv
-- **Known gap:** No pytest suite yet. `test_optimizer.py` is a manual run script only.
-- **Known gap:** `cities.py` has ~50 cities — any city not listed falls back silently to Tel Aviv coords (logs warning since 2026-05-22 fix).
+## Tech Stack
+| Layer | Tech |
+|---|---|
+| Frontend | Single `index.html` — all JS/CSS inline, no build step, vanilla JS only (no React/Vue/TS) |
+| DB | Supabase (PostgreSQL + Auth + RLS) — direct from browser |
+| Optimizer | FastAPI + OR-Tools on Railway (`backend/`) |
+| Hosting | GitHub Pages (frontend) + Railway (FastAPI) |
 
 ## Deployment Checklist (every push)
 1. `git push origin main`
-2. Wait 60s for GitHub Pages to deploy
-3. Open **incognito tab** → `https://eranzivo.github.io/Maslul/`
-4. Confirm: login screen appears within 3s, login succeeds, home page loads
-5. If anything hangs: `https://eranzivo.github.io/Maslul/?clearall=1` resets localStorage
-
-## CDN / Supabase Key Rules
-- **Always use the JWT anon key** (`eyJ...` format) — never `sb_publishable_...` with supabase-js@2
-- **Pin every CDN library to an exact version** — never use `@2` or `latest`; use `@2.49.4` etc.
-- **Always use jsDelivr** (`cdn.jsdelivr.net`) — never unpkg. unpkg can change file content for the same version URL, breaking integrity hashes.
-- **Never add `integrity=` attributes to CDN script/link tags** — version pinning is sufficient; integrity hashes go stale when CDNs update build artifacts.
-- Supabase JS is pinned to `2.49.4`. Leaflet pinned to `1.9.4`. Do not change without testing.
-- Emergency escape hatches: `?clearwal=1` (clear stuck WAL), `?clearall=1` (full reset: `ml_*` + `sb-*` localStorage keys)
-
-## Auth Flow Rules (hard-learned — do not break)
-- **Never use `Promise.race` to cancel a Supabase auth call.** `Promise.race` only abandons the `await` — the underlying fetch keeps running and holds supabase-js's internal lock. Any subsequent auth call queues behind the orphaned operation and hangs indefinitely.
-- **`createClient()` uses a no-op auth lock** — `auth: { lock: async (_n, _t, fn) => fn() }`. supabase-js v2 uses `navigator.locks` (Web Locks API) by default, shared across all tabs of the same origin. If one tab holds the lock, every other tab's `getSession()` and `signInWithPassword()` hangs. The no-op lock gives each tab independence. Do not remove this option.
-- **Pre-flight runs BEFORE `createClient()`** — clears sessions expiring within 5 minutes so supabase-js doesn't attempt a blocking token refresh in its constructor. Do not move the pre-flight inside `initAuth()` — by then the lock is already held.
-- **`initAuth` watchdog** — `authDone = true` is the FIRST line in the watchdog callback. Without it, a late `getSession()` result runs after the user has already logged in and calls `showLogin()` on top of the live app.
-- **`loadTenantFromUser()` must `throw` on failure** — if it `return`s normally after an error, the caller still calls `showApp()` (millisecond flash). It must: (1) call `showLogin()`, (2) set the error text AFTER `showLogin`, (3) fire-and-forget `signOut()`, (4) `throw`.
-- **`SIGNED_OUT` handler skips `showLogin()` if login is already visible** — prevents the fire-and-forget `signOut()` from clearing error messages set by `loadTenantFromUser()`.
-- **`?clearall=1` clears both `ml_*` and `sb-*` keys** — required to clear Supabase's stored session so `getSession()` doesn't try to refresh a stale token and hang on the next page load.
-
-## Supabase SECURITY DEFINER Function Rules (hard-learned — do not break)
-- **`SET search_path = ''` requires `public.` prefix on ALL table references.** Any function with `SET search_path = ''` that references `users` instead of `public.users` fails with `42P01: relation "users" does not exist` at runtime. This silently breaks ALL RLS policies and all REST API queries return 404.
-- **Supabase auto-creates startup functions** — `current_tenant_id()` and `current_user_role()` run on every `authenticated` role connection. Supabase's security hardening sets `search_path = ''` on them without updating table refs. After any security advisor run, immediately check and fix:
-  ```sql
-  SELECT proname, prosrc FROM pg_proc
-  WHERE pronamespace = 'public'::regnamespace AND proconfig @> ARRAY['search_path=""']
-  ORDER BY proname;
-  ```
-  Every function body must use `public.users`, `public.audit_log`, etc. — never bare `users`.
-- **Our four functions that query `public.users`:** `get_tenant_id()`, `is_super_admin()`, `current_tenant_id()`, `current_user_role()`. All must have `public.` prefix and `SET search_path = ''`.
-
-## Architecture Principles
-- Multi-tenant: every table row has `tenant_id`, enforced by Supabase RLS
-- Adding a client: 1 SQL insert into `tenants` + 1 Supabase Auth user + 1 insert into `users`
-- `currentTenantId` set at login via `loadTenantFromUser()`, used in every query
-- localStorage is fallback only — Supabase is source of truth
-- `DEMO_MODE: true` in CONFIG bypasses auth and Supabase entirely
-- Single HTML file until 2+ paying clients
-- **WAL (Write-Ahead Log):** `_walWrite` saves every payload to localStorage BEFORE Supabase call. `_walClear` removes on success. `_replayWAL` re-sends on next login. Key: `ml_wal_v1`.
-- **All writes go through `dbUpsert` / `dbInsert`** — never raw `sb.from().insert()` directly. These handle WAL, save-counter, and error toast.
-- **Schema validator:** `_validateSchema()` runs after every `loadFromSupabase()`, checks null/empty on required fields, sends to Sentry.
-- **Connection monitor:** `_checkConnection()` pings Supabase every 60s. Distinguishes network failure (catch) from auth expiry (401/403 → calls showLogin).
-
-## Safety Stack (added May 2026)
-| Layer | What it does |
-|---|---|
-| WAL (`ml_wal_v1`) | Stores failed saves in localStorage, replays on next login |
-| `dbUpsert` try/catch | Prevents `_savesInFlight` permanent leak if client throws |
-| Schema validator | Post-load null/type checks on all entities, Sentry on drift |
-| Audit log (DB triggers) | Every INSERT/UPDATE/DELETE written to `audit_log` table in Supabase |
-| Connection monitor | 60s ping, red banner on network loss, re-login prompt on auth expiry |
-
-## Terminology / Labels System
-All user-visible entity names come from `tenantLabels` (not hardcoded).
-Call `L('key')` anywhere in JS to get the current tenant's label.
-
-Default keys and Hebrew values:
-| Key | Default | Example override |
-|---|---|---|
-| `worker` | טכנאי | שליח / מנקה |
-| `workers` | טכנאים | שליחים / מנקים |
-| `task` | קריאה | משלוח / עבודה |
-| `tasks` | קריאות | משלוחים / עבודות |
-| `zone` | אזור | מסלול |
-| `zones` | אזורים | מסלולים |
-| `zones_title` | אזורי פעילות | מסלולי פעילות |
-| `dispatch` | שיבוץ קריאה | משלוח חדש |
-
-Labels are stored in `tenants.config.labels` in Supabase and loaded at login.
-Static HTML elements use `data-label="key"` and are updated by `applyLabels()` on init.
-
-## Demo Mode
-Set `CONFIG.DEMO_MODE = true` and `CONFIG.DEMO_TYPE` to one of:
-- `'general'` — field service (technicians, zones, service calls)
-- `'cleaning'` — cleaning company (cleaners, areas, jobs)
-- `'delivery'` — courier (drivers, routes, deliveries)
-
-Also triggered by `?demo=1` (general), `?demo=cleaning`, `?demo=delivery` URL params.
-
-Demo mode: bypasses auth, loads `DEMO_PRESETS[type]`, shows purple banner,
-blocks all localStorage writes and Supabase calls (null `currentTenantId` prevents writes).
-
-## Supabase Tables
-See `schema.sql` for complete DDL, RLS policies, and onboarding SQL.
-
-| Table | Key columns |
-|---|---|
-| `tenants` | `id`, `name`, `plan`, `config` (JSONB) |
-| `users` | `id`, `tenant_id`, `role`, `name` |
-| `technicians` | `id`, `tenant_id`, `name`, `phone`, `base_city`, `color`, `min_daily`, `max_daily`, `start_time`, `end_time`, `blocked_cities` (array), `skills` (array), `cat_limits` (JSONB), `rotation` (JSONB) |
-| `tasks` | `id`, `tenant_id`, `assign_id`, `client_name`, `client_phone`, `city`, `street`, `category_id`, `category_name`, `technician_id`, `status`, `scheduled_date`, `scheduled_time`, `notes`, `cancelled_at`, `checklist_done` (JSONB) |
-| `zones` | `id`, `tenant_id`, `name`, `cities` (array) |
-| `categories` | `id`, `tenant_id`, `name`, `duration_minutes` |
-| `packages` | `id`, `tenant_id`, `name`, `items` (JSONB) |
-| `day_offs` | `id`, `tenant_id`, `technician_id`, `date`, `type`, `from_time`, `to_time`, `reason` |
-| `clients` | `id`, `tenant_id`, `name`, `phone`, `email`, `city`, `address`, `notes`, `archived` |
-| `audit_log` | `id`, `created_at`, `tenant_id`, `table_name`, `operation`, `record_id`, `old_data` (JSONB), `new_data` (JSONB) |
-
-### `tenants.config` JSONB shape
-```json
-{
-  "labels": { "worker": "טכנאי", "workers": "טכנאים", "task": "קריאה", "tasks": "קריאות",
-              "zone": "אזור", "zones": "אזורים", "dispatch": "שיבוץ קריאה" },
-  "defaults": { "regular_job_minutes": 30, "package_job_minutes": 45,
-                "arrival_window_hours": 3, "max_daily_jobs": 9,
-                "lookahead_days": 30, "monthly_volume": 300,
-                "work_start": "07:00", "work_end": "18:00" },
-  "features": { "whatsapp_enabled": true, "demo_mode": false,
-                "google_maps_enabled": false, "odoo_integration": false }
-}
-```
-
-## Supabase Write Pattern
-All entities use the unified write layer — never raw Supabase calls:
-```js
-// Update existing:
-await dbUpsert('table', { id: entity._dbId, ...fields });
-// Insert new:
-const data = await dbInsert('table', { ...fields });
-entity._dbId = data.id;
-```
-`dbUpsert` and `dbInsert` handle: WAL write-before, save counter, error toast, Sentry logging.
-
-For technicians: after insert, `tech.id` is promoted to the Supabase UUID and all
-in-memory tasks referencing the old local integer id are updated.
-
-## ID Strategy
-- `id` = in-memory identity (integer for locally-created, UUID after Supabase insert)
-- `_dbId` = Supabase row UUID, used for update/delete
-- Technicians from Supabase: `id === _dbId === UUID`
-
-## Business Logic Invariants (do not change)
-- Zone-strict scheduling: tech only receives jobs in their rotation zone for that day
-- Far-to-near route: `getCityIndexInZone()` orders cities within a zone
-- Fill-existing-days-first: `fillScore = existingInZone*100 + load`
-- Category limits per technician per day: `catLimits[catId]` cap
-- `min_daily` hard enforcement: if a tech has underfull days, don't open new days
-- `DEMO_MODE` must never make Supabase calls
+2. Wait 60s → open incognito → `https://eranzivo.github.io/Maslul/`
+3. Confirm: login screen < 3s, login succeeds, home page loads
+4. Stuck? `?clearall=1` resets all localStorage. `?clearwal=1` clears WAL only.
 
 ## Clients
 | Client | tenant_id | Business |
 |---|---|---|
 | Israel / PureWater (pilot) | `00000000-0000-0000-0000-000000000001` | Garbage disposal + water systems, 4 technicians |
-| Maslul Admin (Eran) | `642ad6e6-a093-46a4-8489-ce49a966d77c` | Internal admin tenant — empty, used for cross-tenant management |
+| Maslul Admin (Eran) | `642ad6e6-a093-46a4-8489-ce49a966d77c` | Internal admin tenant — cross-tenant management |
 
-**Tenant architecture note:** Eran (infomaslul@gmail.com) logs in to Maslul Admin, which is empty. He uses the `🔀 PureWater` sidebar chip to enter an impersonation session of Israel's tenant. `super_admin = true` on Eran's user row allows RLS to pass for any tenant's data. Israel logs in directly to PureWater and sees only his data.
+Eran (infomaslul@gmail.com) logs in to Maslul Admin → uses 🔀 PureWater sidebar chip to impersonate Israel's tenant. `super_admin = true` on Eran's user row bypasses RLS for any tenant.
 
-## Files
-| File | Purpose |
-|---|---|
-| `index.html` | Entire frontend application |
-| `schema.sql` | Complete Supabase DDL, RLS, audit triggers, onboarding SQL |
-| `backend/main.py` | FastAPI optimizer service |
-| `backend/optimizer.py` | OR-Tools TSP solver |
-| `backend/cities.py` | Hebrew city → coordinates lookup |
-| `backend/test_optimizer.py` | Manual local smoke test for optimizer |
-| `test/smoke.html` | Browser-based round-trip smoke tests (run against staging only) |
-| `context/new-entity-checklist.md` | 8-step checklist for every new Supabase table |
-| `CLAUDE.md` | This file |
-
-## GPS + Live Map (added May 2026)
-- **Leaflet.js** loaded from CDN (free, no API key) — renders OpenStreetMap tiles
-- **Tech route map**: `toggleTechMap()` shows route map in tech view — numbered stop pins, home base marker, GPS dot
-- **GPS tracking**: `startGpsTracking()` / `stopGpsTracking()` — `navigator.geolocation.watchPosition`, throttled to 1 DB write per 30s
-- **Coordinator live map**: `toggleCoordinatorMap()` on home page — all techs with last GPS + today's tasks colored by tech
-- **Supabase Realtime**: channel `ml-tech-gps-{tenantId}` — coordinator map updates in real-time as techs move
-- **GPS columns**: `last_lat`, `last_lon`, `last_seen` on `technicians` table — run `outputs/migration-gps-columns_2026-05-27.sql`
-- `CONFIG.GOOGLE_MAPS_KEY`: optional upgrade — leave empty to use free OpenStreetMap tiles
-
-## Known Backlog / Open Items
+## Known Backlog
 
 ### ✅ Done
-- [x] GPS migration — `last_lat`, `last_lon`, `last_seen` on `technicians` (2026-05-27)
-- [x] Photo upload on task completion — `task-photos` bucket, RLS, signed URL, thumbnail (2026-05-27)
-- [x] Tech job history — "📋 היסטוריה" toggle, groups by date, stats (2026-05-27)
-- [x] Polygon zone drawing — "🗺️ צייר" + Leaflet.draw + ray-cast city detection (2026-05-27)
-- [x] GPS tracking + live coordinator map — Leaflet + OpenStreetMap + Supabase Realtime (2026-05-27)
+- [x] GPS tracking + live coordinator map (2026-05-27)
+- [x] Photo upload on task completion (2026-05-27)
+- [x] Tech job history (2026-05-27)
+- [x] Polygon zone drawing (2026-05-27)
+- [x] Digital signature capture (2026-05-27)
+- [x] WhatsApp message template (2026-05-28)
+- [x] Tenant separation — Eran ↔ Israel impersonation (2026-05-28)
+- [x] Configurable scheduling engine — wizard, modes, route_strategy, duration_overrides (2026-06-01)
+- [x] Recurring jobs (2026-06-01)
+- [x] Pending queue panel on dispatch (2026-06-01)
+- [x] Israeli cities autocomplete (2026-06-01)
+- [x] Google Maps daily quota + /health reporting (2026-06-01)
+- [x] Break time system — tenant default + per-tech override (2026-06-01)
+- [x] Code review — 15 findings fixed (2026-06-01)
+- [x] UI/UX overhaul — home + dispatch pages (2026-06-04): SVG sidebar, KPI cards, tech cards, header cleanup, two-column dispatch
 
-### 🔴 Next Session — Priority Order
-- [x] **Digital signature capture** — canvas `toDataURL` → Supabase Storage, thumbnail + green badge in tech view (2026-05-27)
-- [x] **WhatsApp message template** — rich waMsg() template with emoji, tech name, arrival window, assignId; buttons in task list + tech view + search + dispatch confirm (2026-05-28)
-- [x] **Tenant separation** — Eran → Maslul Admin tenant; Israel → PureWater; 🔀 sidebar chip for cross-tenant access; session persists on refresh (2026-05-28)
-- [ ] **Break time / lunch block** — block 1hr slot in tech schedule via day_offs UI (Medium)
-- [ ] **Recurring jobs** — `repeat_interval` field on tasks, generate next task on completion (Medium)
-- [ ] **Web Push notifications** — Web Push API (free) — alert tech when new task assigned (Medium)
-- [ ] **pytest backend** — `cd backend && pytest tests/ -v` — fix any failures (Low, ~30min)
+### 🔴 Urgent
+- [ ] **Railway upgrade** — trial expires **2026-06-12**. Upgrade to Hobby $5/mo at railway.app or the optimizer goes down.
+
+### 🟠 Next
+- [ ] Israel testing — real scenarios, feedback collection
+- [ ] Web Push notifications — alert tech when new task assigned (Medium)
+- [ ] pytest backend suite (Low, ~30min)
+
+### 🟡 After Israel stabilizes
+- [ ] Tech view redesign — after Israel confirms scheduling engine is solid
+- [ ] Dashboard & analytics — proper charts, KPIs, donut charts (like timing.tech)
+- [ ] Customer ETA portal — SMS/WhatsApp link → customer sees tech ETA + can rate service (timing.tech's #1 differentiator)
 
 ### 🟡 After Client #2
-- [ ] **Custom domain + Cloudflare** — register `maslul.co.il`, GitHub Pages custom domain, Cloudflare free plan (memory saved)
-- [ ] **Client #2 onboarding** — create `context/client-[name].md`, run SQL onboarding script
-- [ ] **Google Maps API key** — add to `CONFIG.GOOGLE_MAPS_KEY` for real drive-time distances (optional)
-- [ ] **SMS auto-send** — Twilio pay-per-use, ~$5/mo for 100 msgs
+- [ ] Custom domain (maslul.co.il) + Cloudflare
+- [ ] Client #2 onboarding — new `context/client-[name].md` + SQL onboarding script
+- [ ] SMS auto-send (Twilio, ~$5/mo for 100 msgs)
 
 ### 🔵 Future
-- [ ] Customer self-booking portal (large)
-- [ ] Polygon AI auto-optimizer — cluster past task coords → suggest zone boundaries
+- [ ] AI call summary in tech view
+- [ ] Customer self-booking portal
 - [ ] Native mobile app (PWA first)
-- [ ] min_daily enforcement — past underfull days not visible to `buildCandidates`
-- [ ] WAL tenant isolation — replay doesn't re-verify tenant_id (low risk, single-tenant now)
+- [ ] min_daily enforcement for past underfull days
+- [ ] WAL tenant isolation on replay
