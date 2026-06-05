@@ -58,10 +58,10 @@ BEGIN
     SELECT pw_id, 'יקנעם-נתניה', '{}'::text[]
     WHERE NOT EXISTS (SELECT 1 FROM zones WHERE tenant_id=pw_id AND name='יקנעם-נתניה');
 
-  -- NOTE: "קש-עפולה" — keeping Israel's exact name; rename via app if needed
+  -- NOTE: "קריית שמונה-עפולה" — keeping Israel's exact name; rename via app if needed
   INSERT INTO zones (tenant_id, name, cities)
-    SELECT pw_id, 'קש-עפולה', '{}'::text[]
-    WHERE NOT EXISTS (SELECT 1 FROM zones WHERE tenant_id=pw_id AND name='קש-עפולה');
+    SELECT pw_id, 'קריית שמונה-עפולה', '{}'::text[]
+    WHERE NOT EXISTS (SELECT 1 FROM zones WHERE tenant_id=pw_id AND name='קריית שמונה-עפולה');
 
   -- ── 2. Resolve zone IDs ────────────────────────────────────────────────
   SELECT id INTO z_darom        FROM zones WHERE tenant_id=pw_id AND name='דרום'              LIMIT 1;
@@ -72,7 +72,7 @@ BEGIN
   SELECT id INTO z_jerusalem    FROM zones WHERE tenant_id=pw_id AND name='ירושלים'            LIMIT 1;
   SELECT id INTO z_zichron      FROM zones WHERE tenant_id=pw_id AND name='זכרון-הרצליה'       LIMIT 1;
   SELECT id INTO z_yoqneam      FROM zones WHERE tenant_id=pw_id AND name='יקנעם-נתניה'        LIMIT 1;
-  SELECT id INTO z_katzir       FROM zones WHERE tenant_id=pw_id AND name='קש-עפולה'           LIMIT 1;
+  SELECT id INTO z_katzir       FROM zones WHERE tenant_id=pw_id AND name='קריית שמונה-עפולה'           LIMIT 1;
 
   -- ── 3. Resolve technician IDs (match by first name) ───────────────────
   SELECT id INTO t_aliran  FROM technicians WHERE tenant_id=pw_id AND name ILIKE '%אלירן%'  LIMIT 1;
@@ -117,7 +117,7 @@ BEGIN
     RAISE WARNING 'בני not found in PureWater technicians!';
   END IF;
 
-  -- מיכאל: Sun=יקנעם-נתניה, Mon=זכרון-הרצליה, Tue=קש-עפולה, Wed=דרום, Thu=ירושלים
+  -- מיכאל: Sun=יקנעם-נתניה, Mon=זכרון-הרצליה, Tue=קריית שמונה-עפולה, Wed=דרום, Thu=ירושלים
   IF t_michael IS NOT NULL THEN
     UPDATE technicians SET rotation = jsonb_build_object(
       '0', z_yoqneam::text,

@@ -1206,6 +1206,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
         <div class="ph-sub">Maslul — גלוי לך בלבד</div>
       </div>
       <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="renderAdminPanel(true)" title="רענן נתונים"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> רענן</button>
         <button class="btn btn-outline" onclick="openNewTenantModal()">+ מהיר</button>
         <button class="btn btn-blue" onclick="initWizard();goPage('wizard')">🧙 אשף לקוח חדש</button>
       </div>
@@ -2980,7 +2981,7 @@ let currentUserSuperAdmin=false;
 let currentUserPermissions={};
 let clientArchiveView=false;
 let reportPeriod='month';
-let adminTenants=[],adminUsers=[];
+let adminTenants=[],adminUsers=[],_adminCache={techs:[],zones:[],cats:[]};
 let nextTaskId=1,nextTechId=1,editingTechId=null;
 let selectedCat=null,currentFilter='all',statusTaskId=null,cancelTaskId=null,prefWindows=[];
 let currentRole='admin',currentTechView=null;
@@ -3088,6 +3089,7 @@ async function initApp() {
   }
   applyLabels();
   buildRoleSelect(); populateTimeSels(); populateCitySelect();
+  if(currentUserSuperAdmin) renderAdminPanel(); // pre-fetch admin data in background
   setDateLabel(); renderCatChips(); renderTasks(); renderHomeTechCards();
   renderTechs(); renderZones(); renderCategories(); renderSettings();
   applyFeatureVisibility();
@@ -3210,7 +3212,7 @@ function goPage(page){
   if(page==='tasks')renderTasks();
   if(page==='home')renderHomeTechCards();
   if(page==='clients'){clientArchiveView=false;renderClients();}
-  if(page==='admin')renderAdminPanel();
+  if(page==='admin')renderAdminPanel(false);
   if(page==='reports')renderReports();
   if(page==='planner')renderPlannerView();
   if(page==='users')renderUsersPage();
@@ -3758,9 +3760,14 @@ async function saveSchedulingConfig(){
 
 // ═══ MASTER ADMIN PANEL ═══
 let editingTenantFeatId=null;
-async function renderAdminPanel(){
+async function renderAdminPanel(force=false){
   const list=document.getElementById('admin-tenant-list');
   if(!list)return;
+  // Serve from cache on repeat visits — only fetch on first load or explicit refresh
+  if(!force&&adminTenants.length>0){
+    _renderAdminTenantList(_adminCache.techs,_adminCache.zones,_adminCache.cats);
+    return;
+  }
   list.innerHTML='<div style="text-align:center;padding:2rem;color:var(--ink-4);">טוען...</div>';
   try{
     const[tenantRes,userRes,techRes,zoneRes,catRes]=await Promise.all([
@@ -3782,14 +3789,22 @@ async function renderAdminPanel(){
     }
     adminTenants=tenantRes.data||[];
     adminUsers=userRes.data||[];
+    _adminCache={techs:techRes.data||[],zones:zoneRes.data||[],cats:catRes.data||[]};
     console.log('admin panel: tenants=',adminTenants.length,'users=',adminUsers.length,adminUsers);
-    const allTechs=techRes.data||[];
-    const allZones=zoneRes.data||[];
-    const allCats=catRes.data||[];
-    if(!adminTenants.length){
-      list.innerHTML='<div class="empty"><div class="empty-icon">🏢</div><div>אין לקוחות נגישים — ודא שפוליסות RLS מאפשרות גישת super_admin</div></div>';
-      return;
-    }
+    _renderAdminTenantList(_adminCache.techs,_adminCache.zones,_adminCache.cats);
+  }catch(err){
+    const list2=document.getElementById('admin-tenant-list');
+    if(list2)list2.innerHTML=`<div class="empty"><div style="color:var(--red);font-weight:700;">שגיאת JavaScript</div><div style="font-size:0.8125rem;color:var(--ink-3);margin-top:4px;">${err.message}</div></div>`;
+    console.error('renderAdminPanel JS error:',err);
+  }
+}
+function _renderAdminTenantList(allTechs,allZones,allCats){
+  const list=document.getElementById('admin-tenant-list');
+  if(!list)return;
+  if(!adminTenants.length){
+    list.innerHTML='<div class="empty"><div class="empty-icon">🏢</div><div>אין לקוחות נגישים — ודא שפוליסות RLS מאפשרות גישת super_admin</div></div>';
+    return;
+  }
     const planColor={pilot:'var(--amber)',starter:'var(--blue)',pro:'var(--purple)'};
     const userDebugNote=adminUsers.length===0?`<div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:8px;padding:8px 12px;font-size:0.78rem;color:#92400E;margin-bottom:12px;">⚠️ שאילתת users החזירה 0 שורות — ייתכן שחסרים רשומות ב-users table או שה-RLS חוסם. פתח DevTools → Console לפרטים.</div>`:'';
     list.innerHTML=userDebugNote+adminTenants.map(t=>{
@@ -3840,10 +3855,7 @@ async function renderAdminPanel(){
         </div>
       </div>`;
     }).join('');
-  }catch(err){
-    list.innerHTML=`<div class="empty"><div style="color:var(--red);font-weight:700;">שגיאת JavaScript</div><div style="font-size:0.8125rem;color:var(--ink-3);margin-top:4px;">${err.message}</div></div>`;
-    console.error('renderAdminPanel JS error:',err);
-  }
+}
 }
 function openTenantFeatModal(tenantId){
   const t=adminTenants.find(x=>x.id===tenantId);if(!t)return;
@@ -3874,7 +3886,7 @@ async function saveTenantFeatures(){
   if(editingTenantFeatId===currentTenantId){tenantConfig=updatedConfig;applyFeatureVisibility();}
   closeMo('mo-tenant-feat');
   showToast('תכונות עודכנו ✓');
-  renderAdminPanel();
+  renderAdminPanel(true);
 }
 async function enableAllFeatures(tenantId){
   const t=adminTenants.find(x=>x.id===tenantId);if(!t)return;
@@ -3885,7 +3897,7 @@ async function enableAllFeatures(tenantId){
   t.config=updatedConfig;
   if(tenantId===currentTenantId){tenantConfig=updatedConfig;applyFeatureVisibility();}
   showToast('כל התכונות הופעלו ✓');
-  renderAdminPanel();
+  renderAdminPanel(true);
 }
 
 let editingTenantId=null;
@@ -3908,7 +3920,7 @@ async function saveTenantEdit(){
   t.name=name;t.plan=plan;
   closeMo('mo-tenant-edit');
   showToast('לקוח עודכן ✓');
-  renderAdminPanel();
+  renderAdminPanel(true);
 }
 function confirmDeleteTenant(){
   document.getElementById('te-delete-confirm').classList.remove('hidden');
@@ -3922,7 +3934,7 @@ async function deleteTenant(){
   closeMo('mo-tenant-edit');
   showToast(`לקוח "${t?.name}" נמחק`);
   editingTenantId=null;
-  renderAdminPanel();
+  renderAdminPanel(true);
 }
 
 function enterTenantSession(tenantId,tenantName){
@@ -4000,7 +4012,7 @@ async function createTenant(){
     showToast(`לקוח "${name}" נוצר — UUID: ${tenant.id}`);
   }
   closeMo('mo-tenant');
-  renderAdminPanel();
+  renderAdminPanel(true);
 }
 
 // ═══ REPORTS ═══
