@@ -24,7 +24,10 @@
 |---|---|
 | `index.html` | Entire frontend — HTML, CSS, JS inline |
 | `schema.sql` | Complete Supabase DDL, RLS policies, onboarding SQL |
-| `CLAUDE.md` | AI assistant context (architecture rules, invariants) |
+| `CLAUDE.md` | AI assistant context (working rule, clients, backlog) |
+| `context/style.md` | CSS tokens, component classes, spacing, RTL conventions |
+| `context/architecture.md` | This file — stack, schema, hard rules, features |
+| `context/scheduling-rules.md` | Scheduling engine rules and invariants |
 | `DEVELOPER.md` | Developer onboarding, gotchas, infrastructure |
 | `PRODUCT_GUIDE.md` | Section-by-section product brief + 15-min demo script |
 | `backend/main.py` | FastAPI app — /health and /optimize endpoints |
@@ -116,3 +119,163 @@ async function saveXToSupabase(x) {
 | Google Cloud | Distance Matrix API |
 | Sentry | Error tracking (EU region) |
 | UptimeRobot | Uptime monitoring |
+
+---
+
+## Supabase Schema
+
+### Tables
+| Table | Key columns |
+|---|---|
+| `tenants` | `id`, `name`, `plan`, `config` (JSONB) |
+| `users` | `id`, `tenant_id`, `role`, `name` |
+| `technicians` | `id`, `tenant_id`, `name`, `phone`, `base_city`, `color`, `min_daily`, `max_daily`, `start_time`, `end_time`, `blocked_cities` (array), `skills` (array), `cat_limits` (JSONB), `rotation` (JSONB), `duration_overrides` (JSONB), `weekly_schedule` (JSONB), `last_lat`, `last_lon`, `last_seen` |
+| `tasks` | `id`, `tenant_id`, `assign_id`, `client_name`, `client_phone`, `city`, `street`, `category_id`, `category_name`, `technician_id`, `status`, `scheduled_date`, `scheduled_time`, `notes`, `cancelled_at`, `checklist_done` (JSONB), `recurring_template_id` (UUID FK) |
+| `zones` | `id`, `tenant_id`, `name`, `cities` (array) |
+| `categories` | `id`, `tenant_id`, `name`, `duration_minutes` |
+| `packages` | `id`, `tenant_id`, `name`, `items` (JSONB) |
+| `day_offs` | `id`, `tenant_id`, `technician_id`, `date`, `type`, `from_time`, `to_time`, `reason` |
+| `clients` | `id`, `tenant_id`, `name`, `phone`, `email`, `city`, `address`, `notes`, `archived` |
+| `recurring_templates` | `id`, `tenant_id`, `client_name`, `client_phone`, `city`, `street`, `category_id`, `category_name`, `notes`, `day_of_week`, `scheduled_time`, `interval_weeks` (1/2/4), `preferred_technician_id`, `lookahead_weeks`, `active`, `last_generated_date`, `created_at` |
+| `audit_log` | `id`, `created_at`, `tenant_id`, `table_name`, `operation`, `record_id`, `old_data` (JSONB), `new_data` (JSONB) |
+
+### DB Migrations (run in order on fresh Supabase)
+```
+outputs/migration-gps-columns_2026-05-27.sql          — last_lat/lon/seen on technicians
+outputs/migration-duration-overrides_2026-06-01.sql   — duration_overrides JSONB on technicians
+outputs/migration-recurring-jobs_2026-06-01.sql       — recurring_templates table + tasks FK
+```
+
+### `tenants.config` JSONB Shape
+```json
+{
+  "labels":    { "worker": "טכנאי", "workers": "טכנאים", "task": "קריאה", "tasks": "קריאות",
+                 "zone": "אזור", "zones": "אזורים", "dispatch": "שיבוץ קריאה" },
+  "defaults":  { "regular_job_minutes": 30, "package_job_minutes": 45,
+                 "arrival_window_hours": 3, "max_daily_jobs": 9,
+                 "lookahead_days": 30, "monthly_volume": 300,
+                 "work_start": "07:00", "work_end": "18:00",
+                 "break": { "enabled": true, "start": "12:00", "end": "13:00" } },
+  "scheduling": { "mode": "zone", "zone_strict": true, "fill_first": true,
+                  "route_logic": true, "route_strategy": "far_to_near" },
+  "features":  { "whatsapp_enabled": true, "demo_mode": false,
+                 "google_maps_enabled": false, "odoo_integration": false,
+                 "tech_duration_overrides": false }
+}
+```
+
+---
+
+## CDN + Supabase Key Rules
+- **Always use the JWT anon key** (`eyJ...` format) — never `sb_publishable_...` with supabase-js@2
+- **Pin every CDN library to an exact version** — never `@2` or `latest`; use `@2.49.4` etc.
+- **Always use jsDelivr** (`cdn.jsdelivr.net`) — never unpkg (unpkg can silently change build artifacts)
+- **Never add `integrity=` attributes** to CDN tags — version pinning is sufficient; hashes go stale
+- Supabase JS pinned to `2.49.4`. Leaflet pinned to `1.9.4`. Do not change without testing.
+
+---
+
+## Auth Flow Rules (hard-learned — do not break)
+- **Never use `Promise.race` to cancel a Supabase auth call.** The underlying fetch keeps running and holds supabase-js's lock. Any subsequent auth call queues behind it and hangs indefinitely.
+- **`createClient()` uses a no-op auth lock** — `auth: { lock: async (_n, _t, fn) => fn() }`. Default Web Locks API is shared across tabs — one tab holds the lock, all others hang. Do not remove this option.
+- **Pre-flight runs BEFORE `createClient()`** — clears sessions expiring within 5 minutes. Do not move inside `initAuth()` — by then the lock is already held.
+- **`initAuth` watchdog** — `authDone = true` is the FIRST line in the watchdog callback. Without it, a late `getSession()` result calls `showLogin()` on top of the live app.
+- **`loadTenantFromUser()` must `throw` on failure** — must: (1) call `showLogin()`, (2) set error text AFTER `showLogin`, (3) fire-and-forget `signOut()`, (4) `throw`. Never `return` after error — caller still calls `showApp()`.
+- **`SIGNED_OUT` handler skips `showLogin()` if login is already visible** — prevents fire-and-forget `signOut()` from clearing errors set by `loadTenantFromUser()`.
+
+---
+
+## Supabase SECURITY DEFINER Function Rules (hard-learned — do not break)
+- **`SET search_path = ''` requires `public.` prefix on ALL table references.** Bare `users` fails with `42P01: relation "users" does not exist` — silently breaks ALL RLS policies.
+- **Supabase auto-creates** `current_tenant_id()` and `current_user_role()` startup functions. After any security advisor run, check and fix:
+  ```sql
+  SELECT proname, prosrc FROM pg_proc
+  WHERE pronamespace = 'public'::regnamespace AND proconfig @> ARRAY['search_path=""']
+  ORDER BY proname;
+  ```
+- **Our four functions** that query `public.users`: `get_tenant_id()`, `is_super_admin()`, `current_tenant_id()`, `current_user_role()`. All must have `public.` prefix.
+
+---
+
+## Data Persistence Rules (CRITICAL)
+1. Verify `currentTenantId` is not null before any Supabase write — if null, show error and stop
+2. `await` all `saveXToSupabase()` calls in user-facing flows — never fire-and-forget on a confirmed action
+3. Show explicit error toast if save returns false/null — never silent failure
+4. For new entities (no `_dbId`): the WAL does NOT cover them — they rely on the Supabase call completing
+5. **Supabase user row invariant:** Every auth user MUST have a row in `public.users` with correct `tenant_id`. Missing row = `currentTenantId` stays null = all saves silently fail. Verify: `SELECT id, tenant_id, role FROM users WHERE id = '<auth_user_id>'`
+
+---
+
+## Safety Stack
+| Layer | What it does |
+|---|---|
+| WAL (`ml_wal_v1`) | Stores failed saves in localStorage, replays on next login |
+| `dbUpsert` try/catch | Prevents `_savesInFlight` permanent leak if client throws |
+| Schema validator | Post-load null/type checks on all entities, Sentry on drift |
+| Audit log (DB triggers) | Every INSERT/UPDATE/DELETE written to `audit_log` table |
+| Connection monitor | 60s ping, red banner on network loss, re-login prompt on auth expiry |
+
+All writes go through `dbUpsert` / `dbInsert` — never raw `sb.from().insert()`. These handle WAL, save-counter, error toast, Sentry logging.
+
+---
+
+## Terminology / Labels System
+All user-visible entity names come from `tenantLabels` — never hardcoded. Call `L('key')` anywhere in JS.
+
+| Key | Default | Example override |
+|---|---|---|
+| `worker` / `workers` | טכנאי / טכנאים | שליח / מנקה |
+| `task` / `tasks` | קריאה / קריאות | משלוח / עבודה |
+| `zone` / `zones` | אזור / אזורים | מסלול |
+| `dispatch` | שיבוץ קריאה | משלוח חדש |
+
+Labels stored in `tenants.config.labels`. Static HTML elements use `data-label="key"`, updated by `applyLabels()` on init.
+
+---
+
+## Demo Mode
+Set `CONFIG.DEMO_MODE = true` (or `?demo=1`, `?demo=cleaning`, `?demo=delivery` URL params).
+- `DEMO_TYPE`: `'general'` / `'cleaning'` / `'delivery'`
+- Bypasses auth, loads `DEMO_PRESETS[type]`, shows purple banner
+- `currentTenantId` is null → all Supabase calls blocked automatically
+- `DEMO_MODE` must never make Supabase calls
+
+---
+
+## GPS + Live Map
+- Leaflet.js from CDN (free, no API key) — OpenStreetMap tiles
+- **Tech route map**: `toggleTechMap()` — numbered stop pins, home base marker, GPS dot
+- **GPS tracking**: `startGpsTracking()` / `stopGpsTracking()` — `navigator.geolocation.watchPosition`, throttled to 1 DB write per 30s
+- **Coordinator live map**: `toggleCoordinatorMap()` — all techs with last GPS + today's tasks
+- **Supabase Realtime**: channel `ml-tech-gps-{tenantId}` — coordinator map updates live as techs move
+- GPS columns: `last_lat`, `last_lon`, `last_seen` on `technicians` — migration: `outputs/migration-gps-columns_2026-05-27.sql`
+
+---
+
+## Feature Architecture (June 2026)
+
+### Recurring Jobs
+- `recurring_templates` table — one row per pattern (day_of_week, interval_weeks 1/2/4, scheduled_time, preferred_technician_id)
+- `_generateRecurringInstances()` runs on every login — idempotent, silent, client-side
+- **ID safety:** `nextTaskId++` only after confirmed `dbInsert` — never pre-consume on network failure
+- **Frontier safety:** `lastGenerated` only advances after confirmed insert — failures retry on next login
+- Tasks link to template via nullable `recurring_template_id` FK; deleting template sets FK to NULL (preserves history)
+- Migration: `outputs/migration-recurring-jobs_2026-06-01.sql`
+
+### Pending Queue Panel
+- Dispatch page — 15 nearest upcoming `status==='pending'` tasks, sorted by date ASC
+- Overdue tasks highlighted red; "שבץ →" button pre-fills dispatch form
+- `queueAssign(id)` pre-fills form + sets `window._queueTask`
+- `confirmAssign()` detects `_queueTask` and updates existing task in-place (not create new)
+- On save failure: rolls back task object to previous state — no silent phantom assignment
+- Filter is `status==='pending'` only — do NOT add `!t.techId` (recurring tasks with preferred tech must still appear)
+
+### Israeli Cities Autocomplete
+- `<datalist id="il-cities-list">` with 250+ Israeli cities, shared across dispatch `s-city` and add-task `at-city`
+- Both are `<input list="il-cities-list">`, not `<select>` — zone enforcement is engine-side, not input-side
+
+### Google Maps Daily Quota
+- `backend/main.py` tracks elements used per UTC day in `_counter` (per-process)
+- Limit via `GMAPS_DAILY_ELEMENT_LIMIT` env var (default 1200 elements/day ≈ 15 optimizations for 4 techs)
+- Falls back to haversine silently when limit hit; `/health` endpoint reports usage
+- Free tier: 40,000 elements/month → 1200/day uses ~36,000/month, within free

@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(git commit -m 'fix: no-op auth lock to prevent cross-tab getSession hang *)",
-      "Bash(git commit -m 'fix: logout shows login immediately, don'\\\\''t await signOut network call *)"
+      "Bash(git commit -m 'fix: logout shows login immediately, don'\\\\''t await signOut network call *)",
+      "Read(//c/Users/WIN11/.claude/projects/c--Users-WIN11-Desktop-My-Workspace/**)",
+      "Bash(git -C \"C:\\\\Users\\\\WIN11\\\\Desktop\\\\My Workspace\" log --oneline -10)"
     ]
   }
 }

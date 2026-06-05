@@ -95,3 +95,53 @@ Core functions: `findBestSlot()` / `buildCandidates()`
 - Builds distance matrix via Google Maps Distance Matrix API (real drive times) or haversine fallback
 - Returns ordered task list with estimated arrival times
 - Triggered by "🔀 מסלול מיטבי" button when tech has 2+ tasks today
+
+---
+
+## Configurable Scheduling Engine (June 2026)
+
+New tenants configure the engine via the onboarding wizard. Settings stored in `tenants.config.scheduling`.
+
+### Scheduling Modes (`scheduling.mode`)
+| Mode | Behavior |
+|---|---|
+| `zone` | Default. Zone-strict — tech only works in their rotation zone. Route ordered by `route_strategy`. |
+| `open` | No zone enforcement. Assigns by workload balance across all techs. |
+| `radius` | Proximity-based. Assigns nearest available tech to each city. |
+
+### Route Strategies (`scheduling.route_strategy`)
+| Strategy | Behavior |
+|---|---|
+| `far_to_near` | Farthest cities first within the zone — Israel's default. `getCityIndexInZone()` orders candidates. |
+| `nearest_first` | Closest cities first. Useful for tight time windows or delivery businesses. |
+| `flexible` | Fill by load score only — distance ordering ignored. |
+
+`route_logic` boolean is kept for backward compat (true = far_to_near). New code reads `route_strategy` first.
+
+### Per-Tech Job Duration Overrides
+- Stored in `technicians.duration_overrides` JSONB: `{ "category_uuid": minutes }`
+- Engine priority: **tech override → category default → `settings.regularTime`**
+- Enabled per-tenant via `features.tech_duration_overrides: true`
+- Set in tech edit drawer under "משך לפי קטגוריה"
+- Migration: `outputs/migration-duration-overrides_2026-06-01.sql`
+
+---
+
+## Break Time System (June 2026)
+
+Break is stored in config only — NOT in `day_offs`. No new DB column.
+
+### Storage
+- **Tenant default**: `tenantConfig.defaults.break = { enabled, start, end }` — set in Settings page
+- **Per-tech override**: `tech.weekly_schedule._break = { mode, start?, end? }` — set in tech drawer
+  - `mode: 'default'` — uses tenant default
+  - `mode: 'custom'` — uses tech-specific `start`/`end`
+  - `mode: 'none'` — this tech has no break (overrides tenant setting)
+
+### Engine Integration
+- `getTechPartialBlocks(tech, dateStr)` — returns all blocked intervals `[{from, to}]` in minutes
+  - Includes manual `day_offs` partials AND resolved break block
+  - Used by `calcOptimalTime()` and all three candidate strategies (`_candidatesZone`, `_candidatesOpen`, `_candidatesRadius`)
+- **Convergent nudge**: `while(changed)` loop ensures a candidate slot clears ALL adjacent partial blocks
+  - A single-pass `for` loop fails when nudging past block 1 creates overlap with block 2
+  - The `while` loop re-checks until no block overlaps remain
