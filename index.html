@@ -683,7 +683,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div id="save-indicator" style="display:none;font-size:0.7rem;color:var(--ink-3);text-align:center;padding:2px 0 4px;letter-spacing:0.3px;">⟳ שומר…</div>
     <div id="conn-indicator" style="display:none;font-size:0.7rem;text-align:center;padding:2px 0 4px;letter-spacing:0.3px;color:var(--red);">⚠️ אין חיבור לרשת</div>
     <button class="btn btn-blue btn-full" style="margin-bottom:10px;" onclick="openCallDrawer()">+ קריאה חדשה</button>
-    <div id="client-chips" style="display:none;margin-bottom:6px;"></div>
     <div id="role-chips" class="role-chips"></div>
     <div class="sb-user">
       <div class="sb-user-av" id="user-av-sb">?</div>
@@ -3089,7 +3088,6 @@ async function initApp() {
   }
   applyLabels();
   buildRoleSelect(); populateTimeSels(); populateCitySelect();
-  loadClientChips();
   setDateLabel(); renderCatChips(); renderTasks(); renderHomeTechCards();
   renderTechs(); renderZones(); renderCategories(); renderSettings();
   applyFeatureVisibility();
@@ -3135,6 +3133,7 @@ function populateCitySelect(){
 function buildRoleSelect(){
   const container=document.getElementById('role-chips');
   if(!container)return;
+  if(currentUserSuperAdmin&&!sessionStorage.getItem('ma_session')){container.innerHTML='';return;}
   const isAdmin=currentRole==='admin';
   const parts=[`<div class="role-chip${isAdmin?' active':''}" onclick="switchRoleTo('admin')" title="תצוגת מנהל / מתאמת"><span>📋 מנהל</span></div>`];
   technicians.forEach(t=>{
@@ -3146,22 +3145,6 @@ function buildRoleSelect(){
   });
   container.innerHTML=parts.join('');
 }
-// ─── Tenant quick-switcher (super_admin only) ─────────────────────────────
-// Shows one chip per tenant in the sidebar so Eran can jump into any
-// client's view without navigating to the admin panel first.
-async function loadClientChips(){
-  const wrap=document.getElementById('client-chips');
-  if(!wrap||!currentUserSuperAdmin)return;
-  const inSession=!!sessionStorage.getItem('ma_session');
-  if(inSession){wrap.style.display='none';return;}
-  const{data}=await sb.from('tenants').select('id,name').neq('id',currentTenantId).order('name');
-  if(!data||!data.length){wrap.style.display='none';return;}
-  wrap.innerHTML=data.map(t=>
-    `<div class="role-chip" onclick="enterTenantSession('${t.id}','${h(t.name)}')" title="כנס לסשן ${h(t.name)}" style="color:var(--purple);border-color:rgba(139,92,246,0.35);">🔀 ${h(t.name)}</div>`
-  ).join('');
-  wrap.style.display='flex';
-}
-// ──────────────────────────────────────────────────────────────────────────
 
 function switchRoleTo(val){
   currentRole=val;
@@ -3783,7 +3766,7 @@ async function renderAdminPanel(){
     const[tenantRes,userRes,techRes,zoneRes,catRes]=await Promise.all([
       sb.from('tenants').select('*'),
       sb.from('users').select('id,tenant_id,role,name,super_admin'),
-      sb.from('technicians').select('tenant_id,rotation'),
+      sb.from('technicians').select('id,tenant_id,name,color,rotation'),
       sb.from('zones').select('tenant_id'),
       sb.from('categories').select('tenant_id'),
     ]);
@@ -3843,6 +3826,16 @@ async function renderAdminPanel(){
             <button class="btn btn-outline btn-sm" onclick="openTenantFeatModal('${t.id}')">⚙️ תכונות</button>
             <button class="btn btn-outline btn-sm" onclick="openTenantEditModal('${t.id}')">✏️ ערוך / מחק</button>
             <button class="btn btn-sm" style="background:var(--green-l);color:var(--green);border:1px solid #BBF7D0;font-weight:700;" onclick="enableAllFeatures('${t.id}')">✅ הפעל הכל</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);">
+          <div>
+            <div style="font-size:0.7rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">מנהלים</div>
+            ${tUsers.length?tUsers.map(u=>`<div onclick="enterTenantSession('${t.id}','${h(t.name)}')" title="כנס כ-${h(u.name)}" style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:var(--r);border:1px solid var(--line);cursor:pointer;font-size:0.8rem;margin-bottom:4px;transition:all 0.15s;" onmouseover="this.style.borderColor='var(--accent)';this.style.background='var(--accent-light)';" onmouseout="this.style.borderColor='var(--line)';this.style.background='';"><span style="font-size:0.9rem;">👤</span><span style="font-weight:600;">${h(u.name)}</span><span style="color:var(--ink-4);font-size:0.72rem;">(${u.role})</span>${u.super_admin?'<span style="color:var(--amber);font-size:0.8rem;">⭐</span>':''}</div>`).join(''):'<div style="font-size:0.78rem;color:var(--ink-4);">אין משתמשים</div>'}
+          </div>
+          <div>
+            <div style="font-size:0.7rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">טכנאים</div>
+            ${tTechs.length?tTechs.map(tech=>`<div onclick="enterTenantAsUser('${t.id}','${h(t.name)}','${tech.id}')" title="כנס כ-${h(tech.name)}" style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:var(--r);border:1px solid var(--line);cursor:pointer;font-size:0.8rem;margin-bottom:4px;transition:all 0.15s;" onmouseover="this.style.borderColor='var(--accent)';this.style.background='var(--accent-light)';" onmouseout="this.style.borderColor='var(--line)';this.style.background='';"><div style="width:18px;height:18px;border-radius:50%;background:${tech.color||'var(--accent)'};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.55rem;font-weight:800;color:white;">${(tech.name||'?').trim().split(' ').map(w=>w[0]).slice(0,2).join('')}</div><span style="font-weight:600;">${h(tech.name)}</span></div>`).join(''):'<div style="font-size:0.78rem;color:var(--ink-4);">אין טכנאים</div>'}
           </div>
         </div>
       </div>`;
@@ -3956,8 +3949,14 @@ function enterTenantSession(tenantId,tenantName){
     applyLabels();buildRoleSelect();populateCitySelect();
     setDateLabel();renderCatChips();renderTasks();renderHomeTechCards();
     renderTechs();renderZones();renderCategories();renderSettings();
-    goPage('home');
+    const pendingTech=sessionStorage.getItem('ma_pending_tech');
+    if(pendingTech){sessionStorage.removeItem('ma_pending_tech');switchRoleTo('tech_'+pendingTech);}
+    else goPage('home');
   });
+}
+function enterTenantAsUser(tenantId,tenantName,techId){
+  sessionStorage.setItem('ma_pending_tech',techId);
+  enterTenantSession(tenantId,tenantName);
 }
 
 async function exitTenantSession(origTenantId){
@@ -3972,7 +3971,6 @@ async function exitTenantSession(origTenantId){
   setDateLabel();renderCatChips();renderTasks();renderHomeTechCards();
   renderTechs();renderZones();renderCategories();renderSettings();
   applyFeatureVisibility();
-  loadClientChips(); // restore tenant chips after exiting impersonation
   goPage('admin');
 }
 
