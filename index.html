@@ -4492,7 +4492,15 @@ function getCatName(){
 }
 
 // ═══ ENGINE ═══
-function getCityZone(city){return zones.find(z=>z.cities.includes(city))||null;}
+const CITY_ALIASES={
+  'קריית גת':'קרית גת','קריית מלאכי':'קרית מלאכי','קריית ים':'קרית ים',
+  'קריית מוצקין':'קרית מוצקין','קריית ביאליק':'קרית ביאליק','קריית חיים':'קרית חיים',
+  'קריית אונו':'קרית אונו','קרית שמונה':'קריית שמונה',
+  'בית-שמש':'בית שמש','נס-ציונה':'נס ציונה','ראשון-לציון':'ראשון לציון',
+  'פתח-תקווה':'פתח תקווה','באר-שבע':'באר שבע','תל-אביב':'תל אביב',
+};
+function normalizeCity(city){if(!city)return city;return CITY_ALIASES[city.trim()]||city.trim();}
+function getCityZone(city){const c=normalizeCity(city);return zones.find(z=>z.cities.includes(c))||null;}
 function getTechDaySchedule(tech,dateStr){
   const dow=new Date(dateStr).getDay();
   const ws=tech.weekly_schedule||{};
@@ -4546,7 +4554,7 @@ function getTechZoneId(tech,dateStr){
 }
 function isCityInTechZone(tech,city,dateStr){
   const zid=getTechZoneId(tech,dateStr);if(!zid)return false;
-  const z=zones.find(x=>x.id===zid);return z?z.cities.includes(city):false;
+  const z=zones.find(x=>x.id===zid);return z?z.cities.includes(normalizeCity(city)):false;
 }
 
 // SLOT RESERVATION: early time slots are held for farther cities.
@@ -4570,7 +4578,7 @@ function getSlotReservationOffset(dateStr,cityIdx,totalCities){
 // We approximate geography by the order cities appear in the zone
 function getCityIndexInZone(city,zoneId){
   const z=zones.find(x=>x.id===zoneId);if(!z)return 999;
-  return z.cities.indexOf(city);
+  return z.cities.indexOf(normalizeCity(city));
 }
 // Calculate optimal time for new task using far-to-near logic.
 // Zone cities array: index 0 = FARTHEST from tech base, last index = CLOSEST.
@@ -5053,7 +5061,7 @@ async function confirmAssign(idx,assignId){
   const client=document.getElementById('c-name').value.trim();
   if(!client){document.getElementById('c-name').classList.add('error');document.getElementById('c-name').focus();alert('שם לקוח הוא שדה חובה');return;}
   document.getElementById('c-name').classList.remove('error');
-  const city=document.getElementById('s-city').value;
+  const city=normalizeCity(document.getElementById('s-city').value);
   const street=document.getElementById('s-street').value.trim();
   const phone=document.getElementById('c-phone').value||'';
   const notes=document.getElementById('c-notes').value||'';
@@ -5386,7 +5394,7 @@ function confirmAddTask(){
   const catEl=document.getElementById('at-cat');
   const name=document.getElementById('at-name').value.trim();
   const phone=document.getElementById('at-phone').value.trim();
-  const city=document.getElementById('at-city').value;
+  const city=normalizeCity(document.getElementById('at-city').value);
   const street=document.getElementById('at-street').value.trim();
   const notes=document.getElementById('at-notes').value.trim();
   const errEl=document.getElementById('at-error');
