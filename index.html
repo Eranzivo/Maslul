@@ -1652,7 +1652,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
       <div>
         <div style="font-size:1.125rem;font-weight:900;" id="td-client"></div>
-        <div style="margin-top:4px;" id="td-assignid"></div>
       </div>
       <span id="td-status-badge" class="badge" style="font-size:0.75rem;padding:4px 10px;"></span>
     </div>
@@ -1663,6 +1662,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     </div>
     <div class="mo-actions" style="flex-wrap:wrap;gap:8px;">
       <button class="btn btn-outline" onclick="closeMo('mo-task-detail')">סגור</button>
+      <button class="btn btn-outline" onclick="editTaskFromDetail()">ערוך ✏</button>
       <div id="td-status-opts" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
       <button class="btn btn-blue" style="margin-right:auto;" onclick="saveTaskDetail()">שמור הערה ✓</button>
     </div>
@@ -6452,7 +6452,6 @@ function openTaskDetail(id){
   detailTaskId=id;
   const tech=technicians.find(x=>String(x.id)===String(t.techId));
   document.getElementById('td-client').textContent=t.client||'';
-  document.getElementById('td-assignid').innerHTML=t.assignId?`<span class="assign-id-tag">${h(t.assignId)}</span>`:'';
   const s=STATUS_MAP[t.status]||STATUS_MAP.pending;
   const sb=document.getElementById('td-status-badge');
   sb.textContent=s.label;sb.className='badge '+s.badge;
@@ -6491,6 +6490,12 @@ async function saveTaskDetail(){
   save();
   closeMo('mo-task-detail');
   showToast('נשמר ✓');
+}
+function editTaskFromDetail(){
+  const id=detailTaskId;
+  closeMo('mo-task-detail');
+  goPage('dispatch');
+  setTimeout(()=>queueAssign(id),150);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   street         TEXT,
   category_id    TEXT,
   category_name  TEXT,
-  technician_id  TEXT,
+  technician_id  UUID,
   status         TEXT NOT NULL DEFAULT 'pending',
   scheduled_date DATE,
   scheduled_time TEXT,
@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS tasks (
 CREATE TABLE IF NOT EXISTS day_offs (
   id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   tenant_id     UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-  technician_id TEXT NOT NULL,
+  technician_id UUID NOT NULL,
   date          DATE NOT NULL,
   type          TEXT NOT NULL DEFAULT 'full',  -- 'full' | 'partial'
   from_time     TEXT,
