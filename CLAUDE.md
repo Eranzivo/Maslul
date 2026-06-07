@@ -10,6 +10,8 @@ Read ALL files in `context/` before touching any code:
 
 **New entity / table rule:** Run all steps in `context/new-entity-checklist.md` before adding any Supabase table.
 
+**Proactive upgrade rule:** If a significant product improvement is possible (like geocoding accuracy, a new API integration, or an architectural enhancement), proactively suggest it with: what it does, steps to implement, and cost estimate. Don't wait to be asked.
+
 **Outputs rule:** Every artifact (reports, plans, summaries, migrations) → `outputs/[task-name]_[YYYY-MM-DD].md`.
 
 **Connections:** `connections/registry.json` lists all external services. Secrets only in `.env` (root) — never in `context/`, `connections/`, or `commands/`.
@@ -65,6 +67,9 @@ Eran (infomaslul@gmail.com) logs in to Maslul Admin → uses 🔀 PureWater side
 - [x] Dispatch form UX — client name/phone/notes moved to top of form, one-step flow (2026-06-07)
 - [x] Task detail modal — "ערוך ✏" button added, MSL assign_id hidden from UI (2026-06-07)
 - [x] Week of Jun 7–11 seeded — 108 placeholder tasks for PureWater via SQL (2026-06-07)
+- [x] Polygon draw modal fixed — map renders, scroll works (2026-06-07)
+- [x] CITY_COORDS_JS expanded 45 → 255 cities (2026-06-07)
+- [x] Geo-intelligence layer — street-level routing via Google Geocoding API + lat/lon caching on tasks; polygon vertices saved on zones; optimizer uses best available coords (2026-06-07)
 
 ### 🔴 Urgent
 - [ ] **Railway upgrade** — trial expires **2026-06-12**. Upgrade to Hobby $5/mo at railway.app or the optimizer goes down.

@@ -79,8 +79,19 @@
 ## Route Optimization Backend
 - POST `/optimize` — builds distance matrix, runs OR-Tools TSP solver, returns ordered tasks with arrival times
 - Distance matrix: Google Maps Distance Matrix API if key set, else haversine
+- Location priority per task: **geocoded lat/lon** → **street + city string** → **city name only**
+- `_parse_loc(loc)` in optimizer.py handles `"lat,lon"` strings and city name strings uniformly
 - 5-second solver time limit
 - "🔀 מסלול מיטבי" button on home when tech has 2+ tasks today
+
+## Geocoding (Google Geocoding API)
+- POST `/geocode` — accepts `{street, city}`, returns `{lat, lon}` via Google Geocoding API (same key as Distance Matrix)
+- Frontend calls this once on `s-street` blur when `features.geocoding_enabled = true`
+- Result cached in `tasks.lat / tasks.lon / tasks.geocoded_at` — geocode once, reuse forever
+- `_pendingGeocode` JS var holds result until `confirmAssign()` writes it to the task
+- `_geocodeCache` JS object caches within the session by `"street|city"` key
+- Cost: ~$0.005 per unique address; within $200/month Google Maps free credit
+- **Israel**: `geocoding_enabled: true` (enabled 2026-06-07)
 
 ## Supabase Write Pattern
 ```js
@@ -130,8 +141,8 @@ async function saveXToSupabase(x) {
 | `tenants` | `id`, `name`, `plan`, `config` (JSONB) |
 | `users` | `id`, `tenant_id`, `role`, `name` |
 | `technicians` | `id`, `tenant_id`, `name`, `phone`, `base_city`, `color`, `min_daily`, `max_daily`, `start_time`, `end_time`, `blocked_cities` (array), `skills` (array), `cat_limits` (JSONB), `rotation` (JSONB), `duration_overrides` (JSONB), `weekly_schedule` (JSONB), `last_lat`, `last_lon`, `last_seen` |
-| `tasks` | `id`, `tenant_id`, `assign_id`, `client_name`, `client_phone`, `city`, `street`, `category_id`, `category_name`, `technician_id`, `status`, `scheduled_date`, `scheduled_time`, `notes`, `cancelled_at`, `checklist_done` (JSONB), `recurring_template_id` (UUID FK) |
-| `zones` | `id`, `tenant_id`, `name`, `cities` (array) |
+| `tasks` | `id`, `tenant_id`, `assign_id`, `client_name`, `client_phone`, `city`, `street`, `category_id`, `category_name`, `technician_id`, `status`, `scheduled_date`, `scheduled_time`, `notes`, `cancelled_at`, `checklist_done` (JSONB), `recurring_template_id` (UUID FK), `lat` (DOUBLE PRECISION), `lon` (DOUBLE PRECISION), `geocoded_at` (TIMESTAMPTZ) |
+| `zones` | `id`, `tenant_id`, `name`, `cities` (array), `polygon` (JSONB — array of `{lat,lng}` vertices, nullable) |
 | `categories` | `id`, `tenant_id`, `name`, `duration_minutes` |
 | `packages` | `id`, `tenant_id`, `name`, `items` (JSONB) |
 | `day_offs` | `id`, `tenant_id`, `technician_id`, `date`, `type`, `from_time`, `to_time`, `reason` |
@@ -144,6 +155,7 @@ async function saveXToSupabase(x) {
 outputs/migration-gps-columns_2026-05-27.sql          — last_lat/lon/seen on technicians
 outputs/migration-duration-overrides_2026-06-01.sql   — duration_overrides JSONB on technicians
 outputs/migration-recurring-jobs_2026-06-01.sql       — recurring_templates table + tasks FK
+outputs/migration-geocoding_2026-06-07.sql            — lat/lon/geocoded_at on tasks; polygon on zones
 ```
 
 ### `tenants.config` JSONB Shape
@@ -160,7 +172,8 @@ outputs/migration-recurring-jobs_2026-06-01.sql       — recurring_templates ta
                   "route_logic": true, "route_strategy": "far_to_near" },
   "features":  { "whatsapp_enabled": true, "demo_mode": false,
                  "google_maps_enabled": false, "odoo_integration": false,
-                 "tech_duration_overrides": false }
+                 "tech_duration_overrides": false,
+                 "geocoding_enabled": false }
 }
 ```
 

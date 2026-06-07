@@ -2,6 +2,7 @@ import os
 from datetime import date
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+import httpx
 from pydantic import BaseModel
 from typing import Optional
 from dotenv import load_dotenv
@@ -56,6 +57,8 @@ class Task(BaseModel):
     id: str
     city: str
     address: Optional[str] = None
+    lat: Optional[float] = None
+    lon: Optional[float] = None
     duration_minutes: int = 30
     scheduled_time: Optional[str] = None
 
@@ -67,6 +70,11 @@ class Technician(BaseModel):
     start_time: str = "07:00"
     end_time: str = "18:00"
     tasks: list[Task] = []
+
+
+class GeocodeRequest(BaseModel):
+    street: str
+    city: str
 
 
 class SchedulingConfig(BaseModel):
@@ -97,6 +105,28 @@ def health():
         "daily_elements_limit": _DAILY_LIMIT,
         "daily_elements_remaining": max(0, _DAILY_LIMIT - used),
     }
+
+
+@app.post("/geocode")
+async def geocode(req: GeocodeRequest):
+    """Geocode a street address using Google Geocoding API. Returns {lat, lon}."""
+    api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=503, detail="Maps key not configured")
+    full_address = f"{req.street}, {req.city}, ישראל"
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            resp = await client.get(
+                "https://maps.googleapis.com/maps/api/geocode/json",
+                params={"address": full_address, "key": api_key, "region": "il", "language": "he"},
+            )
+        data = resp.json()
+    except Exception:
+        raise HTTPException(status_code=503, detail="Geocoding service unavailable")
+    if data.get("status") == "OK":
+        loc = data["results"][0]["geometry"]["location"]
+        return {"lat": loc["lat"], "lon": loc["lng"]}
+    raise HTTPException(status_code=404, detail=f"Address not found: {data.get('status')}")
 
 
 @app.post("/optimize")

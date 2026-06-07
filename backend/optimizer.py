@@ -20,6 +20,29 @@ def km_to_minutes(km: float, speed_kmh: float = 35.0) -> int:
     return max(3, int(km / speed_kmh * 60))
 
 
+def _parse_loc(loc: str) -> tuple[float, float]:
+    """Parse a location string into (lat, lon).
+
+    Accepts 'lat,lon' coordinate strings (from geocoded tasks) or city names.
+    """
+    parts = loc.split(',', 1)
+    if len(parts) == 2:
+        try:
+            return float(parts[0].strip()), float(parts[1].strip())
+        except ValueError:
+            pass
+    return get_coords(loc)
+
+
+def _task_location(t) -> str:
+    """Return the best available location string for a task."""
+    if t.lat and t.lon:
+        return f"{t.lat},{t.lon}"
+    if t.address:
+        return f"{t.address}, {t.city}"
+    return t.city
+
+
 def build_matrix_local(locations: list[str]) -> list[list[int]]:
     """Build travel-time matrix (minutes) using city coordinates + haversine."""
     n = len(locations)
@@ -27,8 +50,8 @@ def build_matrix_local(locations: list[str]) -> list[list[int]]:
     for i in range(n):
         for j in range(n):
             if i != j:
-                lat1, lon1 = get_coords(locations[i])
-                lat2, lon2 = get_coords(locations[j])
+                lat1, lon1 = _parse_loc(locations[i])
+                lat2, lon2 = _parse_loc(locations[j])
                 matrix[i][j] = km_to_minutes(haversine_km(lat1, lon1, lat2, lon2))
     return matrix
 
@@ -61,8 +84,8 @@ async def build_matrix_gmaps(locations: list[str], api_key: str) -> list[list[in
             if element.get('status') == 'OK':
                 matrix[i][j] = element['duration']['value'] // 60  # seconds → minutes
             else:
-                lat1, lon1 = get_coords(locations[i])
-                lat2, lon2 = get_coords(locations[j])
+                lat1, lon1 = _parse_loc(locations[i])
+                lat2, lon2 = _parse_loc(locations[j])
                 matrix[i][j] = km_to_minutes(haversine_km(lat1, lon1, lat2, lon2))
     return matrix
 
@@ -196,7 +219,7 @@ async def optimize_routes(technicians: list, google_maps_api_key: Optional[str])
             })
             continue
 
-        locations = [tech.base_city] + [t.city for t in tech.tasks]
+        locations = [tech.base_city] + [_task_location(t) for t in tech.tasks]
         durations = [t.duration_minutes for t in tech.tasks]
 
         if google_maps_api_key:

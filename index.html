@@ -780,7 +780,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       </div>
       <div class="fg">
         <label class="fl">רחוב ומספר</label>
-        <input class="fc" id="s-street" placeholder="לדוגמה: הרצל 15">
+        <input class="fc" id="s-street" placeholder="לדוגמה: הרצל 15" onblur="_triggerGeocode()">
       </div>
     </div>
     <div class="fg"><label class="fl">הערות</label><input class="fc" id="c-notes" placeholder="הערות..." oninput="saveDispatchDraft()"></div>
@@ -2440,11 +2440,13 @@ async function loadFromSupabase() {
       photoUrl: t.photo_url || null,
       signatureUrl: t.signature_url || null,
       recurringTemplateId: t.recurring_template_id || null,
+      lat: t.lat || null, lon: t.lon || null,
+      geocodedAt: t.geocoded_at || null,
       _dbId: t.id
     }));
 
     zones = (zoneRes.data || []).map(z => ({
-      id: z.id, name: z.name, cities: z.cities || [], _dbId: z.id
+      id: z.id, name: z.name, cities: z.cities || [], polygon: z.polygon || null, _dbId: z.id
     }));
 
     // ── ZONE RECOVERY (one-time seed for Israel's tenant) ─────────────────────
@@ -2840,6 +2842,8 @@ async function saveTaskToSupabase(task) {
     checklist_done: task.checklistDone || {},
     photo_url: task.photoUrl || null,
     signature_url: task.signatureUrl || null,
+    lat: task.lat || null, lon: task.lon || null,
+    geocoded_at: task.geocodedAt || null,
   };
   if (task._dbId) return (await dbUpsert('tasks', { id: task._dbId, ...row })) !== null;
   const data = await dbInsert('tasks', row);
@@ -4949,6 +4953,8 @@ async function optimizeDay(techId, date) {
             id: String(t.id),
             city: t.city,
             address: t.street || null,
+            lat: t.lat || null,
+            lon: t.lon || null,
             duration_minutes: cat ? cat.time : 30,
             scheduled_time: t.time || null,
           };
@@ -4984,6 +4990,29 @@ async function runOptimize(techId, date){
   });
   save();renderHomeTechCards();renderTasks();if(date)renderPlannerContent();
   showToast(`מסלול מיטבי ${result.mode==='gmaps'?'(Google Maps)':'(הערכה)'}  ✓ — ${result.total_drive_minutes} דק׳ נסיעה`);
+}
+
+// ═══ GEOCODING ═══
+let _pendingGeocode = null;
+const _geocodeCache = {};
+
+async function _triggerGeocode() {
+  if (!tenantConfig?.features?.geocoding_enabled || !CONFIG.OPTIMIZER_URL) return;
+  const city = (document.getElementById('s-city').value || '').trim();
+  const street = (document.getElementById('s-street').value || '').trim();
+  if (!city || !street) return;
+  const cacheKey = `${street}|${city}`;
+  if (_geocodeCache[cacheKey]) { _pendingGeocode = _geocodeCache[cacheKey]; return; }
+  try {
+    const res = await fetch(`${CONFIG.OPTIMIZER_URL}/geocode`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ street, city })
+    });
+    if (!res.ok) return;
+    const coords = await res.json();
+    _geocodeCache[cacheKey] = coords;
+    _pendingGeocode = coords;
+  } catch(e) { console.warn('[geocode] failed:', e); }
 }
 
 // ═══ DISPATCH ═══
@@ -5150,19 +5179,22 @@ async function confirmAssign(idx,assignId){
   let newTask,saved;
   const btn=document.getElementById('confirm-assign-btn');
   if(btn){btn.disabled=true;btn.textContent='שומר…';}
+  const _gc=_pendingGeocode;
+  const _gcAt=_gc?new Date().toISOString():null;
   if(qt){
     // Snapshot original state so we can roll back if the save fails
-    const _orig={client:qt.client,phone:qt.phone,city:qt.city,street:qt.street,cat:qt.cat,catId:qt.catId,techId:qt.techId,status:qt.status,time:qt.time,date:qt.date,notes:qt.notes,assignId:qt.assignId,preferredWindows:qt.preferredWindows};
-    Object.assign(qt,{client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows]});
+    const _orig={client:qt.client,phone:qt.phone,city:qt.city,street:qt.street,cat:qt.cat,catId:qt.catId,techId:qt.techId,status:qt.status,time:qt.time,date:qt.date,notes:qt.notes,assignId:qt.assignId,preferredWindows:qt.preferredWindows,lat:qt.lat,lon:qt.lon,geocodedAt:qt.geocodedAt};
+    Object.assign(qt,{client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows],lat:_gc?.lat||qt.lat||null,lon:_gc?.lon||qt.lon||null,geocodedAt:_gc?_gcAt:qt.geocodedAt||null});
     newTask=qt;save();
     saved=await saveTaskToSupabase(qt);
     if(!saved)Object.assign(qt,_orig); // roll back in-memory state on failure
     window._queueTask=null;
   } else {
-    newTask={id:nextTaskId++,client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows]};
+    newTask={id:nextTaskId++,client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows],lat:_gc?.lat||null,lon:_gc?.lon||null,geocodedAt:_gcAt};
     tasks.push(newTask);save();
     saved=await saveTaskToSupabase(newTask);
   }
+  _pendingGeocode=null;
   if(btn){btn.disabled=false;btn.textContent='אשר שיבוץ ✓';}
   if(!saved){showToast('קריאה נוספה מקומית — בדוק חיבור לרשת לאישור סופי','error');}
   clearDispatchDraft();
@@ -5189,6 +5221,7 @@ function clearDispatch(){
   document.getElementById('dispatch-search-card').style.pointerEvents='';
   document.getElementById('dispatch-result').classList.add('hidden');
   selectedTimeSlot=null;allCandidates=[];currentCandidateIdx=0;
+  _pendingGeocode=null;
 }
 // ─── Pending queue panel ──────────────────────────────────────────────────
 function renderPendingQueue(){
