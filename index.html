@@ -767,6 +767,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       </div>
     </div>
     <div class="fg-2">
+      <div class="fg"><label class="fl"><span class="req">*</span> שם לקוח</label><input class="fc" id="c-name" placeholder="שם מלא" oninput="saveDispatchDraft()"></div>
+      <div class="fg"><label class="fl">טלפון</label><input class="fc" id="c-phone" type="tel" placeholder="05X-XXXXXXX" dir="ltr" oninput="saveDispatchDraft()"></div>
+    </div>
+    <div class="fg-2">
       <div class="fg">
         <label class="fl"><span class="req">*</span> עיר / יישוב</label>
         <div style="display:flex;gap:6px;align-items:center;">
@@ -775,10 +779,11 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
         </div>
       </div>
       <div class="fg">
-        <label class="fl"><span class="req">*</span> רחוב ומספר</label>
+        <label class="fl">רחוב ומספר</label>
         <input class="fc" id="s-street" placeholder="לדוגמה: הרצל 15">
       </div>
     </div>
+    <div class="fg"><label class="fl">הערות</label><input class="fc" id="c-notes" placeholder="הערות..." oninput="saveDispatchDraft()"></div>
     <div class="fg">
       <label class="fl">חלונות זמן מועדפים <span style="font-size:0.75rem;color:var(--ink-4);font-weight:400;">(אופציונלי — לפי בקשת הלקוח)</span></label>
       <div id="pref-windows-list"></div>
@@ -5023,12 +5028,6 @@ function showCandidate(idx){
       <div style="font-size:0.8rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 6px;">בחר חלון זמן</div>
       <div class="time-slots">${slots.map((s,si)=>`<div class="time-slot ${s.full?'busy':s.isSuggested?'suggested':s.preferred?'preferred':''}" onclick="${s.full?'':'selectTimeSlot('+si+')'}" id="ts-${si}"><span class="time-slot-range">${s.start} — ${s.end}</span><span style="font-size:0.7rem;">${s.full?'מלא ('+s.slotCount+'/'+s.slotCapacity+')':s.slotCount>0?''+s.slotCount+'/'+s.slotCapacity+(s.isSuggested?' ⭐':''):s.preferred?'⭐ מועדף':'פנוי'}</span></div>`).join('')}</div>
       <div class="customer-form" id="cform-${idx}" style="display:none;">
-        <div style="font-size:0.8rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;margin-bottom:10px;">פרטי לקוח</div>
-        <div class="fg-2">
-          <div class="fg"><label class="fl"><span class="req">*</span> שם לקוח</label><input class="fc" id="c-name" placeholder="שם מלא"></div>
-          <div class="fg"><label class="fl">טלפון</label><input class="fc" id="c-phone" placeholder="05X-XXXXXXX"></div>
-        </div>
-        <div class="fg"><label class="fl">הערות</label><input class="fc" id="c-notes" placeholder="הערות..."></div>
         <div style="display:flex;gap:8px;margin-top:4px;">
           <button class="btn btn-outline" onclick="clearDispatch()">← חזרה</button>
           <button id="confirm-assign-btn" class="btn btn-blue btn-lg" style="flex:1;" onclick="confirmAssign(${idx},'${assignId}')">אשר שיבוץ ✓</button>
@@ -5036,16 +5035,6 @@ function showCandidate(idx){
       </div>
     </div>`;
   selectedTimeSlot=null;
-  // Pre-fill client details from queued task
-  if(window._queueTask){
-    const qt=window._queueTask;
-    const nameEl=document.getElementById('c-name');
-    const phoneEl=document.getElementById('c-phone');
-    const notesEl=document.getElementById('c-notes');
-    if(nameEl&&qt.client)nameEl.value=qt.client;
-    if(phoneEl&&qt.phone)phoneEl.value=qt.phone;
-    if(notesEl&&qt.notes)notesEl.value=qt.notes;
-  }
 }
 function selectTimeSlot(si){
   if(window._currentSlots&&window._currentSlots[si]?.full)return;
@@ -5157,16 +5146,17 @@ function renderPendingQueue(){
 }
 function queueAssign(id){
   const t=tasks.find(x=>String(x.id)===String(id));if(!t)return;
-  // Pre-fill dispatch form with this task's details
   document.getElementById('s-city').value=t.city||'';
   document.getElementById('s-street').value=t.street||'';
-  // Pre-select category chip
+  const nameEl=document.getElementById('c-name');
+  const phoneEl=document.getElementById('c-phone');
+  const notesEl=document.getElementById('c-notes');
+  if(nameEl&&t.client&&t.client!=='ממתין לפרטים')nameEl.value=t.client;
+  if(phoneEl&&t.phone)phoneEl.value=t.phone;
+  if(notesEl&&t.notes&&t.notes!=='שובץ אוטומטית')notesEl.value=t.notes;
   if(t.catId){selectedCat='cat_'+t.catId;renderCatChips();renderPkgSection();}
-  // Scroll form into view and run the engine
   document.getElementById('dispatch-search-card').scrollIntoView({behavior:'smooth',block:'start'});
-  // Pre-fill client details that will be used on confirm
-  window._queueTask=t; // remember so confirmAssign can update instead of creating new
-  // Run engine immediately — capture expected catId to guard against race if user clicks another chip
+  window._queueTask=t;
   if(t.city&&t.catId){const expectedCat='cat_'+t.catId;setTimeout(()=>{if(selectedCat===expectedCat)findBestSlot();},100);}
 }
 // ─── Recurring dispatch ────────────────────────────────────────────────────
