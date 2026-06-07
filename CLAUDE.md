@@ -61,12 +61,18 @@ Eran (infomaslul@gmail.com) logs in to Maslul Admin → uses 🔀 PureWater side
 - [x] Break time system — tenant default + per-tech override (2026-06-01)
 - [x] Code review — 15 findings fixed (2026-06-01)
 - [x] UI/UX overhaul — home + dispatch pages (2026-06-04): SVG sidebar, KPI cards, tech cards, header cleanup, two-column dispatch
+- [x] PureWater zone setup — 9 zones, cities arrays, 3-tech rotation, city normalization (2026-06-06)
+- [x] Dispatch form UX — client name/phone/notes moved to top of form, one-step flow (2026-06-07)
+- [x] Task detail modal — "ערוך ✏" button added, MSL assign_id hidden from UI (2026-06-07)
+- [x] Week of Jun 7–11 seeded — 108 placeholder tasks for PureWater via SQL (2026-06-07)
 
 ### 🔴 Urgent
 - [ ] **Railway upgrade** — trial expires **2026-06-12**. Upgrade to Hobby $5/mo at railway.app or the optimizer goes down.
 
 ### 🟠 Next
+- [ ] Israel fills in client details on 108 seeded tasks (via ערוך ✏ button)
 - [ ] Israel testing — real scenarios, feedback collection
+- [ ] Admin panel chips redesign — plan exists at `.claude/plans/ancient-plotting-prism.md`
 - [ ] Web Push notifications — alert tech when new task assigned (Medium)
 - [ ] pytest backend suite (Low, ~30min)
 
