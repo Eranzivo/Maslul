@@ -3,7 +3,8 @@
 ## Business Details
 - **tenant_id:** `00000000-0000-0000-0000-000000000001`
 - **Business type:** Garbage disposal units + hot/cold water tap installation
-- **Active technicians:** 4
+- **Active technicians:** 3
+- **Depot address:** אלי סיני 7, אשקלון — coords 31.697962, 34.579152 (stored in `tenants.config.depot`; all 3 techs depart from here)
 - **Current workflow:** Odoo v19 mobile app (mark completed, upload photo, attach warranty certificate)
 - **Maslul's role:** Scheduling only — not replacing Odoo
 
@@ -23,8 +24,9 @@
 | Package (bundled) | — | 45 min |
 
 ## Technician Details
-- 4 technicians, each with their own zone rotation
-- Each tech has a base city that determines far-to-near ordering within their zone
+- 3 technicians: אלירן, בני, מיכאל — each with their own zone rotation
+- All depart from the company depot: אלי סיני 7, אשקלון (31.697962, 34.579152)
+- `base_city` on all 3 is `אשקלון`; optimizer uses depot coords (`tenantConfig.depot.lat/lon`) as the precise trip origin
 - Skills and category limits are set per technician
 
 ## What Maslul Handles for This Client

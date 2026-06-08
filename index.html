@@ -1361,6 +1361,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div class="fg"><label class="fl"><span class="req">*</span> עיר יציאה (נקודת מוצא)</label><input class="fc" id="ti-base" placeholder="תל אביב"><div class="field-error hidden" id="e-ti-base">שדה חובה</div></div>
       <div class="fg"><label class="fl">עיר חזרה (סוף יום)</label><input class="fc" id="ti-return" placeholder="כמו עיר יציאה אם זהה"></div>
     </div>
+    <div class="fg"><label class="fl">רחוב יציאה</label><input class="fc" id="ti-base-addr" placeholder="רחוב + מספר (לניתוב מדויק, לא חובה)"></div>
     <div class="fg-2">
       <div class="fg"><label class="fl"><span class="req">*</span> מינימום קריאות/יום</label><input class="fc" id="ti-min" type="number" value="2"></div>
       <div class="fg"><label class="fl"><span class="req">*</span> מקסימום קריאות/יום</label><input class="fc" id="ti-max" type="number" value="9"></div>
@@ -2439,6 +2440,7 @@ async function loadFromSupabase() {
       cat: t.category_name, catId: t.category_id,
       techId: t.technician_id, status: t.status,
       time: t.scheduled_time || '', date: t.scheduled_date || '',
+      windowStart: t.scheduled_window_start || '', windowEnd: t.scheduled_window_end || '',
       notes: t.notes || '', assignId: t.assign_id || '',
       preferredWindows: t.preferred_windows || [],
       checklistDone: t.checklist_done || {},
@@ -2842,6 +2844,7 @@ async function saveTaskToSupabase(task) {
     city: task.city, street: task.street, floor: task.floor || null, apartment: task.apartment || null, entrance_notes: task.entranceNotes || null, category_id: task.catId, category_name: task.cat,
     technician_id: task.techId || null, status: task.status,
     scheduled_date: task.date || null, scheduled_time: task.time || null,
+    scheduled_window_start: task.windowStart || null, scheduled_window_end: task.windowEnd || null,
     notes: task.notes || '', cancelled_at: task.cancelledAt || null,
     preferred_windows: task.preferredWindows || [],
     checklist_done: task.checklistDone || {},
@@ -3001,7 +3004,7 @@ let selectedCat=null,currentFilter='all',statusTaskId=null,cancelTaskId=null,pre
 let currentRole='admin',currentTechView=null;
 let kpiFilter=null;
 let currentWeekOffset=0,selectedTechForCal=null;
-let plannerMode='weekly',plannerWeekOffset=0,plannerSelectedTechs=[],plannerDayIdx=0,detailTaskId=null;
+let plannerMode='weekly',plannerWeekOffset=0,plannerSelectedTechs=[],plannerDayIdx=0,plannerDailyTechIdx=0,detailTaskId=null;
 let allCandidates=[],currentCandidateIdx=0,selectedTimeSlot=null;
 let replaceSuggestion=null;
 let settings={company:'מסלול',startTime:'07:00',endTime:'18:00',window:3,maxDaily:9,lookahead:30,monthlyVolume:300,regularTime:30,packageTime:45};
@@ -4691,6 +4694,25 @@ function buildCandidates(city,catId){
   return _candidatesZone(city,catId,dates,sc); // default — 'zone'
 }
 
+// ── Backtrack guard ──────────────────────────────────────────────────────────
+// After inserting newCity, ensure zone indices stay monotonically non-decreasing
+// (farthest first = lowest index first). A deviation of more than 1 position is
+// treated as a backtrack and the slot is rejected.
+function wouldBacktrack(tech,dateStr,newCity){
+  const zid=getTechZoneId(tech,dateStr);if(!zid)return false;
+  const dayTasks=getTechDayTasks(tech,dateStr).filter(t=>t.status!=='cancelled'&&t.time);
+  if(dayTasks.length===0)return false;
+  const newIdx=getCityIndexInZone(newCity,zid);if(newIdx===999)return false;
+  // Build sorted index sequence after hypothetically inserting the new task
+  const allIdx=dayTasks.map(t=>getCityIndexInZone(t.city,zid)).filter(i=>i!==999);
+  allIdx.push(newIdx);
+  allIdx.sort((a,b)=>a-b); // what the sorted order should be (far→near)
+  // Compare against actual insertion: any existing task's index > newIdx after it in time = backtrack
+  const tasksAfterNew=dayTasks.filter(t=>{const i=getCityIndexInZone(t.city,zid);return i!==999&&i<newIdx;});
+  // If there's any task that's FARTHER than newCity scheduled AFTER where newCity would go, backtrack
+  return tasksAfterNew.length>0;
+}
+
 // ── Strategy: zone (Israel default) ─────────────────────────────────────────
 // Zone-strict: tech only receives jobs in their rotation zone for that weekday.
 // Scoring: fill existing zone-days before opening new ones (existingInZone*100+load).
@@ -4722,6 +4744,26 @@ function _candidatesZone(city,catId,dates,sc){
       if(routeLogic&&!isRouteLogical(tech,date.str,city,catId))continue;
       const optTime=calcOptimalTime(tech,date.str,city,catId);
       if(!optTime)continue;
+      // ── Slot release: near cities can't hold early slots far in advance (PureWater config) ──
+      const slRel=sc.slot_release;
+      if(slRel?.enabled){
+        const zid2=getTechZoneId(tech,date.str);
+        const zoneObj=zones.find(z=>z.id===zid2);
+        const cityIdx=zoneObj?zoneObj.cities.indexOf(normalizeCity(city)):-1;
+        const zoneCities=zoneObj?.cities.length||1;
+        const rel=cityIdx>=0?cityIdx/Math.max(1,zoneCities-1):0; // 0=farthest, 1=closest
+        if(rel>=0.5){
+          const slotDate=new Date(date.str+'T'+optTime+':00');
+          const hoursUntil=(slotDate-Date.now())/3600000;
+          const buffer=hoursUntil>=(slRel.conservative_hours??72)?60:hoursUntil>=(slRel.moderate_hours??48)?30:hoursUntil>=(slRel.aggressive_hours??24)?15:0;
+          if(buffer>0){
+            const sched2=getTechDaySchedule(tech,date.str);
+            if(timeToMins(optTime)<timeToMins(sched2.start)+buffer)continue;
+          }
+        }
+      }
+      // ── Backtrack detection: reject slots that create far→near→far zigzag ──
+      if(routeLogic&&wouldBacktrack(tech,date.str,city))continue;
       const existingInZone=tasks.filter(t=>t.techId===tech.id&&t.date===date.str&&getCityZone(t.city)?.id===getTechZoneId(tech,date.str)&&t.status!=='cancelled').length;
       const fillScore=existingInZone*100+load;
       candidates.push({tech,date,load,existingInZone,fillScore,dateScore:dates.indexOf(date),optTime});
@@ -4951,7 +4993,7 @@ async function optimizeDay(techId, date) {
       technicians: [{
         id: String(tech.id),
         name: tech.name,
-        base_city: tech.base || '',
+        base_city: (tech.address && tech.base) ? `${tech.address}, ${tech.base}` : (tenantConfig.depot?.lat && tenantConfig.depot?.lon) ? `${tenantConfig.depot.lat},${tenantConfig.depot.lon}` : (tech.base || ''),
         return_city: tech.return_city || tech.base || '',
         start_time: getTechDaySchedule(tech,date).start || '07:00',
         end_time: getTechDaySchedule(tech,date).end || '18:00',
@@ -5196,13 +5238,13 @@ async function confirmAssign(idx,assignId){
   if(qt){
     // Snapshot original state so we can roll back if the save fails
     const _orig={client:qt.client,phone:qt.phone,city:qt.city,street:qt.street,floor:qt.floor,apartment:qt.apartment,entranceNotes:qt.entranceNotes,cat:qt.cat,catId:qt.catId,techId:qt.techId,status:qt.status,time:qt.time,date:qt.date,notes:qt.notes,assignId:qt.assignId,preferredWindows:qt.preferredWindows,lat:qt.lat,lon:qt.lon,geocodedAt:qt.geocodedAt};
-    Object.assign(qt,{client,phone,city,street,floor,apartment,entranceNotes,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows],lat:_gc?.lat||qt.lat||null,lon:_gc?.lon||qt.lon||null,geocodedAt:_gc?_gcAt:qt.geocodedAt||null});
+    Object.assign(qt,{client,phone,city,street,floor,apartment,entranceNotes,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,windowStart:slot.start,windowEnd:slot.end,notes,assignId,preferredWindows:[...prefWindows],lat:_gc?.lat||qt.lat||null,lon:_gc?.lon||qt.lon||null,geocodedAt:_gc?_gcAt:qt.geocodedAt||null});
     newTask=qt;save();
     saved=await saveTaskToSupabase(qt);
     if(!saved)Object.assign(qt,_orig); // roll back in-memory state on failure
     window._queueTask=null;
   } else {
-    newTask={id:nextTaskId++,client,phone,city,street,floor,apartment,entranceNotes,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows],lat:_gc?.lat||null,lon:_gc?.lon||null,geocodedAt:_gcAt};
+    newTask={id:nextTaskId++,client,phone,city,street,floor,apartment,entranceNotes,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,windowStart:slot.start,windowEnd:slot.end,notes,assignId,preferredWindows:[...prefWindows],lat:_gc?.lat||null,lon:_gc?.lon||null,geocodedAt:_gcAt};
     tasks.push(newTask);save();
     saved=await saveTaskToSupabase(newTask);
   }
@@ -6035,7 +6077,7 @@ function toggleSkill(catId){
 function openAddTechModal(){
   editingTechId=null;buildTechModalUI();
   document.getElementById('mo-tech-title').textContent='הוסף '+L('worker');
-  ['ti-name','ti-phone','ti-base','ti-return','ti-blocked'].forEach(id=>document.getElementById(id).value='');
+  ['ti-name','ti-phone','ti-base','ti-return','ti-blocked','ti-base-addr'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ti-min').value='2';document.getElementById('ti-max').value='9';
   buildWeekSchedGrid({});
   // Reset break radio to default and hide custom fields
@@ -6055,7 +6097,7 @@ function editTech(id){
   editingTechId=id;buildTechModalUI();
   document.getElementById('mo-tech-title').textContent='עריכת '+L('worker');
   document.getElementById('ti-name').value=tech.name;document.getElementById('ti-phone').value=tech.phone;
-  document.getElementById('ti-base').value=tech.base;document.getElementById('ti-return').value=tech.return_city||'';document.getElementById('ti-min').value=tech.min;
+  document.getElementById('ti-base').value=tech.base;document.getElementById('ti-return').value=tech.return_city||'';document.getElementById('ti-base-addr').value=tech.address||'';document.getElementById('ti-min').value=tech.min;
   document.getElementById('ti-max').value=tech.max;document.getElementById('ti-blocked').value=tech.blocked||'';
   // Build weekly schedule — fallback: if no weekly_schedule set, derive from global start/end
   const existingWs=tech.weekly_schedule&&Object.keys(tech.weekly_schedule).length?tech.weekly_schedule:
@@ -6106,7 +6148,7 @@ function saveTech(){
   // Only consider day-indexed entries (keys '0'-'5'), never _break or other metadata keys
   const firstWorkDay=[0,1,2,3,4,5].map(i=>weekly_schedule[String(i)]).filter(d=>d&&d.work!==false).find(Boolean)||{start:'07:00',end:'17:00'};
   const existingTech=editingTechId?technicians.find(t=>t.id===editingTechId):null;
-  const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),return_city:document.getElementById('ti-return').value.trim(),address:existingTech?.address||'',min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:firstWorkDay.start,end:firstWorkDay.end,weekly_schedule,blocked:document.getElementById('ti-blocked').value.trim(),skills,catLimits,durationOverrides,rotation};
+  const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),return_city:document.getElementById('ti-return').value.trim(),address:document.getElementById('ti-base-addr').value.trim(),min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:firstWorkDay.start,end:firstWorkDay.end,weekly_schedule,blocked:document.getElementById('ti-blocked').value.trim(),skills,catLimits,durationOverrides,rotation};
   let techForSave;
   if(editingTechId){const tech=technicians.find(t=>t.id===editingTechId);if(tech){Object.assign(tech,data);techForSave=tech;}}
   else{const tech={id:nextTechId++,...data,color:COLORS[technicians.length%COLORS.length]};technicians.push(tech);techForSave=tech;}
@@ -6394,15 +6436,18 @@ function togglePlannerTech(id){
   const idx=plannerSelectedTechs.indexOf(id);
   if(idx>=0) plannerSelectedTechs.splice(idx,1);
   else plannerSelectedTechs.push(id);
+  plannerDailyTechIdx=0;
   renderPlannerTechPills();
   renderPlannerContent();
 }
 function plannerSelectAll(){
   plannerSelectedTechs=technicians.map(t=>t.id);
+  plannerDailyTechIdx=0;
   renderPlannerTechPills();renderPlannerContent();
 }
 function plannerClearAll(){
   plannerSelectedTechs=[];
+  plannerDailyTechIdx=0;
   renderPlannerTechPills();renderPlannerContent();
 }
 function plannerSoloTech(id){
@@ -6511,6 +6556,7 @@ function renderPlannerDaily(days){
   const content=document.getElementById('planner-content');
   const selTechs=technicians.filter(t=>plannerSelectedTechs.includes(t.id));
   if(!selTechs.length){content.innerHTML='<div class="empty"><div class="empty-icon">👆</div><div>בחר לפחות טכנאי אחד למעלה</div></div>';return;}
+  // Day tabs
   const dayTabs=days.map((d,i)=>{
     const isToday=d.toDateString()===new Date().toDateString();
     const active=i===plannerDayIdx;
@@ -6519,36 +6565,108 @@ function renderPlannerDaily(days){
   }).join('');
   const day=days[plannerDayIdx];
   const ds=day.toISOString().split('T')[0];
+  // Active tech selector — one tech at a time in daily mode
+  plannerDailyTechIdx=Math.min(plannerDailyTechIdx,selTechs.length-1);
+  const tech=selTechs[plannerDailyTechIdx];
+  const techTabs=selTechs.length>1?selTechs.map((t,i)=>{
+    const active=i===plannerDailyTechIdx;
+    const tc=t.color||'#2563EB';
+    return`<button onclick="plannerDailyTechIdx=${i};renderPlannerContent()" style="display:flex;align-items:center;gap:6px;padding:5px 12px;border:1.5px solid ${active?tc:'var(--line)'};background:${active?tc+'14':'var(--white)'};border-radius:6px;font-family:'Heebo',sans-serif;font-size:0.8rem;font-weight:${active?700:500};cursor:pointer;color:${active?tc:'var(--ink-2)'};">
+      <span style="width:8px;height:8px;border-radius:50%;background:${tc};flex-shrink:0;"></span>${h(t.name)}</button>`;
+  }).join(''):'';
+  // Grid dimensions
   const startH=parseInt((settings.startTime||'07:00').split(':')[0]);
   const endH=parseInt((settings.endTime||'18:00').split(':')[0]);
-  const hours=Array.from({length:endH-startH},(_,i)=>startH+i);
-  const techHeaders=selTechs.map(t=>`<th style="text-align:center;padding:8px 6px;font-size:0.8rem;font-weight:700;background:var(--line-2);min-width:140px;">
-    <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
-      <span style="width:9px;height:9px;border-radius:50%;background:${t.color||'#2563EB'};display:inline-block;"></span>${t.name}
-    </div></th>`).join('');
-  const bodyRows=hours.map(h=>{
-    const hStr=String(h).padStart(2,'0')+':00';
-    const cells=selTechs.map(tech=>{
-      const slotTasks=tasks.filter(t=>String(t.techId)===String(tech.id)&&t.date===ds&&t.status!=='cancelled'&&t.time&&parseInt(t.time.split(':')[0])===h);
-      const isDayOff=dayoffs.some(d=>String(d.techId)===String(tech.id)&&d.date===ds&&d.type==='full');
-      if(isDayOff&&h===startH) return`<td style="vertical-align:top;padding:4px;border-right:1px solid var(--line-2);background:var(--line-2);" rowspan="${endH-startH}"><div class="planner-day-off" style="padding-top:20px;">יום חופש</div></td>`;
-      if(isDayOff) return '';
-      const chips=slotTasks.map(_plannerTaskChip).join('');
-      return`<td style="vertical-align:top;padding:4px;border-right:1px solid var(--line-2);height:52px;">${chips}</td>`;
-    }).join('');
-    return`<tr>
-      <td style="padding:4px 8px;font-size:0.7rem;font-weight:700;color:var(--ink-4);border-bottom:1px solid var(--line-2);border-left:1px solid var(--line);white-space:nowrap;background:var(--line-2);vertical-align:top;">${hStr}</td>
-      ${cells}
-    </tr>`;
+  const PX=1; // px per minute
+  const gridH=(endH-startH)*60*PX;
+  const labelW=42; // px for hour labels
+  // Hour gridlines + labels
+  const hourLines=Array.from({length:endH-startH+1},(_,i)=>{
+    const hh=startH+i;
+    const top=(hh-startH)*60*PX;
+    return`<div style="position:absolute;top:${top}px;left:0;right:0;border-top:1px solid var(--line-2);pointer-events:none;">
+      <span style="position:absolute;right:0;top:-9px;font-size:0.6rem;font-weight:700;color:var(--ink-4);padding:0 4px;background:var(--line-2);border-radius:0 0 0 4px;">${String(hh).padStart(2,'0')}:00</span>
+    </div>`;
   }).join('');
-  content.innerHTML=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">${dayTabs}</div>
-  <table style="border-collapse:collapse;width:100%;background:var(--white);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh);border:1px solid var(--line);">
-    <thead><tr>
-      <th style="background:var(--line-2);padding:8px;font-size:0.7rem;color:var(--ink-3);text-align:center;border-left:1px solid var(--line);min-width:52px;">שעה</th>
-      ${techHeaders}
-    </tr></thead>
-    <tbody>${bodyRows}</tbody>
-  </table>`;
+  // Current-time line
+  let nowLine='';
+  const now=new Date();
+  if(now.toISOString().split('T')[0]===ds){
+    const nowMins=now.getHours()*60+now.getMinutes();
+    if(nowMins>=startH*60&&nowMins<=endH*60){
+      const top=(nowMins-startH*60)*PX;
+      nowLine=`<div style="position:absolute;top:${top}px;left:0;right:0;height:2px;background:#EF4444;z-index:10;pointer-events:none;">
+        <div style="position:absolute;right:-5px;top:-4px;width:10px;height:10px;border-radius:50%;background:#EF4444;"></div></div>`;
+    }
+  }
+  // Day-off overlay
+  const isDayOff=dayoffs.some(d=>String(d.techId)===String(tech.id)&&d.date===ds&&d.type==='full');
+  const dayOffOverlay=isDayOff?`<div style="position:absolute;inset:0;background:rgba(243,244,246,0.88);display:flex;align-items:center;justify-content:center;z-index:20;font-size:1rem;font-weight:700;color:var(--ink-3);">יום חופש</div>`:'';
+  // Split tasks into scheduled vs unscheduled
+  const dayTechTasks=tasks.filter(t=>String(t.techId)===String(tech.id)&&t.date===ds&&t.status!=='cancelled');
+  const scheduled=dayTechTasks.filter(t=>t.time||t.windowStart);
+  const unscheduled=dayTechTasks.filter(t=>!t.time&&!t.windowStart);
+  // Group scheduled tasks by service window key
+  const wGroups={};
+  for(const t of scheduled){
+    const key=t.windowStart?`${t.windowStart}|${t.windowEnd}`:t.time;
+    if(!wGroups[key])wGroups[key]=[];
+    wGroups[key].push(t);
+  }
+  const slotH=settings.window||3;
+  const statusFg={completed:'#16A34A',cancelled:'#DC2626',pending:'#D97706',issue:'#DC2626'};
+  const tc=tech.color||'#2563EB';
+  const taskBlocks=Object.entries(wGroups).map(([key,grp])=>{
+    const first=grp[0];
+    const hasWin=!!first.windowStart;
+    let topMins,heightMins;
+    if(hasWin){
+      topMins=timeToMins(first.windowStart)-startH*60;
+      heightMins=slotH*60;
+    }else{
+      topMins=timeToMins(first.time)-startH*60;
+      const cat=categories.find(c=>c.id===first.catId);
+      heightMins=cat?.time||settings.regularTime||30;
+    }
+    topMins=Math.max(0,topMins);
+    const top=topMins*PX;
+    const height=Math.max(32,heightMins*PX);
+    const label=hasWin?`${first.windowStart} — ${first.windowEnd}`:first.time;
+    const rows=grp.map(t=>`<div onclick="openTaskDetail('${t.id}')" style="display:flex;align-items:center;gap:5px;padding:2px 0;cursor:pointer;border-bottom:1px solid ${tc}20;">
+      <span style="width:5px;height:5px;border-radius:50%;background:${statusFg[t.status]||tc};flex-shrink:0;"></span>
+      <span style="font-size:0.68rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${h(t.client||'—')}</span>
+      <span style="font-size:0.62rem;color:var(--ink-3);">${t.time||''}</span>
+    </div>`).join('');
+    return`<div style="position:absolute;top:${top}px;left:${labelW+4}px;right:6px;height:${height}px;background:${tc}14;border:1.5px solid ${tc}55;border-radius:7px;padding:5px 7px;overflow:hidden;box-sizing:border-box;z-index:2;">
+      <div style="font-size:0.68rem;font-weight:800;color:${tc};margin-bottom:3px;">${label}</div>
+      ${rows}
+    </div>`;
+  }).join('');
+  // Optimize button
+  const scheduledForOpt=dayTechTasks.filter(t=>t.time&&t.status!=='cancelled');
+  const canOpt=CONFIG.OPTIMIZER_URL&&scheduledForOpt.length>=2&&ds>=todayStr();
+  const optBtn=canOpt?`<button id="opt-btn-${tech.id}-${ds}" onclick="runOptimize('${tech.id}','${ds}')" style="display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--blue-l);border:1px solid var(--blue);border-radius:6px;font-size:0.8rem;color:var(--blue-d);font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer;">🔀 מסלול מיטבי</button>`:'';
+  // Unscheduled section
+  const unschedHtml=unscheduled.length?`<div style="margin-top:12px;padding:10px 12px;background:var(--white);border-radius:8px;border:1px solid var(--line);">
+    <div style="font-size:0.72rem;font-weight:800;color:var(--ink-3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.4px;">ממתין לשיבוץ (${unscheduled.length})</div>
+    ${unscheduled.map(t=>`<div onclick="openTaskDetail('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid var(--line-2);cursor:pointer;font-size:0.8rem;">
+      <span style="width:6px;height:6px;border-radius:50%;background:${statusFg[t.status]||tc};flex-shrink:0;"></span>
+      <span style="font-weight:700;">${h(t.client||'—')}</span>
+      <span style="color:var(--ink-3);font-size:0.72rem;">${h(t.city||'')}</span>
+    </div>`).join('')}
+  </div>`:'';
+  content.innerHTML=`
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${dayTabs}</div>
+    ${techTabs?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${techTabs}</div>`:''}
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div style="font-size:0.8rem;color:var(--ink-3);">${scheduledForOpt.length} קריאות${unscheduled.length?' • <span style="color:var(--amber);">'+unscheduled.length+' ממתינות</span>':''}</div>
+      ${optBtn}
+    </div>
+    <div style="position:relative;height:${gridH}px;background:var(--white);border-radius:8px;border:1px solid var(--line);overflow:hidden;">
+      <div style="position:absolute;top:0;bottom:0;right:0;width:${labelW}px;background:var(--line-2);z-index:1;border-left:1px solid var(--line-2);"></div>
+      ${hourLines}${nowLine}${taskBlocks}${dayOffOverlay}
+    </div>
+    ${unschedHtml}`;
 }
 
 function setPlannerDay(idx){

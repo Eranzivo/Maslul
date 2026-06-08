@@ -42,7 +42,7 @@ Hebrew-first SaaS scheduling engine for Israeli SMBs with field workers.
 ## Clients
 | Client | tenant_id | Business |
 |---|---|---|
-| Israel / PureWater (pilot) | `00000000-0000-0000-0000-000000000001` | Garbage disposal + water systems, 4 technicians |
+| Israel / PureWater (pilot) | `00000000-0000-0000-0000-000000000001` | Garbage disposal + water systems, 3 technicians (depot: אלי סיני 7, אשקלון) |
 | Maslul Admin (Eran) | `642ad6e6-a093-46a4-8489-ce49a966d77c` | Internal admin tenant — cross-tenant management |
 
 Eran (infomaslul@gmail.com) logs in to Maslul Admin → uses 🔀 PureWater sidebar chip to impersonate Israel's tenant. `super_admin = true` on Eran's user row bypasses RLS for any tenant.
@@ -77,9 +77,12 @@ Eran (infomaslul@gmail.com) logs in to Maslul Admin → uses 🔀 PureWater side
 - [x] Users management → "הרשאות גישה" — renamed, filtered to admin/coordinator only; techs managed from טכנאים page (2026-06-08)
 - [x] Dropped redundant `users_admin_all` RLS policy — fixed "טוען..." loading bug on users page (2026-06-08)
 - [x] Context files: auth-users.md + zones-polygons.md created (2026-06-08)
+- [x] PureWater scheduling overhaul — service windows persisted to DB, 72/48/24h slot release (PureWater-only config), backtrack detection, return_city as OR-Tools end depot (2026-06-08)
+- [x] Calendar daily view rebuilt — absolute-positioned grid (1px/min), one-tech-at-a-time with tech tabs, all tasks visible incl. unscheduled below grid (2026-06-08)
 
 ### 🔴 Urgent
 - [ ] **Railway upgrade** — trial expires **2026-06-12**. Upgrade to Hobby $5/mo at railway.app or the optimizer goes down.
+- [ ] **Re-dispatch 108 PureWater tasks** — run `outputs/reset-purewater-tasks_2026-06-08.sql` in Supabase, then coordinator re-dispatches via new engine
 
 ### 🟠 Next
 - [ ] Israel fills in client details on 108 seeded tasks (via ערוך ✏ button)
