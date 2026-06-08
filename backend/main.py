@@ -177,14 +177,11 @@ async def batch_schedule(req: BatchScheduleRequest, request: Request):
     if not service_key or auth != f"Bearer {service_key}":
         raise HTTPException(status_code=401, detail="Unauthorized — provide service key as Bearer token")
 
-    google_maps_key = os.getenv("GOOGLE_MAPS_API_KEY") or None
-
     result = await run_batch_schedule(
         tenant_id=req.tenant_id,
         date_from=req.date_from,
         date_to=req.date_to,
         dry_run=req.dry_run,
         service_key=service_key,
-        google_maps_key=google_maps_key,
     )
     return result

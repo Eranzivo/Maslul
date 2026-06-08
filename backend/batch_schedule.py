@@ -8,7 +8,7 @@ import os
 from datetime import date, timedelta
 from typing import Optional
 import httpx
-from optimizer import solve_route, build_matrix_local, build_matrix_gmaps
+from optimizer import solve_route, build_matrix_local
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://pxpqcdfxogaajwstwdtk.supabase.co")
 
@@ -83,7 +83,6 @@ async def run_batch_schedule(
     date_to: str,
     dry_run: bool,
     service_key: str,
-    google_maps_key: Optional[str],
 ) -> dict:
 
     # 1. Fetch all required data
@@ -232,10 +231,9 @@ async def run_batch_schedule(
         locations = [base] + task_locs + ([return_loc] if return_loc else [])
         durations = [t["_duration"] for t in day_tasks]
 
-        if google_maps_key:
-            matrix = await build_matrix_gmaps(locations, google_maps_key)
-        else:
-            matrix = build_matrix_local(locations)
+        # Tasks at city-level only (no street/coords) — haversine is equivalent
+        # to Google Maps for city-center→city-center and avoids burning API quota.
+        matrix = build_matrix_local(locations)
 
         ordered_idx, arrivals = solve_route(
             base_city=base,
