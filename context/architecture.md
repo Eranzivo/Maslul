@@ -86,7 +86,7 @@
 
 ## Geocoding (Google Geocoding API)
 - POST `/geocode` — accepts `{street, city}`, returns `{lat, lon}` via Google Geocoding API (same key as Distance Matrix)
-- Frontend calls this once on `s-street` blur when `features.geocoding_enabled = true`
+- Frontend calls this inside `confirmAssign()` (button press, not blur) when `features.geocoding_enabled = true`
 - Result cached in `tasks.lat / tasks.lon / tasks.geocoded_at` — geocode once, reuse forever
 - `_pendingGeocode` JS var holds result until `confirmAssign()` writes it to the task
 - `_geocodeCache` JS object caches within the session by `"street|city"` key
@@ -141,7 +141,7 @@ async function saveXToSupabase(x) {
 | `tenants` | `id`, `name`, `plan`, `config` (JSONB) |
 | `users` | `id`, `tenant_id`, `role`, `name` |
 | `technicians` | `id`, `tenant_id`, `name`, `phone`, `base_city`, `color`, `min_daily`, `max_daily`, `start_time`, `end_time`, `blocked_cities` (array), `skills` (array), `cat_limits` (JSONB), `rotation` (JSONB), `duration_overrides` (JSONB), `weekly_schedule` (JSONB), `last_lat`, `last_lon`, `last_seen` |
-| `tasks` | `id`, `tenant_id`, `assign_id`, `client_name`, `client_phone`, `city`, `street`, `category_id`, `category_name`, `technician_id`, `status`, `scheduled_date`, `scheduled_time`, `notes`, `cancelled_at`, `checklist_done` (JSONB), `recurring_template_id` (UUID FK), `lat` (DOUBLE PRECISION), `lon` (DOUBLE PRECISION), `geocoded_at` (TIMESTAMPTZ) |
+| `tasks` | `id`, `tenant_id`, `assign_id`, `client_name`, `client_phone`, `city`, `street`, `floor` (TEXT), `apartment` (TEXT), `entrance_notes` (TEXT), `category_id`, `category_name`, `technician_id`, `status`, `scheduled_date`, `scheduled_time`, `notes`, `cancelled_at`, `checklist_done` (JSONB), `recurring_template_id` (UUID FK), `lat` (DOUBLE PRECISION), `lon` (DOUBLE PRECISION), `geocoded_at` (TIMESTAMPTZ) |
 | `zones` | `id`, `tenant_id`, `name`, `cities` (array), `polygon` (JSONB — array of `{lat,lng}` vertices, nullable) |
 | `categories` | `id`, `tenant_id`, `name`, `duration_minutes` |
 | `packages` | `id`, `tenant_id`, `name`, `items` (JSONB) |
@@ -156,6 +156,8 @@ outputs/migration-gps-columns_2026-05-27.sql          — last_lat/lon/seen on t
 outputs/migration-duration-overrides_2026-06-01.sql   — duration_overrides JSONB on technicians
 outputs/migration-recurring-jobs_2026-06-01.sql       — recurring_templates table + tasks FK
 outputs/migration-geocoding_2026-06-07.sql            — lat/lon/geocoded_at on tasks; polygon on zones
+outputs/migration-purewater-zone-cities_2026-06-06.sql — Israel's 9 zones + city lists seeded
+(applied via Supabase MCP 2026-06-08): floor/apartment/entrance_notes on tasks; drop redundant users_admin_all policy
 ```
 
 ### `tenants.config` JSONB Shape

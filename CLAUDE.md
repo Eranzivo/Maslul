@@ -7,6 +7,8 @@ Read ALL files in `context/` before touching any code:
 - `context/scheduling-rules.md` — scheduling engine, zones, break time, configurable modes
 - `context/style.md` — CSS tokens, component classes, spacing rules, RTL conventions
 - `context/client-israel.md` — pilot client details and constraints
+- `context/auth-users.md` — roles, user management, technician↔user linkage, impersonation, RLS
+- `context/zones-polygons.md` — zone system, city-list matching, polygon draw flow, future polygon-point assignment
 
 **New entity / table rule:** Run all steps in `context/new-entity-checklist.md` before adding any Supabase table.
 
@@ -70,6 +72,11 @@ Eran (infomaslul@gmail.com) logs in to Maslul Admin → uses 🔀 PureWater side
 - [x] Polygon draw modal fixed — map renders, scroll works (2026-06-07)
 - [x] CITY_COORDS_JS expanded 45 → 255 cities (2026-06-07)
 - [x] Geo-intelligence layer — street-level routing via Google Geocoding API + lat/lon caching on tasks; polygon vertices saved on zones; optimizer uses best available coords (2026-06-07)
+- [x] Floor / apartment / entrance notes fields — added to tasks table + dispatch form; optional; don't affect geocoding (2026-06-08)
+- [x] Geocoding trigger → confirmAssign() button only — zero automatic API calls (2026-06-08)
+- [x] Users management → "הרשאות גישה" — renamed, filtered to admin/coordinator only; techs managed from טכנאים page (2026-06-08)
+- [x] Dropped redundant `users_admin_all` RLS policy — fixed "טוען..." loading bug on users page (2026-06-08)
+- [x] Context files: auth-users.md + zones-polygons.md created (2026-06-08)
 
 ### 🔴 Urgent
 - [ ] **Railway upgrade** — trial expires **2026-06-12**. Upgrade to Hobby $5/mo at railway.app or the optimizer goes down.

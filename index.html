@@ -675,7 +675,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <button id="nav-zones" class="ni-btn" onclick="goPage('zones')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> <span data-label="zones">אזורים</span></button>
     <button id="nav-categories" class="ni-btn" onclick="goPage('categories')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg> <span data-label="categories">קטגוריות</span></button>
     <button id="nav-settings" class="ni-btn" onclick="goPage('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg> הגדרות</button>
-    <button id="nav-users" class="ni-btn" onclick="goPage('users')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> משתמשים</button>
+    <button id="nav-users" class="ni-btn" onclick="goPage('users')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> הרשאות גישה</button>
     <div id="nav-sec-admin" class="sb-sec hidden" style="color:var(--purple);">MASLUL ADMIN</div>
     <button id="nav-admin" class="ni-btn hidden" onclick="goPage('admin')" style="color:var(--purple);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> מנהל מאסטר</button>
   </div>
@@ -780,9 +780,14 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       </div>
       <div class="fg">
         <label class="fl">רחוב ומספר</label>
-        <input class="fc" id="s-street" placeholder="לדוגמה: הרצל 15" onblur="_triggerGeocode()">
+        <input class="fc" id="s-street" placeholder="לדוגמה: הרצל 15">
       </div>
     </div>
+    <div class="fg-2">
+      <div class="fg"><label class="fl">קומה</label><input class="fc" id="s-floor" placeholder="לדוגמה: 3" oninput="saveDispatchDraft()"></div>
+      <div class="fg"><label class="fl">מספר דירה</label><input class="fc" id="s-apartment" placeholder="לדוגמה: 12" oninput="saveDispatchDraft()"></div>
+    </div>
+    <div class="fg"><label class="fl">קוד / הערות כניסה</label><input class="fc" id="s-entrance" placeholder="לדוגמה: קוד 1234#, כניסה ב'" oninput="saveDispatchDraft()"></div>
     <div class="fg"><label class="fl">הערות</label><input class="fc" id="c-notes" placeholder="הערות..." oninput="saveDispatchDraft()"></div>
     <div class="fg">
       <label class="fl">חלונות זמן מועדפים <span style="font-size:0.75rem;color:var(--ink-4);font-weight:400;">(אופציונלי — לפי בקשת הלקוח)</span></label>
@@ -1102,7 +1107,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 <div id="page-users" class="page hidden">
   <div class="ph">
     <div class="ph-row">
-      <div><div class="ph-title">👤 ניהול משתמשים</div><div class="ph-sub" id="users-count-sub"></div></div>
+      <div><div class="ph-title">🔐 הרשאות גישה</div><div class="ph-sub" id="users-count-sub"></div></div>
       <button class="btn btn-blue" onclick="openAddUserModal(null)">+ משתמש חדש</button>
     </div>
   </div>
@@ -2430,7 +2435,7 @@ async function loadFromSupabase() {
 
     tasks = (taskRes.data || []).map(t => ({
       id: t.id, client: t.client_name, phone: t.client_phone,
-      city: t.city, street: t.street,
+      city: t.city, street: t.street, floor: t.floor || null, apartment: t.apartment || null, entranceNotes: t.entrance_notes || null,
       cat: t.category_name, catId: t.category_id,
       techId: t.technician_id, status: t.status,
       time: t.scheduled_time || '', date: t.scheduled_date || '',
@@ -2834,7 +2839,7 @@ async function dbInsert(table, row) {
 async function saveTaskToSupabase(task) {
   const row = {
     assign_id: task.assignId, client_name: task.client, client_phone: task.phone,
-    city: task.city, street: task.street, category_id: task.catId, category_name: task.cat,
+    city: task.city, street: task.street, floor: task.floor || null, apartment: task.apartment || null, entrance_notes: task.entranceNotes || null, category_id: task.catId, category_name: task.cat,
     technician_id: task.techId || null, status: task.status,
     scheduled_date: task.date || null, scheduled_time: task.time || null,
     notes: task.notes || '', cancelled_at: task.cancelledAt || null,
@@ -2899,7 +2904,7 @@ async function saveZoneToSupabase(zone) {
   const thisOp = prev.then(async () => {
     _setZoneSaveStatus('שומר…');
     _setZoneInlineStatus(zone.id, 'שומר…', false);
-    const data = await dbUpsert('zones', { id: zone.id, name: zone.name, cities: zone.cities });
+    const data = await dbUpsert('zones', { id: zone.id, name: zone.name, cities: zone.cities, polygon: zone.polygon || null });
     if (data) {
       zone._dbId = data.id; save();
       _setZoneSaveStatus('נשמר ✓');
@@ -3239,7 +3244,8 @@ function waMsg(t){
     'שלום '+t.client+' 👋\n'+
     (co?co+' — ':'')+'אישור תיאום '+L('task')+':\n\n'+
     '📋 '+t.cat+'\n'+
-    '📍 '+(t.street?t.street+', ':'')+t.city+'\n'+
+    '📍 '+(t.street?t.street+', ':'')+[t.floor?'קומה '+t.floor:'',t.apartment?'דירה '+t.apartment:''].filter(Boolean).join(' ')+(t.floor||t.apartment?', ':'')+t.city+'\n'+
+    (t.entranceNotes?'🚪 כניסה: '+t.entranceNotes+'\n':'')+
     (dateStr?'📅 '+dateStr+'\n':'')+
     (timeStr?'🕐 '+timeStr+'\n':'')+
     techPart+ref+'\n\n'+
@@ -3568,22 +3574,24 @@ async function renderUsersPage(){
   tbody.innerHTML='<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--ink-4);">טוען...</td></tr>';
   const{data,error}=await sb.from('users').select('id,name,email,role,permissions').eq('tenant_id',currentTenantId).order('created_at');
   if(error){tbody.innerHTML='<tr><td colspan="5" style="padding:20px;color:var(--red);">שגיאה בטעינה</td></tr>';return;}
-  const users=data||[];
-  if(sub)sub.textContent=users.length+' משתמשים';
-  const roleLabel={admin:'מנהל',coordinator:'מתאם',tech:'טכנאי'};
+  // Show only admin + coordinator here. Technician login accounts are managed from the Technicians page.
+  const users=(data||[]).filter(u=>u.role!=='tech');
+  if(sub)sub.textContent=users.length+' משתמשים מורשים · חשבונות טכנאים מנוהלים בעמוד הטכנאים';
+  const roleLabel={admin:'מנהל',coordinator:'מתאם'};
   const viewLabel={home:'דף הבית',dispatch:'שיבוץ',tasks:'קריאות',planner:'יומן',clients:'לקוחות',reports:'דוחות'};
+  if(!users.length){
+    tbody.innerHTML='<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--ink-4);">אין משתמשי ניהול — הוסף מנהל או מתאם</td></tr>';
+    return;
+  }
   tbody.innerHTML=users.map(u=>{
     const perms=u.permissions||{};
     const views=perms.views||[];
-    const linkedTech=u.role==='tech'?technicians.find(t=>t.userId===u.id):null;
-    const viewsText=u.role==='admin'?'הכל'
-      :u.role==='tech'?(linkedTech?'📅 '+h(linkedTech.name):'⚠️ לא מקושר לטכנאי')
-      :views.map(v=>viewLabel[v]||v).join(', ')||'—';
+    const viewsText=u.role==='admin'?'גישה מלאה':views.map(v=>viewLabel[v]||v).join(', ')||'—';
     const isSelf=u.id===currentUser?.id;
     return `<tr style="border-bottom:1px solid var(--border);">
       <td style="padding:10px 16px;font-weight:600;">${h(u.name)}${isSelf?' <span style="font-size:0.7rem;background:var(--blue);color:#fff;border-radius:4px;padding:1px 5px;">אתה</span>':''}</td>
       <td style="padding:10px 16px;color:var(--ink-3);">${h(u.email||'—')}</td>
-      <td style="padding:10px 16px;"><span style="background:${u.role==='admin'?'var(--blue)':u.role==='tech'?'var(--green)':'var(--ink-4)'};color:#fff;border-radius:4px;padding:2px 8px;font-size:0.75rem;">${roleLabel[u.role]||u.role}</span></td>
+      <td style="padding:10px 16px;"><span style="background:${u.role==='admin'?'var(--blue)':'var(--ink-4)'};color:#fff;border-radius:4px;padding:2px 8px;font-size:0.75rem;">${roleLabel[u.role]||u.role}</span></td>
       <td style="padding:10px 16px;font-size:0.8125rem;color:var(--ink-3);">${viewsText}</td>
       <td style="padding:10px 16px;text-align:left;white-space:nowrap;">
         <button class="btn btn-outline btn-sm" onclick="openAddUserModal('${u.id}')">✏️ ערוך</button>
@@ -5157,6 +5165,9 @@ async function confirmAssign(idx,assignId){
   document.getElementById('c-name').classList.remove('error');
   const city=normalizeCity(document.getElementById('s-city').value);
   const street=document.getElementById('s-street').value.trim();
+  const floor=document.getElementById('s-floor').value.trim()||null;
+  const apartment=document.getElementById('s-apartment').value.trim()||null;
+  const entranceNotes=document.getElementById('s-entrance').value.trim()||null;
   const phone=document.getElementById('c-phone').value||'';
   const notes=document.getElementById('c-notes').value||'';
   const slot=slots[selectedTimeSlot];
@@ -5179,18 +5190,19 @@ async function confirmAssign(idx,assignId){
   let newTask,saved;
   const btn=document.getElementById('confirm-assign-btn');
   if(btn){btn.disabled=true;btn.textContent='שומר…';}
+  await _triggerGeocode();
   const _gc=_pendingGeocode;
   const _gcAt=_gc?new Date().toISOString():null;
   if(qt){
     // Snapshot original state so we can roll back if the save fails
-    const _orig={client:qt.client,phone:qt.phone,city:qt.city,street:qt.street,cat:qt.cat,catId:qt.catId,techId:qt.techId,status:qt.status,time:qt.time,date:qt.date,notes:qt.notes,assignId:qt.assignId,preferredWindows:qt.preferredWindows,lat:qt.lat,lon:qt.lon,geocodedAt:qt.geocodedAt};
-    Object.assign(qt,{client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows],lat:_gc?.lat||qt.lat||null,lon:_gc?.lon||qt.lon||null,geocodedAt:_gc?_gcAt:qt.geocodedAt||null});
+    const _orig={client:qt.client,phone:qt.phone,city:qt.city,street:qt.street,floor:qt.floor,apartment:qt.apartment,entranceNotes:qt.entranceNotes,cat:qt.cat,catId:qt.catId,techId:qt.techId,status:qt.status,time:qt.time,date:qt.date,notes:qt.notes,assignId:qt.assignId,preferredWindows:qt.preferredWindows,lat:qt.lat,lon:qt.lon,geocodedAt:qt.geocodedAt};
+    Object.assign(qt,{client,phone,city,street,floor,apartment,entranceNotes,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows],lat:_gc?.lat||qt.lat||null,lon:_gc?.lon||qt.lon||null,geocodedAt:_gc?_gcAt:qt.geocodedAt||null});
     newTask=qt;save();
     saved=await saveTaskToSupabase(qt);
     if(!saved)Object.assign(qt,_orig); // roll back in-memory state on failure
     window._queueTask=null;
   } else {
-    newTask={id:nextTaskId++,client,phone,city,street,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows],lat:_gc?.lat||null,lon:_gc?.lon||null,geocodedAt:_gcAt};
+    newTask={id:nextTaskId++,client,phone,city,street,floor,apartment,entranceNotes,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,notes,assignId,preferredWindows:[...prefWindows],lat:_gc?.lat||null,lon:_gc?.lon||null,geocodedAt:_gcAt};
     tasks.push(newTask);save();
     saved=await saveTaskToSupabase(newTask);
   }
@@ -5202,7 +5214,8 @@ async function confirmAssign(idx,assignId){
   document.getElementById('suc-id').textContent=assignId;
   document.getElementById('suc-details').innerHTML=`
     <div class="cr"><span class="ck">לקוח</span><span class="cv">${client}</span></div>
-    <div class="cr"><span class="ck">כתובת</span><span class="cv">${street}, ${city}</span></div>
+    <div class="cr"><span class="ck">כתובת</span><span class="cv">${[street,floor?'קומה '+floor:'',apartment?'דירה '+apartment:''].filter(Boolean).join(' ')}, ${city}</span></div>
+    ${entranceNotes?`<div class="cr"><span class="ck">כניסה</span><span class="cv">${entranceNotes}</span></div>`:''}
     <div class="cr"><span class="ck">קטגוריה</span><span class="cv">${catName}</span></div>
     <div class="cr"><span class="ck">תאריך</span><span class="cv">${c.date.d.toLocaleDateString('he-IL')}</span></div>
     <div class="cr"><span class="ck">שעות</span><span class="cv">${slot.start} — ${slot.end}</span></div>
@@ -5257,6 +5270,9 @@ function queueAssign(id){
   const t=tasks.find(x=>String(x.id)===String(id));if(!t)return;
   document.getElementById('s-city').value=t.city||'';
   document.getElementById('s-street').value=t.street||'';
+  document.getElementById('s-floor').value=t.floor||'';
+  document.getElementById('s-apartment').value=t.apartment||'';
+  document.getElementById('s-entrance').value=t.entranceNotes||'';
   const nameEl=document.getElementById('c-name');
   const phoneEl=document.getElementById('c-phone');
   const notesEl=document.getElementById('c-notes');
@@ -5380,7 +5396,7 @@ function resetDispatch(){
   renderPendingQueue();
 }
 const _DDKEY='dispatch_draft';
-const _DDFIELDS=['s-city','s-street','c-name','c-phone','c-notes'];
+const _DDFIELDS=['s-city','s-street','s-floor','s-apartment','s-entrance','c-name','c-phone','c-notes'];
 function saveDispatchDraft(){
   if(CONFIG.DEMO_MODE||!currentTenantId)return;
   const d={};
@@ -5785,7 +5801,7 @@ function renderTasks(){
     return`<div class="task-row">
       <div class="task-main">
         <div class="task-client">${h(t.client)} ${t.assignId?`<span class="assign-id-tag">${h(t.assignId)}</span>`:''}${t.recurringTemplateId?(t.techId?'<span style="font-size:0.7rem;background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;border-radius:4px;padding:1px 5px;margin-right:4px;">🔄 חוזרת</span>':'<span style="font-size:0.7rem;background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;border-radius:4px;padding:1px 5px;margin-right:4px;">⚠️ ממתין לשיבוץ</span>'):''}</div>
-        <div class="task-detail">${h(t.cat)} • ${t.street?h(t.street)+', ':''}${h(t.city)}${t.date?' • '+new Date(t.date+'T12:00:00').toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'}):''}${t.time?' '+t.time:''}${tech?' • '+h(tech.name):''}</div>
+        <div class="task-detail">${h(t.cat)} • ${t.street?h(t.street):''}${t.floor?' קומה '+h(t.floor):''}${t.apartment?' דירה '+h(t.apartment):''}${t.street||t.floor||t.apartment?', ':''}${h(t.city)}${t.date?' • '+new Date(t.date+'T12:00:00').toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'}):''}${t.time?' '+t.time:''}${tech?' • '+h(tech.name):''}</div>
         ${t.notes?`<div style="font-size:0.75rem;color:var(--ink-4);margin-top:2px;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px;">💬 ${h(t.notes)}</div>`:''}
       </div>
       <div class="task-actions">
@@ -6558,7 +6574,8 @@ function openTaskDetail(id){
     t.date?['תאריך',new Date(t.date).toLocaleDateString('he-IL')]:'',
     t.time?['שעה',t.time]:'',
     tech?['טכנאי',h(tech.name)]:'',
-    t.city?['עיר',h(t.city)+(t.street?' — '+h(t.street):'')]:'',
+    t.city?['כתובת',h(t.city)+(t.street?' — '+h(t.street):'')+(t.floor?' קומה '+h(t.floor):'')+(t.apartment?' דירה '+h(t.apartment):'')]:'',
+    t.entranceNotes?['כניסה',h(t.entranceNotes)]:'',
     t.cat?['קטגוריה',h(t.cat)]:'',
     t.phone?['טלפון',h(t.phone)]:'',
   ].filter(Boolean).map(([k,v])=>`<div class="td-field"><span class="td-key">${k}</span><span class="td-val">${v}</span></div>`).join('');
@@ -6978,8 +6995,7 @@ function openZoneDraw(zoneId) {
   document.getElementById('mo-zone-draw-title').textContent = `צייר אזור — ${z ? z.name : ''}`;
   document.getElementById('zone-draw-status').textContent = '';
   document.getElementById('mo-zone-draw').classList.remove('hidden');
-  // Two rAF calls: first lets the browser process display:flex, second lets layout settle
-  requestAnimationFrame(() => requestAnimationFrame(() => _initZoneDrawMap()));
+  setTimeout(() => _initZoneDrawMap(), 80);
 }
 
 function _initZoneDrawMap() {
@@ -6988,7 +7004,8 @@ function _initZoneDrawMap() {
   if (_zoneDrawMap) { _zoneDrawMap.remove(); _zoneDrawMap = null; }
   _zoneDrawMap = L.map(el).setView([31.5, 34.85], 8);
   _osmTiles().addTo(_zoneDrawMap);
-  setTimeout(() => { if (_zoneDrawMap) _zoneDrawMap.invalidateSize(); }, 150);
+  setTimeout(() => { if (_zoneDrawMap) _zoneDrawMap.invalidateSize(); }, 200);
+  setTimeout(() => { if (_zoneDrawMap) _zoneDrawMap.invalidateSize(); }, 600);
 
   // Show existing zone cities as reference dots
   const z = zones.find(x => x.id === _zoneDrawId);
@@ -7078,6 +7095,7 @@ function confirmZoneDraw() {
   if (!z) return;
   let added = 0;
   found.forEach(c => { if (!z.cities.includes(c)) { z.cities.push(c); added++; } });
+  z.polygon = _drawnPolygon.map(p => ({ lat: p.lat, lng: p.lng }));
   save(); renderZones(); populateCitySelect(); saveZoneToSupabase(z);
   closeMo('mo-zone-draw');
   if (_zoneDrawMap) { _zoneDrawMap.remove(); _zoneDrawMap = null; }
