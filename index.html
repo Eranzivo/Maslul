@@ -390,8 +390,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 /* ─── PLANNER ─── */
 .tech-pill{display:inline-flex;align-items:center;gap:7px;padding:6px 14px;border-radius:30px;border:2px solid var(--line);background:var(--white);cursor:pointer;font-size:0.8125rem;font-weight:600;transition:all 0.15s;user-select:none;}
 .tech-pill.on{background:var(--white);box-shadow:0 2px 8px rgba(0,0,0,0.12);}
-.planner-task-chip{display:block;padding:5px 8px;border-radius:7px;font-size:0.7rem;cursor:pointer;margin-bottom:3px;line-height:1.45;border:1px solid transparent;transition:filter 0.1s;}
-.planner-task-chip:hover{filter:brightness(0.93);}
+.planner-task-chip{display:block;padding:6px 8px 6px 8px;border-radius:6px;font-size:0.7rem;cursor:pointer;margin-bottom:4px;line-height:1.45;border:1px solid transparent;border-right:3px solid transparent;transition:box-shadow 0.15s,filter 0.1s;box-shadow:0 1px 3px rgba(0,0,0,0.07);}
+.planner-task-chip:hover{filter:brightness(0.94);box-shadow:0 2px 7px rgba(0,0,0,0.13);}
 .planner-empty-cell{height:44px;}
 .planner-day-off{font-size:0.7rem;color:var(--ink-4);text-align:center;padding:10px 0;}
 /* ─── TASK DETAIL MODAL ─── */
@@ -6507,9 +6507,13 @@ function _plannerTaskChip(t){
     issue:{bg:'#FEF2F2',fg:'#DC2626'},
   };
   const col=statusColors[t.status]||{bg:'#EFF6FF',fg:'#1D4ED8'};
-  return`<div class="planner-task-chip" style="background:${col.bg};color:${col.fg};border-color:${col.fg}22;" onclick="openTaskDetail('${t.id}')">
-    <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h(t.client||'')}</div>
-    <div style="opacity:0.75;font-size:0.65rem;">${t.time||''} ${h(t.city||'')}</div>
+  const timeLabel=t.windowStart?`${t.windowStart}–${t.windowEnd}`:(t.time||'');
+  return`<div class="planner-task-chip" style="background:${col.bg};color:${col.fg};border-color:${col.fg}28;border-right-color:${col.fg};" onclick="openTaskDetail('${t.id}')">
+    <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.72rem;">${h(t.client||'לקוח')}</div>
+    <div style="display:flex;align-items:center;gap:4px;margin-top:2px;">
+      ${timeLabel?`<span style="font-size:0.63rem;font-weight:600;opacity:0.9;">${timeLabel}</span><span style="opacity:0.35;font-size:0.6rem;">·</span>`:''}
+      <span style="font-size:0.63rem;opacity:0.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h(t.city||'')}</span>
+    </div>
   </div>`;
 }
 
@@ -6533,10 +6537,8 @@ function renderPlannerWeekly(days){
       const bg=isToday?'#F0F7FF':isDayOff?'var(--line-2)':'';
       if(isDayOff) return`<td style="background:var(--line-2);vertical-align:top;padding:6px;border-left:1px solid var(--line-2);"><div class="planner-day-off">יום חופש</div></td>`;
       const sorted=techTasks.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-      const visible=sorted.slice(0,3);
-      const extra=sorted.length-3;
       const cellId=`pc-${tech.id}-${ds}`;
-      const chips=visible.map(_plannerTaskChip).join('')+(extra>0?`<button id="${cellId}" onclick="expandPlannerCell(this,'${tech.id}','${ds}')" style="display:block;width:100%;text-align:right;background:var(--line-2);border:none;border-radius:4px;font-size:0.65rem;color:var(--blue);padding:3px 6px;cursor:pointer;font-family:'Heebo',sans-serif;font-weight:700;margin-top:2px;">+${extra} נוספות ▾</button>`:'');
+      const chips=sorted.map(_plannerTaskChip).join('');
       const canOptimize=CONFIG.OPTIMIZER_URL&&techTasks.length>=2&&ds>=todayStr();
       const optBtn=canOptimize?`<button id="opt-btn-${tech.id}-${ds}" onclick="runOptimize('${tech.id}','${ds}')" title="מסלול מיטבי" style="display:block;width:100%;text-align:center;background:var(--blue-l);border:1px solid var(--blue);border-radius:4px;font-size:0.65rem;color:var(--blue-d);padding:2px 4px;cursor:pointer;font-family:'Heebo',sans-serif;font-weight:700;margin-top:3px;">🔀 מסלול מיטבי</button>`:'';
       return`<td style="vertical-align:top;padding:5px;border-left:1px solid var(--line-2);${bg?'background:'+bg+';':''}min-width:110px;">${chips||'<div style="height:32px;"></div>'}${optBtn}</td>`;
@@ -6638,16 +6640,16 @@ function renderPlannerDaily(days){
     const top=topMins*PX;
     const height=Math.max(32,heightMins*PX);
     const label=hasWin?`${first.windowStart} — ${first.windowEnd}`:first.time;
-    const rows=grp.map(t=>`<div onclick="openTaskDetail('${t.id}')" style="padding:2px 0;cursor:pointer;border-bottom:1px solid ${tc}20;">
+    const rows=grp.map(t=>`<div onclick="openTaskDetail('${t.id}')" style="padding:3px 0;cursor:pointer;border-bottom:1px solid ${tc}18;border-radius:3px;transition:background 0.1s;" onmouseover="this.style.background='${tc}14'" onmouseout="this.style.background=''">
       <div style="display:flex;align-items:center;gap:5px;">
-        <span style="width:5px;height:5px;border-radius:50%;background:${statusFg[t.status]||tc};flex-shrink:0;"></span>
-        <span style="font-size:0.68rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${h(t.client||'—')}</span>
-        <span style="font-size:0.62rem;color:var(--ink-3);">${t.time||''}</span>
+        <span style="width:6px;height:6px;border-radius:50%;background:${statusFg[t.status]||tc};flex-shrink:0;box-shadow:0 0 0 2px ${(statusFg[t.status]||tc)}30;"></span>
+        <span style="font-size:0.69rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${h(t.client||'—')}</span>
+        <span style="font-size:0.63rem;color:var(--ink-3);font-weight:600;">${t.time||''}</span>
       </div>
-      ${t.notes?`<div style="font-size:0.6rem;color:var(--ink-3);padding-right:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📝 ${h(t.notes)}</div>`:''}
+      ${t.notes?`<div style="font-size:0.6rem;color:var(--ink-3);padding-right:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;">📝 ${h(t.notes)}</div>`:''}
     </div>`).join('');
-    return`<div style="position:absolute;top:${top}px;left:${labelW+6}px;right:6px;height:${height}px;background:${tc}14;border:1.5px solid ${tc}55;border-radius:7px;padding:5px 7px;overflow:hidden;box-sizing:border-box;z-index:2;">
-      <div style="font-size:0.68rem;font-weight:800;color:${tc};margin-bottom:3px;">${label}</div>
+    return`<div style="position:absolute;top:${top}px;left:${labelW+6}px;right:6px;height:${height}px;background:${tc}0D;border:1px solid ${tc}30;border-right:4px solid ${tc};border-radius:6px;padding:6px 10px 5px 7px;overflow:hidden;box-sizing:border-box;z-index:2;box-shadow:0 2px 6px rgba(0,0,0,0.09);">
+      <div style="font-size:0.67rem;font-weight:800;color:${tc};margin-bottom:4px;letter-spacing:0.2px;">${label}</div>
       ${rows}
     </div>`;
   }).join('');
