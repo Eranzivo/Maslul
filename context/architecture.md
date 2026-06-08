@@ -30,8 +30,9 @@
 | `context/scheduling-rules.md` | Scheduling engine rules and invariants |
 | `DEVELOPER.md` | Developer onboarding, gotchas, infrastructure |
 | `PRODUCT_GUIDE.md` | Section-by-section product brief + 15-min demo script |
-| `backend/main.py` | FastAPI app — /health and /optimize endpoints |
+| `backend/main.py` | FastAPI app — /health, /optimize, /batch-schedule, /geocode endpoints |
 | `backend/optimizer.py` | OR-Tools TSP solver + Google Maps / haversine distance matrix |
+| `backend/batch_schedule.py` | Batch auto-scheduler — greedy zone rotation + OR-Tools per tech-day |
 | `backend/cities.py` | 200+ Israeli city coordinates (haversine fallback, logs unknown cities) |
 
 ## Internal HTML Structure
@@ -78,7 +79,8 @@
 
 ## Route Optimization Backend
 - POST `/optimize` — builds distance matrix, runs OR-Tools TSP solver, returns ordered tasks with arrival times
-- Distance matrix: Google Maps Distance Matrix API if key set, else haversine
+- POST `/batch-schedule` — auto-assigns all pending tasks for a tenant across a date range; respects zone rotation, fill-first, equal city distribution; runs OR-Tools per tech-day; protected by `Bearer SUPABASE_SERVICE_KEY`. Implemented in `backend/batch_schedule.py`.
+- Distance matrix: Google Maps Distance Matrix API if key set, else haversine. Batch scheduler always uses haversine (city-level only tasks).
 - Location priority per task: **geocoded lat/lon** → **street + city string** → **city name only**
 - `_parse_loc(loc)` in optimizer.py handles `"lat,lon"` strings and city name strings uniformly
 - 5-second solver time limit
@@ -141,7 +143,7 @@ async function saveXToSupabase(x) {
 | `tenants` | `id`, `name`, `plan`, `config` (JSONB) |
 | `users` | `id`, `tenant_id`, `role`, `name` |
 | `technicians` | `id`, `tenant_id`, `name`, `phone`, `base_city`, `color`, `min_daily`, `max_daily`, `start_time`, `end_time`, `blocked_cities` (array), `skills` (array), `cat_limits` (JSONB), `rotation` (JSONB), `duration_overrides` (JSONB), `weekly_schedule` (JSONB), `last_lat`, `last_lon`, `last_seen` |
-| `tasks` | `id`, `tenant_id`, `assign_id`, `client_name`, `client_phone`, `city`, `street`, `floor` (TEXT), `apartment` (TEXT), `entrance_notes` (TEXT), `category_id`, `category_name`, `technician_id`, `status`, `scheduled_date`, `scheduled_time`, `notes`, `cancelled_at`, `checklist_done` (JSONB), `recurring_template_id` (UUID FK), `lat` (DOUBLE PRECISION), `lon` (DOUBLE PRECISION), `geocoded_at` (TIMESTAMPTZ) |
+| `tasks` | `id`, `tenant_id`, `assign_id`, `client_name`, `client_phone`, `city`, `street`, `floor` (TEXT), `apartment` (TEXT), `entrance_notes` (TEXT), `category_id`, `category_name`, `technician_id`, `status`, `scheduled_date`, `scheduled_time`, `scheduled_window_start` (TEXT), `scheduled_window_end` (TEXT), `notes`, `cancelled_at`, `checklist_done` (JSONB), `recurring_template_id` (UUID FK), `lat` (DOUBLE PRECISION), `lon` (DOUBLE PRECISION), `geocoded_at` (TIMESTAMPTZ) |
 | `zones` | `id`, `tenant_id`, `name`, `cities` (array), `polygon` (JSONB — array of `{lat,lng}` vertices, nullable) |
 | `categories` | `id`, `tenant_id`, `name`, `duration_minutes` |
 | `packages` | `id`, `tenant_id`, `name`, `items` (JSONB) |

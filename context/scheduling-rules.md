@@ -174,6 +174,30 @@ Customers receive a **3-hour arrival window** (e.g., 07:00–10:00), not an exac
 - Unscheduled tasks (no time, no window): listed below the grid in "ממתין לשיבוץ" section
 - One tech at a time — tech tabs at top of daily view
 
+## Batch Scheduler (June 2026) ✅ implemented 2026-06-08
+
+POST `/batch-schedule` on the Railway backend auto-assigns all pending tasks for a tenant across a date range.
+
+### Algorithm
+1. **Greedy assignment**: for each pending task, find the best `(tech, date)` pair:
+   - Tech's rotation zone for that day must contain the task's city
+   - Score: `count * 100 - city_load * 50` — fill active days first, penalise over-concentration of one city
+   - Saturday always skipped; empty rotation string = tech off that day
+2. **Per-day optimization**: for each `(tech, date)` group, run OR-Tools to order tasks by travel time (haversine), assign `scheduled_time` + `scheduled_window_start/end`
+3. **Window formula**: `slot_num = (arr_min - start_min) // 180; window_start = start_min + slot_num * 180`
+
+### Key invariants
+- Zone rotation enforced hard — a task in zone A can only go to the tech assigned zone A that day
+- `arrival_window_hours` read from `tenants.config` (PureWater = 3)
+- `max_daily` read from technician row; falls back to `config.defaults.max_daily_jobs`
+- `dry_run=true` previews without writing to DB
+- Protected endpoint: requires `Authorization: Bearer <SUPABASE_SERVICE_KEY>`
+
+### City normalization
+`_CITY_ALIASES` in `batch_schedule.py` mirrors `normalizeCity()` in JS. Both must stay in sync when adding city variants.
+
+---
+
 ## Return City in Optimizer (June 2026) ✅ implemented 2026-06-08
 
 When `tech.return_city != tech.base_city`, the OR-Tools model uses a two-depot setup:

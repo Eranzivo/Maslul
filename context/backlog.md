@@ -35,3 +35,4 @@
 | 2026-06-06 | PureWater zone setup — 9 zones, 3-tech rotation, city normalization |
 | 2026-06-07 | Dispatch UX, task edit modal, 108 tasks seeded, polygon fix, 255 cities, geo-intelligence layer |
 | 2026-06-08 | Service windows (DB + dispatch), 72/48/24h slot release (PureWater config), backtrack detection, return_city OR-Tools end depot, calendar rebuilt (absolute grid, one-tech, all tasks visible), auth-users + zones-polygons context files, 108 real tasks seeded |
+| 2026-06-08 (cont.) | Batch scheduler (`/batch-schedule` + `batch_schedule.py`) — 108 PureWater tasks auto-assigned from Jun 7 with zone rotation verified (16 tech-day combos ✅); weekly calendar shows all tasks (no +N truncation); professional block styling (accent border + shadow) |
