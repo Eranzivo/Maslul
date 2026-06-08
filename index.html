@@ -4515,7 +4515,11 @@ function getCatName(){
 const CITY_ALIASES={
   'קריית גת':'קרית גת','קריית מלאכי':'קרית מלאכי','קריית ים':'קרית ים',
   'קריית מוצקין':'קרית מוצקין','קריית ביאליק':'קרית ביאליק','קריית חיים':'קרית חיים',
-  'קריית אונו':'קרית אונו','קרית שמונה':'קריית שמונה',
+  'קריית אונו':'קרית אונו',
+  // שמונה — tasks entered as קרית normalize to zone's canonical קריית
+  'קרית שמונה':'קריית שמונה',
+  // זיכרון/זכרון — tasks entered as זיכרון normalize to zone's canonical זכרון
+  'זיכרון יעקב':'זכרון יעקב',
   'בית-שמש':'בית שמש','נס-ציונה':'נס ציונה','ראשון-לציון':'ראשון לציון',
   'פתח-תקווה':'פתח תקווה','באר-שבע':'באר שבע','תל-אביב':'תל אביב',
 };
@@ -4596,9 +4600,26 @@ function getSlotReservationOffset(dateStr,cityIdx,totalCities){
 
 // ROUTE OPTIMIZATION: far-to-near (north-to-south or based on lat order)
 // We approximate geography by the order cities appear in the zone
-function getCityIndexInZone(city,zoneId){
+function getCityIndexInZone(city,zoneId,baseCity){
   const z=zones.find(x=>x.id===zoneId);if(!z)return 999;
-  return z.cities.indexOf(normalizeCity(city));
+  const nc=normalizeCity(city);
+  if(baseCity){
+    const nb=normalizeCity(baseCity);
+    // Sort zone cities far→near from depot using real coordinates.
+    // Cities missing from CITY_COORDS_JS fall to the end.
+    const sorted=[...z.cities].sort((a,b)=>{
+      const da=_cityDistKm(nb,normalizeCity(a)),db=_cityDistKm(nb,normalizeCity(b));
+      if(da===null&&db===null)return 0;
+      if(da===null)return 1;
+      if(db===null)return -1;
+      return db-da; // larger distance = farther = lower index
+    });
+    const idx=sorted.indexOf(nc);
+    return idx===-1?999:idx;
+  }
+  // Fallback when no depot known — use stored array order
+  const idx=z.cities.indexOf(nc);
+  return idx===-1?999:idx;
 }
 // Calculate optimal time for new task using far-to-near logic.
 // Zone cities array: index 0 = FARTHEST from tech base, last index = CLOSEST.
@@ -4613,7 +4634,7 @@ function calcOptimalTime(tech,dateStr,city,catId){
   const techOverride=catId?((tech.durationOverrides||{})[catId]||null):null;
   const dur=techOverride||catDur||settings.regularTime||30;
   const buf=10;
-  const newIdx=getCityIndexInZone(city,zid);
+  const newIdx=getCityIndexInZone(city,zid,tech.base);
   const totalCities=zones.find(x=>x.id===zid)?.cities.length||1;
 
   const partialBlocks=getTechPartialBlocks(tech,dateStr);
@@ -4637,8 +4658,8 @@ function calcOptimalTime(tech,dateStr,city,catId){
 
   // Separate existing tasks into those that must come BEFORE (farther/same) and AFTER (closer).
   // Unknown city (idx 999) is treated as neutral — don't use for blocking.
-  const tasksBefore=dayTasks.filter(t=>{const i=getCityIndexInZone(t.city,zid);return i!==999&&i<=newIdx;});
-  const tasksAfter =dayTasks.filter(t=>{const i=getCityIndexInZone(t.city,zid);return i!==999&&i> newIdx;});
+  const tasksBefore=dayTasks.filter(t=>{const i=getCityIndexInZone(t.city,zid,tech.base);return i!==999&&i<=newIdx;});
+  const tasksAfter =dayTasks.filter(t=>{const i=getCityIndexInZone(t.city,zid,tech.base);return i!==999&&i> newIdx;});
 
   // Earliest we can start = after the last "before" task completes.
   let earliest=sh*60;
@@ -4667,11 +4688,11 @@ function isRouteLogical(tech,dateStr,newCity,catId){
   const optTime=calcOptimalTime(tech,dateStr,newCity,catId);
   if(!optTime)return false;
   const zid=getTechZoneId(tech,dateStr);
-  const newIdx=getCityIndexInZone(newCity,zid);
+  const newIdx=getCityIndexInZone(newCity,zid,tech.base);
   if(newIdx===999)return true; // city not in zone index — can't validate, allow
   const newTimeMins=timeToMins(optTime);
   return getTechDayTasks(tech,dateStr).every(t=>{
-    const tIdx=getCityIndexInZone(t.city,zid);
+    const tIdx=getCityIndexInZone(t.city,zid,tech.base);
     if(tIdx===999)return true;
     const tTime=timeToMins(t.time);
     // A task scheduled BEFORE us must not be closer (higher idx) — that would be near-then-far
@@ -4702,13 +4723,13 @@ function wouldBacktrack(tech,dateStr,newCity){
   const zid=getTechZoneId(tech,dateStr);if(!zid)return false;
   const dayTasks=getTechDayTasks(tech,dateStr).filter(t=>t.status!=='cancelled'&&t.time);
   if(dayTasks.length===0)return false;
-  const newIdx=getCityIndexInZone(newCity,zid);if(newIdx===999)return false;
+  const newIdx=getCityIndexInZone(newCity,zid,tech.base);if(newIdx===999)return false;
   // Build sorted index sequence after hypothetically inserting the new task
-  const allIdx=dayTasks.map(t=>getCityIndexInZone(t.city,zid)).filter(i=>i!==999);
+  const allIdx=dayTasks.map(t=>getCityIndexInZone(t.city,zid,tech.base)).filter(i=>i!==999);
   allIdx.push(newIdx);
   allIdx.sort((a,b)=>a-b); // what the sorted order should be (far→near)
   // Compare against actual insertion: any existing task's index > newIdx after it in time = backtrack
-  const tasksAfterNew=dayTasks.filter(t=>{const i=getCityIndexInZone(t.city,zid);return i!==999&&i<newIdx;});
+  const tasksAfterNew=dayTasks.filter(t=>{const i=getCityIndexInZone(t.city,zid,tech.base);return i!==999&&i<newIdx;});
   // If there's any task that's FARTHER than newCity scheduled AFTER where newCity would go, backtrack
   return tasksAfterNew.length>0;
 }
@@ -4749,9 +4770,9 @@ function _candidatesZone(city,catId,dates,sc){
       if(slRel?.enabled){
         const zid2=getTechZoneId(tech,date.str);
         const zoneObj=zones.find(z=>z.id===zid2);
-        const cityIdx=zoneObj?zoneObj.cities.indexOf(normalizeCity(city)):-1;
+        const cityIdx=zoneObj?getCityIndexInZone(city,zid2,tech.base):-1;
         const zoneCities=zoneObj?.cities.length||1;
-        const rel=cityIdx>=0?cityIdx/Math.max(1,zoneCities-1):0; // 0=farthest, 1=closest
+        const rel=cityIdx>=0&&cityIdx!==999?cityIdx/Math.max(1,zoneCities-1):0; // 0=farthest, 1=closest
         if(rel>=0.5){
           const slotDate=new Date(date.str+'T'+optTime+':00');
           const hoursUntil=(slotDate-Date.now())/3600000;
@@ -4920,9 +4941,27 @@ const CITY_COORDS_JS={
   'אלוני יצחק':[32.5106,35.0036],'שדה אליעזר':[33.0459,35.5641],
   // Golan
   'קצרין':[32.9939,35.6908],
+  // Zone canonical spellings that differ from CITY_COORDS_JS keys above
+  'זכרון יעקב':[32.5726,34.9520],   // zone uses זכרון, coords key is זיכרון
+  'קריית שמונה':[33.2070,35.5690],  // zone uses קריית, coords key is קרית
+  // Zone cities missing from the main list (approximate coordinates)
+  'כפר בן נון':[31.8380,34.9720],   // near Latrun junction, ~50km from Ashkelon
+  'סלעית':[32.1820,34.9680],        // moshav in Sharon, ~62km
+  'כפר נטר':[32.2850,34.9330],      // moshav near Netanya, ~72km
+  'שמשית':[32.6180,35.1570],        // moshav near Afula, ~118km
+  'בלפוריה':[32.5700,35.2010],      // moshav near Afula, ~115km
+  'מרחביה':[32.5900,35.2430],       // kibbutz near Afula, ~117km
+  'חרב':[32.5525,35.0131],          // near Yokneam (same as חריש)
+  'טלמון':[31.9440,35.1620],        // settlement NW of Jerusalem, ~85km
+  'כפר אחים':[31.7220,34.7130],     // moshav near Ashkelon, ~8km
+  'כפר מימון':[31.4570,34.6430],    // near Ofakim, ~30km
+  'קיבוץ שובל':[31.3420,34.7490],   // near Beer Sheva, ~47km
+  'בני דקלים':[31.4680,34.6350],    // near Halutza area, ~31km
 };
 function _cityDistKm(cityA,cityB){
-  const a=CITY_COORDS_JS[cityA],b=CITY_COORDS_JS[cityB];
+  // Normalize before lookup so aliases and zone spellings resolve correctly
+  const a=CITY_COORDS_JS[cityA]||CITY_COORDS_JS[normalizeCity(cityA)];
+  const b=CITY_COORDS_JS[cityB]||CITY_COORDS_JS[normalizeCity(cityB)];
   if(!a||!b)return null;
   const R=6371,dLat=(b[0]-a[0])*Math.PI/180,dLon=(b[1]-a[1])*Math.PI/180;
   const h=Math.sin(dLat/2)**2+Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(dLon/2)**2;
