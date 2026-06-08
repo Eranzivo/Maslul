@@ -1,12 +1,13 @@
 import os
 from datetime import date
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 from pydantic import BaseModel
 from typing import Optional
 from dotenv import load_dotenv
 from optimizer import optimize_routes
+from batch_schedule import run_batch_schedule
 
 load_dotenv()
 
@@ -67,6 +68,7 @@ class Technician(BaseModel):
     id: str
     name: str
     base_city: str
+    return_city: Optional[str] = None
     start_time: str = "07:00"
     end_time: str = "18:00"
     tasks: list[Task] = []
@@ -151,3 +153,38 @@ async def optimize(req: OptimizeRequest):
         "mode": "gmaps" if use_gmaps else "local",
         "optimized": result,
     }
+
+
+class BatchScheduleRequest(BaseModel):
+    tenant_id: str
+    date_from: str   # "YYYY-MM-DD" — first day to assign tasks to
+    date_to: str     # "YYYY-MM-DD" — last day allowed
+    dry_run: bool = False
+
+
+@app.post("/batch-schedule")
+async def batch_schedule(req: BatchScheduleRequest, request: Request):
+    """
+    Auto-assign all pending tasks for a tenant across a date range.
+    Respects zone rotation, fill-first, equal city distribution, and
+    runs OR-Tools per tech-day to produce service windows.
+
+    Protected: requires Authorization: Bearer <SUPABASE_SERVICE_KEY> header.
+    Use dry_run=true to preview the schedule without writing to the DB.
+    """
+    service_key = os.getenv("SUPABASE_SERVICE_KEY", "")
+    auth = request.headers.get("Authorization", "")
+    if not service_key or auth != f"Bearer {service_key}":
+        raise HTTPException(status_code=401, detail="Unauthorized — provide service key as Bearer token")
+
+    google_maps_key = os.getenv("GOOGLE_MAPS_API_KEY") or None
+
+    result = await run_batch_schedule(
+        tenant_id=req.tenant_id,
+        date_from=req.date_from,
+        date_to=req.date_to,
+        dry_run=req.dry_run,
+        service_key=service_key,
+        google_maps_key=google_maps_key,
+    )
+    return result
