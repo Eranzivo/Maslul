@@ -4765,7 +4765,13 @@ function _candidatesZone(city,catId,dates,sc){
       // ── Backtrack detection: reject slots that create far→near→far zigzag ──
       if(routeLogic&&wouldBacktrack(tech,date.str,city))continue;
       const existingInZone=tasks.filter(t=>t.techId===tech.id&&t.date===date.str&&getCityZone(t.city)?.id===getTechZoneId(tech,date.str)&&t.status!=='cancelled').length;
-      const fillScore=existingInZone*100+load;
+      let fillScore=existingInZone*100+load;
+      // ── Equal city distribution: penalise techs already holding more tasks from same city ──
+      // Enabled via scheduling.equal_city_distribution = true (any tenant, defaults false).
+      if(sc.equal_city_distribution){
+        const cityTasks=tasks.filter(t=>String(t.techId)===String(tech.id)&&normalizeCity(t.city)===normalizeCity(city)&&t.status!=='cancelled').length;
+        fillScore-=cityTasks*50;
+      }
       candidates.push({tech,date,load,existingInZone,fillScore,dateScore:dates.indexOf(date),optTime});
     }
   }
@@ -6580,12 +6586,12 @@ function renderPlannerDaily(days){
   const PX=1; // px per minute
   const gridH=(endH-startH)*60*PX;
   const labelW=42; // px for hour labels
-  // Hour gridlines + labels
+  // Hour gridlines + labels (label column on physical left, tasks to the right)
   const hourLines=Array.from({length:endH-startH+1},(_,i)=>{
     const hh=startH+i;
     const top=(hh-startH)*60*PX;
-    return`<div style="position:absolute;top:${top}px;left:0;right:0;border-top:1px solid var(--line-2);pointer-events:none;">
-      <span style="position:absolute;right:0;top:-9px;font-size:0.6rem;font-weight:700;color:var(--ink-4);padding:0 4px;background:var(--line-2);border-radius:0 0 0 4px;">${String(hh).padStart(2,'0')}:00</span>
+    return`<div style="position:absolute;top:${top}px;left:0;right:0;border-top:1px solid var(--line-2);pointer-events:none;z-index:3;">
+      <span style="position:absolute;left:0;top:-9px;font-size:0.62rem;font-weight:700;color:var(--ink-3);padding:0 4px;width:${labelW}px;text-align:center;box-sizing:border-box;">${String(hh).padStart(2,'0')}:00</span>
     </div>`;
   }).join('');
   // Current-time line
@@ -6595,8 +6601,8 @@ function renderPlannerDaily(days){
     const nowMins=now.getHours()*60+now.getMinutes();
     if(nowMins>=startH*60&&nowMins<=endH*60){
       const top=(nowMins-startH*60)*PX;
-      nowLine=`<div style="position:absolute;top:${top}px;left:0;right:0;height:2px;background:#EF4444;z-index:10;pointer-events:none;">
-        <div style="position:absolute;right:-5px;top:-4px;width:10px;height:10px;border-radius:50%;background:#EF4444;"></div></div>`;
+      nowLine=`<div style="position:absolute;top:${top}px;left:${labelW}px;right:0;height:2px;background:#EF4444;z-index:10;pointer-events:none;">
+        <div style="position:absolute;left:-5px;top:-4px;width:10px;height:10px;border-radius:50%;background:#EF4444;"></div></div>`;
     }
   }
   // Day-off overlay
@@ -6637,7 +6643,7 @@ function renderPlannerDaily(days){
       <span style="font-size:0.68rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${h(t.client||'—')}</span>
       <span style="font-size:0.62rem;color:var(--ink-3);">${t.time||''}</span>
     </div>`).join('');
-    return`<div style="position:absolute;top:${top}px;left:${labelW+4}px;right:6px;height:${height}px;background:${tc}14;border:1.5px solid ${tc}55;border-radius:7px;padding:5px 7px;overflow:hidden;box-sizing:border-box;z-index:2;">
+    return`<div style="position:absolute;top:${top}px;left:${labelW+6}px;right:6px;height:${height}px;background:${tc}14;border:1.5px solid ${tc}55;border-radius:7px;padding:5px 7px;overflow:hidden;box-sizing:border-box;z-index:2;">
       <div style="font-size:0.68rem;font-weight:800;color:${tc};margin-bottom:3px;">${label}</div>
       ${rows}
     </div>`;
@@ -6663,7 +6669,7 @@ function renderPlannerDaily(days){
       ${optBtn}
     </div>
     <div style="position:relative;height:${gridH}px;background:var(--white);border-radius:8px;border:1px solid var(--line);overflow:hidden;">
-      <div style="position:absolute;top:0;bottom:0;right:0;width:${labelW}px;background:var(--line-2);z-index:1;border-left:1px solid var(--line-2);"></div>
+      <div style="position:absolute;top:0;bottom:0;left:0;width:${labelW}px;background:var(--line-2);z-index:1;border-right:1px solid var(--line);"></div>
       ${hourLines}${nowLine}${taskBlocks}${dayOffOverlay}
     </div>
     ${unschedHtml}`;
