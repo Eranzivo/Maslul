@@ -151,11 +151,19 @@ Intake is **blocked** (never silently misrouted), but the coordinator is one cli
 
 ## 10. Testing
 
-**Unit (`resolveZone` + helpers):**
+**Harness — tiny, dependency-free, dev-only (`tests/zones.test.js`):**
+- Run with `node tests/zones.test.js` — no `npm`, no framework, uses only Node built-ins (`fs`, `vm`).
+- The pure zone logic stays **inline in `index.html`** between clear markers (`// <zone-logic>` … `// </zone-logic>`). The harness reads that block out of `index.html` and evaluates it in a sandbox, so there is **one source of truth** (no duplication, no drift) and the **shipped app stays a single file**. The test file is never loaded by the app.
+- Doubles as **living documentation of tenant/config separation:** tests build two mock tenants with *different* configs (Tenant A `zone_match: city_list`, Tenant B `zone_match: polygon`) and assert each resolves by its own config with no shared state — so the suite encodes how separation works and fails loudly if it ever regresses.
+
+**Unit coverage (`resolveZone` + helpers):**
 - city in a city-list zone → matched; city absent → `city_not_in_zone`
 - point inside a polygon → matched; outside all → `outside_all_polygons`; missing coords → `not_geocoded`
 - `canonicalCity`: variant spelling collapses to canonical; near-duplicate triggers "did you mean"
 - `blocked_zones` excludes the tech; non-overlap guarantees single match
+- **tenant separation:** Tenant A (city_list) and Tenant B (polygon) resolve the same input differently per their config; neither leaks state into the other
+
+**Optional follow-up:** a small project command (`/test-zones`) that runs the suite and asks Claude to review it for gaps/improvements — gives the "run with a skill that suggests improvements" workflow. Marked optional in the plan.
 
 **Manual QA checklist:**
 - Draw a zone on the map (verify map renders reliably after a forced CDN failure / offline) → cities captured → saved → reload persists
