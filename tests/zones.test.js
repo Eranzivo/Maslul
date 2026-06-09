@@ -26,7 +26,8 @@ function suite(name, fn){ console.log('• ' + name); fn(); }
 suite('harness', () => {
   check('normalizeCity is extracted', typeof ctx.normalizeCity === 'function');
   check('normalizeCity returns a string', typeof ctx.normalizeCity('תל אביב') === 'string');
-  check('CITY_COORDS_JS extracted (has תל אביב)', typeof ctx.normalizeCity === 'function');
+  check('CITY_COORDS_JS block extracted', /CITY_COORDS_JS\s*=/.test(code));
+  check('_pointInPolygon block extracted', typeof ctx._pointInPolygon === 'function');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
