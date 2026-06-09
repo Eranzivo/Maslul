@@ -30,5 +30,17 @@ suite('harness', () => {
   check('_pointInPolygon block extracted', typeof ctx._pointInPolygon === 'function');
 });
 
+suite('canonicalCity', () => {
+  // exact known city passes through
+  check('known city unchanged', ctx.canonicalCity('קרית גת').city === 'קרית גת');
+  // variant spelling collapses (rule-based)
+  check('double-yud variant collapses', ctx.canonicalCity('קריית גת').city === 'קרית גת');
+  // near-duplicate not in dict → suggestion offered
+  const r = ctx.canonicalCity('קריית שמונהh');
+  check('typo yields suggestion', r.suggestion === 'קרית שמונה' || r.suggestion === 'קריית שמונה');
+  // unknown city → no suggestion, kept as typed (trimmed)
+  check('unknown kept as-is', ctx.canonicalCity('  כפר דמיוני ').city === 'כפר דמיוני');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

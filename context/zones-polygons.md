@@ -18,6 +18,16 @@ zones.polygon   — JSONB — array of {lat, lng} vertices (nullable — only se
 
 **City names are normalized** via `normalizeCity()` before storage and lookup. The `CITY_ALIASES` map handles Hebrew spelling variants (e.g., `קריית גת` → `קרית גת`).
 
+### canonicalCity guard (Task input / city add)
+
+`canonicalCity(input)` is a higher-level guard used when persisting a city entered by a user (task form or zone city-add). It returns `{city, suggestion}`:
+
+1. Calls `normalizeCity()` (alias lookup + trim).
+2. Applies a rule-based collapse: `קריית → קרית` for any city name.
+3. Looks up the result in `CITY_COORDS_JS`. If found → `{city: normalized, suggestion: null}`.
+4. If not found, runs Levenshtein against all known city names. If the closest match is within 1–2 characters → `{city: input_normalized, suggestion: closest}`, so the UI can prompt "האם התכוונת ל…?".
+5. If no close match → `{city: input_normalized, suggestion: null}` — city is stored as typed (unknown city, no crash).
+
 ---
 
 ## Zone Assignment Logic (current)
