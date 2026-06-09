@@ -138,7 +138,10 @@ def solve_route(
     end_min = time_to_min(end_time_str)
     horizon = end_min - start_min  # total working minutes
 
-    manager = pywrapcp.RoutingIndexManager(n_nodes, 1, 0, end_node)
+    if two_depot:
+        manager = pywrapcp.RoutingIndexManager(n_nodes, 1, [0], [end_node])
+    else:
+        manager = pywrapcp.RoutingIndexManager(n_nodes, 1, 0)
     routing = pywrapcp.RoutingModel(manager)
 
     # Travel-time callback (matrix already offset: row/col 0 = depot)
