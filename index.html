@@ -2563,7 +2563,7 @@ async function loadFromSupabase() {
       });
       checkScalar(technicians, ['name','max'], 'tech');
       checkObj(technicians, 'rotation', 'tech');
-      checkScalar(tasks,       ['assignId','status','city'], 'task');
+      checkScalar(tasks,       ['status','city'], 'task');
       checkScalar(zones,       ['name'], 'zone');
       checkArr(zones,          'cities', 'zone');
       checkScalar(categories,  ['name','time'], 'category');
