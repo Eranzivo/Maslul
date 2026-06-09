@@ -6567,7 +6567,7 @@ function renderPlannerWeekly(days){
   const dayHeaders=days.map(d=>{
     const ds=d.toISOString().split('T')[0];
     const isToday=ds===todayDs;
-    return`<th style="text-align:center;padding:10px 4px;font-size:0.75rem;font-weight:800;color:${isToday?'var(--blue)':'var(--ink-3)'};background:${isToday?'#DBEAFE':'var(--line-2)'};white-space:nowrap;min-width:110px;border-bottom:${isToday?'3px solid var(--blue)':'3px solid transparent'};">
+    return`<th style="position:sticky;top:0;z-index:4;text-align:center;padding:10px 4px;font-size:0.75rem;font-weight:800;color:${isToday?'var(--blue)':'var(--ink-3)'};background:${isToday?'#DBEAFE':'var(--line-2)'};white-space:nowrap;min-width:110px;border-bottom:${isToday?'3px solid var(--blue)':'3px solid transparent'};">
       ${DAYS_SHORT[d.getDay()]}׳ <span style="font-size:0.7rem;font-weight:${isToday?800:500};opacity:${isToday?1:0.7};">${d.getDate()}/${d.getMonth()+1}</span>${isToday?'<div style="font-size:0.6rem;color:var(--blue);margin-top:2px;">היום</div>':''}</th>`;
   }).join('');
   const rows=selTechs.map(tech=>{
@@ -6595,7 +6595,7 @@ function renderPlannerWeekly(days){
   }).join('');
   content.innerHTML=`<table style="border-collapse:collapse;width:100%;background:var(--white);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh);border:1px solid var(--line);">
     <thead><tr>
-      <th style="background:var(--line-2);padding:10px 14px;font-size:0.75rem;font-weight:800;color:var(--ink-3);text-align:right;white-space:nowrap;position:sticky;right:0;z-index:2;border-left:2px solid var(--line-2);border-bottom:3px solid transparent;">${L('workers')}</th>
+      <th style="background:var(--line-2);padding:10px 14px;font-size:0.75rem;font-weight:800;color:var(--ink-3);text-align:right;white-space:nowrap;position:sticky;top:0;right:0;z-index:5;border-left:2px solid var(--line-2);border-bottom:3px solid transparent;">${L('workers')}</th>
       ${dayHeaders}
     </tr></thead>
     <tbody>${rows}</tbody>
