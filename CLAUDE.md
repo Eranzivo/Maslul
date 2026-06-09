@@ -12,6 +12,8 @@ Read ALL files in `context/` before touching any code:
 
 **Adding a client:** Create `context/clients/[name].md` + SQL onboarding script. Each client's business rules live in `tenants.config` — never in shared code.
 
+**Per-tenant scheduling rule:** Scheduling logic is tenant config, never a hardcoded default. **Far-to-near routing is PureWater/Israel-specific** — it is NOT the default for new clients; route strategy, zone-matching mode, durations, and windows are chosen per-tenant at onboarding. What's right for PureWater is not right for everyone.
+
 **New entity / table rule:** Run all steps in `context/new-entity-checklist.md` before adding any Supabase table.
 
 **Proactive upgrade rule:** Suggest significant product improvements proactively: what it does, steps, cost estimate.

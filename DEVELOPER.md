@@ -265,10 +265,12 @@ The core business logic lives in `findBestSlot()` / `buildCandidates()`.
 
 **Rules (do not break):**
 1. **Zone-strict:** A tech only receives jobs in their scheduled zone for that day. Zone assignment rotates weekly (`tech.rotation` JSONB keys 0–5 = Sun–Fri)
-2. **Far-to-near routing:** Cities within a zone are ordered by `getCityIndexInZone()`. Earlier jobs go to farther cities
+2. **Far-to-near routing — PureWater/Israel logic, NOT a global default.** `route_strategy: 'far_to_near'` orders a zone's cities by distance-from-depot (`getCityIndexInZone()`), scheduling farther cities earlier. This is *Israel-specific business logic*, not a universal rule. The next client may not want it — it must be chosen per-tenant during onboarding, never assumed. (Code currently falls back to `far_to_near` when no strategy is set; that default is slated to become an explicit onboarding choice in the scheduling-engine workstream. Far-to-near is also only a heuristic — true route order should come from the OR-Tools TSP with real drive times.)
 3. **Fill existing days first:** Prefer days where the tech already has jobs in that zone (`fillScore = existingInZone * 100 + currentLoad`)
 4. **Category limits:** Per-tech daily caps (`tech.catLimits[catId]`)
 5. **Availability:** `isTechAvailable()` checks `dayoffs` array AND `weekly_schedule` before adding candidate
+
+> **Per-tenant principle:** scheduling logic (route strategy, zone-matching mode, durations, windows) is tenant config, never hardcoded. What's right for PureWater is not the default for everyone.
 
 ---
 
