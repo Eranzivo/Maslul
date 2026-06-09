@@ -22,6 +22,16 @@ No build step. No npm. No toolchain.
 
 > Demo mode is controlled by `CONFIG.DEMO_MODE = true` at the top of the `<script>` block. It bypasses all auth and Supabase calls entirely.
 
+### Testing
+
+A dependency-free Node test harness lives at `tests/zones.test.js`. Run with:
+
+```
+node tests/zones.test.js
+```
+
+No npm install required — uses only built-in Node modules (`fs`, `vm`, `path`). It extracts pure zone logic from `index.html` between `// <zone-logic>` … `// </zone-logic>` markers and runs assertions against it in a sandboxed VM context. Keep any pure, side-effect-free zone logic inside those markers so it stays testable.
+
 ---
 
 ## File Map

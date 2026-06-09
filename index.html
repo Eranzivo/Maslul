@@ -4512,6 +4512,7 @@ function getCatName(){
 }
 
 // ═══ ENGINE ═══
+// <zone-logic>
 const CITY_ALIASES={
   'קריית גת':'קרית גת','קריית מלאכי':'קרית מלאכי','קריית ים':'קרית ים',
   'קריית מוצקין':'קרית מוצקין','קריית ביאליק':'קרית ביאליק','קריית חיים':'קרית חיים',
@@ -4524,6 +4525,7 @@ const CITY_ALIASES={
   'פתח-תקווה':'פתח תקווה','באר-שבע':'באר שבע','תל-אביב':'תל אביב',
 };
 function normalizeCity(city){if(!city)return city;return CITY_ALIASES[city.trim()]||city.trim();}
+// </zone-logic>
 function getCityZone(city){const c=normalizeCity(city);return zones.find(z=>z.cities.includes(c))||null;}
 function getTechDaySchedule(tech,dateStr){
   const dow=new Date(dateStr).getDay();
@@ -4849,6 +4851,7 @@ function _candidatesOpen(city,catId,dates,sc){
 // Proximity score: based on tech.base vs job city using CITY_COORDS_JS lookup.
 // Falls back to load-balance if coords not found for either city.
 // Zone and route logic disabled — client manages geographic rules via cat_limits / blocked_cities.
+// <zone-logic>
 const CITY_COORDS_JS={
   // Gush Dan
   'תל אביב':[32.0853,34.7818],'יפו':[32.0530,34.7542],'בני ברק':[32.0833,34.8333],
@@ -4958,6 +4961,7 @@ const CITY_COORDS_JS={
   'קיבוץ שובל':[31.3420,34.7490],   // near Beer Sheva, ~47km
   'בני דקלים':[31.4680,34.6350],    // near Halutza area, ~31km
 };
+// </zone-logic>
 function _cityDistKm(cityA,cityB){
   // Normalize before lookup so aliases and zone spellings resolve correctly
   const a=CITY_COORDS_JS[cityA]||CITY_COORDS_JS[normalizeCity(cityA)];
@@ -7257,6 +7261,7 @@ function _updateZoneDrawStatus() {
 }
 
 // Ray-casting point-in-polygon (works with L.LatLng objects)
+// <zone-logic>
 function _pointInPolygon(lat, lon, polygon) {
   let inside = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
@@ -7268,6 +7273,7 @@ function _pointInPolygon(lat, lon, polygon) {
   }
   return inside;
 }
+// </zone-logic>
 
 function _detectCitiesInPolygon(latlngs) {
   return Object.entries(CITY_COORDS_JS)
