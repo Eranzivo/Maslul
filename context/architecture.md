@@ -142,9 +142,9 @@ async function saveXToSupabase(x) {
 |---|---|
 | `tenants` | `id`, `name`, `plan`, `config` (JSONB) |
 | `users` | `id`, `tenant_id`, `role`, `name` |
-| `technicians` | `id`, `tenant_id`, `name`, `phone`, `base_city`, `color`, `min_daily`, `max_daily`, `start_time`, `end_time`, `blocked_cities` (array), `skills` (array), `cat_limits` (JSONB), `rotation` (JSONB), `duration_overrides` (JSONB), `weekly_schedule` (JSONB), `last_lat`, `last_lon`, `last_seen` |
+| `technicians` | `id`, `tenant_id`, `name`, `phone`, `base_city`, `color`, `min_daily`, `max_daily`, `start_time`, `end_time`, `blocked_cities` (array), `blocked_zones` (array), `skills` (array), `cat_limits` (JSONB), `rotation` (JSONB), `duration_overrides` (JSONB), `weekly_schedule` (JSONB), `last_lat`, `last_lon`, `last_seen` |
 | `tasks` | `id`, `tenant_id`, `assign_id`, `client_name`, `client_phone`, `city`, `street`, `floor` (TEXT), `apartment` (TEXT), `entrance_notes` (TEXT), `category_id`, `category_name`, `technician_id`, `status`, `scheduled_date`, `scheduled_time`, `scheduled_window_start` (TEXT), `scheduled_window_end` (TEXT), `notes`, `cancelled_at`, `checklist_done` (JSONB), `recurring_template_id` (UUID FK), `lat` (DOUBLE PRECISION), `lon` (DOUBLE PRECISION), `geocoded_at` (TIMESTAMPTZ) |
-| `zones` | `id`, `tenant_id`, `name`, `cities` (array), `polygon` (JSONB — array of `{lat,lng}` vertices, nullable) |
+| `zones` | `id`, `tenant_id`, `name`, `cities` (array), `polygon` (JSONB — array of `{lat,lng}` vertices, nullable), `polygons` (JSONB — array of polygon rings, each `[{lat,lng},…]`) |
 | `categories` | `id`, `tenant_id`, `name`, `duration_minutes` |
 | `packages` | `id`, `tenant_id`, `name`, `items` (JSONB) |
 | `day_offs` | `id`, `tenant_id`, `technician_id`, `date`, `type`, `from_time`, `to_time`, `reason` |
@@ -160,6 +160,7 @@ outputs/migration-recurring-jobs_2026-06-01.sql       — recurring_templates ta
 outputs/migration-geocoding_2026-06-07.sql            — lat/lon/geocoded_at on tasks; polygon on zones
 outputs/migration-purewater-zone-cities_2026-06-06.sql — Israel's 9 zones + city lists seeded
 (applied via Supabase MCP 2026-06-08): floor/apartment/entrance_notes on tasks; drop redundant users_admin_all policy
+outputs/migration-zones-polygons_2026-06-09.sql       — polygons JSONB on zones; blocked_zones TEXT[] on technicians
 ```
 
 ### `tenants.config` JSONB Shape
@@ -172,7 +173,7 @@ outputs/migration-purewater-zone-cities_2026-06-06.sql — Israel's 9 zones + ci
                  "lookahead_days": 30, "monthly_volume": 300,
                  "work_start": "07:00", "work_end": "18:00",
                  "break": { "enabled": true, "start": "12:00", "end": "13:00" } },
-  "scheduling": { "mode": "zone", "zone_strict": true, "fill_first": true,
+  "scheduling": { "mode": "zone", "zone_match": "city_list", "zone_strict": true, "fill_first": true,
                   "route_logic": true, "route_strategy": "far_to_near" },
   "features":  { "whatsapp_enabled": true, "demo_mode": false,
                  "google_maps_enabled": false, "odoo_integration": false,

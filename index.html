@@ -1085,6 +1085,13 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
           <option value="radius">📍 רדיוס — עדיפות לטכנאי הקרוב ביותר לעיר הקריאה</option>
         </select>
       </div>
+      <div class="fg" id="sched-row-zone-match">
+        <label class="fl">הגדרת אזור (כשמצב = אזורים)</label>
+        <select class="fc" id="sched-zone-match" onchange="saveSchedulingConfig()">
+          <option value="city_list">רשימת ערים (ברירת מחדל)</option>
+          <option value="polygon">פוליגון על המפה</option>
+        </select>
+      </div>
       <div class="toggle-row" id="sched-row-zone-strict">
         <div><div class="toggle-label">🔒 אזורים קשיחים</div><div class="toggle-sub">טכנאי לא יקבל קריאות מחוץ לאזור שלו באותו יום</div></div>
         <label class="toggle-switch"><input type="checkbox" id="sched-zone-strict" checked><span class="toggle-slider"></span></label>
@@ -2425,6 +2432,7 @@ async function loadFromSupabase() {
       color: t.color, min: t.min_daily, max: t.max_daily,
       start: t.start_time, end: t.end_time,
       blocked: (t.blocked_cities || []).join(','),
+      blockedZones: t.blocked_zones || [],
       skills: t.skills || [],
       catLimits: t.cat_limits || {},
       durationOverrides: t.duration_overrides || {},
@@ -2453,7 +2461,7 @@ async function loadFromSupabase() {
     }));
 
     zones = (zoneRes.data || []).map(z => ({
-      id: z.id, name: z.name, cities: z.cities || [], polygon: z.polygon || null, _dbId: z.id
+      id: z.id, name: z.name, cities: z.cities || [], polygons: z.polygons || (z.polygon ? [z.polygon] : []), polygon: z.polygon || null, _dbId: z.id
     }));
 
     // ── ZONE RECOVERY (one-time seed for Israel's tenant) ─────────────────────
@@ -2869,6 +2877,7 @@ async function saveTechToSupabase(tech) {
     base_address: tech.address || '', color: tech.color, min_daily: tech.min, max_daily: tech.max,
     start_time: tech.start, end_time: tech.end,
     blocked_cities: tech.blocked ? tech.blocked.split(',').map(c=>c.trim()).filter(c=>c) : [],
+    blocked_zones: tech.blockedZones || [],
     skills: tech.skills || [], cat_limits: tech.catLimits || {},
     duration_overrides: tech.durationOverrides || {},
     rotation: tech.rotation || {}, weekly_schedule: tech.weekly_schedule || {},
@@ -2907,7 +2916,7 @@ async function saveZoneToSupabase(zone) {
   const thisOp = prev.then(async () => {
     _setZoneSaveStatus('שומר…');
     _setZoneInlineStatus(zone.id, 'שומר…', false);
-    const data = await dbUpsert('zones', { id: zone.id, name: zone.name, cities: zone.cities, polygon: zone.polygon || null });
+    const data = await dbUpsert('zones', { id: zone.id, name: zone.name, cities: zone.cities, polygons: zone.polygons || [], polygon: zone.polygon || null });
     if (data) {
       zone._dbId = data.id; save();
       _setZoneSaveStatus('נשמר ✓');
@@ -3534,6 +3543,8 @@ function applyFeatureVisibility(){
     const sc=tenantConfig.scheduling||{};
     const modeEl=document.getElementById('sched-mode');
     if(modeEl)modeEl.value=sc.mode||'zone';
+    const zm=document.getElementById('sched-zone-match');
+    if(zm)zm.value=sc.zone_match||'city_list';
     const zs=document.getElementById('sched-zone-strict');
     if(zs)zs.checked=sc.zone_strict!==false;
     const ff=document.getElementById('sched-fill-first');
@@ -3542,7 +3553,7 @@ function applyFeatureVisibility(){
     if(rl)rl.checked=sc.route_logic!==false;
     // show/hide zone-specific rows based on mode
     const mode=sc.mode||'zone';
-    const zoneRows=['sched-row-zone-strict','sched-row-route-logic'];
+    const zoneRows=['sched-row-zone-strict','sched-row-route-logic','sched-row-zone-match'];
     zoneRows.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=mode==='open'?'none':'';});
   }
   // Settings section — admins only
@@ -3766,6 +3777,7 @@ async function saveSchedulingConfig(){
   const mode=document.getElementById('sched-mode')?.value||'zone';
   const scheduling={
     mode,
+    zone_match:document.getElementById('sched-zone-match')?.value||'city_list',
     zone_strict:mode==='open'?false:!!(document.getElementById('sched-zone-strict')?.checked),
     fill_first:!!(document.getElementById('sched-fill-first')?.checked),
     route_logic:mode==='open'?false:!!(document.getElementById('sched-route-logic')?.checked),
