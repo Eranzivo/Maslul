@@ -6,7 +6,7 @@ Read ALL files in `context/` before touching any code:
 - `context/architecture.md` — stack, schema, hard rules, auth, safety, GPS, labels, features
 - `context/scheduling-rules.md` — scheduling engine, zones, break time, configurable modes
 - `context/style.md` — CSS tokens, component classes, spacing rules, RTL conventions
-- `context/clients/purewater.md` — PureWater pilot: zones, techs, scheduling config, Odoo
+- `context/clients/` — per-client profiles (`README.md` = global vs per-tenant model + source-of-truth rule; `_template.md`; `purewater.md` pilot)
 - `context/auth-users.md` — roles, user management, technician↔user linkage, impersonation, RLS
 - `context/zones-polygons.md` — zone system, city-list matching, polygon draw flow
 

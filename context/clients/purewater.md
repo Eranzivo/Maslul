@@ -1,28 +1,49 @@
-# Client Context — PureWater Israel (Pilot Client)
+# Client Context — PureWater Israel (Pilot)
 
-## Business Details
-- **tenant_id:** `00000000-0000-0000-0000-000000000001`
-- **Business type:** Garbage disposal units + hot/cold water tap installation
-- **Active technicians:** 3 (אלירן, בני, מיכאל)
-- **Depot address:** אלי סיני 7, אשקלון — coords 31.697962, 34.579152 (stored in `tenants.config.depot`)
-- **Current workflow:** Odoo v19 mobile app (mark completed, upload photo, attach warranty)
-- **Maslul's role:** Scheduling only — not replacing Odoo
+> Human-readable mirror of PureWater's `tenants.config`. DB is the source of truth; keep this in lockstep. See `context/clients/README.md`.
 
-## Scheduling Config (in `tenants.config.scheduling`)
-```json
-{
-  "mode": "zone",
-  "zone_strict": true,
-  "fill_first": true,
-  "route_strategy": "far_to_near",
-  "slot_release": { "enabled": true, "conservative_hours": 72, "moderate_hours": 48, "aggressive_hours": 24 }
-}
-```
-- 9 zones, each tech has a day-of-week rotation (Sun–Fri)
-- All 3 techs start from Ashkelon depot; `base_city = אשקלון`
-- `arrival_window_hours = 3` — customers get 3-hour service windows, not exact times
+## Identity
+| Field | Value |
+|---|---|
+| tenant_id | `00000000-0000-0000-0000-000000000001` |
+| Business type | Garbage disposal units + hot/cold water tap installation |
+| Workers | 3 technicians (טכנאי) — אלירן, בני, מיכאל |
+| Stage | Pilot (not yet paying, as of Jun 2026) |
+| Depot | אלי סיני 7, אשקלון — `31.697962, 34.579152` (in `tenants.config.depot`) |
+| Onboarding SQL | `outputs/migration-purewater-zone-cities_2026-06-06.sql` (+ zones-rotation) |
 
-## Service Categories
+## Runtime config (mirrors `tenants.config`)
+| Key | Value | Notes |
+|---|---|---|
+| `scheduling.mode` | `zone` | zone-strict assignment |
+| `scheduling.zone_match` | `city_list` | matches by city list (not polygon) |
+| `scheduling.route_strategy` | `far_to_near` | **PureWater/Israel-specific** — not a global default |
+| `scheduling.fill_first` | `true` | fill active zone-days before opening new ones |
+| `scheduling.slot_release` | enabled (72/48/24h) | hold early slots for farther cities |
+| `defaults.arrival_window_hours` | 3 | customers get a 3-hour service window |
+| `defaults.max_daily_jobs` | 9 | per tech per day |
+| `defaults.work_start` / `work_end` | 07:00 / 18:00 | per-tech `weekly_schedule` can override |
+| Features | whatsapp, google_maps (distance matrix), geocoding (enabled 2026-06-07) | `tenants.config.features` |
+
+## Zones & rotation
+9 city-list zones covering Israel; all 3 techs start from the Ashkelon depot (`base_city = אשקלון`). Day-of-week rotation (0=Sun … 4=Thu; Saturday off):
+
+| Day | אלירן | בני | מיכאל |
+|---|---|---|---|
+| Sun | שפלה | שרון | ירושלים |
+| Mon | ירושלים | שפלה | שרון |
+| Tue | שרון | ירושלים | שפלה |
+| Wed | נגב | מרכז | דן |
+| Thu | דן | נגב | מרכז |
+
+Setup SQL: `outputs/migration-purewater-zones-rotation_2026-06-05.sql`.
+
+## Restrictions & preferences
+- **Far-to-near routing** is PureWater's chosen logic (route_strategy). True route order should come from the OR-Tools TSP with real drive times — far-to-near is the heuristic, not the goal.
+- **Slot release (72/48/24h):** near cities can't hold the earliest slots far in advance, reserving them for farther jobs that may still come in.
+- No per-tech blocked zones/cities configured yet.
+
+## Service categories
 | Hebrew | Type | Duration |
 |---|---|---|
 | טוחן אשפה | Garbage disposal unit | 30 min |
@@ -31,12 +52,18 @@
 | קריאת שירות | Service call | 30 min |
 | Package (bundled) | — | 45 min |
 
-## Odoo Integration
-- Maslul generates `MSL-XXXXX` IDs; coordinator copies to Odoo manually
-- No API integration planned; if Israel wants it later it's an add-on
+## Integrations
+- **Odoo v19** — Maslul generates `MSL-XXXXX` IDs; coordinator copies them into Odoo manually. No API integration planned (optional add-on later).
+- Maslul's role is **scheduling only** — it does not replace Odoo.
 
 ## Notes
-- Client uses Hebrew exclusively; RTL and mobile-first
-- WhatsApp is primary customer communication channel
-- Pilot stage — not yet paying (as of Jun 2026)
-- 108 real tasks seeded Jun 2026 (status=pending, city-only, client details to be filled via ✏️)
+- Hebrew exclusively; RTL, mobile-first.
+- WhatsApp is the primary customer communication channel.
+- 108 real tasks seeded Jun 2026 (status=pending, city-only; client details filled via ✏️).
+
+## Change log
+| Date | Change |
+|---|---|
+| 2026-06-09 | Standardized to client template; recorded `zone_match = city_list`; flagged far-to-near as PureWater-specific |
+| 2026-06-08 | 108 tasks batch-scheduled; service windows live |
+| 2026-06-06 | 9 zones + 3-tech rotation + city normalization |

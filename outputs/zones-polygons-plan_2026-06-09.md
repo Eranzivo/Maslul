@@ -25,6 +25,27 @@
 
 ---
 
+## Documentation Sync (REQUIRED final step of every task)
+
+Before the commit in each task, update the **one** relevant doc so docs never drift from the product, then include it in the same commit. Division of labor: **CLAUDE.md** stays lean (pointers only, ~80 lines); **DEVELOPER.md** = technical how-it-works; **context/[area].md** = detailed area doc; **context/clients/purewater.md** = only when client-specific behavior changes (`tenants.config` is the source of truth — the file mirrors it).
+
+| Task | Doc to update | What to write |
+|---|---|---|
+| 0 | `DEVELOPER.md` | Testing: how to run `node tests/zones.test.js`; the `// <zone-logic>` marker convention |
+| 1 | `context/architecture.md` (schema table + config shape), `context/clients/purewater.md` | `zones.polygons`, `technicians.blocked_zones`, `scheduling.zone_match`; PureWater = `city_list` |
+| 2 | `context/zones-polygons.md` | `canonicalCity` guard + variant-collapse rule |
+| 3 | `context/zones-polygons.md`, `context/scheduling-rules.md` | `resolveZone` seam; two-axis model (`mode` × `zone_match`) |
+| 4 | `context/architecture.md` (CDN→vendor), `DEVELOPER.md` (gotchas) | Leaflet self-hosted in `vendor/`; lazy fallback |
+| 5 | `context/zones-polygons.md` | authoring: city-batch via guard + polygon draw; `polygons[]` |
+| 6 | `context/zones-polygons.md` / `context/architecture.md` (tech schema) | `blocked_zones` per tech |
+| 7 | `context/zones-polygons.md` | no-match handling: block + mode-aware message + CTA |
+| 8 | `DEVELOPER.md` / `context/architecture.md` (features) | bulk import flow |
+| 9 | `DEVELOPER.md` | `/test-zones` command |
+
+After all tasks: append a row to `context/backlog.md` milestone log.
+
+---
+
 ## Task 0: Test harness scaffold + mark existing pure logic
 
 **Files:**
