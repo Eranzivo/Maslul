@@ -1727,7 +1727,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div id="zone-draw-status" style="margin-top:10px;font-size:0.875rem;color:var(--ink-2);min-height:1.5em;text-align:center;font-weight:600;"></div>
     <div class="mo-actions">
       <button class="btn btn-blue" style="flex:1;" onclick="confirmZoneDraw()">✓ הוסף ערים לאזור</button>
-      <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-zone-draw');if(_zoneDrawMap){_zoneDrawMap.remove();_zoneDrawMap=null;}">ביטול</button>
+      <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-zone-draw')">ביטול</button>
     </div>
   </div>
 </div>
@@ -6445,7 +6445,10 @@ function importSettings(event){
 }
 
 // ═══ UTILS ═══
-function closeMo(id){document.getElementById(id).classList.add('hidden');}
+function closeMo(id){
+  document.getElementById(id).classList.add('hidden');
+  if(id==='mo-zone-draw'&&_zoneDrawMap){try{_zoneDrawMap.remove();}catch(e){}  _zoneDrawMap=null;}
+}
 function showToast(msg, type='success'){
   const t=document.getElementById('toast');
   t.textContent=msg;t.className='toast '+type;t.classList.add('show');
@@ -7170,7 +7173,13 @@ function openZoneDraw(zoneId) {
 function _initZoneDrawMap() {
   const el = document.getElementById('zone-draw-map');
   if (!el) return;
-  if (_zoneDrawMap) { _zoneDrawMap.remove(); _zoneDrawMap = null; }
+  if (typeof window.L === 'undefined' || typeof L.map !== 'function') {
+    const st = document.getElementById('zone-draw-status');
+    if (st) st.textContent = 'ספריית מפות לא נטענה — יש לרענן את הדף.';
+    return;
+  }
+  if (_zoneDrawMap) { try { _zoneDrawMap.remove(); } catch(e){} _zoneDrawMap = null; }
+  if (el._leaflet_id) delete el._leaflet_id; // clear stale Leaflet state on reuse
   _zoneDrawMap = L.map(el).setView([31.5, 34.85], 8);
   _osmTiles().addTo(_zoneDrawMap);
   setTimeout(() => { if (_zoneDrawMap) _zoneDrawMap.invalidateSize(); }, 200);
