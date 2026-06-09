@@ -2840,7 +2840,7 @@ async function dbInsert(table, row) {
 
 async function saveTaskToSupabase(task) {
   const row = {
-    assign_id: task.assignId, client_name: task.client, client_phone: task.phone,
+    assign_id: task.assignId || null, client_name: task.client, client_phone: task.phone,
     city: task.city, street: task.street, floor: task.floor || null, apartment: task.apartment || null, entrance_notes: task.entranceNotes || null, category_id: task.catId, category_name: task.cat,
     technician_id: task.techId || null, status: task.status,
     scheduled_date: task.date || null, scheduled_time: task.time || null,
@@ -5078,10 +5078,20 @@ async function runOptimize(techId, date){
   const result=await optimizeDay(techId, targetDate);
   if(btn){btn.disabled=false;btn.textContent='🔀';}
   if(!result){showToast('לא ניתן לבצע אופטימיזציה — בדוק חיבור לשרת','error');return;}
+  const _oTech=technicians.find(t=>String(t.id)===String(techId));
+  const _oStart=timeToMins(getTechDaySchedule(_oTech,targetDate).start||'07:00');
+  const _oWinMins=(tenantConfig.arrival_window_hours||3)*60;
   result.ordered_tasks.forEach(taskId=>{
     const t=tasks.find(x=>String(x.id)===taskId||String(x._dbId)===taskId);
     const arrival=result.estimated_times?.[taskId];
-    if(t&&arrival){t.time=arrival;saveTaskToSupabase(t);}
+    if(t&&arrival){
+      t.time=arrival;
+      const arrMin=timeToMins(arrival);
+      const slot=Math.max(0,Math.floor((arrMin-_oStart)/_oWinMins));
+      t.windowStart=minsToTime(_oStart+slot*_oWinMins);
+      t.windowEnd=minsToTime(_oStart+(slot+1)*_oWinMins);
+      saveTaskToSupabase(t);
+    }
   });
   save();renderHomeTechCards();renderTasks();if(date)renderPlannerContent();
   showToast(`מסלול מיטבי ${result.mode==='gmaps'?'(Google Maps)':'(הערכה)'}  ✓ — ${result.total_drive_minutes} דק׳ נסיעה`);
