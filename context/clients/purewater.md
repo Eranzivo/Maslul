@@ -26,17 +26,17 @@
 | Features | whatsapp, google_maps (distance matrix), geocoding (enabled 2026-06-07) | `tenants.config.features` |
 
 ## Zones & rotation
-9 city-list zones covering Israel; all 3 techs start from the Ashkelon depot (`base_city = אשקלון`). Day-of-week rotation (0=Sun … 4=Thu; Saturday off):
+9 city-list zones covering Israel (דרום · לוד-אשדוד · נהריה-חיפה · תל אביב והסביבה · ראש העין והסביבה · ירושלים · זכרון-הרצליה · יקנעם-נתניה · קריית שמונה-עפולה); all 3 techs start from the Ashkelon depot (`base_city = אשקלון`). Day-of-week rotation (0=Sun … 4=Thu; Fri/Sat off):
 
 | Day | אלירן | בני | מיכאל |
 |---|---|---|---|
-| Sun | שפלה | שרון | ירושלים |
-| Mon | ירושלים | שפלה | שרון |
-| Tue | שרון | ירושלים | שפלה |
-| Wed | נגב | מרכז | דן |
-| Thu | דן | נגב | מרכז |
+| Sun | דרום | תל אביב והסביבה | יקנעם-נתניה |
+| Mon | לוד-אשדוד | ירושלים | זכרון-הרצליה |
+| Tue | נהריה-חיפה | זכרון-הרצליה | קריית שמונה-עפולה |
+| Wed | תל אביב והסביבה | לוד-אשדוד | דרום |
+| Thu | ראש העין והסביבה | נהריה-חיפה | ירושלים |
 
-Setup SQL: `outputs/migration-purewater-zones-rotation_2026-06-05.sql`.
+Setup SQL: `outputs/migration-purewater-zones-rotation_2026-06-05.sql`. **Rotation stores zone IDs — re-run this block if zones are ever re-created (IDs change, orphaning the rotation → grid shows "—").**
 
 ## Restrictions & preferences
 - **Far-to-near routing** is PureWater's chosen logic (route_strategy). True route order should come from the OR-Tools TSP with real drive times — far-to-near is the heuristic, not the goal.
