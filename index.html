@@ -6487,10 +6487,16 @@ function getIsraelDefaultZones(){
 }
 
 function renderZones(){
-  document.getElementById('zones-list').innerHTML=zones.map((z,zi)=>`
+  document.getElementById('zones-list').innerHTML=zones.map((z,zi)=>{
+    const isPoly=!!(z.polygons&&z.polygons.length);
+    return `
     <div class="zone-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <input class="fc" value="${h(z.name)}" onchange="(function(v,id){const z=zones.find(x=>x.id===id);if(z){z.name=v;saveZoneToSupabase(z);save();}})(this.value,'${z.id}')" style="font-weight:800;font-size:0.9375rem;border:none;padding:0;background:transparent;flex:1;">
+        <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0;">
+          <span title="${isPoly?'אזור פוליגון':'אזור רשימת ערים'}" style="display:inline-block;width:11px;height:11px;border-radius:50%;flex-shrink:0;background:${isPoly?'var(--blue)':'#10b981'};"></span>
+          <span style="font-size:0.68rem;font-weight:700;flex-shrink:0;color:${isPoly?'var(--blue-d)':'#059669'};">${isPoly?'פוליגון':'רשימה'}</span>
+          <input class="fc" value="${h(z.name)}" onchange="(function(v,id){const z=zones.find(x=>x.id===id);if(z){z.name=v;saveZoneToSupabase(z);save();}})(this.value,'${z.id}')" style="font-weight:800;font-size:0.9375rem;border:none;padding:0;background:transparent;flex:1;min-width:0;">
+        </div>
         <div style="display:flex;gap:6px;flex-shrink:0;">
           <button class="btn btn-outline btn-sm" onclick="openZoneDraw('${z.id}')">🗺️ צייר</button>
           <button class="btn btn-ghost btn-sm" onclick="deleteZone('${z.id}')" style="color:var(--red);">הסר</button>
@@ -6505,7 +6511,7 @@ function renderZones(){
           <span id="zone-status-${z.id}" style="font-size:0.7rem;color:var(--ink-3);min-height:1em;"></span>
         </div>
       </div>
-    </div>`).join('')||'<div class="empty"><div class="empty-icon">🗺️</div><div>הוסף אזור ראשון</div></div>';
+    </div>`;}).join('')||'<div class="empty"><div class="empty-icon">🗺️</div><div>הוסף אזור ראשון</div></div>';
 }
 async function addZone(){
   const z={id:genClientId(),name:'אזור חדש',cities:[]};
@@ -7379,9 +7385,13 @@ let _zoneDrawFeatureGroup = null;
 let _drawnPolygon = null;
 
 function openZoneDraw(zoneId) {
+  const z = zones.find(x => x.id === zoneId);
+  // Non-override guard: drawing a polygon on a city-list zone converts its type. Confirm first.
+  if (z && z.cities && z.cities.length && !(z.polygons && z.polygons.length)) {
+    if (!confirm(`"${z.name}" הוא אזור רשימת ערים. ציור פוליגון יסמן אותו כאזור פוליגון. להמשיך?`)) return;
+  }
   _zoneDrawId = zoneId;
   _drawnPolygon = null;
-  const z = zones.find(x => x.id === zoneId);
   document.getElementById('mo-zone-draw-title').textContent = `צייר אזור — ${z ? z.name : ''}`;
   document.getElementById('zone-draw-status').textContent = '';
   document.getElementById('mo-zone-draw').classList.remove('hidden');
