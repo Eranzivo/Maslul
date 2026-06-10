@@ -5736,7 +5736,7 @@ async function runBulkImport(){
     if(!r.matched){unmatched.push(`${row} — ${r.reason==='city_not_in_zone'?'עיר לא משויכת לאזור':'מחוץ לאזור'}`);continue;}
     const saved=await dbInsert('tasks',{
       assign_id:null,
-      client_name:'',client_phone:'',
+      client_name:'(ללא שם)',client_phone:'',
       city,street,
       floor:null,apartment:null,entrance_notes:null,
       category_id:null,category_name:'',
@@ -5751,10 +5751,10 @@ async function runBulkImport(){
     });
     if(!saved){unmatched.push(`${row} — שמירה נכשלה`);continue;}
     const t={
-      id:saved.id,client:'',phone:'',
+      id:saved.id,client:'(ללא שם)',phone:'',
       city,street,floor:null,apartment:null,entranceNotes:null,
       cat:'',catId:null,techId:null,
-      status:'pending',time:'',date:'',
+      status:'pending',time:'',date:'',windowStart:'',windowEnd:'',
       notes:'',assignId:'',
       preferredWindows:[],checklistDone:{},photoUrl:null,signatureUrl:null,
       lat:null,lon:null,geocodedAt:null,
