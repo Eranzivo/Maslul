@@ -64,10 +64,12 @@ The live helpers `getCityZone(city)` and `isCityInTechZone(tech, city, dateStr)`
 7. `confirmZoneDraw()`:
    - Runs `_detectCitiesInPolygon()` — ray-casting point-in-polygon for each of the ~255 known cities
    - Adds detected cities to `zone.cities` (no duplicates)
-   - Sets `zone.polygon = _drawnPolygon.map(p => ({lat: p.lat, lng: p.lng}))` — serialized to plain objects
-   - Calls `saveZoneToSupabase(zone)` — saves both `cities` and `polygon`
+   - Writes the ring to **`zone.polygons = [ring]`** (the array form used by `resolveZone`) and also `zone.polygon = ring` (legacy single, kept one release)
+   - Calls `saveZoneToSupabase(zone)` — saves `cities` + `polygons` + `polygon`
 
-**`invalidateSize()` is called at 200ms and 600ms** after map init to handle container layout settling.
+**`invalidateSize()` is called at 200ms and 600ms** after map init to handle container layout settling. The draw modal is enlarged (`min(96vw,1000px)` box, `min(70vh,620px)` map) for precise drawing.
+
+**Manual city-add guard:** typing/pasting cities (`addCities()`) runs each through `canonicalCity()` — if the input isn't an exact known city but is a near-duplicate, it prompts *"האם התכוונת ל…?"* before storing the canonical form (prevents קרית/קריית duplicates).
 
 ---
 

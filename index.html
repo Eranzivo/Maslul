@@ -1727,10 +1727,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 
 <!-- ZONE POLYGON DRAW MODAL -->
 <div class="mo hidden" id="mo-zone-draw">
-  <div class="mo-box" style="max-width:min(90vw,720px);">
+  <div class="mo-box" style="max-width:min(96vw,1000px);">
     <div class="mo-title" id="mo-zone-draw-title">צייר אזור על מפה</div>
     <div style="font-size:0.8rem;color:var(--ink-3);margin-bottom:10px;">בחר את כלי הפוליגון בסרגל הצד, צייר את האזור על המפה — הערים שבתוכו יתווספו אוטומטית לאזור. נקודות כחולות = ערים קיימות באזור זה.</div>
-    <div id="zone-draw-map" style="height:400px;border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--line);"></div>
+    <div id="zone-draw-map" style="height:min(70vh,620px);border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--line);"></div>
     <div id="zone-draw-status" style="margin-top:10px;font-size:0.875rem;color:var(--ink-2);min-height:1.5em;text-align:center;font-weight:600;"></div>
     <div class="mo-actions">
       <button class="btn btn-blue" style="flex:1;" onclick="confirmZoneDraw()">✓ הוסף ערים לאזור</button>
@@ -6385,7 +6385,14 @@ function deleteZone(id){
 function addCities(zoneId){
   const inp=document.getElementById('new-city-'+zoneId);const text=inp.value.trim();if(!text)return;
   const z=zones.find(x=>x.id===zoneId);if(!z)return;
-  text.split(/[\n,]+/).map(c=>c.trim()).filter(c=>c).forEach(c=>{if(!z.cities.includes(c))z.cities.push(c);});
+  text.split(/[\n,]+/).map(c=>c.trim()).filter(Boolean).forEach(raw=>{
+    const {city,suggestion}=canonicalCity(raw);
+    let toAdd=city;
+    if(suggestion&&suggestion!==city){
+      toAdd=confirm(`"${raw}" אינה מזוהה. האם התכוונת ל"${suggestion}"?`)?suggestion:city;
+    }
+    if(!z.cities.includes(toAdd))z.cities.push(toAdd);
+  });
   inp.value='';save();renderZones();populateCitySelect();saveZoneToSupabase(z);
 }
 function removeCity(zoneId,ci){const z=zones.find(x=>x.id===zoneId);if(z){z.cities.splice(ci,1);saveZoneToSupabase(z);}save();renderZones();populateCitySelect();}
@@ -7370,7 +7377,9 @@ function confirmZoneDraw() {
   if (!z) return;
   let added = 0;
   found.forEach(c => { if (!z.cities.includes(c)) { z.cities.push(c); added++; } });
-  z.polygon = _drawnPolygon.map(p => ({ lat: p.lat, lng: p.lng }));
+  const ring = _drawnPolygon.map(p => ({ lat: p.lat, lng: p.lng }));
+  z.polygon = ring;
+  z.polygons = [ring];   // exclusive zones: one drawn area; multi-disjoint editing is a later enhancement
   save(); renderZones(); populateCitySelect(); saveZoneToSupabase(z);
   closeMo('mo-zone-draw');
   if (_zoneDrawMap) { _zoneDrawMap.remove(); _zoneDrawMap = null; }
