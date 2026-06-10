@@ -5698,12 +5698,14 @@ function openAddCityModal(){
   setTimeout(()=>document.getElementById('ac-city-name').focus(),100);
 }
 function confirmAddCity(){
-  const cityName=document.getElementById('ac-city-name').value.trim();
+  const rawCity=document.getElementById('ac-city-name').value.trim();
   const zoneId=document.getElementById('ac-zone-sel').value;
   const errEl=document.getElementById('ac-error');
-  if(!cityName){errEl.textContent='נא להזין שם עיר';return;}
+  if(!rawCity){errEl.textContent='נא להזין שם עיר';return;}
   if(!zoneId){errEl.textContent='נא לבחור אזור';return;}
   const z=zones.find(x=>x.id===zoneId);if(!z)return;
+  const _cc=canonicalCity(rawCity);
+  const cityName=(_cc.suggestion&&_cc.suggestion!==_cc.city&&confirm(`"${rawCity}" אינה מזוהה. האם התכוונת ל"${_cc.suggestion}"?`))?_cc.suggestion:_cc.city;
   if(z.cities.includes(cityName)){errEl.textContent='העיר כבר קיימת באזור זה';return;}
   z.cities.push(cityName);
   saveZoneToSupabase(z);save();populateCitySelect();
@@ -7251,20 +7253,28 @@ function openZoneDraw(zoneId) {
 // Lazy fallback: if the vendored Leaflet didn't load (rare), inject it on demand
 // so the map self-heals instead of dead-ending until a full page refresh.
 let _leafletLoading = null;
+function _ensureCss(href){
+  if(![...document.querySelectorAll('link[rel="stylesheet"]')].some(l=>l.href.includes(href))){
+    const l=document.createElement('link');l.rel='stylesheet';l.href=href;document.head.appendChild(l);
+  }
+}
 function _lazyLoadLeaflet() {
   if (typeof L !== 'undefined' && L.map) return Promise.resolve(true);
   if (_leafletLoading) return _leafletLoading;
+  _ensureCss('vendor/leaflet/leaflet.css');
+  _ensureCss('vendor/leaflet-draw/leaflet.draw.css');
   _leafletLoading = new Promise(res => {
+    const fail = () => { _leafletLoading = null; res(false); }; // reset so a later retry can re-attempt
     const s = document.createElement('script');
     s.src = 'vendor/leaflet/leaflet.js';
     s.onload = () => {
       const d = document.createElement('script');
       d.src = 'vendor/leaflet-draw/leaflet.draw.js';
       d.onload = () => res(true);
-      d.onerror = () => res(false);
+      d.onerror = fail;
       document.head.appendChild(d);
     };
-    s.onerror = () => res(false);
+    s.onerror = fail;
     document.head.appendChild(s);
   });
   return _leafletLoading;
