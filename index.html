@@ -5263,7 +5263,7 @@ function findBestSlot(){
 }
 function findNextSlot(){
   currentCandidateIdx++;selectedTimeSlot=null;
-  if(currentCandidateIdx>=allCandidates.length){alert('אין עוד מועדים. בדוק הגדרות אזורים.');currentCandidateIdx=allCandidates.length-1;return;}
+  if(currentCandidateIdx>=allCandidates.length){alert(appUsesZones()?'אין עוד מועדים. בדוק הגדרות אזורים.':'אין עוד מועדים זמינים.');currentCandidateIdx=allCandidates.length-1;return;}
   showCandidate(currentCandidateIdx);
 }
 function checkSpecificDate(dateStr){
@@ -5298,6 +5298,8 @@ function showNoResult(city,reason){
     cta=`<button class="btn btn-blue btn-sm" onclick="goPage('zones')" style="margin-top:8px;">🗺️ ערוך אזור על המפה</button>`;
   } else if(reason==='not_geocoded'){
     msg=`לא ניתן לאתר את הכתובת — בדוק רחוב ועיר.`;
+  } else if(!appUsesZones()){ // non-zone tenant — no zone concepts
+    msg=`לא נמצא ${L('worker')} פנוי מתאים. בדוק זמינות ועומס של הצוות.`;
   } else { // city_not_in_zone (or undefined → treat as city-not-in-zone)
     msg=`העיר "${h(city||'')}" אינה משויכת לאף אזור עם ${L('worker')} זמין.`;
     cta=`<button class="btn btn-blue btn-sm" onclick="goPage('zones')" style="margin-top:8px;">➕ שייך עיר לאזור</button>`;
