@@ -9,6 +9,10 @@
 - [ ] Web Push notifications — alert tech when task assigned
 
 ## 🟡 After Israel stabilizes
+- [ ] **Per-task scheduling constraints** (from Israel's real cards) — structured `earliest`/`latest`/`forbidden_times`, `fixed_date`, `requires_approval`, `contact_person`; optimizer must honor them. Today buried in free-text `notes`.
+- [ ] **"Call N min before arrival"** per-task notification rule (WhatsApp).
+- [ ] **Variable window length per task** (not hardcoded 3h — saw 1.5h/3h/4h in real data).
+- [ ] **Basic CRM structured fields** (the next-client direction; already needed by Israel): `product`/model, `price`/quote, `job_type` (לקחת/לספק/להתקין/לתקן), `contact`. Schema accurate + connected end-to-end. See `context/clients/purewater.md` → "Signals from Israel's real calendar".
 - [ ] Tech view redesign
 - [ ] Dashboard & analytics — charts, KPIs (like timing.tech)
 - [ ] Customer ETA portal — SMS/WhatsApp link → customer sees tech ETA + can rate

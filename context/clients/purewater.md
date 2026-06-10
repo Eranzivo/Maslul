@@ -48,6 +48,13 @@ Israel's full dispatcher spec is captured in `context/scheduling-rules.md` (nort
 - Worker example for base/return: depart אשקלון, could return קרית גת — routing is relative to each tech's own start.
 - No per-tech blocked zones/cities configured yet.
 
+## Signals from Israel's real calendar (screenshots, 2026-06-10)
+Israel's live task cards reveal structure currently buried in free-text `notes`:
+- **Per-task scheduling constraints** the optimizer must honor (beyond geography): customer time limits ("לא יכולה בשעה 07:00"), fixed/known dates, approval gates ("באישור ישראל"), contact-person-first ("לדבר עם הבן/האישה"). → future structured fields: `earliest`/`latest`/`forbidden_times`, `fixed_date`, `requires_approval`, `contact_person`.
+- **"Call 30 min before arrival"** ("חצי שעה התראה לפני") → a per-task notification rule (WhatsApp), not a routing constraint.
+- **Variable window length** — not always 3h (saw 1.5h, 3h, 4h). Window length should be configurable per task, not hardcoded.
+- **CRM data in the description**: product model (טוחן 750/1000/2200, גריינדמאסטר, HC2200), price/quote (₪350–1150), action type (לקחת/לספק/להתקין/לתקן), contact + phone. → structured `product`, `price`, `job_type`, `contact` fields (the "basic CRM" direction). See [product-philosophy].
+
 ## Service categories
 | Hebrew | Type | Duration |
 |---|---|---|
