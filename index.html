@@ -4700,6 +4700,13 @@ function isPairOrdered(strategy, earlierIdx, laterIdx){
   if(strategy === 'nearest_first') return earlierIdx >= laterIdx;
   return true;
 }
+// Split a tech-day's tasks into locked (pinned, immovable) vs flexible (optimizer may sequence).
+// The Plan B auto-sequencer passes `locked` as fixed constraints and only reorders `flexible`.
+function splitLockedFlexible(dayTasks){
+  const locked=[], flexible=[];
+  for(const t of (dayTasks||[])){ (t && t.locked ? locked : flexible).push(t); }
+  return {locked, flexible};
+}
 // </sched-logic>
 function getCityIndexInZone(city,zoneId,baseCity){
   const z=zones.find(x=>x.id===zoneId);if(!z)return 999;

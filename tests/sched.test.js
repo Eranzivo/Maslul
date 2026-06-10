@@ -47,5 +47,18 @@ suite('strategy truth table (locks refactor intent)', () => {
   check('NF after-nearer illegal', ctx.isPairOrdered('nearest_first', 1, 2) === false);
 });
 
+suite('splitLockedFlexible', () => {
+  const day = [
+    {id:1, city:'a', locked:true},
+    {id:2, city:'b'},
+    {id:3, city:'c', locked:false},
+    {id:4, city:'d', locked:true},
+  ];
+  const r = ctx.splitLockedFlexible(day);
+  check('locked picks only truthy locked', r.locked.map(t=>t.id).join(',') === '1,4');
+  check('flexible is the rest', r.flexible.map(t=>t.id).join(',') === '2,3');
+  check('empty input → empty arrays', JSON.stringify(ctx.splitLockedFlexible([])) === '{"locked":[],"flexible":[]}');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
