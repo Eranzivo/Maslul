@@ -53,6 +53,10 @@ _CITY_ALIASES = {
     'ת"א': 'תל אביב',
     'נהריה': 'נהרייה',
     'נהרייה': 'נהרייה',
+    # Kiryat Shmona — bare/abbrev forms map to the zone's stored spelling קריית שמונה
+    'קש': 'קריית שמונה', 'ק"ש': 'קריית שמונה', 'קרית שמונה': 'קריית שמונה',
+    # Zichron — bare "זכרון"/"זיכרון" map to the zone's city זכרון יעקב
+    'זכרון': 'זכרון יעקב', 'זיכרון': 'זכרון יעקב', 'זיכרון יעקב': 'זכרון יעקב',
 }
 
 def _norm(city: str) -> str:

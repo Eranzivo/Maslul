@@ -1,6 +1,7 @@
 # Maslul — Backlog & History
 
 ## 🟠 Next
+- [ ] **Calculate/batch-schedule PureWater's 108 tasks** — DEFERRED until all scheduling changes land (mode-aware UI + Plan B). Prereqs: (1) re-run rotation SQL so tech rotations re-link to current zone IDs; (2) verify Israel's tech-zone-per-day division (confirmed 2026-06-10 = `migration-purewater-zones-rotation_2026-06-05.sql`); (3) city aliases קש→קריית שמונה, זכרון→זכרון יעקב (added 2026-06-10, JS + backend). Then run batch assignment respecting the rotation.
 - [ ] Israel fills in client details on 108 tasks (via ✏️ edit button)
 - [ ] Israel testing — real dispatch scenarios, feedback collection
 - [ ] Equal city distribution — config flag `scheduling.equal_city_distribution` to spread same-city tasks across techs
