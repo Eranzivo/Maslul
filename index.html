@@ -1405,6 +1405,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       </div>
     </div>
     <div class="fg"><label class="fl">ערים חסומות (מופרד בפסיק)</label><input class="fc" id="ti-blocked"></div>
+    <div class="fg"><label class="fl">אזורים חסומים</label>
+      <select class="fc" id="ti-blocked-zones" multiple size="4"></select>
+    </div>
     <div class="mo-actions">
       <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-tech')">ביטול</button>
       <button class="btn btn-blue" style="flex:2;" id="ti-save-btn" onclick="saveTech()">הוסף</button>
@@ -4807,6 +4810,8 @@ function _candidatesZone(city,catId,dates,sc){
   for(const date of dates){
     for(const tech of technicians){
       if(zoneStrict&&!isCityInTechZone(tech,city,date.str))continue;
+      const _zid=getTechZoneId(tech,date.str);
+      if((tech.blockedZones||[]).includes(_zid))continue;
       if(!isTechAvailable(tech,date.str))continue;
       if(isCityBlocked(tech,city))continue;
       if(!techHasSkill(tech,catId))continue;
@@ -6197,6 +6202,8 @@ function openAddTechModal(){
   document.getElementById('mo-tech-title').textContent='הוסף '+L('worker');
   ['ti-name','ti-phone','ti-base','ti-return','ti-blocked','ti-base-addr'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ti-min').value='2';document.getElementById('ti-max').value='9';
+  const _bzNew=document.getElementById('ti-blocked-zones');
+  if(_bzNew){_bzNew.innerHTML=zones.map(z=>`<option value="${z.id}">${h(z.name)}</option>`).join('');Array.from(_bzNew.options).forEach(o=>o.selected=false);}
   buildWeekSchedGrid({});
   // Reset break radio to default and hide custom fields
   const defRadio=document.querySelector('input[name="ti-break-mode"][value="default"]');
@@ -6217,6 +6224,9 @@ function editTech(id){
   document.getElementById('ti-name').value=tech.name;document.getElementById('ti-phone').value=tech.phone;
   document.getElementById('ti-base').value=tech.base;document.getElementById('ti-return').value=tech.return_city||'';document.getElementById('ti-base-addr').value=tech.address||'';document.getElementById('ti-min').value=tech.min;
   document.getElementById('ti-max').value=tech.max;document.getElementById('ti-blocked').value=tech.blocked||'';
+  const _bz=document.getElementById('ti-blocked-zones');
+  if(_bz){_bz.innerHTML=zones.map(z=>`<option value="${z.id}">${h(z.name)}</option>`).join('');
+    Array.from(_bz.options).forEach(o=>o.selected=(tech.blockedZones||[]).includes(o.value));}
   // Build weekly schedule — fallback: if no weekly_schedule set, derive from global start/end
   const existingWs=tech.weekly_schedule&&Object.keys(tech.weekly_schedule).length?tech.weekly_schedule:
     Object.fromEntries([0,1,2,3,4,5].map(i=>[String(i),{work:true,start:tech.start||'07:00',end:tech.end||'17:00'}]));
@@ -6266,7 +6276,8 @@ function saveTech(){
   // Only consider day-indexed entries (keys '0'-'5'), never _break or other metadata keys
   const firstWorkDay=[0,1,2,3,4,5].map(i=>weekly_schedule[String(i)]).filter(d=>d&&d.work!==false).find(Boolean)||{start:'07:00',end:'17:00'};
   const existingTech=editingTechId?technicians.find(t=>t.id===editingTechId):null;
-  const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),return_city:document.getElementById('ti-return').value.trim(),address:document.getElementById('ti-base-addr').value.trim(),min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:firstWorkDay.start,end:firstWorkDay.end,weekly_schedule,blocked:document.getElementById('ti-blocked').value.trim(),skills,catLimits,durationOverrides,rotation};
+  const _bzEl=document.getElementById('ti-blocked-zones');
+  const data={name:document.getElementById('ti-name').value.trim(),phone:document.getElementById('ti-phone').value.trim(),base:document.getElementById('ti-base').value.trim(),return_city:document.getElementById('ti-return').value.trim(),address:document.getElementById('ti-base-addr').value.trim(),min:parseInt(document.getElementById('ti-min').value)||2,max:parseInt(document.getElementById('ti-max').value)||9,start:firstWorkDay.start,end:firstWorkDay.end,weekly_schedule,blocked:document.getElementById('ti-blocked').value.trim(),skills,catLimits,durationOverrides,rotation,blockedZones:_bzEl?Array.from(_bzEl.selectedOptions).map(o=>o.value):[]};
   let techForSave;
   if(editingTechId){const tech=technicians.find(t=>t.id===editingTechId);if(tech){Object.assign(tech,data);techForSave=tech;}}
   else{const tech={id:nextTechId++,...data,color:COLORS[technicians.length%COLORS.length]};technicians.push(tech);techForSave=tech;}

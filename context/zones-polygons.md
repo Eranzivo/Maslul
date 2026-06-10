@@ -133,3 +133,11 @@ Zone enforcement happens **in the engine** (`buildCandidates` → `_candidatesZo
 `mode = 'zone'` (Israel default): only techs whose rotation zone contains the task city are offered.
 `mode = 'open'`: any tech, any city — no zone check.
 `mode = 'radius'`: city within X km of tech's base.
+
+### Per-Technician Zone Exclusions (`blockedZones`)
+
+Each technician has a `blockedZones` field (array of zone IDs, stored in `technicians.blocked_zones` TEXT[] in Supabase). If a tech's rotation zone for a given day is in their `blockedZones`, `_candidatesZone` skips them for that date regardless of city match.
+
+- Set via the **"אזורים חסומים"** multi-select in the tech edit/add drawer (`ti-blocked-zones`).
+- The multi-select is populated with all zones when the drawer opens (both new-tech and edit-tech paths).
+- On save, `data.blockedZones` is built from selected options and merged into the tech object via `Object.assign` (edit) or spread (new), then persisted by `saveTechToSupabase`.
