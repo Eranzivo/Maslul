@@ -4707,7 +4707,10 @@ function splitLockedFlexible(dayTasks){
   for(const t of (dayTasks||[])){ (t && t.locked ? locked : flexible).push(t); }
   return {locked, flexible};
 }
+// True when this tenant uses zones (mode 'zone' or absent). open/radius ⇒ no zones.
+function usesZones(sc){ return ((sc && sc.mode) || 'zone') === 'zone'; }
 // </sched-logic>
+function appUsesZones(){ return usesZones(tenantConfig && tenantConfig.scheduling); }
 function getCityIndexInZone(city,zoneId,baseCity){
   const z=zones.find(x=>x.id===zoneId);if(!z)return 999;
   const nc=normalizeCity(city);
