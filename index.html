@@ -5271,7 +5271,7 @@ function checkSpecificDate(dateStr){
   const city=document.getElementById('s-city').value;
   const catId=getCatId();
   for(const tech of technicians){
-    if(!isCityInTechZone(tech,city,dateStr))continue;
+    if(appUsesZones() && !isCityInTechZone(tech,city,dateStr))continue;
     if(!isTechAvailable(tech,dateStr))continue;
     if(isCityBlocked(tech,city))continue;
     if(!techHasSkill(tech,catId))continue;
@@ -6373,7 +6373,7 @@ function saveTech(){
   else document.getElementById('e-ti-skills').classList.add('hidden');
   const rotation={};let hasRot=false;
   for(let i=0;i<6;i++){rotation[i]=document.getElementById('rot-'+i)?.value||'';if(rotation[i])hasRot=true;}
-  if(!hasRot){document.getElementById('e-ti-rotation').classList.remove('hidden');valid=false;}
+  if(appUsesZones() && !hasRot){document.getElementById('e-ti-rotation').classList.remove('hidden');valid=false;}
   else document.getElementById('e-ti-rotation').classList.add('hidden');
   if(!valid)return;
   const catLimits={};
