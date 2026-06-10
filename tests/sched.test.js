@@ -37,5 +37,15 @@ suite('isPairOrdered', () => {
   check('flexible: any order OK', ctx.isPairOrdered('flexible',2,0) === true && ctx.isPairOrdered('flexible',0,2) === true);
 });
 
+suite('strategy truth table (locks refactor intent)', () => {
+  // far_to_near: a "before" task that is nearer (higher idx) than the new one is illegal
+  check('FTN before-nearer illegal', ctx.isPairOrdered('far_to_near', /*earlier*/2, /*later=new*/1) === false);
+  // far_to_near: an "after" task that is farther (lower idx) than the new one is illegal
+  check('FTN after-farther illegal', ctx.isPairOrdered('far_to_near', /*earlier=new*/1, /*later*/0) === false);
+  // nearest_first mirrors
+  check('NF before-farther illegal', ctx.isPairOrdered('nearest_first', 0, 1) === false);
+  check('NF after-nearer illegal', ctx.isPairOrdered('nearest_first', 1, 2) === false);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

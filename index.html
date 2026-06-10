@@ -4785,6 +4785,8 @@ function calcOptimalTime(tech,dateStr,city,catId){
 function isRouteLogical(tech,dateStr,newCity,catId){
   const optTime=calcOptimalTime(tech,dateStr,newCity,catId);
   if(!optTime)return false;
+  const strategy=resolveRouteStrategy(tenantConfig.scheduling);
+  if(strategy==='flexible')return true; // no geographic constraint
   const zid=getTechZoneId(tech,dateStr);
   const newIdx=getCityIndexInZone(newCity,zid,tech.base);
   if(newIdx===999)return true; // city not in zone index — can't validate, allow
@@ -4793,10 +4795,10 @@ function isRouteLogical(tech,dateStr,newCity,catId){
     const tIdx=getCityIndexInZone(t.city,zid,tech.base);
     if(tIdx===999)return true;
     const tTime=timeToMins(t.time);
-    // A task scheduled BEFORE us must not be closer (higher idx) — that would be near-then-far
-    if(tTime<newTimeMins&&tIdx>newIdx)return false;
-    // A task scheduled AFTER us must not be farther (lower idx) — that would be far-near-far zigzag
-    if(tTime>newTimeMins&&tIdx<newIdx)return false;
+    // task BEFORE new: pair (tIdx → newIdx) must be ordered for this strategy
+    if(tTime<newTimeMins && !isPairOrdered(strategy,tIdx,newIdx))return false;
+    // task AFTER new: pair (newIdx → tIdx) must be ordered for this strategy
+    if(tTime>newTimeMins && !isPairOrdered(strategy,newIdx,tIdx))return false;
     return true;
   });
 }
@@ -4818,18 +4820,20 @@ function buildCandidates(city,catId){
 // (farthest first = lowest index first). A deviation of more than 1 position is
 // treated as a backtrack and the slot is rejected.
 function wouldBacktrack(tech,dateStr,newCity){
+  const strategy=resolveRouteStrategy(tenantConfig.scheduling);
+  if(strategy==='flexible')return false;
   const zid=getTechZoneId(tech,dateStr);if(!zid)return false;
   const dayTasks=getTechDayTasks(tech,dateStr).filter(t=>t.status!=='cancelled'&&t.time);
   if(dayTasks.length===0)return false;
   const newIdx=getCityIndexInZone(newCity,zid,tech.base);if(newIdx===999)return false;
-  // Build sorted index sequence after hypothetically inserting the new task
-  const allIdx=dayTasks.map(t=>getCityIndexInZone(t.city,zid,tech.base)).filter(i=>i!==999);
-  allIdx.push(newIdx);
-  allIdx.sort((a,b)=>a-b); // what the sorted order should be (far→near)
-  // Compare against actual insertion: any existing task's index > newIdx after it in time = backtrack
-  const tasksAfterNew=dayTasks.filter(t=>{const i=getCityIndexInZone(t.city,zid,tech.base);return i!==999&&i<newIdx;});
-  // If there's any task that's FARTHER than newCity scheduled AFTER where newCity would go, backtrack
-  return tasksAfterNew.length>0;
+  // far_to_near: an existing FARTHER task (lower idx) conflicts with inserting a nearer one.
+  // nearest_first: an existing NEARER task (higher idx) conflicts.
+  const conflicting=dayTasks.filter(t=>{
+    const i=getCityIndexInZone(t.city,zid,tech.base);
+    if(i===999)return false;
+    return strategy==='far_to_near' ? i<newIdx : i>newIdx;
+  });
+  return conflicting.length>0;
 }
 
 // ── Strategy: zone (Israel default) ─────────────────────────────────────────
@@ -4841,8 +4845,8 @@ function _candidatesZone(city,catId,dates,sc){
   const zoneStrict=sc.zone_strict!==false; // default true
   const fillFirst=sc.fill_first!==false;
   // route_strategy takes precedence over legacy route_logic boolean
-  const routeStrategy=sc.route_strategy||(sc.route_logic!==false?'far_to_near':'flexible');
-  const routeLogic=routeStrategy==='far_to_near';
+  const routeStrategy=resolveRouteStrategy(sc);
+  const routeLogic=routeStrategy!=='flexible';
   for(const date of dates){
     for(const tech of technicians){
       if(zoneStrict&&!isCityInTechZone(tech,city,date.str))continue;
@@ -4867,7 +4871,7 @@ function _candidatesZone(city,catId,dates,sc){
       if(!optTime)continue;
       // ── Slot release: near cities can't hold early slots far in advance (PureWater config) ──
       const slRel=sc.slot_release;
-      if(slRel?.enabled){
+      if(slRel?.enabled && routeStrategy==='far_to_near'){
         const zid2=getTechZoneId(tech,date.str);
         const zoneObj=zones.find(z=>z.id===zid2);
         const cityIdx=zoneObj?getCityIndexInZone(city,zid2,tech.base):-1;
