@@ -5196,7 +5196,10 @@ function findBestSlot(){
   const catId=getCatId();
   allCandidates=buildCandidates(city,catId);
   currentCandidateIdx=0;selectedTimeSlot=null;
-  if(!allCandidates.length){showNoResult();return;}
+  if(!allCandidates.length){
+    const r=resolveZone(city,(_pendingGeocode&&_pendingGeocode.lat)||null,(_pendingGeocode&&_pendingGeocode.lon)||null,tenantConfig,zones);
+    showNoResult(city,r.reason);return;
+  }
   document.getElementById('dispatch-search-card').style.opacity='0.5';
   document.getElementById('dispatch-search-card').style.pointerEvents='none';
   document.getElementById('dispatch-result').classList.remove('hidden');
@@ -5229,13 +5232,23 @@ function checkSpecificDate(dateStr){
   document.getElementById('d-alert').textContent=`⚠️ לא ניתן לשבץ בתאריך זה — אין ${L('worker')} זמין באזור הנדרש.`;
   document.getElementById('d-alert').classList.remove('hidden');
 }
-function showNoResult(){
+function showNoResult(city,reason){
   document.getElementById('dispatch-search-card').style.opacity='0.5';
   document.getElementById('dispatch-search-card').style.pointerEvents='none';
   document.getElementById('dispatch-result').classList.remove('hidden');
-  document.getElementById('d-alert').className='alert alert-amber';
-  document.getElementById('d-alert').textContent=`⚠️ לא נמצא שיבוץ אפשרי. בדוק שהעיר משויכת לאזור עם ${L('worker')} זמין.`;
-  document.getElementById('d-alert').classList.remove('hidden');
+  const a=document.getElementById('d-alert');a.className='alert alert-amber';
+  let msg,cta='';
+  if(reason==='outside_all_polygons'){
+    msg=`הכתובת מחוץ לאזור השירות.`;
+    cta=`<button class="btn btn-blue btn-sm" onclick="goPage('zones')" style="margin-top:8px;">🗺️ ערוך אזור על המפה</button>`;
+  } else if(reason==='not_geocoded'){
+    msg=`לא ניתן לאתר את הכתובת — בדוק רחוב ועיר.`;
+  } else { // city_not_in_zone (or undefined → treat as city-not-in-zone)
+    msg=`העיר "${h(city||'')}" אינה משויכת לאף אזור עם ${L('worker')} זמין.`;
+    cta=`<button class="btn btn-blue btn-sm" onclick="goPage('zones')" style="margin-top:8px;">➕ שייך עיר לאזור</button>`;
+  }
+  a.innerHTML=`⚠️ ${msg} ${cta}`;
+  a.classList.remove('hidden');
   document.getElementById('suggestion-card').innerHTML='';
 }
 function showCandidate(idx){

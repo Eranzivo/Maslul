@@ -134,6 +134,18 @@ Zone enforcement happens **in the engine** (`buildCandidates` → `_candidatesZo
 `mode = 'open'`: any tech, any city — no zone check.
 `mode = 'radius'`: city within X km of tech's base.
 
+### No-Match Blocked Message (mode-aware)
+
+When `buildCandidates` returns an empty list, `findBestSlot` calls `resolveZone(city, lat, lon, tenantConfig, zones)` to determine *why* no zone matched, then calls `showNoResult(city, reason)` which renders a mode-aware amber alert in `#d-alert`:
+
+| `reason` | Message shown | CTA button |
+|---|---|---|
+| `outside_all_polygons` | "הכתובת מחוץ לאזור השירות." | "🗺️ ערוך אזור על המפה" → `goPage('zones')` |
+| `not_geocoded` | "לא ניתן לאתר את הכתובת — בדוק רחוב ועיר." | none |
+| `city_not_in_zone` (or undefined) | "העיר '…' אינה משויכת לאף אזור עם טכנאי זמין." | "➕ שייך עיר לאזור" → `goPage('zones')` |
+
+Coordinates passed to `resolveZone` come from `_pendingGeocode` (set by `_triggerGeocode()` when the dispatcher form is submitted), or `null` if geocoding hasn't run yet.
+
 ### Per-Technician Zone Exclusions (`blockedZones`)
 
 Each technician has a `blockedZones` field (array of zone IDs, stored in `technicians.blocked_zones` TEXT[] in Supabase). If a tech's rotation zone for a given day is in their `blockedZones`, `_candidatesZone` skips them for that date regardless of city match.
