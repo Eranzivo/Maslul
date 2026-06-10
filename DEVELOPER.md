@@ -247,6 +247,21 @@ Sentry Browser SDK loaded via CDN loader in `<head>`. Project: `maslul` on `inge
 
 Any unhandled JS exception is automatically captured and appears in the Sentry Issues dashboard.
 
+### 🔴 Principal rule — no internal errors in the UI
+
+Raw `error.message` / `error.code` / Supabase internals / JS stack text must **never** render in any user-visible string — not for customers, not for coordinators, not in the backoffice. Every user-facing error must either explain *why* generically or tell the user *what to do / where to fix it*.
+
+```js
+if (error) {
+  console.error('[context]', error);        // raw → devtools
+  Sentry?.captureException(error);           // raw → Sentry for Eran
+  errEl.textContent = 'נסה לרענן את הדף. אם הבעיה נמשכת, פנה לתמיכה.'; // generic + actionable → user
+  return;
+}
+```
+
+Model pattern: `doLogin()` inspects `error.message` only to branch, shows generic Hebrew only. The backoffice `renderAdminPanel` was fixed 2026-06-10 (was leaking `tenantRes.error.message` / `err.message`).
+
 ---
 
 ## Feature Flags

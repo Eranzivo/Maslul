@@ -3828,13 +3828,13 @@ async function renderAdminPanel(force=false){
       sb.from('categories').select('tenant_id'),
     ]);
     if(tenantRes.error){
-      list.innerHTML=`<div class="empty"><div style="color:var(--red);font-weight:700;margin-bottom:6px;">שגיאה בטעינה</div><div style="font-size:0.8125rem;color:var(--ink-3);">${tenantRes.error.message||'בדוק שפונקציות RLS הותקנו בסופבייס'}</div></div>`;
-      console.error('admin panel tenants error:',tenantRes.error);
+      list.innerHTML=`<div class="empty"><div style="color:var(--red);font-weight:700;margin-bottom:6px;">שגיאה בטעינת הנתונים</div><div style="font-size:0.8125rem;color:var(--ink-3);">נסה לרענן את הדף. אם הבעיה נמשכת, פנה לתמיכה.</div></div>`;
+      console.error('admin panel tenants error:',tenantRes.error);Sentry?.captureException(tenantRes.error);
       return;
     }
     if(userRes.error){
-      console.error('admin panel users error:',userRes.error);
-      list.innerHTML=`<div class="empty"><div style="color:var(--red);font-weight:700;margin-bottom:6px;">שגיאה בטעינת משתמשים</div><div style="font-size:0.8125rem;color:var(--ink-3);">${userRes.error.message}</div></div>`;
+      console.error('admin panel users error:',userRes.error);Sentry?.captureException(userRes.error);
+      list.innerHTML=`<div class="empty"><div style="color:var(--red);font-weight:700;margin-bottom:6px;">שגיאה בטעינת משתמשים</div><div style="font-size:0.8125rem;color:var(--ink-3);">נסה לרענן את הדף. אם הבעיה נמשכת, פנה לתמיכה.</div></div>`;
       return;
     }
     adminTenants=tenantRes.data||[];
@@ -3844,8 +3844,8 @@ async function renderAdminPanel(force=false){
     _renderAdminTenantList(_adminCache.techs,_adminCache.zones,_adminCache.cats);
   }catch(err){
     const list2=document.getElementById('admin-tenant-list');
-    if(list2)list2.innerHTML=`<div class="empty"><div style="color:var(--red);font-weight:700;">שגיאת JavaScript</div><div style="font-size:0.8125rem;color:var(--ink-3);margin-top:4px;">${err.message}</div></div>`;
-    console.error('renderAdminPanel JS error:',err);
+    if(list2)list2.innerHTML=`<div class="empty"><div style="color:var(--red);font-weight:700;">שגיאה בלתי צפויה</div><div style="font-size:0.8125rem;color:var(--ink-3);margin-top:4px;">נסה לרענן את הדף. אם הבעיה נמשכת, פנה לתמיכה.</div></div>`;
+    console.error('renderAdminPanel JS error:',err);Sentry?.captureException(err);
   }
 }
 function _renderAdminTenantList(allTechs,allZones,allCats){
