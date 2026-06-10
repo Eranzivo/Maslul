@@ -125,13 +125,20 @@ Zone behavior is two **independent** settings:
 Absent settings = `zone` + `city_list` = today's behavior. See `context/zones-polygons.md` for `resolveZone`.
 
 ### Route Strategies (`scheduling.route_strategy`)
+Resolved via `resolveRouteStrategy(sc)` — **absent config ⇒ `flexible`** (the safe global default). `far_to_near` is PureWater/Israel-specific and is NEVER the fallback. Legacy `route_logic:true` still opts into far_to_near for back-compat.
+
 | Strategy | Behavior |
 |---|---|
-| `far_to_near` | Farthest cities first within the zone — Israel's default. `getCityIndexInZone()` orders candidates. |
-| `nearest_first` | Closest cities first. Useful for tight time windows or delivery businesses. |
-| `flexible` | Fill by load score only — distance ordering ignored. |
+| `flexible` (default) | No geographic ordering constraint — fill by load score. Sanity guards (`isRouteLogical`/`wouldBacktrack`) are no-ops. |
+| `far_to_near` | Farthest cities first within the zone. `getCityIndexInZone()` (idx 0 = farthest) orders candidates; **slot-release reservation runs only under this strategy.** |
+| `nearest_first` | Closest cities first — **now fully implemented** (mirror of far_to_near via `isPairOrdered`), not a silent flexible. Useful for dense urban zones / delivery. |
 
-`route_logic` boolean is kept for backward compat (true = far_to_near). New code reads `route_strategy` first.
+`isRouteLogical` / `wouldBacktrack` are **strategy-aware sanity guards** (via `isPairOrdered(strategy, earlierIdx, laterIdx)`); for `far_to_near` they behave exactly as before. `_candidatesZone` enables geographic gating for any non-`flexible` strategy.
+
+### Manual override (`tasks.locked`)
+A `locked` task is pinned by the coordinator and is a **fixed constraint** — the (Plan B) auto-sequencer must never move, reorder, or gap-fill it. `splitLockedFlexible(dayTasks)` separates locked (immovable) from flexible (sequenceable). The flag round-trips DB↔JS today; the draw-to-create UI and sequencer integration land in Plan B (Slices 3–7). See `outputs/scheduling-engine-design_2026-06-10.md`.
+
+_2026-06-10 — Slices 1–2: honest strategies + safe `flexible` default + `locked` seam._
 
 ### Per-Tech Job Duration Overrides
 - Stored in `technicians.duration_overrides` JSONB: `{ "category_uuid": minutes }`

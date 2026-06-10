@@ -17,7 +17,7 @@
 |---|---|---|
 | `scheduling.mode` | `zone` | zone-strict assignment |
 | `scheduling.zone_match` | `city_list` | matches by city list (not polygon) |
-| `scheduling.route_strategy` | `far_to_near` | **PureWater/Israel-specific** — not a global default |
+| `scheduling.route_strategy` | `far_to_near` | **PureWater/Israel-specific — set explicitly.** Engine default is now `flexible` (`resolveRouteStrategy`); far_to_near is never the global fallback. |
 | `scheduling.fill_first` | `true` | fill active zone-days before opening new ones |
 | `scheduling.slot_release` | enabled (72/48/24h) | hold early slots for farther cities |
 | `defaults.arrival_window_hours` | 3 | customers get a 3-hour service window |
@@ -64,6 +64,7 @@ Setup SQL: `outputs/migration-purewater-zones-rotation_2026-06-05.sql`.
 ## Change log
 | Date | Change |
 |---|---|
+| 2026-06-10 | Engine default `route_strategy` flipped to `flexible` (far_to_near is PureWater-specific). **Audit required**: confirm `tenants.config` sets `route_strategy:far_to_near` explicitly before this ships to main. |
 | 2026-06-09 | Standardized to client template; recorded `zone_match = city_list`; flagged far-to-near as PureWater-specific |
 | 2026-06-08 | 108 tasks batch-scheduled; service windows live |
 | 2026-06-06 | 9 zones + 3-tech rotation + city normalization |
