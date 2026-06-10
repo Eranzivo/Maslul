@@ -189,7 +189,8 @@ outputs/migration-zones-polygons_2026-06-09.sql       — polygons JSONB on zone
 - **Pin every CDN library to an exact version** — never `@2` or `latest`; use `@2.49.4` etc.
 - **Always use jsDelivr** (`cdn.jsdelivr.net`) — never unpkg (unpkg can silently change build artifacts)
 - **Never add `integrity=` attributes** to CDN tags — version pinning is sufficient; hashes go stale
-- Supabase JS pinned to `2.49.4`. Leaflet pinned to `1.9.4`. Do not change without testing.
+- Supabase JS pinned to `2.49.4` (jsDelivr CDN). Do not change without testing.
+- **Leaflet + Leaflet.draw are SELF-HOSTED in `vendor/`** (pinned 1.9.4 / 1.0.4), not from a CDN — the recurring "ספריית מפות לא נטענה" zone-draw failure was a CDN load failure with no fallback. `_lazyLoadLeaflet()` re-injects on demand if the vendored script somehow didn't load. To upgrade, replace the files in `vendor/` (no build step).
 
 ---
 

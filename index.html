@@ -14,12 +14,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 <script src="https://browser.sentry-cdn.com/8.0.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
-<!-- Leaflet.js — free open-source maps (OpenStreetMap tiles, no API key needed) -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<!-- Leaflet.draw — draw polygons on map for zone configuration (free, no API key) -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.min.css"/>
-<script src="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.min.js"></script>
+<!-- Leaflet.js — self-hosted in vendor/ (no CDN dependency; pinned 1.9.4). See Task 4 / DEVELOPER.md -->
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css"/>
+<script src="vendor/leaflet/leaflet.js"></script>
+<!-- Leaflet.draw — self-hosted in vendor/ (pinned 1.0.4) — draw polygons for zone config -->
+<link rel="stylesheet" href="vendor/leaflet-draw/leaflet.draw.css"/>
+<script src="vendor/leaflet-draw/leaflet.draw.js"></script>
 <style>
 :root{
   --ink:#111827;--ink-2:#374151;--ink-3:#6B7280;--ink-4:#9CA3AF;
@@ -7241,13 +7241,37 @@ function openZoneDraw(zoneId) {
   setTimeout(() => _initZoneDrawMap(), 80);
 }
 
+// Lazy fallback: if the vendored Leaflet didn't load (rare), inject it on demand
+// so the map self-heals instead of dead-ending until a full page refresh.
+let _leafletLoading = null;
+function _lazyLoadLeaflet() {
+  if (typeof L !== 'undefined' && L.map) return Promise.resolve(true);
+  if (_leafletLoading) return _leafletLoading;
+  _leafletLoading = new Promise(res => {
+    const s = document.createElement('script');
+    s.src = 'vendor/leaflet/leaflet.js';
+    s.onload = () => {
+      const d = document.createElement('script');
+      d.src = 'vendor/leaflet-draw/leaflet.draw.js';
+      d.onload = () => res(true);
+      d.onerror = () => res(false);
+      document.head.appendChild(d);
+    };
+    s.onerror = () => res(false);
+    document.head.appendChild(s);
+  });
+  return _leafletLoading;
+}
 function _initZoneDrawMap() {
   const el = document.getElementById('zone-draw-map');
   if (!el) return;
   if (typeof window.L === 'undefined' || typeof L.map !== 'function') {
     const st = document.getElementById('zone-draw-status');
-    if (st) st.textContent = 'ספריית מפות לא נטענה — יש לרענן את הדף.';
-    return;
+    if (st) st.textContent = 'טוען מפה…';
+    return _lazyLoadLeaflet().then(ok => {
+      if (ok) _initZoneDrawMap();
+      else if (st) st.textContent = 'שגיאה בטעינת המפה — בדוק חיבור לרשת ונסה שוב.';
+    });
   }
   if (_zoneDrawMap) { try { _zoneDrawMap.remove(); } catch(e){} _zoneDrawMap = null; }
   if (el._leaflet_id) delete el._leaflet_id; // clear stale Leaflet state on reuse

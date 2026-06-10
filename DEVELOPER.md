@@ -358,6 +358,7 @@ Railway is on trial (expires ~June 12 2026) → upgrade to Hobby ($5/mo) before 
 - **OR-Tools on Railway** — first deploy takes 2–3 min (large library). Health check at `/health`
 - **Port 8080** — Railway domain must be configured to route to port 8080. Check Networking → domain → pencil icon if 502
 - **Session impersonation** — stored in `sessionStorage` (tab-scoped, clears on tab close). `exitTenantSession()` clears it explicitly
+- **Leaflet maps self-hosted** — Leaflet + Leaflet.draw live in `vendor/` (not a CDN). This fixed the recurring zone-draw "ספריית מפות לא נטענה" failure (a CDN script that intermittently failed to load with no retry). `_lazyLoadLeaflet()` re-injects on demand as a safety net. Upgrade = swap the files in `vendor/`
 
 ---
 
