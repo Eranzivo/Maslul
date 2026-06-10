@@ -36,7 +36,7 @@
 | Wed | תל אביב והסביבה | לוד-אשדוד | דרום |
 | Thu | ראש העין והסביבה | נהריה-חיפה | ירושלים |
 
-Setup SQL: `outputs/migration-purewater-zones-rotation_2026-06-05.sql`. **Rotation stores zone IDs — re-run this block if zones are ever re-created (IDs change, orphaning the rotation → grid shows "—").**
+Setup SQL: `outputs/migration-purewater-zones-rotation_2026-06-05.sql` (original). **Rotation stores zone IDs — if zones are re-created the IDs change and the rotation orphans (grid shows "—"). Re-link with `outputs/migration-purewater-rotation_2026-06-11.sql`** (resolves zone+tech IDs by name; ran 2026-06-11 to fix the orphaned grids).
 
 ## Restrictions & preferences
 Israel's full dispatcher spec is captured in `context/scheduling-rules.md` (north star + priority order + must-never-do + window purpose). PureWater's instantiation:
