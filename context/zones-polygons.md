@@ -30,19 +30,26 @@ zones.polygon   — JSONB — array of {lat, lng} vertices (nullable — only se
 
 ---
 
-## Zone Assignment Logic (current)
+## Zone Assignment Logic — the `resolveZone` seam
 
-Zone matching is **city-list based**:
+All zone matching goes through **one** function:
 
 ```javascript
-function isCityInTechZone(tech, city, dateStr) {
-  const zid = getTechZoneId(tech, dateStr); // from tech.rotation[dayOfWeek]
-  const z = zones.find(x => x.id === zid);
-  return z ? z.cities.includes(normalizeCity(city)) : false;
-}
+resolveZone(city, lat, lon, conf, zonesList) → { zoneId|null, matched, reason }
 ```
 
-The polygon (`zones.polygon`) is **not used** for zone assignment — it exists as stored geometry for future point-in-polygon matching and for visual reference. All current routing uses city-list only.
+It switches on the per-tenant **`tenants.config.scheduling.zone_match`** axis (separate from `scheduling.mode`):
+
+| `zone_match` | How it matches | `reason` when no match |
+|---|---|---|
+| `city_list` (default) | canonical city is in a zone's `cities[]` | `city_not_in_zone` |
+| `polygon` | the geocoded point falls inside a zone's `polygons[]` (`_pointInPolygon`) | `outside_all_polygons`, or `not_geocoded` if no lat/lon |
+
+`city_list` matching **canonicalizes both sides** — the input city *and* each stored zone city run through `canonicalCity` — so a zone that stored a variant spelling (e.g. `קריית גת`) still matches a canonical input (`קרית גת`). This fixed a latent bug where only the input was normalized.
+
+The live helpers `getCityZone(city)` and `isCityInTechZone(tech, city, dateStr)` both **delegate to `resolveZone`** (passing the globals `tenantConfig`, `zones`). PureWater is `city_list`, so behavior is unchanged but more robust. Polygon-mode callers pass real coordinates; until geocoding is wired for a polygon tenant, `null` coords correctly yield `not_geocoded`.
+
+`resolveZone` is pure and lives inside the `// <zone-logic>` markers, covered by `tests/zones.test.js` (including tenant-separation cases proving two tenants with different `zone_match` resolve independently).
 
 ---
 

@@ -106,12 +106,23 @@ Core functions: `findBestSlot()` / `buildCandidates()`
 
 New tenants configure the engine via the onboarding wizard. Settings stored in `tenants.config.scheduling`.
 
-### Scheduling Modes (`scheduling.mode`)
+### Two-axis zone model (`scheduling.mode` × `scheduling.zone_match`)
+Zone behavior is two **independent** settings:
+
+**`scheduling.mode`** — assignment strategy:
 | Mode | Behavior |
 |---|---|
 | `zone` | Default. Zone-strict — tech only works in their rotation zone. Route ordered by `route_strategy`. |
 | `open` | No zone enforcement. Assigns by workload balance across all techs. |
 | `radius` | Proximity-based. Assigns nearest available tech to each city. |
+
+**`scheduling.zone_match`** (only relevant when `mode = zone`) — how a zone boundary is matched, via the `resolveZone()` seam:
+| zone_match | Behavior |
+|---|---|
+| `city_list` (default) | Match by canonical city in the zone's `cities[]` (PureWater). |
+| `polygon` | Match by point-in-polygon on the geocoded address against the zone's `polygons[]`. |
+
+Absent settings = `zone` + `city_list` = today's behavior. See `context/zones-polygons.md` for `resolveZone`.
 
 ### Route Strategies (`scheduling.route_strategy`)
 | Strategy | Behavior |

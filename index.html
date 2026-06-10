@@ -4563,7 +4563,26 @@ function canonicalCity(input){
   return{city:c,suggestion:(best&&bestD<=thresh&&bestD>0)?best:null};
 }
 // </zone-logic>
-function getCityZone(city){const c=normalizeCity(city);return zones.find(z=>z.cities.includes(c))||null;}
+// <zone-logic>
+// Single seam: which zone does a task belong to, given a tenant's config.
+// zonesList passed explicitly for testability; app callers pass the global `zones`.
+function resolveZone(city, lat, lon, conf, zonesList){
+  const match=(conf&&conf.scheduling&&conf.scheduling.zone_match)||'city_list';
+  const list=zonesList||[];
+  if(match==='polygon'){
+    if(lat==null||lon==null)return{zoneId:null,matched:false,reason:'not_geocoded'};
+    const z=list.find(zz=>(zz.polygons||[]).some(p=>_pointInPolygon(lat,lon,p)));
+    return z?{zoneId:z.id,matched:true,reason:null}
+            :{zoneId:null,matched:false,reason:'outside_all_polygons'};
+  }
+  // city_list (default) — canonicalize both sides so variant spellings still match
+  const c=canonicalCity(city).city;
+  const z=list.find(zz=>(zz.cities||[]).some(zc=>canonicalCity(zc).city===c));
+  return z?{zoneId:z.id,matched:true,reason:null}
+          :{zoneId:null,matched:false,reason:'city_not_in_zone'};
+}
+// </zone-logic>
+function getCityZone(city){const r=resolveZone(city,null,null,tenantConfig,zones);return r.zoneId?zones.find(z=>z.id===r.zoneId):null;}
 function getTechDaySchedule(tech,dateStr){
   const dow=new Date(dateStr).getDay();
   const ws=tech.weekly_schedule||{};
@@ -4617,7 +4636,8 @@ function getTechZoneId(tech,dateStr){
 }
 function isCityInTechZone(tech,city,dateStr){
   const zid=getTechZoneId(tech,dateStr);if(!zid)return false;
-  const z=zones.find(x=>x.id===zid);return z?z.cities.includes(normalizeCity(city)):false;
+  const r=resolveZone(city,null,null,tenantConfig,zones);
+  return r.matched && r.zoneId===zid;
 }
 
 // SLOT RESERVATION: early time slots are held for farther cities.
