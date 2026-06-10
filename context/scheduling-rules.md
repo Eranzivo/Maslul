@@ -143,6 +143,8 @@ Zone behavior is two **independent** settings:
 
 Absent settings = `zone` + `city_list` = today's behavior. See `context/zones-polygons.md` for `resolveZone`.
 
+**Mode-aware UI:** zone UI (settings tab, rotation grid, city-in-zone gate, zone error copy, batch CTA) renders only when `appUsesZones()` (mode `zone`/absent). `open`/`radius` tenants get address→auto-assign with no zone concepts. The onboarding wizard's "מודל שיבוץ" picker chooses `mode`. See `context/architecture.md` → Mode-Aware UI.
+
 ### Route Strategies (`scheduling.route_strategy`)
 Resolved via `resolveRouteStrategy(sc)` — **absent config ⇒ `flexible`** (the safe global default). `far_to_near` is PureWater/Israel-specific and is NEVER the fallback. Legacy `route_logic:true` still opts into far_to_near for back-compat.
 
