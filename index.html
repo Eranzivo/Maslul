@@ -1288,6 +1288,14 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div class="fg"><label class="fl">שעת סיום</label><input class="fc" id="wc-end" type="time" value="18:00"></div>
     </div>
     <div class="fg">
+      <label class="fl">⚙️ מודל שיבוץ</label>
+      <div style="display:grid;gap:8px;margin-top:8px;">
+        <label class="wiz-type-opt"><input type="radio" name="wc-mode" value="zone" checked><span>🗺️ אזורים לטכנאי לפי יום — חלוקת שטח (ברירת מחדל)</span></label>
+        <label class="wiz-type-opt"><input type="radio" name="wc-mode" value="open"><span>🔓 ללא אזורים — שיבוץ לפי עומס וזמינות</span></label>
+        <label class="wiz-type-opt"><input type="radio" name="wc-mode" value="radius"><span>📍 הקרוב ביותר — הטכנאי הפנוי הקרוב</span></label>
+      </div>
+    </div>
+    <div class="fg">
       <label class="fl">🗺️ אסטרטגיית ניתוב גיאוגרפי</label>
       <div style="display:grid;gap:8px;margin-top:8px;">
         <label class="wiz-type-opt"><input type="radio" name="wc-route" value="far_to_near" checked><span>↔️ רחוק → קרוב — מונע נסיעות חזרה <span style="color:var(--ink-3);font-size:0.8rem;">(מומלץ לשירות שטח)</span></span></label>
@@ -3483,7 +3491,7 @@ async function createWizardTenant(){
     business_type:type,
     defaults:{regular_job_minutes:30,package_job_minutes:45,arrival_window_hours:3,max_daily_jobs:9,lookahead_days:30,work_start:start,work_end:end},
     features:{crm_enabled:false,reports_enabled:false,files_enabled:false,checklists_enabled:false,whatsapp_enabled:false,demo_mode:false,google_maps_enabled:false,tech_duration_overrides:durationMode==='per_tech'},
-    scheduling:{mode:'zone',zone_strict:true,fill_first:true,route_logic:routeStrategy==='far_to_near',route_strategy:routeStrategy}
+    scheduling:{mode:document.querySelector('input[name="wc-mode"]:checked')?.value||'zone',zone_strict:true,fill_first:true,route_logic:routeStrategy==='far_to_near',route_strategy:routeStrategy}
   };
   const{data:tenant,error:te}=await sb.from('tenants').insert({name,plan,config}).select().single();
   if(te){showToast('שגיאה ביצירת הלקוח','error');console.error(te);btn.disabled=false;btn.textContent='🚀 צור לקוח';return;}
