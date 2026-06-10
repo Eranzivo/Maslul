@@ -4677,6 +4677,27 @@ function getSlotReservationOffset(dateStr,cityIdx,totalCities){
 
 // ROUTE OPTIMIZATION: far-to-near (north-to-south or based on lat order)
 // We approximate geography by the order cities appear in the zone
+// <sched-logic>
+// Resolve the active route strategy with a SAFE default.
+// far_to_near is PureWater/Israel-specific — it is NOT the global default.
+// Absent config ⇒ 'flexible'. Legacy route_logic:true still opts into far_to_near.
+function resolveRouteStrategy(sc){
+  if(!sc) return 'flexible';
+  if(sc.route_strategy) return sc.route_strategy;
+  if(sc.route_logic === true) return 'far_to_near';
+  return 'flexible';
+}
+// Is an (earlier-in-time, later-in-time) pair of zone indices ordered for this strategy?
+// Zone index 0 = farthest from depot; higher index = nearer.
+//   far_to_near  → index must not decrease over time (far first)  → earlier <= later
+//   nearest_first→ index must not increase over time (near first) → earlier >= later
+//   flexible     → no geographic constraint
+function isPairOrdered(strategy, earlierIdx, laterIdx){
+  if(strategy === 'far_to_near')  return earlierIdx <= laterIdx;
+  if(strategy === 'nearest_first') return earlierIdx >= laterIdx;
+  return true;
+}
+// </sched-logic>
 function getCityIndexInZone(city,zoneId,baseCity){
   const z=zones.find(x=>x.id===zoneId);if(!z)return 999;
   const nc=normalizeCity(city);
