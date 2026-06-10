@@ -5301,13 +5301,13 @@ function showNoResult(city,reason){
   document.getElementById('dispatch-result').classList.remove('hidden');
   const a=document.getElementById('d-alert');a.className='alert alert-amber';
   let msg,cta='';
-  if(reason==='outside_all_polygons'){
+  if(reason==='not_geocoded'){
+    msg=`לא ניתן לאתר את הכתובת — בדוק רחוב ועיר.`;
+  } else if(!appUsesZones()){ // non-zone tenant — no zone concepts (checked before any zone branch)
+    msg=`לא נמצא ${L('worker')} פנוי מתאים. בדוק זמינות ועומס של הצוות.`;
+  } else if(reason==='outside_all_polygons'){
     msg=`הכתובת מחוץ לאזור השירות.`;
     cta=`<button class="btn btn-blue btn-sm" onclick="goPage('zones')" style="margin-top:8px;">🗺️ ערוך אזור על המפה</button>`;
-  } else if(reason==='not_geocoded'){
-    msg=`לא ניתן לאתר את הכתובת — בדוק רחוב ועיר.`;
-  } else if(!appUsesZones()){ // non-zone tenant — no zone concepts
-    msg=`לא נמצא ${L('worker')} פנוי מתאים. בדוק זמינות ועומס של הצוות.`;
   } else { // city_not_in_zone (or undefined → treat as city-not-in-zone)
     msg=`העיר "${h(city||'')}" אינה משויכת לאף אזור עם ${L('worker')} זמין.`;
     cta=`<button class="btn btn-blue btn-sm" onclick="goPage('zones')" style="margin-top:8px;">➕ שייך עיר לאזור</button>`;
@@ -5782,7 +5782,8 @@ async function runBulkImport(){
     const street=parts.length>1?parts[0]:'';
     const rawCity=parts.length>1?parts[1]:parts[0];
     const {city}=canonicalCity(rawCity);
-    const r=resolveZone(city,null,null,tenantConfig,zones);
+    // Non-zone tenants (open/radius) have no zones — import every row; zone-match only gates zone tenants.
+    const r=appUsesZones()?resolveZone(city,null,null,tenantConfig,zones):{matched:true,zoneId:null,reason:null};
     if(!r.matched){unmatched.push(`${row} — ${r.reason==='city_not_in_zone'?'עיר לא משויכת לאזור':'מחוץ לאזור'}`);continue;}
     const saved=await dbInsert('tasks',{
       assign_id:null,
