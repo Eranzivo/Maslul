@@ -298,3 +298,11 @@ Set `CONFIG.DEMO_MODE = true` (or `?demo=1`, `?demo=cleaning`, `?demo=delivery` 
 - Limit via `GMAPS_DAILY_ELEMENT_LIMIT` env var (default 1200 elements/day ≈ 15 optimizations for 4 techs)
 - Falls back to haversine silently when limit hit; `/health` endpoint reports usage
 - Free tier: 40,000 elements/month → 1200/day uses ~36,000/month, within free
+
+### Bulk Task Import
+- Modal `#mo-bulk-import` — user pastes one `street, city` row per line
+- Trigger: "⇪ ייבוא מרובה" button in the tasks page toolbar (next to "📥 ייבא CSV")
+- `runBulkImport()` processes each row: `canonicalCity(rawCity)` → `resolveZone(city, null, null, tenantConfig, zones)` → if matched, `dbInsert('tasks', row)` creates a pending task
+- Matched rows: task inserted via `dbInsert` (columns: `city`, `street`, `status:'pending'`, `client_name`, `client_phone`, `category_id`, `category_name`, `technician_id`, `notes`, `preferred_windows`, `checklist_done`, plus all nullable fields). In-memory task object mirrors the pending-task shape (`id`, `client`, `phone`, `city`, `street`, `cat`, `catId`, `techId:null`, `status:'pending'`, `time:''`, `date:''`, `notes:''`, `assignId:''`, `preferredWindows:[]`, `checklistDone:{}`, `photoUrl:null`, `signatureUrl:null`, `lat:null`, `lon:null`, `geocodedAt:null`, `_dbId`).
+- Unmatched rows: listed in-modal with reason (`city_not_in_zone` → "עיר לא משויכת לאזור"; `outside_all_polygons` / `not_geocoded` → "מחוץ לאזור") plus a "תקן אזורים" CTA button that navigates to the zones page.
+- Future: polygon-mode tenants need a geocode step before `resolveZone` can use polygon matching (lat/lon are passed as null today).

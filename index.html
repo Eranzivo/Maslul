@@ -904,6 +904,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div class="flex-gap">
       <button class="btn btn-outline btn-sm" onclick="openAddTaskModal()">+ הוסף קריאה</button>
       <button class="btn btn-outline btn-sm" onclick="openCsvImportModal()" title="ייבוא קריאות מקובץ CSV / Excel">📥 ייבא CSV</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('mo-bulk-import').classList.remove('hidden')">⇪ ייבוא מרובה</button>
       <span class="badge badge-blue" id="tf-all" onclick="filterTasks('all')" style="cursor:pointer;padding:5px 12px;">הכל</span>
       <span class="badge badge-gray" id="tf-pending" onclick="filterTasks('pending')" style="cursor:pointer;padding:5px 12px;">ממתינות</span>
       <span class="badge badge-gray" id="tf-assigned" onclick="filterTasks('assigned')" style="cursor:pointer;padding:5px 12px;">משובצות</span>
@@ -1738,6 +1739,20 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div class="mo-actions">
       <button class="btn btn-blue" style="flex:1;" onclick="confirmZoneDraw()">✓ הוסף ערים לאזור</button>
       <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-zone-draw')">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: BULK TASK IMPORT -->
+<div class="mo hidden" id="mo-bulk-import">
+  <div class="mo-box" style="max-width:min(92vw,760px);">
+    <div class="mo-title">ייבוא קריאות מרובה</div>
+    <div style="font-size:0.8rem;color:var(--ink-3);margin-bottom:8px;">שורה לכל קריאה: <strong>רחוב, עיר</strong></div>
+    <textarea class="fc" id="bulk-rows" style="width:100%;height:200px;font-size:0.85rem;" placeholder="הרצל 10, קרית גת&#10;ויצמן 5, אשקלון"></textarea>
+    <div id="bulk-result" style="margin-top:10px;font-size:0.85rem;"></div>
+    <div class="mo-actions">
+      <button class="btn btn-blue" style="flex:1;" onclick="runBulkImport()">ייבא</button>
+      <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-bulk-import')">סגור</button>
     </div>
   </div>
 </div>
@@ -5703,6 +5718,52 @@ function confirmAddTask(){
   goPage('tasks');
   filterTasks('pending');
   showToast('הקריאה נרשמה ✓');
+}
+
+// ═══ BULK TASK IMPORT ═══
+async function runBulkImport(){
+  if(!currentTenantId){showToast('לא מחובר','error');return;}
+  const rows=document.getElementById('bulk-rows').value.split('\n').map(r=>r.trim()).filter(Boolean);
+  const out=document.getElementById('bulk-result');
+  out.innerHTML='<span style="color:var(--ink-3);">מעבד…</span>';
+  let made=0;const unmatched=[];
+  for(const row of rows){
+    const parts=row.split(',').map(s=>s.trim());
+    const street=parts.length>1?parts[0]:'';
+    const rawCity=parts.length>1?parts[1]:parts[0];
+    const {city}=canonicalCity(rawCity);
+    const r=resolveZone(city,null,null,tenantConfig,zones);
+    if(!r.matched){unmatched.push(`${row} — ${r.reason==='city_not_in_zone'?'עיר לא משויכת לאזור':'מחוץ לאזור'}`);continue;}
+    const saved=await dbInsert('tasks',{
+      assign_id:null,
+      client_name:'',client_phone:'',
+      city,street,
+      floor:null,apartment:null,entrance_notes:null,
+      category_id:null,category_name:'',
+      technician_id:null,
+      status:'pending',
+      scheduled_date:null,scheduled_time:null,
+      scheduled_window_start:null,scheduled_window_end:null,
+      notes:'',cancelled_at:null,
+      preferred_windows:[],checklist_done:{},
+      photo_url:null,signature_url:null,
+      lat:null,lon:null,geocoded_at:null
+    });
+    if(!saved){unmatched.push(`${row} — שמירה נכשלה`);continue;}
+    const t={
+      id:saved.id,client:'',phone:'',
+      city,street,floor:null,apartment:null,entranceNotes:null,
+      cat:'',catId:null,techId:null,
+      status:'pending',time:'',date:'',
+      notes:'',assignId:'',
+      preferredWindows:[],checklistDone:{},photoUrl:null,signatureUrl:null,
+      lat:null,lon:null,geocodedAt:null,
+      _dbId:saved.id
+    };
+    tasks.push(t);made++;
+  }
+  save();renderTasks();
+  out.innerHTML=`✅ נוצרו ${made} קריאות.`+(unmatched.length?`<div style="color:var(--amber);margin-top:6px;"><strong>${unmatched.length} לא שובצו:</strong><br>${unmatched.map(h).join('<br>')}<br><button class="btn btn-blue btn-sm" style="margin-top:6px;" onclick="goPage('zones')">תקן אזורים</button></div>`:'');
 }
 
 // ═══ ADD CITY FROM DISPATCH ═══
