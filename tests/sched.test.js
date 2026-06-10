@@ -60,5 +60,13 @@ suite('splitLockedFlexible', () => {
   check('empty input → empty arrays', JSON.stringify(ctx.splitLockedFlexible([])) === '{"locked":[],"flexible":[]}');
 });
 
+suite('usesZones', () => {
+  check('absent config → true (zone default)', ctx.usesZones({}) === true);
+  check('undefined → true', ctx.usesZones(undefined) === true);
+  check('mode zone → true', ctx.usesZones({mode:'zone'}) === true);
+  check('mode open → false', ctx.usesZones({mode:'open'}) === false);
+  check('mode radius → false', ctx.usesZones({mode:'radius'}) === false);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

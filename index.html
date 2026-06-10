@@ -45,6 +45,7 @@
   --sh-md:0 4px 12px rgba(0,0,0,0.08);
   --sh-lg:0 8px 32px rgba(0,0,0,0.14);
 }
+body[data-zone-mode="none"] .zone-only{ display:none !important; }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direction:rtl;min-height:100vh;-webkit-font-smoothing:antialiased;}
 .shell{display:flex;min-height:100vh;}
@@ -675,7 +676,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <button id="nav-clients" class="ni-btn hidden" onclick="goPage('clients')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> לקוחות</button>
     <div id="nav-sec-settings" class="sb-sec">הגדרות</div>
     <button id="nav-technicians" class="ni-btn" onclick="goPage('technicians')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> <span data-label="workers">טכנאים</span></button>
-    <button id="nav-zones" class="ni-btn" onclick="goPage('zones')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> <span data-label="zones">אזורים</span></button>
+    <button id="nav-zones" class="ni-btn zone-only" onclick="goPage('zones')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> <span data-label="zones">אזורים</span></button>
     <button id="nav-categories" class="ni-btn" onclick="goPage('categories')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg> <span data-label="categories">קטגוריות</span></button>
     <button id="nav-settings" class="ni-btn" onclick="goPage('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg> הגדרות</button>
     <button id="nav-users" class="ni-btn" onclick="goPage('users')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> הרשאות גישה</button>
@@ -1287,6 +1288,14 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div class="fg"><label class="fl">שעת סיום</label><input class="fc" id="wc-end" type="time" value="18:00"></div>
     </div>
     <div class="fg">
+      <label class="fl">⚙️ מודל שיבוץ</label>
+      <div style="display:grid;gap:8px;margin-top:8px;">
+        <label class="wiz-type-opt"><input type="radio" name="wc-mode" value="zone" checked><span>🗺️ אזורים לטכנאי לפי יום — חלוקת שטח (ברירת מחדל)</span></label>
+        <label class="wiz-type-opt"><input type="radio" name="wc-mode" value="open"><span>🔓 ללא אזורים — שיבוץ לפי עומס וזמינות</span></label>
+        <label class="wiz-type-opt"><input type="radio" name="wc-mode" value="radius"><span>📍 הקרוב ביותר — הטכנאי הפנוי הקרוב</span></label>
+      </div>
+    </div>
+    <div class="fg">
       <label class="fl">🗺️ אסטרטגיית ניתוב גיאוגרפי</label>
       <div style="display:grid;gap:8px;margin-top:8px;">
         <label class="wiz-type-opt"><input type="radio" name="wc-route" value="far_to_near" checked><span>↔️ רחוק → קרוב — מונע נסיעות חזרה <span style="color:var(--ink-3);font-size:0.8rem;">(מומלץ לשירות שטח)</span></span></label>
@@ -1390,7 +1399,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     </div>
     <div class="fg"><label class="fl">הגבלת קריאות לפי קטגוריה ביום</label><div id="ti-cat-limits"></div></div>
     <div class="fg" id="ti-dur-override-wrap" style="display:none;"><label class="fl">⏱️ זמן ביצוע מותאם אישית (דקות) — השאר ריק לברירת המחדל של הקטגוריה</label><div id="ti-dur-overrides"></div></div>
-    <div class="fg">
+    <div class="fg zone-only">
       <label class="fl"><span class="req">*</span> רוטציה אזורים (ראשון–שישי)</label>
       <div class="field-error hidden" id="e-ti-rotation">יש להגדיר לפחות יום אחד</div>
       <div class="rotation-grid" id="ti-rotation"></div>
@@ -1881,6 +1890,7 @@ function applyLabels(){
   document.querySelectorAll('[data-label]').forEach(el=>{
     const v=L(el.dataset.label);if(v)el.textContent=v;
   });
+  document.body.dataset.zoneMode = appUsesZones() ? 'zone' : 'none';
 }
 
 // ═══ DEMO MODE ═══
@@ -3481,7 +3491,7 @@ async function createWizardTenant(){
     business_type:type,
     defaults:{regular_job_minutes:30,package_job_minutes:45,arrival_window_hours:3,max_daily_jobs:9,lookahead_days:30,work_start:start,work_end:end},
     features:{crm_enabled:false,reports_enabled:false,files_enabled:false,checklists_enabled:false,whatsapp_enabled:false,demo_mode:false,google_maps_enabled:false,tech_duration_overrides:durationMode==='per_tech'},
-    scheduling:{mode:'zone',zone_strict:true,fill_first:true,route_logic:routeStrategy==='far_to_near',route_strategy:routeStrategy}
+    scheduling:{mode:document.querySelector('input[name="wc-mode"]:checked')?.value||'zone',zone_strict:true,fill_first:true,route_logic:routeStrategy==='far_to_near',route_strategy:routeStrategy}
   };
   const{data:tenant,error:te}=await sb.from('tenants').insert({name,plan,config}).select().single();
   if(te){showToast('שגיאה ביצירת הלקוח','error');console.error(te);btn.disabled=false;btn.textContent='🚀 צור לקוח';return;}
@@ -4707,7 +4717,10 @@ function splitLockedFlexible(dayTasks){
   for(const t of (dayTasks||[])){ (t && t.locked ? locked : flexible).push(t); }
   return {locked, flexible};
 }
+// True when this tenant uses zones (mode 'zone' or absent). open/radius ⇒ no zones.
+function usesZones(sc){ return ((sc && sc.mode) || 'zone') === 'zone'; }
 // </sched-logic>
+function appUsesZones(){ return usesZones(tenantConfig && tenantConfig.scheduling); }
 function getCityIndexInZone(city,zoneId,baseCity){
   const z=zones.find(x=>x.id===zoneId);if(!z)return 999;
   const nc=normalizeCity(city);
@@ -5258,7 +5271,7 @@ function findBestSlot(){
 }
 function findNextSlot(){
   currentCandidateIdx++;selectedTimeSlot=null;
-  if(currentCandidateIdx>=allCandidates.length){alert('אין עוד מועדים. בדוק הגדרות אזורים.');currentCandidateIdx=allCandidates.length-1;return;}
+  if(currentCandidateIdx>=allCandidates.length){alert(appUsesZones()?'אין עוד מועדים. בדוק הגדרות אזורים.':'אין עוד מועדים זמינים.');currentCandidateIdx=allCandidates.length-1;return;}
   showCandidate(currentCandidateIdx);
 }
 function checkSpecificDate(dateStr){
@@ -5266,7 +5279,7 @@ function checkSpecificDate(dateStr){
   const city=document.getElementById('s-city').value;
   const catId=getCatId();
   for(const tech of technicians){
-    if(!isCityInTechZone(tech,city,dateStr))continue;
+    if(appUsesZones() && !isCityInTechZone(tech,city,dateStr))continue;
     if(!isTechAvailable(tech,dateStr))continue;
     if(isCityBlocked(tech,city))continue;
     if(!techHasSkill(tech,catId))continue;
@@ -5288,11 +5301,13 @@ function showNoResult(city,reason){
   document.getElementById('dispatch-result').classList.remove('hidden');
   const a=document.getElementById('d-alert');a.className='alert alert-amber';
   let msg,cta='';
-  if(reason==='outside_all_polygons'){
+  if(reason==='not_geocoded'){
+    msg=`לא ניתן לאתר את הכתובת — בדוק רחוב ועיר.`;
+  } else if(!appUsesZones()){ // non-zone tenant — no zone concepts (checked before any zone branch)
+    msg=`לא נמצא ${L('worker')} פנוי מתאים. בדוק זמינות ועומס של הצוות.`;
+  } else if(reason==='outside_all_polygons'){
     msg=`הכתובת מחוץ לאזור השירות.`;
     cta=`<button class="btn btn-blue btn-sm" onclick="goPage('zones')" style="margin-top:8px;">🗺️ ערוך אזור על המפה</button>`;
-  } else if(reason==='not_geocoded'){
-    msg=`לא ניתן לאתר את הכתובת — בדוק רחוב ועיר.`;
   } else { // city_not_in_zone (or undefined → treat as city-not-in-zone)
     msg=`העיר "${h(city||'')}" אינה משויכת לאף אזור עם ${L('worker')} זמין.`;
     cta=`<button class="btn btn-blue btn-sm" onclick="goPage('zones')" style="margin-top:8px;">➕ שייך עיר לאזור</button>`;
@@ -5767,7 +5782,8 @@ async function runBulkImport(){
     const street=parts.length>1?parts[0]:'';
     const rawCity=parts.length>1?parts[1]:parts[0];
     const {city}=canonicalCity(rawCity);
-    const r=resolveZone(city,null,null,tenantConfig,zones);
+    // Non-zone tenants (open/radius) have no zones — import every row; zone-match only gates zone tenants.
+    const r=appUsesZones()?resolveZone(city,null,null,tenantConfig,zones):{matched:true,zoneId:null,reason:null};
     if(!r.matched){unmatched.push(`${row} — ${r.reason==='city_not_in_zone'?'עיר לא משויכת לאזור':'מחוץ לאזור'}`);continue;}
     const saved=await dbInsert('tasks',{
       assign_id:null,
@@ -5798,7 +5814,8 @@ async function runBulkImport(){
     tasks.push(t);made++;
   }
   save();renderTasks();
-  out.innerHTML=`✅ נוצרו ${made} קריאות.`+(unmatched.length?`<div style="color:var(--amber);margin-top:6px;"><strong>${unmatched.length} לא שובצו:</strong><br>${unmatched.map(h).join('<br>')}<br><button class="btn btn-blue btn-sm" style="margin-top:6px;" onclick="goPage('zones')">תקן אזורים</button></div>`:'');
+  const _unmCta = appUsesZones() ? `<br><button class="btn btn-blue btn-sm" style="margin-top:6px;" onclick="goPage('zones')">תקן אזורים</button>` : '';
+  out.innerHTML=`✅ נוצרו ${made} קריאות.`+(unmatched.length?`<div style="color:var(--amber);margin-top:6px;"><strong>${unmatched.length} לא שובצו:</strong><br>${unmatched.map(h).join('<br>')}${_unmCta}</div>`:'');
 }
 
 // ═══ ADD CITY FROM DISPATCH ═══
@@ -6368,7 +6385,7 @@ function saveTech(){
   else document.getElementById('e-ti-skills').classList.add('hidden');
   const rotation={};let hasRot=false;
   for(let i=0;i<6;i++){rotation[i]=document.getElementById('rot-'+i)?.value||'';if(rotation[i])hasRot=true;}
-  if(!hasRot){document.getElementById('e-ti-rotation').classList.remove('hidden');valid=false;}
+  if(appUsesZones() && !hasRot){document.getElementById('e-ti-rotation').classList.remove('hidden');valid=false;}
   else document.getElementById('e-ti-rotation').classList.add('hidden');
   if(!valid)return;
   const catLimits={};
@@ -7601,7 +7618,7 @@ function toggleTechHistory(techId) {
 <div id="mob-overlay" class="mob-sheet-overlay hidden" onclick="closeMobMore()"></div>
 <div id="mob-sheet" class="mob-sheet hidden">
   <button class="mob-sheet-item" onclick="closeMobMore();goPage('technicians')"><span>👷</span><span data-label="workers">טכנאים</span></button>
-  <button class="mob-sheet-item" onclick="closeMobMore();goPage('zones')"><span>🗺️</span><span data-label="zones">אזורים</span></button>
+  <button class="mob-sheet-item zone-only" onclick="closeMobMore();goPage('zones')"><span>🗺️</span><span data-label="zones">אזורים</span></button>
   <button class="mob-sheet-item" onclick="closeMobMore();goPage('categories')"><span>📦</span><span data-label="categories">קטגוריות</span></button>
   <button class="mob-sheet-item" onclick="closeMobMore();goPage('settings')"><span>⚙️</span>הגדרות</button>
   <div class="mob-sheet-sep"></div>

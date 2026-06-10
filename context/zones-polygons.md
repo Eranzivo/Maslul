@@ -51,6 +51,8 @@ The live helpers `getCityZone(city)` and `isCityInTechZone(tech, city, dateStr)`
 
 `resolveZone` is pure and lives inside the `// <zone-logic>` markers, covered by `tests/zones.test.js` (including tenant-separation cases proving two tenants with different `zone_match` resolve independently).
 
+**Mode-aware UI:** the entire zone surface (settings **אזורים** tab, tech rotation grid, city-in-zone gate, zone error copy, batch "תקן אזורים" CTA) is gated by `appUsesZones()` / `body[data-zone-mode]` — hidden for `open`/`radius` tenants. See `context/architecture.md` → Mode-Aware UI.
+
 ---
 
 ## Polygon Drawing Flow
