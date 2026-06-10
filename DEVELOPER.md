@@ -32,6 +32,8 @@ node tests/zones.test.js
 
 No npm install required — uses only built-in Node modules (`fs`, `vm`, `path`). It extracts pure zone logic from `index.html` between `// <zone-logic>` … `// </zone-logic>` markers and runs assertions against it in a sandboxed VM context. Keep any pure, side-effect-free zone logic inside those markers so it stays testable.
 
+Run `/test-zones` (Claude Code project command) to run the suite **and** get a prioritized list of suggested coverage gaps.
+
 ---
 
 ## File Map
