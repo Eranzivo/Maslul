@@ -39,8 +39,13 @@
 Setup SQL: `outputs/migration-purewater-zones-rotation_2026-06-05.sql`. **Rotation stores zone IDs — re-run this block if zones are ever re-created (IDs change, orphaning the rotation → grid shows "—").**
 
 ## Restrictions & preferences
+Israel's full dispatcher spec is captured in `context/scheduling-rules.md` (north star + priority order + must-never-do + window purpose). PureWater's instantiation:
 - **Far-to-near routing** is PureWater's chosen logic (route_strategy). True route order should come from the OR-Tools TSP with real drive times — far-to-near is the heuristic, not the goal.
+- **3-hour windows = insertion flexibility.** A 07:00–10:00 promise lets the optimizer add 1–2 more nearby jobs into that window (or visit someone first) without breaking the commitment. Windows must show in the calendar AND in slot placement.
 - **Slot release (72/48/24h):** near cities can't hold the earliest slots far in advance, reserving them for farther jobs that may still come in.
+- **Fill before opening:** prefer adding to a tech's partial/active day over opening another tech's empty future day (e.g. add a Netanya job to Michael's partial Sunday rather than Eliran's empty Thursday) — unless the customer asked for a specific date/window.
+- **No unrestricted manual time selection** — coordinators shouldn't freely pick times that break routes; manual override (locks) is constrained/optional for PureWater.
+- Worker example for base/return: depart אשקלון, could return קרית גת — routing is relative to each tech's own start.
 - No per-tech blocked zones/cities configured yet.
 
 ## Service categories

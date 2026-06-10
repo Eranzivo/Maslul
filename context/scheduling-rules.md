@@ -1,8 +1,27 @@
 # Scheduling Rules — Maslul
 
 ## Overarching Goal
-The software does not manage a calendar. It manages an optimal work route for a technician.
-**Goal:** minimum driving, minimum fuel, minimum wasted time, no back-and-forth to the same area, no empty time windows, no delays, full utilization of the working day, route always planned Far → Near.
+The software does not manage a calendar. It manages an **optimal work route** for a technician.
+
+### North Star — behave like an expert dispatcher (universal, every tenant)
+The system should think and decide like a seasoned scheduling coordinator: understand geography and proximity, account for workload distribution and technician capacity, plan ahead (not just the current moment), know when to leave availability open for better future bookings, and eliminate the inefficiencies of manual scheduling — with greater consistency and scale. It balances operational efficiency, technician utilization, travel time, customer commitments, and future opportunities.
+
+**Goal:** minimum driving, minimum fuel, minimum wasted time, no back-and-forth to the same area, no empty gaps, no late arrivals, full utilization of the workday.
+
+### Scheduling priority order (the optimizer optimizes in THIS order)
+1. **Correct route direction** — logical geographic flow, no backtracking. *Most important.*
+2. **Full-day utilization** — maximize productive time, minimize idle gaps.
+3. **Prevention of late arrivals** — never build a schedule that's predictably late.
+4. **Reduce fuel & travel time** — continuous operational efficiency.
+5. **Most appropriate technician** — chosen *only after* 1–4 are satisfied.
+
+> ⚠️ **Tenant-specific vs universal:** the *dispatcher intelligence* above is universal. The *specific knobs* — **Far → Near** direction, **3-hour windows**, **zones-per-tech-per-day**, **72/48/24h release** — are **PureWater's** chosen instantiation (`route_strategy`, windows, `slot_release`), NOT global defaults. Another tenant pursues the same north star with different knobs. See [far-to-near-tenant-specific] and `context/clients/purewater.md`.
+
+### What the system must never do
+Go far→near→far, send a tech backwards geographically, leave dead time mid-day, schedule on clock-time alone (ignoring travel), allow unrestricted manual time selection that breaks routes, or build a schedule where lateness is predictable from the outset.
+
+### Why 3-hour windows exist
+A window (not an exact time) is **reserved capacity for insertion**: a job promised 07:00–10:00 lets the optimizer later slot 1–2 *more* nearby jobs into that same window (or visit someone before the original) without breaking the customer commitment. The window is the flexibility that makes live re-optimization possible.
 
 ## Technician Starting Point
 Every technician has:

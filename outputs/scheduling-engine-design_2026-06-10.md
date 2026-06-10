@@ -11,6 +11,25 @@ This builds on the existing two-axis zone model (`scheduling.mode` × `schedulin
 
 ---
 
+## 0. Dispatcher requirements (PureWater spec) → coverage
+
+North star (universal): **behave like an expert dispatcher.** The optimizer's priority order — **(1) correct route direction → (2) full-day utilization → (3) prevent lateness → (4) cut fuel/travel → (5) pick the tech** — is the objective ranking Plan B's sequencer must encode. PureWater's far→near, 3-hour windows, zones-per-day, and 72/48/24h release are tenant *knobs* toward it (already config-gated). Full rules: `context/scheduling-rules.md`.
+
+| Requirement | Where addressed |
+|---|---|
+| Correct route direction, no far→near→far | §1 sequencing (TSP) + Plan A strategy guards (shipped) |
+| 3-hour window = reserved capacity for **insertion** of more nearby jobs | §3 gap-fill (cheapest-insertion) + §6 windows as hard constraints |
+| Reserved capacity / progressive 72-48-24h release | `slot_release` (PureWater config, shipped Plan A) |
+| Fill partial/active days before opening a new tech-day (Michael-Sun vs Eliran-Thu) | §2 assignment scoring `fillScore` + weekly balance; **strengthen so cross-tech fill beats opening a far empty day** |
+| Dynamic route calc on new job (travel, duration, window, direction, load, traffic) | §1 + §5 cache (real drive times) + §6 `sequenceDay` |
+| Per-tech base/return depot drives routing | shipped (return_city end-depot) |
+| No unrestricted manual time selection that breaks routes | §4 locks are **per-tenant-gated** (`features.manual_override`); PureWater may keep it off/constrained; conflicts always surfaced |
+| **Changes from UI OR backend are stored & stay consistent** | §6 epoch + optimistic-version guards; all writes awaited (data-persistence rule); batch/optimizer write-back to same rows |
+
+This section is the acceptance checklist for Plan B.
+
+---
+
 ## 1. Core architecture: assignment vs. sequencing
 
 The root cause of the observed zigzag (Kiryat Gat mid-day, Tel Aviv in-and-out) is that the JS engine both *assigns* and *orders* tasks, using a far-to-near heuristic that linearizes 2-D geography onto a 1-D "index in zone" from haversine distance. The OR-Tools optimizer (real drive times) only runs on a manual button press.
