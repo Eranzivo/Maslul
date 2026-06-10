@@ -20,9 +20,9 @@
 <!-- Leaflet.draw — self-hosted in vendor/ (pinned 1.0.4) — draw polygons for zone config -->
 <link rel="stylesheet" href="vendor/leaflet-draw/leaflet.draw.css"/>
 <script src="vendor/leaflet-draw/leaflet.draw.js"></script>
-<!-- Leaflet defines a global `L` that collides with the app's label helper L(key).
-     Hand Leaflet its own global (LF) via noConflict and release `L` for the app. -->
-<script>if(window.L&&typeof window.L.noConflict==='function'){window.LF=window.L.noConflict();}</script>
+<!-- Leaflet owns the global `L` (leaflet-draw references it at runtime). The app's
+     label helper is named LBL(key), NOT L, to avoid the collision. LF aliases Leaflet. -->
+<script>if(window.L){window.LF=window.L;}</script>
 <style>
 :root{
   --ink:#111827;--ink-2:#374151;--ink-3:#6B7280;--ink-4:#9CA3AF;
@@ -1885,10 +1885,10 @@ const DEFAULT_LABELS = {
   categories:'קטגוריות',
 };
 let tenantLabels = {...DEFAULT_LABELS};
-function L(key){ return tenantLabels[key] ?? DEFAULT_LABELS[key] ?? key; }
+function LBL(key){ return tenantLabels[key] ?? DEFAULT_LABELS[key] ?? key; }
 function applyLabels(){
   document.querySelectorAll('[data-label]').forEach(el=>{
-    const v=L(el.dataset.label);if(v)el.textContent=v;
+    const v=LBL(el.dataset.label);if(v)el.textContent=v;
   });
   document.body.dataset.zoneMode = appUsesZones() ? 'zone' : 'none';
 }
@@ -3162,7 +3162,7 @@ function setDateLabel(){
   const d=new Date(),label='יום '+DAYS_HE[d.getDay()]+' — '+d.toLocaleDateString('he-IL');
   document.getElementById('dispatch-date').textContent=label;
   const activeTechCount=technicians.filter(t=>getTechLoad(t,todayStr())>0).length;
-  document.getElementById('home-date').textContent=`${activeTechCount} ${L('workers')} פעילים · ${label}`;
+  document.getElementById('home-date').textContent=`${activeTechCount} ${LBL('workers')} פעילים · ${label}`;
 }
 function populateTimeSels(){
   const times=[];for(let h=5;h<=22;h++){['00','30'].forEach(m=>times.push(pad(h)+':'+m));}
@@ -3285,7 +3285,7 @@ function waMsg(t){
   const ref=t.assignId?'\nמספר קריאה: '+t.assignId:'';
   return encodeURIComponent(
     'שלום '+t.client+' 👋\n'+
-    (co?co+' — ':'')+'אישור תיאום '+L('task')+':\n\n'+
+    (co?co+' — ':'')+'אישור תיאום '+LBL('task')+':\n\n'+
     '📋 '+t.cat+'\n'+
     '📍 '+(t.street?t.street+', ':'')+[t.floor?'קומה '+t.floor:'',t.apartment?'דירה '+t.apartment:''].filter(Boolean).join(' ')+(t.floor||t.apartment?', ':'')+t.city+'\n'+
     (t.entranceNotes?'🚪 כניסה: '+t.entranceNotes+'\n':'')+
@@ -4162,7 +4162,7 @@ function renderReports(){
       <div class="card" style="text-align:center;"><div style="font-size:2.25rem;font-weight:900;color:var(--amber);">${pending}</div><div style="font-size:0.8rem;color:var(--ink-3);margin-top:3px;">ממתינות כעת</div></div>
     </div>
     <div class="card" style="margin-bottom:1rem;">
-      <div class="card-title">${L('workers')} — ביצועים</div>
+      <div class="card-title">${LBL('workers')} — ביצועים</div>
       ${techStats.length?techStats.map(({tech,total:t,done})=>{
         const pct=maxTech?Math.round((t/maxTech)*100):0;
         return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line-2);">
@@ -4172,7 +4172,7 @@ function renderReports(){
         </div>`;
       }).join(''):'<div style="color:var(--ink-4);font-size:0.875rem;padding:1rem 0;text-align:center;">אין נתונים לתקופה זו</div>'}
     </div>
-    ${zoneStats.length?`<div class="card" style="margin-bottom:1rem;"><div class="card-title">${L('zones')} — חלוקה גיאוגרפית</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:8px;">${zoneStats.map(({zone,total:t,done})=>`<div style="background:var(--blue-l);border-radius:var(--r);padding:12px;"><div style="font-weight:700;font-size:0.9rem;">${h(zone.name)}</div><div style="font-size:1.75rem;font-weight:900;color:var(--blue-d);margin-top:4px;">${t}</div><div style="font-size:0.7rem;color:var(--ink-3);">${done} הושלמו</div></div>`).join('')}</div></div>`:''}
+    ${zoneStats.length?`<div class="card" style="margin-bottom:1rem;"><div class="card-title">${LBL('zones')} — חלוקה גיאוגרפית</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:8px;">${zoneStats.map(({zone,total:t,done})=>`<div style="background:var(--blue-l);border-radius:var(--r);padding:12px;"><div style="font-weight:700;font-size:0.9rem;">${h(zone.name)}</div><div style="font-size:1.75rem;font-weight:900;color:var(--blue-d);margin-top:4px;">${t}</div><div style="font-size:0.7rem;color:var(--ink-3);">${done} הושלמו</div></div>`).join('')}</div></div>`:''}
     ${catStats.length?`<div class="card" style="margin-bottom:1rem;"><div class="card-title">קטגוריות — נפח קריאות</div>${catStats.map(({cat,total:t})=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-2);"><div style="font-size:0.875rem;font-weight:600;">${h(cat.name)}</div><span class="badge badge-blue">${t}</span></div>`).join('')}</div>`:''}
     ${(()=>{
       const dayNames=['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
@@ -4379,7 +4379,7 @@ function renderHomeTechCards(){
     kpiEl.innerHTML=`
       <div class="kpi-card${kpiFilter==='today'?' kpi-active':''}" onclick="filterByKpi('today')" style="border-right-color:var(--accent);">
         <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-        <div class="kpi-val">${todayTasks.length}</div><div class="kpi-lbl">${L('tasks')} היום</div>
+        <div class="kpi-val">${todayTasks.length}</div><div class="kpi-lbl">${LBL('tasks')} היום</div>
       </div>
       <div class="kpi-card${kpiFilter==='active'?' kpi-active':''}" onclick="filterByKpi('active')" style="border-right-color:var(--amber);">
         <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -4438,7 +4438,7 @@ function renderHomeTechCards(){
         </div>
       </div>
     </div>`;
-  }).join('')||`<div class="empty"><div class="empty-icon">👷</div><div>הוסף ${L('worker')} ראשון</div></div>`;
+  }).join('')||`<div class="empty"><div class="empty-icon">👷</div><div>הוסף ${LBL('worker')} ראשון</div></div>`;
 }
 function getTechStatus(tech,dateStr){
   const inProgress=tasks.filter(t=>t.techId===tech.id&&t.date===dateStr&&['en_route','arrived'].includes(t.status));
@@ -5292,7 +5292,7 @@ function checkSpecificDate(dateStr){
     showCandidate(currentCandidateIdx);return;
   }
   document.getElementById('d-alert').className='alert alert-amber';
-  document.getElementById('d-alert').textContent=`⚠️ לא ניתן לשבץ בתאריך זה — אין ${L('worker')} זמין באזור הנדרש.`;
+  document.getElementById('d-alert').textContent=`⚠️ לא ניתן לשבץ בתאריך זה — אין ${LBL('worker')} זמין באזור הנדרש.`;
   document.getElementById('d-alert').classList.remove('hidden');
 }
 function showNoResult(city,reason){
@@ -5304,12 +5304,12 @@ function showNoResult(city,reason){
   if(reason==='not_geocoded'){
     msg=`לא ניתן לאתר את הכתובת — בדוק רחוב ועיר.`;
   } else if(!appUsesZones()){ // non-zone tenant — no zone concepts (checked before any zone branch)
-    msg=`לא נמצא ${L('worker')} פנוי מתאים. בדוק זמינות ועומס של הצוות.`;
+    msg=`לא נמצא ${LBL('worker')} פנוי מתאים. בדוק זמינות ועומס של הצוות.`;
   } else if(reason==='outside_all_polygons'){
     msg=`הכתובת מחוץ לאזור השירות.`;
     cta=`<button class="btn btn-blue btn-sm" onclick="goPage('zones')" style="margin-top:8px;">🗺️ ערוך אזור על המפה</button>`;
   } else { // city_not_in_zone (or undefined → treat as city-not-in-zone)
-    msg=`העיר "${h(city||'')}" אינה משויכת לאף אזור עם ${L('worker')} זמין.`;
+    msg=`העיר "${h(city||'')}" אינה משויכת לאף אזור עם ${LBL('worker')} זמין.`;
     cta=`<button class="btn btn-blue btn-sm" onclick="goPage('zones')" style="margin-top:8px;">➕ שייך עיר לאזור</button>`;
   }
   a.innerHTML=`⚠️ ${msg} ${cta}`;
@@ -6238,7 +6238,7 @@ function techSetStatus(taskId,ns){
 
 // ═══ TECHNICIANS ═══
 function renderTechs(){
-  document.getElementById('tech-count-sub').textContent=technicians.length+' '+L('workers');
+  document.getElementById('tech-count-sub').textContent=technicians.length+' '+LBL('workers');
   document.getElementById('tech-grid').innerHTML=technicians.map(tech=>{
     const cnt=getTechLoad(tech,todayStr());
     const lp=Math.min(100,Math.round((cnt/Math.max(tech.max,1))*100));
@@ -6249,7 +6249,7 @@ function renderTechs(){
       <div class="tech-name">${h(tech.name)}</div>
       <div class="tech-info">📞 ${h(tech.phone)}</div>
       <div class="tech-info">🚀 יציאה: ${h(tech.base)}${tech.return_city&&tech.return_city!==tech.base?' · חזרה: '+h(tech.return_city):''}</div>
-      <div class="tech-info">📊 ${tech.min}–${tech.max} ${L('tasks')}/יום</div>
+      <div class="tech-info">📊 ${tech.min}–${tech.max} ${LBL('tasks')}/יום</div>
       ${skills?`<div style="margin-top:6px;">${skills}</div>`:''}
       <div class="load-bar" style="margin:8px 0 3px;"><div class="load-fill" style="width:${lp}%;background:${fc};"></div></div>
       <div style="font-size:0.7rem;color:var(--ink-4);">${cnt}/${tech.max} היום</div>
@@ -6258,7 +6258,7 @@ function renderTechs(){
         <button class="btn btn-ghost btn-sm" onclick="deleteTech('${tech.id}')" style="color:var(--red);">הסר</button>
       </div>
     </div>`;
-  }).join('')||`<div class="empty"><div class="empty-icon">👷</div><div>הוסף ${L('worker')} ראשון</div></div>`;
+  }).join('')||`<div class="empty"><div class="empty-icon">👷</div><div>הוסף ${LBL('worker')} ראשון</div></div>`;
 }
 function buildTechModalUI(){
   document.getElementById('ti-skills-container').innerHTML=categories.map(c=>
@@ -6325,7 +6325,7 @@ function toggleSkill(catId){
 }
 function openAddTechModal(){
   editingTechId=null;buildTechModalUI();
-  document.getElementById('mo-tech-title').textContent='הוסף '+L('worker');
+  document.getElementById('mo-tech-title').textContent='הוסף '+LBL('worker');
   ['ti-name','ti-phone','ti-base','ti-return','ti-blocked','ti-base-addr'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ti-min').value='2';document.getElementById('ti-max').value='9';
   const _bzNew=document.getElementById('ti-blocked-zones');
@@ -6346,7 +6346,7 @@ function openAddTechModal(){
 function editTech(id){
   const tech=technicians.find(t=>t.id===id);if(!tech)return;
   editingTechId=id;buildTechModalUI();
-  document.getElementById('mo-tech-title').textContent='עריכת '+L('worker');
+  document.getElementById('mo-tech-title').textContent='עריכת '+LBL('worker');
   document.getElementById('ti-name').value=tech.name;document.getElementById('ti-phone').value=tech.phone;
   document.getElementById('ti-base').value=tech.base;document.getElementById('ti-return').value=tech.return_city||'';document.getElementById('ti-base-addr').value=tech.address||'';document.getElementById('ti-min').value=tech.min;
   document.getElementById('ti-max').value=tech.max;document.getElementById('ti-blocked').value=tech.blocked||'';
@@ -6749,7 +6749,7 @@ function renderPlannerContent(){
   const weekStart=days[0].toISOString().split('T')[0];
   const weekEnd=days[days.length-1].toISOString().split('T')[0];
   const weekTasks=tasks.filter(t=>plannerSelectedTechs.includes(t.techId)&&t.date>=weekStart&&t.date<=weekEnd&&t.status!=='cancelled').length;
-  if(sub) sub.textContent=plannerSelectedTechs.length+' '+L('workers')+' · '+weekTasks+' '+L('tasks')+' השבוע';
+  if(sub) sub.textContent=plannerSelectedTechs.length+' '+LBL('workers')+' · '+weekTasks+' '+LBL('tasks')+' השבוע';
   if(plannerMode==='weekly') renderPlannerWeekly(days);
   else renderPlannerDaily(days);
 }
@@ -6813,7 +6813,7 @@ function renderPlannerWeekly(days){
   }).join('');
   content.innerHTML=`<table style="border-collapse:collapse;width:100%;background:var(--white);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh);border:1px solid var(--line);">
     <thead><tr>
-      <th style="background:var(--line-2);padding:10px 14px;font-size:0.75rem;font-weight:800;color:var(--ink-3);text-align:right;white-space:nowrap;position:sticky;top:0;right:0;z-index:5;border-left:2px solid var(--line-2);border-bottom:3px solid transparent;">${L('workers')}</th>
+      <th style="background:var(--line-2);padding:10px 14px;font-size:0.75rem;font-weight:800;color:var(--ink-3);text-align:right;white-space:nowrap;position:sticky;top:0;right:0;z-index:5;border-left:2px solid var(--line-2);border-bottom:3px solid transparent;">${LBL('workers')}</th>
       ${dayHeaders}
     </tr></thead>
     <tbody>${rows}</tbody>
@@ -7408,7 +7408,7 @@ function _lazyLoadLeaflet() {
     s.onload = () => {
       const d = document.createElement('script');
       d.src = 'vendor/leaflet-draw/leaflet.draw.js';
-      d.onload = () => { if(window.L&&window.L.noConflict){window.LF=window.L.noConflict();} res(true); };
+      d.onload = () => { window.LF = window.L; res(true); };
       d.onerror = fail;
       document.head.appendChild(d);
     };
