@@ -5805,7 +5805,8 @@ async function runBulkImport(){
     tasks.push(t);made++;
   }
   save();renderTasks();
-  out.innerHTML=`✅ נוצרו ${made} קריאות.`+(unmatched.length?`<div style="color:var(--amber);margin-top:6px;"><strong>${unmatched.length} לא שובצו:</strong><br>${unmatched.map(h).join('<br>')}<br><button class="btn btn-blue btn-sm" style="margin-top:6px;" onclick="goPage('zones')">תקן אזורים</button></div>`:'');
+  const _unmCta = appUsesZones() ? `<br><button class="btn btn-blue btn-sm" style="margin-top:6px;" onclick="goPage('zones')">תקן אזורים</button>` : '';
+  out.innerHTML=`✅ נוצרו ${made} קריאות.`+(unmatched.length?`<div style="color:var(--amber);margin-top:6px;"><strong>${unmatched.length} לא שובצו:</strong><br>${unmatched.map(h).join('<br>')}${_unmCta}</div>`:'');
 }
 
 // ═══ ADD CITY FROM DISPATCH ═══
