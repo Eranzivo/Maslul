@@ -376,6 +376,7 @@ Railway is on trial (expires ~June 12 2026) → upgrade to Hobby ($5/mo) before 
 - **Port 8080** — Railway domain must be configured to route to port 8080. Check Networking → domain → pencil icon if 502
 - **Session impersonation** — stored in `sessionStorage` (tab-scoped, clears on tab close). `exitTenantSession()` clears it explicitly
 - **Leaflet maps self-hosted** — Leaflet + Leaflet.draw live in `vendor/` (not a CDN). This fixed the recurring zone-draw "ספריית מפות לא נטענה" failure (a CDN script that intermittently failed to load with no retry). `_lazyLoadLeaflet()` re-injects on demand as a safety net. Upgrade = swap the files in `vendor/`
+- 🔴 **`L` is the app's label helper, NOT Leaflet.** Leaflet exports a global `L` that collides with our `L(key)` i18n helper — once a map loaded it clobbered the helper and every `L('worker')` threw "L is not a function" (broke editTech etc.). Fix: a `noConflict()` script right after the Leaflet `<script>` tags (and in `_lazyLoadLeaflet`) moves Leaflet to `window.LF`. **All Leaflet calls use `LF.` (`LF.map`, `LF.marker`, `LF.Control.Draw`, …); never `L.`** When adding map code, use `LF`.
 
 ---
 
