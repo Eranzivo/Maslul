@@ -20,6 +20,9 @@
 <!-- Leaflet.draw — self-hosted in vendor/ (pinned 1.0.4) — draw polygons for zone config -->
 <link rel="stylesheet" href="vendor/leaflet-draw/leaflet.draw.css"/>
 <script src="vendor/leaflet-draw/leaflet.draw.js"></script>
+<!-- Leaflet defines a global `L` that collides with the app's label helper L(key).
+     Hand Leaflet its own global (LF) via noConflict and release `L` for the app. -->
+<script>if(window.L&&typeof window.L.noConflict==='function'){window.LF=window.L.noConflict();}</script>
 <style>
 :root{
   --ink:#111827;--ink-2:#374151;--ink-3:#6B7280;--ink-4:#9CA3AF;
@@ -6483,10 +6486,11 @@ function renderZones(){
 async function addZone(){
   const z={id:genClientId(),name:'אזור חדש',cities:[]};
   zones.push(z);save();
-  // Await the Supabase insert so _dbId is set BEFORE the textarea appears.
-  // This eliminates the race where a fast city-add fires a duplicate INSERT.
-  await saveZoneToSupabase(z);
+  // Render immediately so the new zone card shows without a page refresh.
+  // saveZoneToSupabase upserts keyed on zone.id via a per-zone queue, so a fast
+  // city-add can't fire a duplicate INSERT even though _dbId isn't set yet.
   renderZones();populateCitySelect();
+  await saveZoneToSupabase(z);
 }
 function deleteZone(id){
   const z=zones.find(x=>x.id===id);if(!z)return;
@@ -6984,14 +6988,14 @@ let _gpsWatchId = null;       // navigator.geolocation watchId
 let _myGpsMarker = null;      // tech's own position marker on route map
 let _techRouteMap = null;     // Leaflet map instance in tech view
 let _coordMapInstance = null; // Leaflet map instance in coordinator home view
-let _coordTechMarkers = {};   // { techId → L.marker } for coordinator map
+let _coordTechMarkers = {};   // { techId → LF.marker } for coordinator map
 let _coordTaskMarkers = [];   // task markers on coordinator map
 let _realtimeSub = null;      // Supabase Realtime channel for live updates
 let _lastGpsWrite = 0;        // throttle DB writes
 
 // ── Shared OSM tile layer factory ───────────────────────────────────────────
 function _osmTiles(){
-  return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  return LF.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
     attribution:'© <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom:19
   });
@@ -7049,11 +7053,11 @@ function stopGpsTracking(){
 }
 
 function _makeMyMarker(lat,lon){
-  const icon=L.divIcon({
+  const icon=LF.divIcon({
     html:`<div style="width:16px;height:16px;background:#10B981;border:3px solid white;border-radius:50%;box-shadow:0 0 8px rgba(16,185,129,0.8);"></div>`,
     className:'',iconSize:[16,16],iconAnchor:[8,8]
   });
-  return L.marker([lat,lon],{icon,title:'המיקום שלי',zIndexOffset:1000});
+  return LF.marker([lat,lon],{icon,title:'המיקום שלי',zIndexOffset:1000});
 }
 
 // ── Tech Route Map ───────────────────────────────────────────────────────────
@@ -7081,7 +7085,7 @@ function _initTechRouteMap(){
   const todayTasks=tasks.filter(t=>String(t.techId)===String(tech.id)&&t.date===today&&t.status!=='cancelled')
     .sort((a,b)=>(a.time||'').localeCompare(b.time||''));
 
-  const map=L.map(containerId,{zoomControl:true,attributionControl:true}).setView([31.8,35.0],8);
+  const map=LF.map(containerId,{zoomControl:true,attributionControl:true}).setView([31.8,35.0],8);
   _osmTiles().addTo(map);
   _techRouteMap=map;
 
@@ -7093,24 +7097,24 @@ function _initTechRouteMap(){
     const isDone=task.status==='completed';
     const isEnRoute=task.status==='en_route';
     const bg=isDone?'#94A3B8':isEnRoute?'#F59E0B':'#2563EB';
-    const icon=L.divIcon({
+    const icon=LF.divIcon({
       html:`<div style="background:${bg};color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);${isDone?'opacity:0.6;':''}">${i+1}</div>`,
       className:'',iconSize:[28,28],iconAnchor:[14,14]
     });
     bounds.push(coords);
-    L.marker(coords,{icon}).addTo(map)
+    LF.marker(coords,{icon}).addTo(map)
       .bindPopup(`<div style="direction:rtl;min-width:150px;"><b>${task.client||''}</b><br><span style="color:#64748B;">${task.city}${task.street?', '+task.street:''}</span><br>${task.cat||''} · ${task.time||''}<br><span style="color:${isDone?'#10B981':'#2563EB'}">${STATUS_MAP[task.status]?.label||''}</span></div>`);
   });
 
   // Base city marker
   const baseCoords=_coordsForCity(tech.base);
   if(baseCoords){
-    const homeIcon=L.divIcon({
+    const homeIcon=LF.divIcon({
       html:`<div style="background:#8B5CF6;color:white;border-radius:6px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);">🏠</div>`,
       className:'',iconSize:[26,26],iconAnchor:[13,13]
     });
     bounds.push(baseCoords);
-    L.marker(baseCoords,{icon:homeIcon}).addTo(map).bindPopup(`<b>יציאה: ${tech.base}</b>`);
+    LF.marker(baseCoords,{icon:homeIcon}).addTo(map).bindPopup(`<b>יציאה: ${tech.base}</b>`);
   }
 
   // My GPS position
@@ -7122,7 +7126,7 @@ function _initTechRouteMap(){
 
   // Draw dashed route line between stops
   if(bounds.length>1){
-    L.polyline(bounds,{color:'#2563EB',weight:2,opacity:0.4,dashArray:'6,6'}).addTo(map);
+    LF.polyline(bounds,{color:'#2563EB',weight:2,opacity:0.4,dashArray:'6,6'}).addTo(map);
   }
 
   if(bounds.length>0){map.fitBounds(bounds,{padding:[30,30]});}
@@ -7160,7 +7164,7 @@ function _initCoordinatorMap(){
   if(!el||!el.offsetWidth)return;
   if(_coordMapInstance){_coordMapInstance.invalidateSize();return;}
 
-  const map=L.map(containerId,{zoomControl:true,attributionControl:true}).setView([31.5,35.0],8);
+  const map=LF.map(containerId,{zoomControl:true,attributionControl:true}).setView([31.5,35.0],8);
   _osmTiles().addTo(map);
   _coordMapInstance=map;
 
@@ -7185,11 +7189,11 @@ function _initCoordinatorMap(){
     const isEnRoute=task.status==='en_route';
     const dot=isDone?'✓':isEnRoute?'↗':'●';
     const size=isDone?18:22;
-    const icon=L.divIcon({
+    const icon=LF.divIcon({
       html:`<div style="background:${isDone?'#94A3B8':color};color:white;border-radius:4px;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-size:${isDone?9:11}px;font-weight:800;border:1.5px solid rgba(0,0,0,0.15);opacity:${isDone?0.55:1};box-shadow:0 1px 4px rgba(0,0,0,0.25);">${dot}</div>`,
       className:'',iconSize:[size,size],iconAnchor:[size/2,size/2]
     });
-    const m=L.marker(coords,{icon}).addTo(map)
+    const m=LF.marker(coords,{icon}).addTo(map)
       .bindPopup(`<div style="direction:rtl;min-width:160px;"><b>${task.client||''}</b><br>${task.city}<br>${task.cat||''}<br>${tech?.name||''} · ${task.time||''}<br><span style="color:${isDone?'#10B981':'#2563EB'}">${STATUS_MAP[task.status]?.label||''}</span></div>`);
     _coordTaskMarkers.push(m);
   });
@@ -7228,11 +7232,11 @@ function _addTechMarker(map,tech){
   if(!tech.last_lat||!tech.last_lon)return;
   const ago=tech.last_seen?Math.round((Date.now()-new Date(tech.last_seen))/60000):null;
   const isStale=ago!==null&&ago>60; // >1 hour old = grey out
-  const icon=L.divIcon({
+  const icon=LF.divIcon({
     html:`<div style="background:${isStale?'#94A3B8':tech.color};color:white;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);opacity:${isStale?0.6:1};">${initials(tech.name)}</div>`,
     className:'',iconSize:[34,34],iconAnchor:[17,17]
   });
-  const marker=L.marker([tech.last_lat,tech.last_lon],{icon,zIndexOffset:500}).addTo(map)
+  const marker=LF.marker([tech.last_lat,tech.last_lon],{icon,zIndexOffset:500}).addTo(map)
     .bindPopup(`<div style="direction:rtl;min-width:140px;"><b>${tech.name}</b><br>${tech.base?'🏠 '+tech.base:''}<br>📡 ${ago!==null?(ago<1?'עכשיו':ago+'ד׳ לפני'):'לא ידוע'}</div>`);
   _coordTechMarkers[tech.id]=marker;
 }
@@ -7369,7 +7373,7 @@ function _ensureCss(href){
   }
 }
 function _lazyLoadLeaflet() {
-  if (typeof L !== 'undefined' && L.map) return Promise.resolve(true);
+  if (window.LF && LF.map) return Promise.resolve(true);
   if (_leafletLoading) return _leafletLoading;
   _ensureCss('vendor/leaflet/leaflet.css');
   _ensureCss('vendor/leaflet-draw/leaflet.draw.css');
@@ -7380,7 +7384,7 @@ function _lazyLoadLeaflet() {
     s.onload = () => {
       const d = document.createElement('script');
       d.src = 'vendor/leaflet-draw/leaflet.draw.js';
-      d.onload = () => res(true);
+      d.onload = () => { if(window.L&&window.L.noConflict){window.LF=window.L.noConflict();} res(true); };
       d.onerror = fail;
       document.head.appendChild(d);
     };
@@ -7392,7 +7396,7 @@ function _lazyLoadLeaflet() {
 function _initZoneDrawMap() {
   const el = document.getElementById('zone-draw-map');
   if (!el) return;
-  if (typeof window.L === 'undefined' || typeof L.map !== 'function') {
+  if (typeof window.LF === 'undefined' || typeof LF.map !== 'function') {
     const st = document.getElementById('zone-draw-status');
     if (st) st.textContent = 'טוען מפה…';
     return _lazyLoadLeaflet().then(ok => {
@@ -7402,7 +7406,7 @@ function _initZoneDrawMap() {
   }
   if (_zoneDrawMap) { try { _zoneDrawMap.remove(); } catch(e){} _zoneDrawMap = null; }
   if (el._leaflet_id) delete el._leaflet_id; // clear stale Leaflet state on reuse
-  _zoneDrawMap = L.map(el).setView([31.5, 34.85], 8);
+  _zoneDrawMap = LF.map(el).setView([31.5, 34.85], 8);
   _osmTiles().addTo(_zoneDrawMap);
   setTimeout(() => { if (_zoneDrawMap) _zoneDrawMap.invalidateSize(); }, 200);
   setTimeout(() => { if (_zoneDrawMap) _zoneDrawMap.invalidateSize(); }, 600);
@@ -7412,14 +7416,14 @@ function _initZoneDrawMap() {
   if (z) {
     z.cities.forEach(city => {
       const coords = CITY_COORDS_JS[city];
-      if (coords) L.circleMarker(coords, {radius:6,color:'#4f46e5',fillColor:'#4f46e5',fillOpacity:0.75,weight:2})
+      if (coords) LF.circleMarker(coords, {radius:6,color:'#4f46e5',fillColor:'#4f46e5',fillOpacity:0.75,weight:2})
         .bindTooltip(city, {direction:'top',permanent:false}).addTo(_zoneDrawMap);
     });
   }
 
   // Draw control — polygon only
-  _zoneDrawFeatureGroup = new L.FeatureGroup().addTo(_zoneDrawMap);
-  const drawCtrl = new L.Control.Draw({
+  _zoneDrawFeatureGroup = new LF.FeatureGroup().addTo(_zoneDrawMap);
+  const drawCtrl = new LF.Control.Draw({
     draw: {
       polygon: { allowIntersection: false, showArea: false,
         shapeOptions: { color:'#2563eb', fillColor:'#2563eb', fillOpacity:0.15, weight:2 } },
@@ -7429,18 +7433,18 @@ function _initZoneDrawMap() {
   });
   _zoneDrawMap.addControl(drawCtrl);
 
-  _zoneDrawMap.on(L.Draw.Event.CREATED, e => {
+  _zoneDrawMap.on(LF.Draw.Event.CREATED, e => {
     _zoneDrawFeatureGroup.clearLayers();
     _zoneDrawFeatureGroup.addLayer(e.layer);
     _drawnPolygon = e.layer.getLatLngs()[0];
     _updateZoneDrawStatus();
   });
-  _zoneDrawMap.on(L.Draw.Event.EDITED, () => {
+  _zoneDrawMap.on(LF.Draw.Event.EDITED, () => {
     _drawnPolygon = null;
     _zoneDrawFeatureGroup.eachLayer(l => { if(l.getLatLngs) _drawnPolygon = l.getLatLngs()[0]; });
     _updateZoneDrawStatus();
   });
-  _zoneDrawMap.on(L.Draw.Event.DELETED, () => {
+  _zoneDrawMap.on(LF.Draw.Event.DELETED, () => {
     _drawnPolygon = null;
     document.getElementById('zone-draw-status').textContent = '';
   });
