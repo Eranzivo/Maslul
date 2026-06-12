@@ -1453,6 +1453,18 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   </div>
 </div>
 
+<!-- MODAL: SHADOW COMPARE (super_admin) — current vs optimizer-proposed route -->
+<div class="mo hidden" id="mo-shadow">
+  <div class="mo-box" style="max-width:min(94vw,760px);">
+    <div class="mo-title">🔍 השוואת מסלול — נוכחי מול מוצע</div>
+    <div id="shadow-body" style="max-height:60vh;overflow-y:auto;"></div>
+    <div class="mo-actions">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-shadow')">סגור</button>
+      <button class="btn btn-blue" style="flex:2;" id="shadow-apply-btn" onclick="applyShadowProposal()">החל סדר מוצע ✓</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: REPLACE SUGGESTION -->
 <div class="mo hidden" id="mo-replace">
   <div class="mo-box">
@@ -4822,6 +4834,75 @@ function _seqSetBadge(techId,date,on){
   const el=document.getElementById(`seq-badge-${techId}-${date}`);
   if(el)el.style.display=on?'inline-block':'none';
 }
+
+// ── Shadow compare (super_admin): current vs proposed route, READ-ONLY ───────
+// The PureWater go/no-go view: shows Israel what auto-sequencing would do to a real
+// day — order, arrival times, per-leg drives, and the fuel delta — without persisting.
+let _shadowCtx=null;
+async function shadowCompare(techId,date){
+  const tech=technicians.find(t=>String(t.id)===String(techId)); if(!tech) return;
+  const dayTasks=tasks.filter(t=>String(t.techId)===String(techId)&&t.date===date&&t.status!=='cancelled'&&t.time);
+  if(dayTasks.length<2){showToast('צריך לפחות 2 קריאות מתוזמנות להשוואה');return;}
+  const body=document.getElementById('shadow-body');
+  body.innerHTML='<div style="text-align:center;padding:2rem;color:var(--ink-3);">מחשב השוואה…</div>';
+  document.getElementById('shadow-apply-btn').style.display='none';
+  document.getElementById('mo-shadow').classList.remove('hidden');
+  const durationOf=(t)=>{const c=categories.find(c=>c.id===t.catId);return (tech.durationOverrides||{})[t.catId]||(c&&c.time)||settings.regularTime||30;};
+  const sched=getTechDaySchedule(tech,date);
+  const brk=getTechPartialBlocks(tech,date).map(b=>({from:minsToTime(b.from),to:minsToTime(b.to)}));
+  const mkTech=(taskPayload)=>({id:String(tech.id),name:tech.name,
+    base_city:(tech.address&&tech.base)?`${tech.address}, ${tech.base}`:(tech.base||''),
+    return_city:tech.return_city||tech.base||'',
+    start_time:sched.start||'07:00',end_time:sched.end||'18:00',breaks:brk,tasks:taskPayload});
+  const strategy=resolveRouteStrategy(tenantConfig.scheduling);
+  try{
+    // Call 1: CURRENT order — pin every task at its current time (reproduces today's cost).
+    const curPayload=buildSequencePayload(dayTasks,durationOf).map(p=>({...p,locked:true}));
+    // Call 2: PROPOSED — tasks free (their real locked flags), optimizer decides.
+    const [curRes,propRes]=await Promise.all([
+      fetch(`${CONFIG.OPTIMIZER_URL}/optimize`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,scheduling:{route_strategy:strategy},technicians:[mkTech(curPayload)]})}).then(r=>r.json()),
+      fetch(`${CONFIG.OPTIMIZER_URL}/optimize`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,scheduling:{route_strategy:strategy},technicians:[mkTech(buildSequencePayload(dayTasks,durationOf))]})}).then(r=>r.json()),
+    ]);
+    const cur=(curRes.optimized||[])[0], prop=(propRes.optimized||[])[0];
+    if(!cur||!prop) throw new Error('empty optimizer result');
+    const col=(title,r)=>{
+      const items=(r.ordered_tasks||[]).map(id=>{
+        const t=dayTasks.find(x=>String(x.id)===String(id)); if(!t)return '';
+        const tr=(r.trace||{})[String(id)]||{};
+        return `<div style="padding:5px 0;border-bottom:1px solid var(--line-2);font-size:0.8rem;">
+          <strong>${(r.estimated_times||{})[String(id)]||t.time||''}</strong> · ${h(t.client||'—')} · ${h(t.city||'')}
+          ${tr.prev?`<div style="font-size:0.68rem;color:var(--ink-3);">🚗 ${tr.drive_minutes} דק׳ מ-${h(tr.prev)}</div>`:''}
+        </div>`;}).join('');
+      return `<div style="flex:1;min-width:240px;background:var(--bg);border-radius:8px;padding:10px;">
+        <div style="font-weight:800;margin-bottom:6px;">${title}</div>${items}
+        <div style="margin-top:8px;font-weight:700;font-size:0.8rem;">סה״כ נסיעה: ${r.total_drive_minutes} דק׳</div></div>`;
+    };
+    const delta=cur.total_drive_minutes-prop.total_drive_minutes;
+    const deltaLine=delta>0?`<div class="alert alert-green" style="margin-top:10px;">⛽ הסדר המוצע חוסך ${delta} דק׳ נסיעה ביום זה</div>`
+      :delta<0?`<div class="alert alert-amber" style="margin-top:10px;">הסדר הנוכחי יעיל יותר ב-${-delta} דק׳ — אין צורך בשינוי</div>`
+      :`<div style="margin-top:10px;color:var(--ink-3);font-size:0.85rem;">שני הסדרים שקולים בזמן נסיעה</div>`;
+    body.innerHTML=`<div style="display:flex;gap:10px;flex-wrap:wrap;">${col('📋 נוכחי',cur)}${col('✨ מוצע',prop)}</div>${deltaLine}
+      ${prop.dropped_tasks&&prop.dropped_tasks.length?`<div class="alert alert-amber" style="margin-top:6px;">בסדר המוצע ${prop.dropped_tasks.length} קריאות לא נכנסות ליום</div>`:''}`;
+    _shadowCtx={techId,date,result:prop,sentEpoch:null};
+    if(delta>0&&!(prop.dropped_tasks||[]).length)document.getElementById('shadow-apply-btn').style.display='';
+  }catch(e){
+    console.warn('[shadow] compare failed:',e);
+    body.innerHTML='<div class="alert alert-amber">לא ניתן לחשב השוואה כעת — בדוק שהאופטימייזר זמין ונסה שוב.</div>';
+  }
+}
+function applyShadowProposal(){
+  if(!_shadowCtx)return;
+  const {techId,date,result}=_shadowCtx;
+  const dayTasks=tasks.filter(t=>String(t.techId)===String(techId)&&t.date===date&&t.status!=='cancelled'&&t.time);
+  const {applied}=applySequenceResult(dayTasks,result,1,1); // explicit user action — no epoch race
+  if(applied){
+    (async()=>{for(const t of dayTasks){await saveTaskToSupabase(t);}})();
+    _seqTraces[`${techId}|${date}`]=result.trace||{};
+    showToast('הסדר המוצע הוחל ✓');
+    closeMo('mo-shadow');renderPlannerContent();
+  }
+  _shadowCtx=null;
+}
 // ═════════════════════════════════════════════════════════════════════════════
 function getCityIndexInZone(city,zoneId,baseCity){
   const z=zones.find(x=>x.id===zoneId);if(!z)return 999;
@@ -7042,7 +7123,8 @@ function renderPlannerDaily(days){
   // Optimize button
   const scheduledForOpt=dayTechTasks.filter(t=>t.time&&t.status!=='cancelled');
   const canOpt=CONFIG.OPTIMIZER_URL&&scheduledForOpt.length>=2&&ds>=todayStr();
-  const optBtn=canOpt?`<button id="opt-btn-${tech.id}-${ds}" onclick="runOptimize('${tech.id}','${ds}')" style="display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--blue-l);border:1px solid var(--blue);border-radius:6px;font-size:0.8rem;color:var(--blue-d);font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer;">🔀 מסלול מיטבי</button>`:'';
+  const shadowBtn=(canOpt&&typeof currentUserSuperAdmin!=='undefined'&&currentUserSuperAdmin)?`<button onclick="shadowCompare('${tech.id}','${ds}')" style="display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--white);border:1px dashed var(--blue);border-radius:6px;font-size:0.8rem;color:var(--blue-d);font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer;">🔍 השוואת מסלול</button>`:'';
+  const optBtn=(canOpt?`<button id="opt-btn-${tech.id}-${ds}" onclick="runOptimize('${tech.id}','${ds}')" style="display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--blue-l);border:1px solid var(--blue);border-radius:6px;font-size:0.8rem;color:var(--blue-d);font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer;">🔀 מסלול מיטבי</button>`:'')+shadowBtn;
   // Unscheduled section
   const unschedHtml=unscheduled.length?`<div style="margin-top:12px;padding:10px 12px;background:var(--white);border-radius:8px;border:1px solid var(--line);">
     <div style="font-size:0.72rem;font-weight:800;color:var(--ink-3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.4px;">ממתין לשיבוץ (${unscheduled.length})</div>
