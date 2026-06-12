@@ -234,7 +234,14 @@ The OR-Tools optimizer is the **single source of truth** for a tech-day's order 
 
 **Quota honesty:** with the cache active, the daily Google counter charges only **actual** fetches (cache hits are free); legacy path unchanged.
 
-Rollout: enable per tenant via `config.features.auto_sequence`. PureWater stays OFF until the B3 shadow-compare. Deferred to B3: weekly cross-tech balance, gap-fill suggestions, `updated_at` optimistic versioning, lock/unlock UI, **and wiring `route_strategy` as a bias into `solve_route_v2`** — v2 today is pure min-drive: verified live, it ordered באר שבע→דימונה (95 drive-min) where the far→near heuristic gave דימונה→באר שבע (118). Less fuel, but inverts PureWater's far-first habit — exactly the trade-off the shadow-compare must show Israel before enablement.
+Rollout: enable per tenant via `config.features.auto_sequence`. PureWater stays OFF until the shadow-compare sign-off. Still deferred: lock/unlock UI (drag-to-pin).
+
+### B3 additions ✅ implemented 2026-06-12
+- **`route_strategy` honored in the solver** — physics-grounded: for `far_to_near` (no explicit return city) the **drive home counts in COST but not in work-hours** (separate cost/time callbacks), so min-drive naturally ends near base = far→near; a ≤3-min depot-departure nudge breaks exact closed-tour ties toward starting far. `flexible` keeps end-at-last-client (pure min-drive may start near — by design). Strategy flows: tenant config → `sequenceDay` POST `scheduling.route_strategy` → `SchedulingConfig` → `solve_route_v2`.
+- **Weekly balance** (`balanceAdjust`, `scheduling.balance {enabled,weight}`): partial days beat opening empty future days, across techs (the "Michael-Sunday rule"). Wired into `_candidatesZone` + `_candidatesOpen`; absent = today's behavior.
+- **Gap-fill suggestions** (`rankGapFill`): cancelling a future task surfaces the 5 nearest pending tasks (toast, non-blocking; auto-assign is a future `gap_fill.auto`).
+- **Shadow-compare** (super_admin, daily view "🔍 השוואת מסלול"): two read-only `/optimize` calls — all-pinned (current cost) vs free (proposal) — side-by-side with per-leg drives and a fuel delta; one-click apply only when the proposal saves time and drops nothing. **This is PureWater's go/no-go gate.**
+- **Optimistic versioning**: `sequenceDay` re-checks `tasks.updated_at` before persisting; concurrent edit ⇒ abort + re-sequence. Dormant until `outputs/migration-tasks-updated-at_2026-06-12.sql` runs.
 
 ## Batch Scheduler (June 2026) ✅ implemented 2026-06-08
 
