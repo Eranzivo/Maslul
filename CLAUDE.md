@@ -54,6 +54,6 @@ Eran (infomaslul@gmail.com) → Maslul Admin → 🔀 PureWater chip to imperson
 ---
 
 ## 🔴 Urgent
-- [ ] **Railway upgrade** — trial expires **2026-06-12**. Upgrade to Hobby $5/mo at railway.app or optimizer goes down.
+- [ ] **Railway env var** — add `SUPABASE_SERVICE_KEY` (service_role secret) in Railway → Variables to activate the drive-time cache (`gmaps-cached` mode). Railway plan upgraded to Hobby ✓ 2026-06-12.
 
 Full backlog + milestone log → `context/backlog.md`
