@@ -115,6 +115,10 @@ async def geocode(req: GeocodeRequest):
     api_key = os.getenv("GOOGLE_MAPS_API_KEY")
     if not api_key:
         raise HTTPException(status_code=503, detail="Maps key not configured")
+    # Meter geocoding under the same daily counter (counts as 10 elements per call) so an
+    # unauthenticated caller can't burn unbounded Google spend (CORS doesn't stop server-to-server).
+    if not _gmaps_quota_ok(10):
+        raise HTTPException(status_code=429, detail="Daily geocoding quota reached")
     full_address = f"{req.street}, {req.city}, ישראל"
     try:
         async with httpx.AsyncClient(timeout=5) as client:
@@ -146,7 +150,11 @@ async def optimize(req: OptimizeRequest):
         if not use_gmaps:
             print(f"[quota] daily limit reached ({_DAILY_LIMIT} elements) — falling back to haversine")
 
-    result = await optimize_routes(req.technicians, google_maps_key if use_gmaps else None)
+    result = await optimize_routes(
+        req.technicians,
+        google_maps_key if use_gmaps else None,
+        service_key=os.getenv("SUPABASE_SERVICE_KEY", ""),
+    )
 
     return {
         "date": req.date,

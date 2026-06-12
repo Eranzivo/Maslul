@@ -116,6 +116,7 @@ Core functions: `findBestSlot()` / `buildCandidates()`
 ## Route Optimization Backend
 - OR-Tools TSP solver on Railway (FastAPI)
 - Builds distance matrix via Google Maps Distance Matrix API (real drive times) or haversine fallback
+- **Drive-time cache (`route_cache`, June 2026):** cached legs are reused across calls — only new city/coord pairs hit Google (bounded by `GMAPS_DAILY_ELEMENT_LIMIT`). Makes always-on real-drive-time sequencing (Plan B2) affordable. See `context/architecture.md` → Drive-Time Cache
 - Returns ordered task list with estimated arrival times
 - Triggered by "🔀 מסלול מיטבי" button when tech has 2+ tasks today
 

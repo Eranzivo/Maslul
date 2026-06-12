@@ -3,6 +3,7 @@ import httpx
 from typing import Optional
 from ortools.constraint_solver import routing_enums_pb2, pywrapcp
 from cities import get_coords
+import route_cache
 
 
 # ── Distance helpers ──────────────────────────────────────────────────────────
@@ -87,6 +88,41 @@ async def build_matrix_gmaps(locations: list[str], api_key: str) -> list[list[in
                 lat1, lon1 = _parse_loc(locations[i])
                 lat2, lon2 = _parse_loc(locations[j])
                 matrix[i][j] = km_to_minutes(haversine_km(lat1, lon1, lat2, lon2))
+    return matrix
+
+
+async def build_matrix_cached(locations: list[str], api_key: str, service_key: str) -> list[list[int]]:
+    """Cache-first travel matrix: reuse cached legs, fetch only misses from Google
+    (trust-checked before storing), fall back to haversine for anything still missing.
+    A fully-warm cache performs zero Google calls."""
+    keys = [route_cache.norm_key(l) for l in locations]
+    hits, misses = route_cache.split_hits_misses(locations, service_key)
+    n = len(locations)
+    matrix = [[0] * n for _ in range(n)]
+    new_rows = []
+    # Fetch a Google matrix only when something is actually missing.
+    gmatrix = None
+    if misses and api_key:
+        gmatrix = await build_matrix_gmaps(locations, api_key)
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                continue
+            pair = (keys[i], keys[j])
+            if pair in hits:
+                matrix[i][j] = hits[pair]
+                continue
+            lat1, lon1 = _parse_loc(locations[i])
+            lat2, lon2 = _parse_loc(locations[j])
+            straight_km = haversine_km(lat1, lon1, lat2, lon2)
+            hav = km_to_minutes(straight_km)
+            if gmatrix is not None and route_cache.is_trustworthy(gmatrix[i][j], straight_km):
+                matrix[i][j] = gmatrix[i][j]
+                new_rows.append({"from_key": keys[i], "to_key": keys[j],
+                                 "drive_minutes": gmatrix[i][j], "source": "google"})
+            else:
+                matrix[i][j] = hav
+    route_cache.put_cached(new_rows, service_key)
     return matrix
 
 
@@ -214,7 +250,7 @@ def solve_route(
 
 # ── Public entry point ────────────────────────────────────────────────────────
 
-async def optimize_routes(technicians: list, google_maps_api_key: Optional[str]) -> list[dict]:
+async def optimize_routes(technicians: list, google_maps_api_key: Optional[str], service_key: str = "") -> list[dict]:
     results = []
 
     for tech in technicians:
@@ -233,7 +269,12 @@ async def optimize_routes(technicians: list, google_maps_api_key: Optional[str])
         locations = [tech.base_city] + task_locs + ([return_loc] if return_loc else [])
         durations = [t.duration_minutes for t in tech.tasks]
 
-        if google_maps_api_key:
+        if service_key:
+            # Cache-first: cached legs are reused even when Google is unavailable/quota-blocked
+            # (api_key None → misses fall back to haversine, hits still use real drive times).
+            matrix = await build_matrix_cached(locations, google_maps_api_key, service_key)
+            mode = 'gmaps-cached' if google_maps_api_key else 'local-cached'
+        elif google_maps_api_key:
             matrix = await build_matrix_gmaps(locations, google_maps_api_key)
             mode = 'gmaps'
         else:
