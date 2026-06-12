@@ -24,6 +24,7 @@
 | `defaults.max_daily_jobs` | 9 | per tech per day |
 | `defaults.work_start` / `work_end` | 07:00 / 18:00 | per-tech `weekly_schedule` can override |
 | Features | whatsapp, google_maps (distance matrix), geocoding (enabled 2026-06-07) | `tenants.config.features` |
+| `features.auto_sequence` | **OFF** (absent) | Authoritative auto-sequencing stays off for PureWater until the B3 dry-run shadow-compare validates routes against the live schedule |
 
 ## Zones & rotation
 9 city-list zones covering Israel (דרום · לוד-אשדוד · נהריה-חיפה · תל אביב והסביבה · ראש העין והסביבה · ירושלים · זכרון-הרצליה · יקנעם-נתניה · קריית שמונה-עפולה); all 3 techs start from the Ashkelon depot (`base_city = אשקלון`). Day-of-week rotation (0=Sun … 4=Thu; Fri/Sat off):

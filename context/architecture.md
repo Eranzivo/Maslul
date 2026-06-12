@@ -78,7 +78,7 @@
 | `super_admin` | Eran only — cross-tenant admin, wizard, enter-as-tenant |
 
 ## Route Optimization Backend
-- POST `/optimize` — builds distance matrix, runs OR-Tools TSP solver, returns ordered tasks with arrival times
+- POST `/optimize` — builds distance matrix, runs OR-Tools solver, returns ordered tasks with arrival times. **v2 (June 2026):** `Task` accepts `window_start`/`window_end` (hard customer window), `locked` (pinned, never dropped); `Technician` accepts `breaks` (`[{from,to}]`). Response adds `dropped_tasks` (over-full day → tray), `conflict` (locked-vs-locked), and `trace` (`{taskId: {prev, drive_minutes}}`). Solver: `solve_route_v2` — arrivals read from the Time dimension (handles waiting); no return-city ⇒ day ends at last client
 - POST `/batch-schedule` — auto-assigns all pending tasks for a tenant across a date range; respects zone rotation, fill-first, equal city distribution; runs OR-Tools per tech-day; protected by `Bearer SUPABASE_SERVICE_KEY`. Implemented in `backend/batch_schedule.py`.
 - Distance matrix: Google Maps Distance Matrix API if key set, else haversine. Batch scheduler always uses haversine (city-level only tasks).
 - Location priority per task: **geocoded lat/lon** → **street + city string** → **city name only**

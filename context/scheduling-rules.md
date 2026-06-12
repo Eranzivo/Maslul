@@ -214,6 +214,28 @@ Customers receive a **3-hour arrival window** (e.g., 07:00–10:00), not an exac
 - Unscheduled tasks (no time, no window): listed below the grid in "ממתין לשיבוץ" section
 - One tech at a time — tech tabs at top of daily view
 
+## Authoritative Auto-Sequencing (`features.auto_sequence`) ✅ implemented 2026-06-12
+
+The OR-Tools optimizer is the **single source of truth** for a tech-day's order and times when the flag is on (default OFF — absent flag = zero behavior change).
+
+**The seam:** every task mutation (dispatch confirm, cancel, cancel+replace, edit/move) calls `markDayDirty(techId, date)` — the ONLY integration point. It debounces ~1s per tech-day, bumps an **epoch counter**, and calls `sequenceDay`:
+1. Gather the day's non-cancelled tasks (needs ≥2); build payload via `buildSequencePayload` (pure, tested)
+2. POST `/optimize` with breaks (`getTechPartialBlocks`), per-task hard windows, and `locked` pins
+3. Apply via `applySequenceResult` (pure) **only if the epoch still matches** — stale replies discarded
+4. Persist each task awaited (`saveTaskToSupabase`); partial failure leaves the day dirty for retry
+5. Render trace + clear badge. On optimizer failure: amber **"טעון אופטימיזציה"** badge, day keeps heuristic order, never blocks
+
+**Constraint semantics (backend `solve_route_v2`):**
+- `locked` + time ⇒ pinned exactly, **never moved, never dropped**; two conflicting locked tasks ⇒ `conflict:true` → coordinator toast "שתי קריאות נעולות מתנגשות"
+- `window_start/window_end` ⇒ hard customer window; the solver may insert **waiting** (arrivals come from the Time dimension, not accumulation)
+- Tech breaks ⇒ zero-travel pinned pseudo-nodes — no task overlaps a break
+- Over-full day ⇒ flexible tasks are **dropped to the pending tray** (Hebrew toast "היום מלא — N קריאות הוחזרו"), never silently lost; no return-city ⇒ the day ends at the last client (return leg costs no work time)
+- Response includes a per-stop **decision trace** (`prev` city + `drive_minutes`) shown in the daily view (🚗 X דק׳ מ-Y); 🔒 marks locked tasks
+
+**Quota honesty:** with the cache active, the daily Google counter charges only **actual** fetches (cache hits are free); legacy path unchanged.
+
+Rollout: enable per tenant via `config.features.auto_sequence`. PureWater stays OFF until the B3 shadow-compare. Deferred to B3: weekly cross-tech balance, gap-fill suggestions, `updated_at` optimistic versioning, lock/unlock UI.
+
 ## Batch Scheduler (June 2026) ✅ implemented 2026-06-08
 
 POST `/batch-schedule` on the Railway backend auto-assigns all pending tasks for a tenant across a date range.
