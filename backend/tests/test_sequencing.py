@@ -63,6 +63,32 @@ def test_locked_is_never_dropped():
     assert r["dropped"] == [0]        # flexible was dropped
 
 
+def test_far_to_near_counts_return_home_and_prefers_far_first():
+    # far_to_near models the (unpaid) drive home: closed-tour costs are symmetric here
+    # (near-first 10+20+30=60 == far-first 30+20+10=60), so the tie-break must pick FAR first.
+    m = [[0, 10, 30], [10, 0, 20], [30, 20, 0]]
+    tasks = base_tasks()
+    r = solve_route_v2(m, tasks, "07:00", "18:00", breaks=[], route_strategy="far_to_near")
+    assert r["ordered"][0] == 1  # farther-from-depot first
+
+
+def test_far_to_near_bias_never_overrides_big_savings():
+    # asymmetric return: near-first closed tour = 10+35+15 = 60, far-first = 40+35+10 = 85
+    # → min-drive must still win despite the far-first preference.
+    m = [[0, 10, 40], [10, 0, 35], [15, 35, 0]]
+    tasks = base_tasks()
+    r = solve_route_v2(m, tasks, "07:00", "18:00", breaks=[], route_strategy="far_to_near")
+    assert r["ordered"][0] == 0  # cheaper route preserved despite bias
+
+
+def test_flexible_keeps_open_end_semantics():
+    # flexible (default) ends at the last client: near-first open cost 10+20=30 beats far-first 30+20=50
+    m = [[0, 10, 30], [10, 0, 20], [30, 20, 0]]
+    tasks = base_tasks()
+    r = solve_route_v2(m, tasks, "07:00", "18:00", breaks=[], route_strategy="flexible")
+    assert r["ordered"][0] == 0
+
+
 def test_break_blocks_time():
     # 12:00-13:00 break: no task may overlap the break window
     tasks = base_tasks()

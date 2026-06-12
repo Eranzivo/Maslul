@@ -257,7 +257,7 @@ def solve_route(
 
 
 def solve_route_v2(matrix, tasks, start_time_str, end_time_str, breaks,
-                   return_node: bool = False):
+                   return_node: bool = False, route_strategy: str = "flexible"):
     """Constraint-aware single-vehicle solver (Plan B2).
 
     matrix: (n_tasks+1[+1]) square travel-minutes matrix, node 0 = start depot,
@@ -290,14 +290,33 @@ def solve_route_v2(matrix, tasks, start_time_str, end_time_str, breaks,
     for _ in brk_specs:
         full.append([0] * n_nodes)
 
+    # ── Cost vs Time matrices ─────────────────────────────────────────────────
+    # cost_m drives the objective (what we minimize); time_m drives the work-hours
+    # dimension. They differ on the return-to-base leg:
+    #   flexible/nearest_first, no return city → day ends at the last client:
+    #       return arcs are zero in BOTH (current B2 behavior).
+    #   far_to_near, no return city → the tech still DRIVES HOME (unpaid): the return
+    #       leg counts in COST (so the tour naturally ends near base ⇒ far→near) but
+    #       NOT in work-hours. Plus a tiny depot-departure bias to break exact ties
+    #       toward starting far (closed-tour costs are direction-symmetric).
+    time_m = [row[:] for row in full]
+    cost_m = [row[:] for row in full]
+    if not return_node:
+        for r in range(n_nodes):
+            time_m[r][0] = 0
+        if route_strategy == "far_to_near":
+            depot_d = [full[0][j] for j in range(1, n_tasks + 1)]
+            max_d = max(depot_d) or 1
+            for j in range(1, n_tasks + 1):
+                closeness = (max_d - full[0][j]) / max_d  # 1 = nearest, 0 = farthest
+                cost_m[0][j] += int(round(3 * closeness))  # ≤3 min nudge — tie-break only
+        else:
+            for r in range(n_nodes):
+                cost_m[r][0] = 0
+
     if return_node:
         manager = pywrapcp.RoutingIndexManager(n_nodes, 1, [0], [base_n - 1])
     else:
-        # No explicit return city: the workday ends at the LAST CLIENT, not back at base.
-        # Zero the arcs into the virtual end-depot (node 0) so the return leg costs nothing
-        # and doesn't eat work-hours (the last job itself must still finish within the day).
-        for r in range(n_nodes):
-            full[r][0] = 0
         manager = pywrapcp.RoutingIndexManager(n_nodes, 1, 0)
     routing = pywrapcp.RoutingModel(manager)
 
@@ -309,14 +328,19 @@ def solve_route_v2(matrix, tasks, start_time_str, end_time_str, breaks,
             return spec["to_min"] - spec["from_min"]
         return 0
 
-    def transit_cb(fi, ti):
+    def cost_cb(fi, ti):
         f, t = manager.IndexToNode(fi), manager.IndexToNode(ti)
-        return node_duration(f) + full[f][t]
+        return node_duration(f) + cost_m[f][t]
 
-    cb = routing.RegisterTransitCallback(transit_cb)
-    routing.SetArcCostEvaluatorOfAllVehicles(cb)
+    def time_cb(fi, ti):
+        f, t = manager.IndexToNode(fi), manager.IndexToNode(ti)
+        return node_duration(f) + time_m[f][t]
+
+    cost_idx = routing.RegisterTransitCallback(cost_cb)
+    routing.SetArcCostEvaluatorOfAllVehicles(cost_idx)
+    time_idx = routing.RegisterTransitCallback(time_cb)
     horizon = max(1, end_min - start_min)
-    routing.AddDimension(cb, horizon, horizon, False, 'Time')  # slack = waiting allowed
+    routing.AddDimension(time_idx, horizon, horizon, False, 'Time')  # slack = waiting allowed
     time_dim = routing.GetDimensionOrDie('Time')
 
     # ── Per-task constraints (Time cumul is minutes-from-day-start) ──
@@ -378,7 +402,8 @@ def solve_route_v2(matrix, tasks, start_time_str, end_time_str, breaks,
 
 # ── Public entry point ────────────────────────────────────────────────────────
 
-async def optimize_routes(technicians: list, google_maps_api_key: Optional[str], service_key: str = "") -> list[dict]:
+async def optimize_routes(technicians: list, google_maps_api_key: Optional[str], service_key: str = "",
+                          route_strategy: str = "flexible") -> list[dict]:
     global LAST_GOOGLE_ELEMENTS
     LAST_GOOGLE_ELEMENTS = 0
     results = []
@@ -420,7 +445,8 @@ async def optimize_routes(technicians: list, google_maps_api_key: Optional[str],
         } for t in tech.tasks]
         r = solve_route_v2(matrix, v2_tasks, tech.start_time, tech.end_time,
                            breaks=getattr(tech, "breaks", []) or [],
-                           return_node=bool(return_loc))
+                           return_node=bool(return_loc),
+                           route_strategy=route_strategy)
         ordered_idx, arrivals = r["ordered"], r["arrivals"]
 
         ordered_task_ids = [tech.tasks[i].id for i in ordered_idx]

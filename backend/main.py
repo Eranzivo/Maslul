@@ -93,6 +93,7 @@ class SchedulingConfig(BaseModel):
     zone_strict: bool = True
     fill_first: bool = True
     route_logic: bool = True
+    route_strategy: str = "flexible"   # flexible | far_to_near | nearest_first
 
 class OptimizeRequest(BaseModel):
     date: str
@@ -110,8 +111,9 @@ def health():
     return {
         "status": "ok",
         "service": "maslul-optimizer",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "gmaps": "configured" if gmaps_key else "missing — using haversine fallback",
+        "route_cache": "configured" if os.getenv("SUPABASE_SERVICE_KEY") else "missing SUPABASE_SERVICE_KEY — optimizer works but never caches",
         "daily_elements_used": used,
         "daily_elements_limit": _DAILY_LIMIT,
         "daily_elements_remaining": max(0, _DAILY_LIMIT - used),
@@ -166,6 +168,7 @@ async def optimize(req: OptimizeRequest):
         req.technicians,
         google_maps_key if use_gmaps else None,
         service_key=service_key,
+        route_strategy=(req.scheduling.route_strategy if req.scheduling else "flexible"),
     )
     if service_key and optimizer_module.LAST_GOOGLE_ELEMENTS:
         _gmaps_quota_ok(optimizer_module.LAST_GOOGLE_ELEMENTS)  # charge real spend
