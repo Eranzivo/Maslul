@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from typing import Optional
 from dotenv import load_dotenv
 from optimizer import optimize_routes
+import optimizer as optimizer_module
 from batch_schedule import run_batch_schedule
 
 load_dotenv()
@@ -33,14 +34,18 @@ _counter: dict = {"day": None, "elements": 0}
 # the limit independently, so effective daily limit = _DAILY_LIMIT × worker_count.
 # Hobby plan runs 1 worker by default; set RAILWAY_NUMREPLICAS=1 to be explicit.
 
-def _gmaps_quota_ok(elements_needed: int) -> bool:
+def _gmaps_quota_ok(elements_needed: int, charge: bool = True) -> bool:
+    """charge=True consumes quota; charge=False only checks headroom (peek).
+    The cache path peeks first and charges ACTUAL Google fetches afterwards —
+    cache hits must not consume quota."""
     today = str(date.today())
     if _counter["day"] != today:
         _counter["day"] = today
         _counter["elements"] = 0
     if _counter["elements"] + elements_needed > _DAILY_LIMIT:
         return False
-    _counter["elements"] += elements_needed
+    if charge:
+        _counter["elements"] += elements_needed
     return True
 
 def _total_elements(technicians) -> int:
@@ -62,6 +67,9 @@ class Task(BaseModel):
     lon: Optional[float] = None
     duration_minutes: int = 30
     scheduled_time: Optional[str] = None
+    window_start: Optional[str] = None   # hard customer window (e.g. "08:00")
+    window_end: Optional[str] = None
+    locked: bool = False                 # pinned by coordinator — never moved/dropped
 
 
 class Technician(BaseModel):
@@ -71,6 +79,7 @@ class Technician(BaseModel):
     return_city: Optional[str] = None
     start_time: str = "07:00"
     end_time: str = "18:00"
+    breaks: list[dict] = []              # [{"from":"12:00","to":"13:00"}]
     tasks: list[Task] = []
 
 
@@ -141,20 +150,25 @@ async def optimize(req: OptimizeRequest):
         raise HTTPException(status_code=400, detail="No technicians provided")
 
     google_maps_key = os.getenv("GOOGLE_MAPS_API_KEY") or None
+    service_key = os.getenv("SUPABASE_SERVICE_KEY", "")
 
-    # Only use Google Maps if key is set AND daily quota has headroom
+    # Only use Google Maps if key is set AND daily quota has headroom.
+    # Cache path: PEEK here, charge actual fetches after (cache hits are free).
+    # Legacy path (no service key): pre-charge as before.
     use_gmaps = False
     if google_maps_key:
         needed = _total_elements(req.technicians)
-        use_gmaps = _gmaps_quota_ok(needed)
+        use_gmaps = _gmaps_quota_ok(needed, charge=not service_key)
         if not use_gmaps:
             print(f"[quota] daily limit reached ({_DAILY_LIMIT} elements) — falling back to haversine")
 
     result = await optimize_routes(
         req.technicians,
         google_maps_key if use_gmaps else None,
-        service_key=os.getenv("SUPABASE_SERVICE_KEY", ""),
+        service_key=service_key,
     )
+    if service_key and optimizer_module.LAST_GOOGLE_ELEMENTS:
+        _gmaps_quota_ok(optimizer_module.LAST_GOOGLE_ELEMENTS)  # charge real spend
 
     return {
         "date": req.date,

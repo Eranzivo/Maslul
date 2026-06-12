@@ -91,10 +91,17 @@ async def build_matrix_gmaps(locations: list[str], api_key: str) -> list[list[in
     return matrix
 
 
+# Telemetry: elements actually fetched from Google by the LAST optimize_routes call.
+# Read by main.py to charge the daily quota for real spend only (cache hits are free).
+# Single-worker telemetry — a concurrent-request race only skews the count, never spend.
+LAST_GOOGLE_ELEMENTS = 0
+
+
 async def build_matrix_cached(locations: list[str], api_key: str, service_key: str) -> list[list[int]]:
     """Cache-first travel matrix: reuse cached legs, fetch only misses from Google
     (trust-checked before storing), fall back to haversine for anything still missing.
     A fully-warm cache performs zero Google calls."""
+    global LAST_GOOGLE_ELEMENTS
     keys = [route_cache.norm_key(l) for l in locations]
     hits, misses = route_cache.split_hits_misses(locations, service_key)
     n = len(locations)
@@ -104,6 +111,7 @@ async def build_matrix_cached(locations: list[str], api_key: str, service_key: s
     gmatrix = None
     if misses and api_key:
         gmatrix = await build_matrix_gmaps(locations, api_key)
+        LAST_GOOGLE_ELEMENTS += n * n
     for i in range(n):
         for j in range(n):
             if i == j:
@@ -371,6 +379,8 @@ def solve_route_v2(matrix, tasks, start_time_str, end_time_str, breaks,
 # ── Public entry point ────────────────────────────────────────────────────────
 
 async def optimize_routes(technicians: list, google_maps_api_key: Optional[str], service_key: str = "") -> list[dict]:
+    global LAST_GOOGLE_ELEMENTS
+    LAST_GOOGLE_ELEMENTS = 0
     results = []
 
     for tech in technicians:
@@ -401,34 +411,35 @@ async def optimize_routes(technicians: list, google_maps_api_key: Optional[str],
             matrix = build_matrix_local(locations)
             mode = 'local'
 
-        ordered_idx, arrivals = solve_route(
-            base_city=tech.base_city,
-            task_cities=[t.city for t in tech.tasks],
-            task_durations=durations,
-            matrix=matrix,
-            start_time_str=tech.start_time,
-            end_time_str=tech.end_time,
-            return_city=return_loc,
-        )
+        v2_tasks = [{
+            "duration": t.duration_minutes,
+            "window_start": getattr(t, "window_start", None),
+            "window_end": getattr(t, "window_end", None),
+            "locked": getattr(t, "locked", False),
+            "scheduled_time": t.scheduled_time,
+        } for t in tech.tasks]
+        r = solve_route_v2(matrix, v2_tasks, tech.start_time, tech.end_time,
+                           breaks=getattr(tech, "breaks", []) or [],
+                           return_node=bool(return_loc))
+        ordered_idx, arrivals = r["ordered"], r["arrivals"]
 
         ordered_task_ids = [tech.tasks[i].id for i in ordered_idx]
         time_map = {tech.tasks[i].id: min_to_time(arr) for i, arr in zip(ordered_idx, arrivals)}
 
-        # Total drive time (start depot → tasks → end depot)
-        total_drive = 0
-        prev_node = 0
-        for idx in ordered_idx:
-            total_drive += matrix[prev_node][idx + 1]
-            prev_node = idx + 1
-        if return_loc and ordered_idx:
-            end_node_idx = len(tech.tasks) + 1  # last row in matrix = return city
-            total_drive += matrix[prev_node][end_node_idx]
+        # Per-stop decision trace: where the tech came from + how long the drive was.
+        trace = {}
+        for k, i in enumerate(ordered_idx):
+            prev_city = tech.tasks[ordered_idx[k - 1]].city if k > 0 else tech.base_city
+            trace[tech.tasks[i].id] = {"prev": prev_city, "drive_minutes": r["legs"][k]}
 
         results.append({
             'technician_id': tech.id,
             'ordered_tasks': ordered_task_ids,
             'estimated_times': time_map,
-            'total_drive_minutes': total_drive,
+            'dropped_tasks': [tech.tasks[i].id for i in r["dropped"]],
+            'conflict': r.get("conflict", False),
+            'trace': trace,
+            'total_drive_minutes': sum(r["legs"]),
             'mode': mode,
         })
 
