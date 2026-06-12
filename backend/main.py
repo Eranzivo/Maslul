@@ -111,8 +111,9 @@ def health():
     return {
         "status": "ok",
         "service": "maslul-optimizer",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "gmaps": "configured" if gmaps_key else "missing — using haversine fallback",
+        "route_cache": "configured" if os.getenv("SUPABASE_SERVICE_KEY") else "missing SUPABASE_SERVICE_KEY — optimizer works but never caches",
         "daily_elements_used": used,
         "daily_elements_limit": _DAILY_LIMIT,
         "daily_elements_remaining": max(0, _DAILY_LIMIT - used),
