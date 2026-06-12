@@ -242,7 +242,7 @@ All writes go through `dbUpsert` / `dbInsert` — never raw `sb.from().insert()`
 The UI adapts to `tenants.config.scheduling.mode`. Predicate: `usesZones(sc)` (pure, in the `// <sched-logic>` markers) + `appUsesZones()` wrapper (reads live `tenantConfig`). `applyLabels()` sets `document.body.dataset.zoneMode = 'zone'|'none'`, and CSS `body[data-zone-mode="none"] .zone-only{display:none}` hides zone UI — the settings **אזורים** nav (desktop + mobile) and the tech-modal rotation grid. Behavior guards (`appUsesZones()`) cover: `saveTech` rotation requirement, `checkSpecificDate` zone filter, `showNoResult`/`findNextSlot` copy, and the batch-import "תקן אזורים" CTA. `open`/`radius` tenants see no zone concepts (address → auto-assign); `mode` absent or `'zone'` = unchanged. The onboarding wizard's "מודל שיבוץ" picker (`wc-mode`) writes `scheduling.mode`.
 
 ## Terminology / Labels System
-All user-visible entity names come from `tenantLabels` — never hardcoded. Call `L('key')` anywhere in JS.
+All user-visible entity names come from `tenantLabels` — never hardcoded. Call `LBL('key')` anywhere in JS. (**Renamed from `L()` 2026-06-11** — global `L` belongs to Leaflet; never name anything `L`. See DEVELOPER.md gotchas.)
 
 | Key | Default | Example override |
 |---|---|---|

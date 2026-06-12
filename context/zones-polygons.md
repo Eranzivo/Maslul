@@ -104,17 +104,7 @@ When needed: modify `isCityInTechZone` to accept lat/lon, check polygon containm
 
 ## PureWater Zone Setup (Israel)
 
-9 zones covering Israel, 3 technicians, day-of-week rotation:
-
-| Day | אלירן | בני | מיכאל |
-|---|---|---|---|
-| Sun | שפלה | שרון | ירושלים |
-| Mon | ירושלים | שפלה | שרון |
-| Tue | שרון | ירושלים | שפלה |
-| Wed | נגב | מרכז | דן |
-| Thu | דן | נגב | מרכז |
-
-Setup SQL: `outputs/migration-purewater-zone-cities_2026-06-06.sql`
+9 zones covering Israel, 3 technicians, day-of-week rotation. **The authoritative rotation table lives in `context/clients/purewater.md`** (single source — keep one copy only). Re-link SQL if zones are ever re-created: `outputs/migration-purewater-rotation_2026-06-11.sql`. City lists: `outputs/migration-purewater-zone-cities_2026-06-06.sql`
 
 ---
 

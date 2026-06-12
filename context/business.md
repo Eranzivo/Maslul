@@ -4,7 +4,7 @@
 **Name:** Maslul (מסלול)
 **What it does:** A smart scheduling engine for small Israeli businesses with field workers. Replaces manual management via WhatsApp and Google Sheets. The coordinator enters a city and category — the system calculates who the technician is, when, and why.
 **Target audience:** Small Israeli businesses with 2–20 field workers — installers, technicians, delivery drivers, cleaners.
-**First client:** Israel (PureWater) — garbage disposal + hot/cold water tap installer. 4 technicians. Uses Odoo v19.
+**First client:** Israel (PureWater) — garbage disposal + hot/cold water tap installer. 3 technicians (אלירן, בני, מיכאל). Uses Odoo v19.
 **Main marketing channel:** Facebook groups for small Israeli businesses, direct outreach.
 
 ## Tone

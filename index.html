@@ -2704,7 +2704,9 @@ function _walWrite(table, row) {
   if (!row.id) return null;
   try {
     const wal = JSON.parse(localStorage.getItem(_WAL_KEY) || '{}');
-    wal[`${table}:${row.id}`] = { table, row, ts: Date.now() };
+    // Capture the tenant at WRITE time. Replaying with the live currentTenantId would
+    // re-stamp rows edited under impersonation onto the wrong tenant (super_admin bypasses RLS).
+    wal[`${table}:${row.id}`] = { table, row, tenantId: currentTenantId, ts: Date.now() };
     localStorage.setItem(_WAL_KEY, JSON.stringify(wal));
     return `${table}:${row.id}`;
   } catch(e) { return null; }
@@ -2725,12 +2727,13 @@ async function _replayWAL() {
     if (!entries.length) return;
     console.log(`[WAL] replaying ${entries.length} pending save(s)`);
     let ok = 0, fail = 0;
-    for (const [key, {table, row}] of entries) {
+    for (const [key, {table, row, tenantId}] of entries) {
       try {
         // Wrap each upsert in a 5-second timeout so a hanging network call
         // never blocks the entire app load indefinitely.
         const timeout = new Promise((_,rej) => setTimeout(() => rej(new Error('WAL replay timeout')), 5000));
-        const upsert  = sb.from(table).upsert({ ...row, tenant_id: currentTenantId }, { onConflict: 'id' });
+        // Use the tenant captured at write time (pre-capture entries fall back to current).
+        const upsert  = sb.from(table).upsert({ ...row, tenant_id: tenantId || currentTenantId }, { onConflict: 'id' });
         const { error } = await Promise.race([upsert, timeout]);
         if (!error) { _walClear(key); ok++; }
         else { console.warn('[WAL] replay failed:', table, row.id, error.message); fail++; }
