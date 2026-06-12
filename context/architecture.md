@@ -301,6 +301,15 @@ Set `CONFIG.DEMO_MODE = true` (or `?demo=1`, `?demo=cleaning`, `?demo=delivery` 
 - Limit via `GMAPS_DAILY_ELEMENT_LIMIT` env var (default 1200 elements/day ≈ 15 optimizations for 4 techs)
 - Falls back to haversine silently when limit hit; `/health` endpoint reports usage
 - Free tier: 40,000 elements/month → 1200/day uses ~36,000/month, within free
+- **`/geocode` is metered under the same counter** (10 elements/call, returns 429 when exhausted) — closed an unauthenticated-spend gap (CORS doesn't stop server-to-server calls)
+
+### Drive-Time Cache (`route_cache`) — June 2026
+- **Global** table (drive times are tenant-independent), **backend-only** via service key — RLS enabled with no policies, so anon/authenticated are denied. Migration: `outputs/migration-route-cache_2026-06-11.sql`
+- `backend/route_cache.py`: `norm_key` (coords → 4 dp, cities trimmed), `get_cached`/`put_cached` (best-effort, **fail-open** — cache errors never break optimization), `split_hits_misses`
+- `optimizer.build_matrix_cached`: cached legs reused first (**even when Google is quota-blocked** — mode `local-cached`), only misses fetched from Google, results **trust-checked** before storing
+- **Trust bound is physics-based**: floor = straight-line km at 110 km/h (NOT the 35 km/h city heuristic — that wrongly rejects real intercity highway legs); cap = 10× the 35 km/h estimate. Untrusted legs → haversine, not cached
+- After warm-up nearly every leg is a hit → near-zero ongoing Google spend; `/optimize` reports mode `gmaps-cached` / `local-cached`
+- Tests: `backend/tests/test_route_cache.py` + `test_matrix_cached.py` (run with local Python 3.12: `python -m pytest tests/ -q` in `backend/`)
 
 ### Bulk Task Import
 - Modal `#mo-bulk-import` — user pastes one `street, city` row per line
