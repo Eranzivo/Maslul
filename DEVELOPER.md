@@ -233,6 +233,8 @@ A "🔀 מסלול מיטבי" button appears on home tech cards when the tech h
 | `PORT` | `8080` |
 | `ALLOWED_ORIGINS` | `https://eranzivo.github.io` |
 | `GOOGLE_MAPS_API_KEY` | set — Distance Matrix API enabled on Google Cloud |
+| `SUPABASE_SERVICE_KEY` | **required since 2026-06-12** — service_role secret (Supabase → Settings → API). Powers the `route_cache` drive-time cache (`gmaps-cached` mode) and `/batch-schedule` auth. Without it the optimizer still works but never caches (`mode:"gmaps"`). |
+| `GMAPS_DAILY_ELEMENT_LIMIT` | optional, default `1200` |
 
 ---
 

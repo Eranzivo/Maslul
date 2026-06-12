@@ -234,7 +234,7 @@ The OR-Tools optimizer is the **single source of truth** for a tech-day's order 
 
 **Quota honesty:** with the cache active, the daily Google counter charges only **actual** fetches (cache hits are free); legacy path unchanged.
 
-Rollout: enable per tenant via `config.features.auto_sequence`. PureWater stays OFF until the B3 shadow-compare. Deferred to B3: weekly cross-tech balance, gap-fill suggestions, `updated_at` optimistic versioning, lock/unlock UI.
+Rollout: enable per tenant via `config.features.auto_sequence`. PureWater stays OFF until the B3 shadow-compare. Deferred to B3: weekly cross-tech balance, gap-fill suggestions, `updated_at` optimistic versioning, lock/unlock UI, **and wiring `route_strategy` as a bias into `solve_route_v2`** — v2 today is pure min-drive: verified live, it ordered באר שבע→דימונה (95 drive-min) where the far→near heuristic gave דימונה→באר שבע (118). Less fuel, but inverts PureWater's far-first habit — exactly the trade-off the shadow-compare must show Israel before enablement.
 
 ## Batch Scheduler (June 2026) ✅ implemented 2026-06-08
 
