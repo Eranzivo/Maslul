@@ -49,9 +49,9 @@ def test_haversine_tel_aviv_jerusalem():
     assert 50 < d < 65, f"Expected ~55 km, got {d:.1f}"
 
 def test_haversine_tel_aviv_eilat():
-    # ~330 km straight-line
+    # ~282 km straight-line (the ~330 km figure is the ROAD distance; haversine is shorter)
     d = haversine_km(32.0853, 34.7818, 29.5569, 34.9519)
-    assert 300 < d < 360, f"Expected ~330 km, got {d:.1f}"
+    assert 260 < d < 300, f"Expected ~282 km straight-line, got {d:.1f}"
 
 def test_km_to_minutes_minimum():
     assert km_to_minutes(0.1) == 3  # clamps to minimum

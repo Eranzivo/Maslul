@@ -11,18 +11,24 @@ def test_norm_key_passes_city_names_through_trimmed():
     assert rc.norm_key("  תל אביב ") == "תל אביב"
 
 
-def test_trust_rejects_below_haversine_floor():
-    # google 2 min between points ~20 km apart (haversine floor ~34 min) → distrust
-    assert rc.is_trustworthy(google_min=2, haversine_min=34) is False
+def test_trust_rejects_below_physical_floor():
+    # 2 minutes for 20 straight-line km would require >600 km/h → distrust
+    assert rc.is_trustworthy(google_min=2, straight_km=20) is False
 
 
 def test_trust_rejects_absurdly_high():
-    # > 10x the haversine floor → distrust (bad API row)
-    assert rc.is_trustworthy(google_min=400, haversine_min=34) is False
+    # 20 km: cap = (20/35*60)*10 ≈ 340 min → 400 is a bad API row
+    assert rc.is_trustworthy(google_min=400, straight_km=20) is False
 
 
 def test_trust_accepts_plausible():
-    assert rc.is_trustworthy(google_min=40, haversine_min=34) is True
+    assert rc.is_trustworthy(google_min=40, straight_km=20) is True
+
+
+def test_trust_accepts_fast_intercity_highway_leg():
+    # TLV→Haifa: ~85 straight km, Google ~70-80 min — much faster than the 35 km/h
+    # heuristic (~145 min) but entirely real. Must NOT be rejected.
+    assert rc.is_trustworthy(google_min=75, straight_km=85) is True
 
 
 def test_assemble_matrix_uses_cache_then_marks_misses(monkeypatch):

@@ -27,14 +27,15 @@ def norm_key(loc: str) -> str:
     return s
 
 
-def is_trustworthy(google_min: int, haversine_min: int) -> bool:
+def is_trustworthy(google_min: int, straight_km: float) -> bool:
     """Reject implausible Google legs that would poison the cache forever.
-    A real drive can't beat the straight-line floor, and >10x it is absurd."""
-    if google_min < max(1, int(haversine_min * 0.6)):
-        return False
-    if google_min > haversine_min * 10:
-        return False
-    return True
+    Floor: nobody covers the straight-line distance faster than ~110 km/h highway driving.
+    Cap: more than 10x the conservative 35 km/h estimate is absurd (bad API row).
+    NOTE: the floor must be physics-based (highway speed), NOT the 35 km/h city heuristic —
+    real intercity legs are routinely much faster than that heuristic."""
+    floor = max(1, int(straight_km / 110 * 60))
+    cap = max(3, int(straight_km / 35 * 60)) * 10
+    return floor <= google_min <= cap
 
 
 # ── Supabase REST I/O (best-effort, fail-open) ────────────────────────────────
