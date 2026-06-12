@@ -91,10 +91,17 @@ async def build_matrix_gmaps(locations: list[str], api_key: str) -> list[list[in
     return matrix
 
 
+# Telemetry: elements actually fetched from Google by the LAST optimize_routes call.
+# Read by main.py to charge the daily quota for real spend only (cache hits are free).
+# Single-worker telemetry — a concurrent-request race only skews the count, never spend.
+LAST_GOOGLE_ELEMENTS = 0
+
+
 async def build_matrix_cached(locations: list[str], api_key: str, service_key: str) -> list[list[int]]:
     """Cache-first travel matrix: reuse cached legs, fetch only misses from Google
     (trust-checked before storing), fall back to haversine for anything still missing.
     A fully-warm cache performs zero Google calls."""
+    global LAST_GOOGLE_ELEMENTS
     keys = [route_cache.norm_key(l) for l in locations]
     hits, misses = route_cache.split_hits_misses(locations, service_key)
     n = len(locations)
@@ -104,6 +111,7 @@ async def build_matrix_cached(locations: list[str], api_key: str, service_key: s
     gmatrix = None
     if misses and api_key:
         gmatrix = await build_matrix_gmaps(locations, api_key)
+        LAST_GOOGLE_ELEMENTS += n * n
     for i in range(n):
         for j in range(n):
             if i == j:
@@ -248,9 +256,131 @@ def solve_route(
     return ordered, arrivals
 
 
+def solve_route_v2(matrix, tasks, start_time_str, end_time_str, breaks,
+                   return_node: bool = False):
+    """Constraint-aware single-vehicle solver (Plan B2).
+
+    matrix: (n_tasks+1[+1]) square travel-minutes matrix, node 0 = start depot,
+            nodes 1..n = tasks (same order as `tasks`), optional last node = end depot.
+    tasks:  [{duration, window_start, window_end, locked, scheduled_time}]
+    breaks: [{"from": "12:00", "to": "13:00"}] — modeled as zero-travel pinned pseudo-tasks.
+
+    Semantics:
+      - locked + scheduled_time → pinned to that exact start time, never dropped
+      - window_start/window_end → hard customer window; the solver may WAIT to honor it
+      - flexible tasks get a disjunction: an over-full day DROPS them (returned in
+        "dropped") instead of failing the whole solve
+      - arrivals come from the Time dimension (includes solver-inserted waiting)
+
+    Returns {"ordered": [task_idx...], "arrivals": [abs-minute...],
+             "dropped": [task_idx...], "legs": [drive-min-from-prev-stop...],
+             "conflict": bool (locked tasks were mutually infeasible)}.
+    """
+    n_tasks = len(tasks)
+    start_min = time_to_min(start_time_str)
+    end_min = time_to_min(end_time_str)
+    if n_tasks == 0:
+        return {"ordered": [], "arrivals": [], "dropped": [], "legs": [], "conflict": False}
+
+    # ── Append break pseudo-nodes: zero travel to/from everywhere, pinned window ──
+    brk_specs = [{"from_min": time_to_min(b["from"]), "to_min": time_to_min(b["to"])} for b in (breaks or [])]
+    base_n = len(matrix)
+    n_nodes = base_n + len(brk_specs)
+    full = [row[:] + [0] * len(brk_specs) for row in matrix]
+    for _ in brk_specs:
+        full.append([0] * n_nodes)
+
+    if return_node:
+        manager = pywrapcp.RoutingIndexManager(n_nodes, 1, [0], [base_n - 1])
+    else:
+        # No explicit return city: the workday ends at the LAST CLIENT, not back at base.
+        # Zero the arcs into the virtual end-depot (node 0) so the return leg costs nothing
+        # and doesn't eat work-hours (the last job itself must still finish within the day).
+        for r in range(n_nodes):
+            full[r][0] = 0
+        manager = pywrapcp.RoutingIndexManager(n_nodes, 1, 0)
+    routing = pywrapcp.RoutingModel(manager)
+
+    def node_duration(node):
+        if 1 <= node <= n_tasks:
+            return tasks[node - 1]["duration"]
+        if node >= base_n:  # break pseudo-node
+            spec = brk_specs[node - base_n]
+            return spec["to_min"] - spec["from_min"]
+        return 0
+
+    def transit_cb(fi, ti):
+        f, t = manager.IndexToNode(fi), manager.IndexToNode(ti)
+        return node_duration(f) + full[f][t]
+
+    cb = routing.RegisterTransitCallback(transit_cb)
+    routing.SetArcCostEvaluatorOfAllVehicles(cb)
+    horizon = max(1, end_min - start_min)
+    routing.AddDimension(cb, horizon, horizon, False, 'Time')  # slack = waiting allowed
+    time_dim = routing.GetDimensionOrDie('Time')
+
+    # ── Per-task constraints (Time cumul is minutes-from-day-start) ──
+    for i, t in enumerate(tasks):
+        idx = manager.NodeToIndex(i + 1)
+        lo, hi = 0, max(0, horizon - t["duration"])
+        if t.get("window_start"):
+            lo = max(lo, time_to_min(t["window_start"]) - start_min)
+        if t.get("window_end"):
+            # must START early enough to finish inside the window
+            hi = min(hi, time_to_min(t["window_end"]) - start_min - t["duration"])
+        if t.get("locked") and t.get("scheduled_time"):
+            pin = time_to_min(t["scheduled_time"]) - start_min
+            lo = hi = max(0, pin)
+        if hi < lo:
+            hi = lo  # impossible window → keep model solvable; disjunction drops it
+        time_dim.CumulVar(idx).SetRange(lo, hi)
+        if not (t.get("locked") and t.get("scheduled_time")):
+            # Droppable: huge penalty so dropping is a last resort, never an unsolvable model
+            routing.AddDisjunction([idx], 100000)
+
+    # Break pseudo-nodes: mandatory, pinned to their window start
+    for b_i, spec in enumerate(brk_specs):
+        idx = manager.NodeToIndex(base_n + b_i)
+        pin = max(0, spec["from_min"] - start_min)
+        time_dim.CumulVar(idx).SetRange(pin, pin)
+
+    params = pywrapcp.DefaultRoutingSearchParameters()
+    params.first_solution_strategy = routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
+    params.local_search_metaheuristic = routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+    params.time_limit.seconds = 5
+    solution = routing.SolveWithParameters(params)
+
+    if not solution:
+        # Rare with disjunctions — e.g. two locked tasks that physically conflict.
+        locked_idx = [i for i, t in enumerate(tasks) if t.get("locked") and t.get("scheduled_time")]
+        flex_idx = [i for i in range(n_tasks) if i not in locked_idx]
+        return {"ordered": locked_idx,
+                "arrivals": [time_to_min(tasks[i]["scheduled_time"]) for i in locked_idx],
+                "dropped": flex_idx, "legs": [0] * len(locked_idx), "conflict": True}
+
+    ordered, arrivals, legs = [], [], []
+    index = routing.Start(0)
+    prev_node = manager.IndexToNode(index)
+    while not routing.IsEnd(index):
+        node = manager.IndexToNode(index)
+        if 1 <= node <= n_tasks:
+            ordered.append(node - 1)
+            # Arrival from the Time dimension — includes solver-inserted waiting
+            arrivals.append(start_min + solution.Value(time_dim.CumulVar(index)))
+            legs.append(full[prev_node][node])
+            prev_node = node
+        index = solution.Value(routing.NextVar(index))
+
+    visited = set(ordered)
+    dropped = [i for i in range(n_tasks) if i not in visited]
+    return {"ordered": ordered, "arrivals": arrivals, "dropped": dropped, "legs": legs, "conflict": False}
+
+
 # ── Public entry point ────────────────────────────────────────────────────────
 
 async def optimize_routes(technicians: list, google_maps_api_key: Optional[str], service_key: str = "") -> list[dict]:
+    global LAST_GOOGLE_ELEMENTS
+    LAST_GOOGLE_ELEMENTS = 0
     results = []
 
     for tech in technicians:
@@ -281,34 +411,35 @@ async def optimize_routes(technicians: list, google_maps_api_key: Optional[str],
             matrix = build_matrix_local(locations)
             mode = 'local'
 
-        ordered_idx, arrivals = solve_route(
-            base_city=tech.base_city,
-            task_cities=[t.city for t in tech.tasks],
-            task_durations=durations,
-            matrix=matrix,
-            start_time_str=tech.start_time,
-            end_time_str=tech.end_time,
-            return_city=return_loc,
-        )
+        v2_tasks = [{
+            "duration": t.duration_minutes,
+            "window_start": getattr(t, "window_start", None),
+            "window_end": getattr(t, "window_end", None),
+            "locked": getattr(t, "locked", False),
+            "scheduled_time": t.scheduled_time,
+        } for t in tech.tasks]
+        r = solve_route_v2(matrix, v2_tasks, tech.start_time, tech.end_time,
+                           breaks=getattr(tech, "breaks", []) or [],
+                           return_node=bool(return_loc))
+        ordered_idx, arrivals = r["ordered"], r["arrivals"]
 
         ordered_task_ids = [tech.tasks[i].id for i in ordered_idx]
         time_map = {tech.tasks[i].id: min_to_time(arr) for i, arr in zip(ordered_idx, arrivals)}
 
-        # Total drive time (start depot → tasks → end depot)
-        total_drive = 0
-        prev_node = 0
-        for idx in ordered_idx:
-            total_drive += matrix[prev_node][idx + 1]
-            prev_node = idx + 1
-        if return_loc and ordered_idx:
-            end_node_idx = len(tech.tasks) + 1  # last row in matrix = return city
-            total_drive += matrix[prev_node][end_node_idx]
+        # Per-stop decision trace: where the tech came from + how long the drive was.
+        trace = {}
+        for k, i in enumerate(ordered_idx):
+            prev_city = tech.tasks[ordered_idx[k - 1]].city if k > 0 else tech.base_city
+            trace[tech.tasks[i].id] = {"prev": prev_city, "drive_minutes": r["legs"][k]}
 
         results.append({
             'technician_id': tech.id,
             'ordered_tasks': ordered_task_ids,
             'estimated_times': time_map,
-            'total_drive_minutes': total_drive,
+            'dropped_tasks': [tech.tasks[i].id for i in r["dropped"]],
+            'conflict': r.get("conflict", False),
+            'trace': trace,
+            'total_drive_minutes': sum(r["legs"]),
             'mode': mode,
         })
 

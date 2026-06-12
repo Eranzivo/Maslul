@@ -4720,10 +4720,89 @@ function splitLockedFlexible(dayTasks){
   for(const t of (dayTasks||[])){ (t && t.locked ? locked : flexible).push(t); }
   return {locked, flexible};
 }
+// Build the /optimize v2 task payload from in-memory tasks. durationOf(task) → minutes.
+function buildSequencePayload(dayTasks, durationOf){
+  return (dayTasks||[]).map(t=>({
+    id:String(t.id), city:t.city, address:t.street||null,
+    lat:t.lat||null, lon:t.lon||null,
+    duration_minutes:durationOf(t),
+    scheduled_time:t.time||null,
+    window_start:t.windowStart||null, window_end:t.windowEnd||null,
+    locked:!!t.locked,
+  }));
+}
+// Apply an /optimize result to in-memory tasks IF the epoch still matches.
+// Locked tasks are never moved. Returns {applied, dropped} — caller persists + renders.
+function applySequenceResult(dayTasks, result, sentEpoch, currentEpoch){
+  if(sentEpoch!==currentEpoch) return {applied:false, dropped:[]};
+  const times=(result&&result.estimated_times)||{};
+  for(const t of (dayTasks||[])){
+    const nt=times[String(t.id)];
+    if(nt && !t.locked) t.time=nt;
+  }
+  return {applied:true, dropped:(result&&result.dropped_tasks)||[]};
+}
 // True when this tenant uses zones (mode 'zone' or absent). open/radius ⇒ no zones.
 function usesZones(sc){ return ((sc && sc.mode) || 'zone') === 'zone'; }
 // </sched-logic>
 function appUsesZones(){ return usesZones(tenantConfig && tenantConfig.scheduling); }
+// ═══ AUTO-SEQUENCING SEAM (features.auto_sequence) ═══════════════════════════
+// markDayDirty(techId,date) is the ONLY entry point other code calls after a task
+// mutation. Debounced per tech-day; an epoch counter discards stale optimizer replies.
+// Feature OFF (default) ⇒ complete no-op — today's behavior exactly.
+const _seqEpochs={}, _seqTimers={}, _seqTraces={};
+function _autoSeqOn(){ return !!(tenantConfig&&tenantConfig.features&&tenantConfig.features.auto_sequence) && !!CONFIG.OPTIMIZER_URL; }
+function markDayDirty(techId,date){
+  if(!_autoSeqOn()||!techId||!date) return;
+  const k=`${techId}|${date}`;
+  _seqEpochs[k]=(_seqEpochs[k]||0)+1;
+  clearTimeout(_seqTimers[k]);
+  _seqTimers[k]=setTimeout(()=>sequenceDay(techId,date),1000);
+}
+async function sequenceDay(techId,date){
+  const k=`${techId}|${date}`, sentEpoch=_seqEpochs[k];
+  const tech=technicians.find(t=>String(t.id)===String(techId)); if(!tech) return;
+  const dayTasks=tasks.filter(t=>String(t.techId)===String(techId)&&t.date===date&&t.status!=='cancelled');
+  if(dayTasks.length<2) return;
+  const durationOf=(t)=>{const c=categories.find(c=>c.id===t.catId);return (tech.durationOverrides||{})[t.catId]||(c&&c.time)||settings.regularTime||30;};
+  const sched=getTechDaySchedule(tech,date);
+  const brk=getTechPartialBlocks(tech,date).map(b=>({from:minsToTime(b.from),to:minsToTime(b.to)}));
+  try{
+    const res=await fetch(`${CONFIG.OPTIMIZER_URL}/optimize`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({date,technicians:[{id:String(tech.id),name:tech.name,
+        base_city:(tech.address&&tech.base)?`${tech.address}, ${tech.base}`:(tech.base||''),
+        return_city:tech.return_city||tech.base||'',
+        start_time:sched.start||'07:00',end_time:sched.end||'18:00',breaks:brk,
+        tasks:buildSequencePayload(dayTasks,durationOf)}]})});
+    if(!res.ok) throw new Error('optimizer '+res.status);
+    const data=await res.json(); const r=(data.optimized||[])[0]; if(!r) return;
+    const {applied,dropped}=applySequenceResult(dayTasks,r,sentEpoch,_seqEpochs[k]);
+    if(!applied) return; // a newer edit superseded this reply — discard
+    // Persist sequentially, awaited — a partial failure leaves the day dirty for retry
+    for(const t of dayTasks){ await saveTaskToSupabase(t); }
+    _seqTraces[k]=r.trace||{};
+    if(dropped.length) _seqDropToTray(dropped);
+    if(r.conflict) showToast('⚠️ שתי קריאות נעולות מתנגשות — יש לשחרר אחת מהן','error');
+    _seqSetBadge(techId,date,false);
+    const _pp=document.getElementById('page-planner');
+    if(_pp&&!_pp.classList.contains('hidden')) renderPlannerContent();
+    renderTasks&&renderTasks();
+  }catch(e){
+    console.warn('[seq] optimizer unreachable — day keeps heuristic order:',e);
+    _seqSetBadge(techId,date,true); // "טעון אופטימיזציה" — re-tries on the next mutation
+  }
+}
+function _seqDropToTray(ids){
+  let n=0;
+  for(const id of ids){const t=tasks.find(x=>String(x.id)===String(id));
+    if(t&&!t.locked){t.status='pending';t.techId=null;t.date='';t.time='';t.windowStart='';t.windowEnd='';saveTaskToSupabase(t);n++;}}
+  if(n){save();showToast(`היום מלא — ${n} קריאות הוחזרו לרשימת הממתינות`,'error');}
+}
+function _seqSetBadge(techId,date,on){
+  const el=document.getElementById(`seq-badge-${techId}-${date}`);
+  if(el)el.style.display=on?'inline-block':'none';
+}
+// ═════════════════════════════════════════════════════════════════════════════
 function getCityIndexInZone(city,zoneId,baseCity){
   const z=zones.find(x=>x.id===zoneId);if(!z)return 999;
   const nc=normalizeCity(city);
@@ -5444,6 +5523,9 @@ async function confirmAssign(idx,assignId){
     newTask=qt;save();
     saved=await saveTaskToSupabase(qt);
     if(!saved)Object.assign(qt,_orig); // roll back in-memory state on failure
+    // Task moved tech/day: the day it LEFT also needs re-sequencing (tightens the hole)
+    if(saved&&_orig.techId&&_orig.date&&(String(_orig.techId)!==String(qt.techId)||_orig.date!==qt.date))
+      markDayDirty(_orig.techId,_orig.date);
     window._queueTask=null;
   } else {
     newTask={id:nextTaskId++,client,phone,city,street,floor,apartment,entranceNotes,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,windowStart:slot.start,windowEnd:slot.end,notes,assignId,preferredWindows:[...prefWindows],lat:_gc?.lat||null,lon:_gc?.lon||null,geocodedAt:_gcAt};
@@ -5472,6 +5554,7 @@ async function confirmAssign(idx,assignId){
   document.getElementById('recur-section').classList.remove('hidden');
   document.getElementById('dispatch-success').classList.remove('hidden');
   renderPendingQueue(); // refresh queue after assignment
+  markDayDirty(c.tech.id, c.date.str); // auto-sequence the receiving day (no-op when feature off)
 }
 function clearDispatch(){
   document.getElementById('dispatch-search-card').style.opacity='1';
@@ -5688,7 +5771,7 @@ function openCancelModal(taskId){
 }
 function cancelOnly(){
   const t=tasks.find(x=>String(x.id)===String(cancelTaskId));
-  if(t){t.status='cancelled';t.cancelledAt=new Date().toISOString();saveTaskToSupabase(t);}
+  if(t){t.status='cancelled';t.cancelledAt=new Date().toISOString();saveTaskToSupabase(t);markDayDirty(t.techId,t.date);}
   save();renderTasks();renderHomeTechCards();closeMo('mo-cancel');
 }
 function windowMatchScore(task,time){
@@ -5712,6 +5795,7 @@ function cancelAndReplace(){
   })[0];
   replaceSuggestion={cancelledTask:t,replacement:best,freedSlot:{time:t.time,date:t.date}};
   t.status='cancelled';t.cancelledAt=new Date().toISOString();
+  saveTaskToSupabase(t);markDayDirty(t.techId,t.date);
   save();closeMo('mo-cancel');
   const winMatch=windowMatchScore(best,t.time)>0;
   document.getElementById('replace-suggestion').innerHTML=`
@@ -5737,6 +5821,7 @@ function confirmReplace(){
   replacement.assignId=genId();
   nextTaskId++;
   saveTaskToSupabase(replacement);
+  markDayDirty(replacement.techId,replacement.date);
   save();renderTasks();renderHomeTechCards();closeMo('mo-replace');
   replaceSuggestion=null;
 }
@@ -6909,12 +6994,14 @@ function renderPlannerDaily(days){
     const top=topMins*PX;
     const height=Math.max(32,heightMins*PX);
     const label=hasWin?`${first.windowStart} — ${first.windowEnd}`:first.time;
+    const _trc=_seqTraces[`${tech.id}|${ds}`]||{};
     const rows=grp.map(t=>`<div onclick="openTaskDetail('${t.id}')" style="padding:3px 0;cursor:pointer;border-bottom:1px solid ${tc}18;border-radius:3px;transition:background 0.1s;" onmouseover="this.style.background='${tc}14'" onmouseout="this.style.background=''">
       <div style="display:flex;align-items:center;gap:5px;">
         <span style="width:6px;height:6px;border-radius:50%;background:${statusFg[t.status]||tc};flex-shrink:0;box-shadow:0 0 0 2px ${(statusFg[t.status]||tc)}30;"></span>
-        <span style="font-size:0.69rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${h(t.client||'—')}</span>
+        <span style="font-size:0.69rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${t.locked?'🔒 ':''}${h(t.client||'—')}</span>
         <span style="font-size:0.63rem;color:var(--ink-3);font-weight:600;">${t.time||''}</span>
       </div>
+      ${_trc[String(t.id)]?`<div style="font-size:0.6rem;color:var(--ink-4);padding-right:11px;margin-top:1px;">🚗 ${_trc[String(t.id)].drive_minutes} דק׳ מ-${h(_trc[String(t.id)].prev)}</div>`:''}
       ${t.notes?`<div style="font-size:0.6rem;color:var(--ink-3);padding-right:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;">📝 ${h(t.notes)}</div>`:''}
     </div>`).join('');
     return`<div style="position:absolute;top:${top}px;left:${labelW+6}px;right:6px;height:${height}px;background:${tc}0D;border:1px solid ${tc}30;border-right:4px solid ${tc};border-radius:6px;padding:6px 10px 5px 7px;overflow:hidden;box-sizing:border-box;z-index:2;box-shadow:0 2px 6px rgba(0,0,0,0.09);">
@@ -6939,7 +7026,8 @@ function renderPlannerDaily(days){
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${dayTabs}</div>
     ${techTabs?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${techTabs}</div>`:''}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <div style="font-size:0.8rem;color:var(--ink-3);">${scheduledForOpt.length} קריאות${unscheduled.length?' • <span style="color:var(--amber);">'+unscheduled.length+' ממתינות</span>':''}</div>
+      <div style="font-size:0.8rem;color:var(--ink-3);">${scheduledForOpt.length} קריאות${unscheduled.length?' • <span style="color:var(--amber);">'+unscheduled.length+' ממתינות</span>':''}
+        <span id="seq-badge-${tech.id}-${ds}" style="display:none;margin-right:8px;padding:2px 8px;background:#FEF3C7;color:#92400E;border-radius:10px;font-size:0.68rem;font-weight:700;">טעון אופטימיזציה</span></div>
       ${optBtn}
     </div>
     <div style="position:relative;height:${gridH}px;background:var(--white);border-radius:8px;border:1px solid var(--line);overflow:hidden;">
