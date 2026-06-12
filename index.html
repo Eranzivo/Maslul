@@ -4720,6 +4720,28 @@ function splitLockedFlexible(dayTasks){
   for(const t of (dayTasks||[])){ (t && t.locked ? locked : flexible).push(t); }
   return {locked, flexible};
 }
+// Build the /optimize v2 task payload from in-memory tasks. durationOf(task) → minutes.
+function buildSequencePayload(dayTasks, durationOf){
+  return (dayTasks||[]).map(t=>({
+    id:String(t.id), city:t.city, address:t.street||null,
+    lat:t.lat||null, lon:t.lon||null,
+    duration_minutes:durationOf(t),
+    scheduled_time:t.time||null,
+    window_start:t.windowStart||null, window_end:t.windowEnd||null,
+    locked:!!t.locked,
+  }));
+}
+// Apply an /optimize result to in-memory tasks IF the epoch still matches.
+// Locked tasks are never moved. Returns {applied, dropped} — caller persists + renders.
+function applySequenceResult(dayTasks, result, sentEpoch, currentEpoch){
+  if(sentEpoch!==currentEpoch) return {applied:false, dropped:[]};
+  const times=(result&&result.estimated_times)||{};
+  for(const t of (dayTasks||[])){
+    const nt=times[String(t.id)];
+    if(nt && !t.locked) t.time=nt;
+  }
+  return {applied:true, dropped:(result&&result.dropped_tasks)||[]};
+}
 // True when this tenant uses zones (mode 'zone' or absent). open/radius ⇒ no zones.
 function usesZones(sc){ return ((sc && sc.mode) || 'zone') === 'zone'; }
 // </sched-logic>

@@ -68,5 +68,32 @@ suite('usesZones', () => {
   check('mode radius → false', ctx.usesZones({mode:'radius'}) === false);
 });
 
+suite('buildSequencePayload', () => {
+  const tasks=[
+    {id:1, city:'א', street:'הרצל 1', time:'09:00', windowStart:'08:00', windowEnd:'11:00', locked:true,  catId:null, lat:32.1, lon:34.8},
+    {id:2, city:'ב', time:'',      windowStart:'',      windowEnd:'',      locked:false, catId:null},
+  ];
+  const p = ctx.buildSequencePayload(tasks, t=>30);
+  check('locked carries scheduled_time', p[0].locked===true && p[0].scheduled_time==='09:00');
+  check('windows map to snake_case', p[0].window_start==='08:00' && p[0].window_end==='11:00');
+  check('empty window → null', p[1].window_start===null && p[1].window_end===null);
+  check('duration from resolver', p[0].duration_minutes===30);
+  check('ids stringified + coords carried', p[0].id==='1' && p[0].lat===32.1);
+});
+
+suite('applySequenceResult (epoch guard)', () => {
+  const tasks=[{id:'1',time:'07:00',locked:false},{id:'2',time:'08:00',locked:false}];
+  const res={ordered_tasks:['2','1'],estimated_times:{'1':'10:00','2':'07:30'},dropped_tasks:[]};
+  const out = ctx.applySequenceResult(tasks,res, /*sentEpoch*/3, /*currentEpoch*/3);
+  check('applies times when epoch matches', out.applied===true && tasks[0].time==='10:00' && tasks[1].time==='07:30');
+  const out2 = ctx.applySequenceResult(tasks,{...res,estimated_times:{'1':'12:00','2':'12:30'}}, 3, /*newer*/4);
+  check('stale epoch discarded', out2.applied===false && tasks[0].time==='10:00');
+  const out3 = ctx.applySequenceResult(tasks,{...res,dropped_tasks:['2']}, 5, 5);
+  check('dropped ids surfaced', out3.dropped.length===1 && out3.dropped[0]==='2');
+  const lockedTasks=[{id:'9',time:'09:00',locked:true}];
+  ctx.applySequenceResult(lockedTasks,{estimated_times:{'9':'11:00'},dropped_tasks:[]},1,1);
+  check('locked task time never moved', lockedTasks[0].time==='09:00');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
