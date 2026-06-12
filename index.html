@@ -4769,7 +4769,7 @@ async function sequenceDay(techId,date){
   const brk=getTechPartialBlocks(tech,date).map(b=>({from:minsToTime(b.from),to:minsToTime(b.to)}));
   try{
     const res=await fetch(`${CONFIG.OPTIMIZER_URL}/optimize`,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({date,technicians:[{id:String(tech.id),name:tech.name,
+      body:JSON.stringify({date,scheduling:{route_strategy:resolveRouteStrategy(tenantConfig.scheduling)},technicians:[{id:String(tech.id),name:tech.name,
         base_city:(tech.address&&tech.base)?`${tech.address}, ${tech.base}`:(tech.base||''),
         return_city:tech.return_city||tech.base||'',
         start_time:sched.start||'07:00',end_time:sched.end||'18:00',breaks:brk,
