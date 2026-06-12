@@ -4741,6 +4741,16 @@ function balanceAdjust(balanceConf, c){
   const emptyLatePenalty = c.dayLoad === 0 ? Math.min(c.dateOffset, 6) * (w / 10) : 0;
   return fillBonus - emptyLatePenalty;
 }
+// Rank pending tasks for a freed slot by detour distance (cheapest insertion, v1: city
+// proximity to the freed stop). Caller supplies distanceOf(cityA, cityB) → km/min.
+function rankGapFill(freedSlot, pendingTasks, distanceOf){
+  return (pendingTasks||[])
+    .filter(t=>t.status==='pending')
+    .map(t=>({t, d:distanceOf(freedSlot.city, t.city)}))
+    .sort((a,b)=>a.d-b.d)
+    .slice(0,5)
+    .map(x=>x.t);
+}
 // Apply an /optimize result to in-memory tasks IF the epoch still matches.
 // Locked tasks are never moved. Returns {applied, dropped} — caller persists + renders.
 function applySequenceResult(dayTasks, result, sentEpoch, currentEpoch){
@@ -5783,7 +5793,15 @@ function openCancelModal(taskId){
 }
 function cancelOnly(){
   const t=tasks.find(x=>String(x.id)===String(cancelTaskId));
-  if(t){t.status='cancelled';t.cancelledAt=new Date().toISOString();saveTaskToSupabase(t);markDayDirty(t.techId,t.date);}
+  if(t){
+    t.status='cancelled';t.cancelledAt=new Date().toISOString();saveTaskToSupabase(t);markDayDirty(t.techId,t.date);
+    // Gap-fill suggestion: surface the nearest pending tasks that could take the freed slot
+    if(_autoSeqOn()&&t.date&&t.date>=todayStr()){
+      const _dist=(c1,c2)=>{const d=_cityDistKm(normalizeCity(c1||''),normalizeCity(c2||''));return d==null?9999:d;};
+      const sugg=rankGapFill({techId:t.techId,date:t.date,time:t.time,city:t.city},tasks,_dist);
+      if(sugg.length)showToast(`התפנה חריץ ב-${t.city} — ${sugg.length} קריאות ממתינות מתאימות בלוח השיבוץ`,'info');
+    }
+  }
   save();renderTasks();renderHomeTechCards();closeMo('mo-cancel');
 }
 function windowMatchScore(task,time){

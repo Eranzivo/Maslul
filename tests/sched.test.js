@@ -107,5 +107,21 @@ suite('balanceAdjust', () => {
     ctx.balanceAdjust({enabled:true,weight:50}, {dayLoad:0, dateOffset:6}));
 });
 
+suite('rankGapFill', () => {
+  const freed={techId:'T',date:'2026-06-15',time:'09:00',city:'באר שבע'};
+  const pending=[
+    {id:'a',status:'pending',city:'באר שבע'},
+    {id:'b',status:'pending',city:'קריית שמונה'},
+    {id:'c',status:'assigned',city:'באר שבע'},
+    {id:'d',status:'pending',city:'דימונה'},
+  ];
+  const dist=(c1,c2)=>c1===c2?0:(c1==='דימונה'||c2==='דימונה')?40:300;
+  const ranked=ctx.rankGapFill(freed,pending,dist);
+  check('same-city pending ranks first', ranked[0]&&ranked[0].id==='a');
+  check('nearby city second', ranked[1]&&ranked[1].id==='d');
+  check('non-pending excluded', !ranked.some(t=>t.id==='c'));
+  check('caps at 5', ctx.rankGapFill(freed,Array.from({length:9},(_,i)=>({id:i,status:'pending',city:'x'})),()=>1).length===5);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
