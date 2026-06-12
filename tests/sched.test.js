@@ -95,5 +95,17 @@ suite('applySequenceResult (epoch guard)', () => {
   check('locked task time never moved', lockedTasks[0].time==='09:00');
 });
 
+suite('balanceAdjust', () => {
+  // candidate A: day already has 3 tasks (partial) → bonus; candidate B: empty day later → penalty
+  check('partial day beats empty later day',
+    ctx.balanceAdjust({enabled:true,weight:50}, {dayLoad:3, dateOffset:0}) >
+    ctx.balanceAdjust({enabled:true,weight:50}, {dayLoad:0, dateOffset:4}));
+  check('disabled → 0', ctx.balanceAdjust({enabled:false,weight:50}, {dayLoad:3, dateOffset:0}) === 0);
+  check('absent config → 0', ctx.balanceAdjust(undefined, {dayLoad:3, dateOffset:0}) === 0);
+  check('empty today is neutral-ish vs empty far future',
+    ctx.balanceAdjust({enabled:true,weight:50}, {dayLoad:0, dateOffset:0}) >
+    ctx.balanceAdjust({enabled:true,weight:50}, {dayLoad:0, dateOffset:6}));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

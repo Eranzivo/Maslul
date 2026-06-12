@@ -4731,6 +4731,16 @@ function buildSequencePayload(dayTasks, durationOf){
     locked:!!t.locked,
   }));
 }
+// Cross-tech fill-before-open ("the Michael-Sunday rule"): reward candidates landing on
+// already-active days, penalize opening empty days further in the future. Config-gated by
+// scheduling.balance {enabled, weight} — absent/disabled ⇒ 0 ⇒ today's behavior exactly.
+function balanceAdjust(balanceConf, c){
+  if(!balanceConf || !balanceConf.enabled) return 0;
+  const w = balanceConf.weight || 50;
+  const fillBonus = c.dayLoad > 0 ? w : 0;
+  const emptyLatePenalty = c.dayLoad === 0 ? Math.min(c.dateOffset, 6) * (w / 10) : 0;
+  return fillBonus - emptyLatePenalty;
+}
 // Apply an /optimize result to in-memory tasks IF the epoch still matches.
 // Locked tasks are never moved. Returns {applied, dropped} — caller persists + renders.
 function applySequenceResult(dayTasks, result, sentEpoch, currentEpoch){
@@ -4996,6 +5006,7 @@ function _candidatesZone(city,catId,dates,sc){
       if(routeLogic&&wouldBacktrack(tech,date.str,city))continue;
       const existingInZone=tasks.filter(t=>t.techId===tech.id&&t.date===date.str&&getCityZone(t.city)?.id===getTechZoneId(tech,date.str)&&t.status!=='cancelled').length;
       let fillScore=existingInZone*100+load;
+      fillScore+=balanceAdjust(sc.balance,{dayLoad:load,dateOffset:dates.indexOf(date)});
       // ── Equal city distribution: penalise techs already holding more tasks from same city ──
       // Enabled via scheduling.equal_city_distribution = true (any tenant, defaults false).
       if(sc.equal_city_distribution){
@@ -5046,7 +5057,8 @@ function _candidatesOpen(city,catId,dates,sc){
       slot=nudged;
       if(slot+dur>eh)continue;
       const optTime=minsToTime(slot);
-      const fillScore=load*100+dates.indexOf(date);
+      let fillScore=load*100+dates.indexOf(date);
+      fillScore+=balanceAdjust(sc.balance,{dayLoad:load,dateOffset:dates.indexOf(date)});
       candidates.push({tech,date,load,existingInZone:0,fillScore,dateScore:dates.indexOf(date),optTime});
     }
   }
