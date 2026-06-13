@@ -56,6 +56,42 @@ calls 20 min that's always 35 in morning traffic). **Start by just logging now**
   trust and what to refine.
 - **Geocode at entry, not at optimize** — one-time cost, better UX, optimizer never guesses.
 
+## Canonicalization — merging spellings safely (the load-bearing part)
+
+The same real place arrives spelled many ways: `ת"א` / `תל אביב` / `תל אביב-יפו` / `יפו`;
+`נהריה` / `נהרייה`; `ב"ש` / `באר שבע`; `קרית` / `קריית`; quote vs gershayim (`"`/`״`), geresh,
+hyphen/maqaf, trailing spaces; plus genuine typos (`חרב`). If these don't collapse to ONE place,
+the engine gets wrong/missing distances — and because Layer A is shared, a wrong merge poisons
+**every** client. So the rule is: **be eager to normalize noise, but conservative about merging.**
+
+**Four resolution tiers, safest first — only the first three may auto-merge:**
+1. **Deterministic normalization** (`normalize_place_key`): NFKC, strip gershayim/geresh/quotes
+   (`ת"א`→`תא`), collapse whitespace + hyphen/maqaf (`קרית-גת`→`קרית גת`). Pure, tested, zero risk —
+   it only removes punctuation noise, it does NOT decide two *different* spellings are the same.
+2. **Curated aliases** (`place_aliases` table): human-blessed maps (`תא`→`תל אביב`, `בש`→`באר שבע`,
+   `נהרייה`→`נהריה`, `יפו`→`תל אביב` per Eran). Authoritative, auditable, grows deliberately.
+3. **Coordinate identity (the real key):** geocode → if two labels land within ~150 m they ARE the
+   same place → merge. Language-agnostic, the strongest signal (`נהריה` and `נהרייה` both geocode to
+   ~33.00,35.10). **Coordinates are the identity; the spelling is just a label.**
+4. **Fuzzy similarity (SUGGEST ONLY, never auto-merge):** edit-distance near-misses surface as
+   "did you mean X?" for a human to confirm. This is where `בלפוריה`≈`פוריה`-type traps live, so it
+   must never auto-apply.
+
+**Streets:** don't try to canonicalize free-text street strings — **geocode the full address to
+coordinates** and let the coords be the identity. The string is only for display.
+
+**Guardrails (think-double):**
+- Auto-merge ONLY on exact-normalized, curated-alias, or coordinate-proximity. Fuzzy = suggest.
+- **Provenance on every place** (source: geocoded/manual/alias; who/what confirmed) → merges are
+  auditable and **reversible**. Never a destructive merge.
+- **Single authority:** resolution lives in ONE backend module (`canonicalize.py`), not duplicated
+  in JS — the JS/backend split is exactly what caused the `נהריה`/`נהרייה` false-flag. Frontend defers.
+
+**Monitoring (so we catch problems before they corrupt routes):**
+- Log every resolution: `input → key → canonical, method (exact|alias|geocode|fuzzy-suggested|failed),
+  confidence`. Surface a small report: unresolved inputs, low-confidence matches, pending fuzzy
+  suggestions, and any place whose coords moved. Review before anything auto-merges at scale.
+
 ## Recommended first step
 Promote `cities.py` → `geo_places` table + geocode-on-add. Highest-value foundation piece, and it
 directly removes the coordinate friction we just hit. Worth doing **before client #2** so the brain
