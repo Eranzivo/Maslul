@@ -136,5 +136,17 @@ suite('reassignTask', () => {
   check('no window → empty window kept', p.windowStart === '' && p.windowEnd === '');
 });
 
+suite('layoutColumns', () => {
+  const a = ctx.layoutColumns([{start:0,end:60},{start:60,end:120}]);
+  check('non-overlapping share one column', a[0].cols===1 && a[1].cols===1 && a[0].col===0 && a[1].col===0);
+  const b = ctx.layoutColumns([{start:0,end:120},{start:60,end:180}]);
+  check('two overlapping → 2 cols, distinct', b[0].cols===2 && b[1].cols===2 && b[0].col!==b[1].col);
+  const c = ctx.layoutColumns([{start:0,end:180},{start:60,end:240},{start:120,end:300}]);
+  check('three mutually overlapping → 3 distinct cols', c.every(x=>x.cols===3) && new Set(c.map(x=>x.col)).size===3);
+  const e = ctx.layoutColumns([{start:0,end:60},{start:0,end:120},{start:60,end:120}]);
+  check('a freed column is reused (max 2 cols)', Math.max(...e.map(x=>x.cols))===2);
+  check('returns one entry per input, order preserved', e.length===3 && e.every(x=>typeof x.col==='number'));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

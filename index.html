@@ -4798,6 +4798,31 @@ function reassignTask(task, techId, date){
     status: (task && task.status === 'pending') ? 'assigned' : (task && task.status) || 'assigned',
   };
 }
+// Calendar-style column layout for time-blocks that overlap (windows 07-10, 08-11, 09-12…).
+// blocks: [{start,end}] in minutes; input order preserved in the returned array.
+// Returns [{col, cols}] — col = 0-based column index, cols = number of columns in this
+// block's overlap cluster — so the caller places blocks side-by-side instead of stacked.
+function layoutColumns(blocks){
+  const out=new Array(blocks.length);
+  const sorted=blocks.map((b,i)=>({start:b.start,end:b.end,i})).sort((a,b)=>a.start-b.start||a.end-b.end);
+  let cluster=[], clusterEnd=-Infinity;
+  const flush=()=>{
+    const colEnds=[]; // colEnds[c] = end time of the last block placed in column c
+    for(const b of cluster){
+      let c=0; while(c<colEnds.length && colEnds[c]>b.start) c++;
+      colEnds[c]=b.end; b._col=c;
+    }
+    const cols=colEnds.length;
+    for(const b of cluster) out[b.i]={col:b._col, cols};
+    cluster=[]; clusterEnd=-Infinity;
+  };
+  for(const b of sorted){
+    if(cluster.length && b.start>=clusterEnd) flush();
+    cluster.push(b); clusterEnd=Math.max(clusterEnd,b.end);
+  }
+  if(cluster.length) flush();
+  return out;
+}
 // </sched-logic>
 function appUsesZones(){ return usesZones(tenantConfig && tenantConfig.scheduling); }
 // ═══ AUTO-SEQUENCING SEAM (features.auto_sequence) ═══════════════════════════
@@ -6955,14 +6980,15 @@ function _onTaskDragStart(ev,id){
   try{ ev.dataTransfer.effectAllowed='move'; ev.dataTransfer.setData('text/plain',String(id)); }catch(e){}
 }
 function _onCellDragOver(ev){ ev.preventDefault(); try{ev.dataTransfer.dropEffect='move';}catch(e){} }
-function _onCellDrop(ev,techId,ds){
+async function _onCellDrop(ev,techId,ds){
   ev.preventDefault();
   const id=_dragTaskId||(ev.dataTransfer&&ev.dataTransfer.getData('text/plain')); _dragTaskId=null;
   const t=tasks.find(x=>String(x.id)===String(id)); if(!t) return;
   if(String(t.techId)===String(techId)&&t.date===ds) return; // dropped on its own cell — no-op
   const oldTech=t.techId, oldDate=t.date;
   Object.assign(t, reassignTask(t, techId, ds));
-  save(); saveTaskToSupabase(t);
+  save();
+  await saveTaskToSupabase(t); // await — a move must reach Supabase (visible to Israel) before a refresh can drop it
   if(oldTech&&oldDate) markDayDirty(oldTech,oldDate);
   markDayDirty(techId,ds);
   renderPlannerContent();
@@ -7132,7 +7158,9 @@ function renderPlannerDaily(days){
   const slotH=settings.window||3;
   const statusFg={completed:'#16A34A',cancelled:'#DC2626',pending:'#D97706',issue:'#DC2626'};
   const tc=tech.color||'#2563EB';
-  const taskBlocks=Object.entries(wGroups).map(([key,grp])=>{
+  // Build block metadata first, then lay overlapping windows into side-by-side columns
+  // (calendar style) so blocks never stack on top of each other.
+  const blockMeta=Object.entries(wGroups).map(([key,grp])=>{
     const first=grp[0];
     const hasWin=!!first.windowStart;
     let topMins,heightMins;
@@ -7145,8 +7173,17 @@ function renderPlannerDaily(days){
       heightMins=cat?.time||settings.regularTime||30;
     }
     topMins=Math.max(0,topMins);
+    return {grp,first,hasWin,topMins,heightMins};
+  });
+  const _cols=layoutColumns(blockMeta.map(b=>({start:b.topMins,end:b.topMins+b.heightMins})));
+  const _gut=labelW+6, _avail=`(100% - ${_gut+6}px)`; // left gutter + right margin
+  const taskBlocks=blockMeta.map((b,bi)=>{
+    const {grp,first,hasWin,topMins,heightMins}=b;
     const top=topMins*PX;
-    const height=Math.max(32,heightMins*PX);
+    const height=Math.max(34,heightMins*PX);
+    const {col,cols:ncol}=_cols[bi];
+    const left=`calc(${_gut}px + ${_avail} * ${col} / ${ncol})`;
+    const width=`calc(${_avail} / ${ncol} - 4px)`;
     const label=hasWin?`${first.windowStart} — ${first.windowEnd}`:first.time;
     const _trc=_seqTraces[`${tech.id}|${ds}`]||{};
     const rows=grp.map(t=>`<div onclick="openTaskDetail('${t.id}')" style="padding:3px 0;cursor:pointer;border-bottom:1px solid ${tc}18;border-radius:3px;transition:background 0.1s;" onmouseover="this.style.background='${tc}14'" onmouseout="this.style.background=''">
@@ -7158,8 +7195,8 @@ function renderPlannerDaily(days){
       ${_trc[String(t.id)]?`<div style="font-size:0.6rem;color:var(--ink-4);padding-right:11px;margin-top:1px;">🚗 ${_trc[String(t.id)].drive_minutes} דק׳ מ-${h(_trc[String(t.id)].prev)}</div>`:''}
       ${t.notes?`<div style="font-size:0.6rem;color:var(--ink-3);padding-right:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;">📝 ${h(t.notes)}</div>`:''}
     </div>`).join('');
-    return`<div style="position:absolute;top:${top}px;left:${labelW+6}px;right:6px;height:${height}px;background:${tc}0D;border:1px solid ${tc}30;border-right:4px solid ${tc};border-radius:6px;padding:6px 10px 5px 7px;overflow:hidden;box-sizing:border-box;z-index:2;box-shadow:0 2px 6px rgba(0,0,0,0.09);">
-      <div style="font-size:0.67rem;font-weight:800;color:${tc};margin-bottom:4px;letter-spacing:0.2px;">${label}</div>
+    return`<div style="position:absolute;top:${top}px;left:${left};width:${width};height:${height}px;background:#fff;border:1.5px solid ${tc}55;border-right:4px solid ${tc};border-radius:7px;padding:5px 8px 5px 7px;overflow:hidden;box-sizing:border-box;z-index:2;box-shadow:0 1px 4px rgba(0,0,0,0.10),0 0 0 1px ${tc}10;">
+      <div style="font-size:0.66rem;font-weight:800;color:${tc};margin-bottom:3px;letter-spacing:0.2px;border-bottom:1px solid ${tc}22;padding-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</div>
       ${rows}
     </div>`;
   }).join('');

@@ -217,7 +217,8 @@ Customers receive a **3-hour arrival window** (e.g., 07:00–10:00), not an exac
   - *Desktop drag:* weekly-view chips drag between tech/day cells → `reassignTask` (pure, tested).
   - *Tap-to-place (mobile + desktop):* the task-detail modal has a שיבוץ/העברה panel (tech `<select>` + date input + 3-hour-window `<select>`) → `placeTaskDetail` assigns/moves the call, flips pending→assigned (places flagged חרב/טבריה), persists, marks both days dirty.
   - *Needs-attention strip:* `_needsAttentionStrip()` renders at the top of both planner views — every `status='pending'` call (which has no tech and so shows in no column), tappable (→ place) and draggable. Surfaces flagged חרב (needs location) + טבריה (overflow) so they're findable.
-  - Both keep the customer window where chosen, clear exact time so the receiving day re-sequences. Plan + remaining slice (daily within-window drag): `outputs/editable-calendar-plan_2026-06-13.md`. **Needs browser QA before relying on it.**
+  - *Calendar column layout:* `layoutColumns(blocks)` (pure, tested) lays overlapping windows (07-10, 08-11, 09-12…) into **side-by-side columns** in the daily view so blocks never stack on top of each other; white blocks with a bold tech-colour frame + window-label header band. Fixes the visual pile-up.
+  - Both edit paths keep the customer window where chosen, clear exact time so the receiving day re-sequences. **Persistence:** both `await saveTaskToSupabase` → the edit reaches Supabase (shared DB, visible to Israel via tenant RLS) before any refresh can drop it. Plan + remaining slice (daily within-window drag + re-sequence-on-move): `outputs/editable-calendar-plan_2026-06-13.md`. **Needs browser QA.**
 
 ## Authoritative Auto-Sequencing (`features.auto_sequence`) ✅ implemented 2026-06-12
 
