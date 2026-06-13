@@ -1702,6 +1702,15 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <span id="td-status-badge" class="badge" style="font-size:0.75rem;padding:4px 10px;"></span>
     </div>
     <div id="td-details" style="background:var(--bg);border-radius:var(--r);padding:12px 14px;margin-bottom:1rem;"></div>
+    <div class="fg" style="background:var(--blue-l);border-radius:var(--r);padding:10px 12px;margin-bottom:1rem;">
+      <label class="fl" style="margin-bottom:6px;">שיבוץ / העברה</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <select class="fc" id="td-tech"></select>
+        <input class="fc" type="date" id="td-date">
+        <select class="fc" id="td-window" style="grid-column:1/-1;"></select>
+      </div>
+      <button class="btn btn-blue btn-sm" style="margin-top:8px;width:100%;" onclick="placeTaskDetail()">שבץ כאן ✓</button>
+    </div>
     <div class="fg">
       <label class="fl">הערות</label>
       <textarea class="fc" id="td-notes" rows="3" style="resize:vertical;" placeholder="הוסף הערה..."></textarea>
@@ -7197,6 +7206,19 @@ function openTaskDetail(id){
     t.phone?['טלפון',h(t.phone)]:'',
   ].filter(Boolean).map(([k,v])=>`<div class="td-field"><span class="td-key">${k}</span><span class="td-val">${v}</span></div>`).join('');
   document.getElementById('td-notes').value=t.notes||'';
+  // Placement editor (tap-to-place — the mobile-safe path; mirrors weekly drag)
+  document.getElementById('td-tech').innerHTML=technicians.map(tt=>
+    `<option value="${tt.id}" ${String(tt.id)===String(t.techId)?'selected':''}>${h(tt.name)}</option>`).join('');
+  document.getElementById('td-date').value=t.date||'';
+  const _sH=parseInt((settings.startTime||'07:00').split(':')[0]);
+  const _eH=parseInt((settings.endTime||'18:00').split(':')[0]);
+  const _slotH=settings.window||3;
+  let _winOpts='<option value="">— ללא חלון —</option>';
+  for(let hh=_sH; hh<_eH; hh+=_slotH){
+    const ws=String(hh).padStart(2,'0')+':00', we=String(Math.min(hh+_slotH,_eH)).padStart(2,'0')+':00';
+    _winOpts+=`<option value="${ws}|${we}" ${t.windowStart===ws?'selected':''}>${ws}–${we}</option>`;
+  }
+  document.getElementById('td-window').innerHTML=_winOpts;
   document.getElementById('td-status-opts').innerHTML=s.next.map(ns=>{
     const ni=STATUS_MAP[ns];
     return`<button class="btn btn-outline btn-sm" onclick="setDetailStatus('${ns}')"><span class="badge ${ni.badge}">${ni.label}</span></button>`;
@@ -7229,6 +7251,30 @@ function editTaskFromDetail(){
   closeMo('mo-task-detail');
   goPage('dispatch');
   setTimeout(()=>queueAssign(id),150);
+}
+// Tap-to-place (mobile-safe equivalent of the weekly drag) — assign/move a call to the
+// chosen tech/day/window. Pending calls (incl. flagged חרב/טבריה) become assigned.
+async function placeTaskDetail(){
+  const t=tasks.find(x=>String(x.id)===String(detailTaskId));
+  if(!t)return;
+  const techId=document.getElementById('td-tech').value;
+  const date=document.getElementById('td-date').value;
+  const win=document.getElementById('td-window').value;
+  if(!techId||!date){ showToast('בחר טכנאי ותאריך','error'); return; }
+  const oldTech=t.techId, oldDate=t.date;
+  const [ws,we]=win?win.split('|'):['',''];
+  t.techId=String(techId); t.date=date;
+  t.windowStart=ws; t.windowEnd=we; t.time='';
+  if(t.status==='pending') t.status='assigned';
+  await saveTaskToSupabase(t);
+  save();
+  if(oldTech&&oldDate&&(String(oldTech)!==String(techId)||oldDate!==date)) markDayDirty(oldTech,oldDate);
+  markDayDirty(techId,date);
+  closeMo('mo-task-detail');
+  const _pp=document.getElementById('page-planner');
+  if(_pp&&!_pp.classList.contains('hidden')) renderPlannerContent();
+  const tn=(technicians.find(x=>String(x.id)===String(techId))||{}).name||'';
+  showToast('שובץ ל'+tn+' · '+new Date(date).toLocaleDateString('he-IL')+' ✓');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
