@@ -1,6 +1,50 @@
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from batch_schedule import optimize_day, resolve_route_strategy
+from batch_schedule import optimize_day, resolve_route_strategy, _assignment_score
+
+
+# ── Fluid workload balance ────────────────────────────────────────────────────
+# Greedy simulation that mirrors run_batch_schedule's pick: each task goes to the
+# covering tech-day with the highest _assignment_score. All tasks here are the same
+# city (the "8 jobs in one city" case), spread across `n_days` covering tech-days.
+def _simulate(n_tasks, n_days, balance_conf, max_daily=9):
+    load = [0] * n_days
+    city = [0] * n_days
+    for _ in range(n_tasks):
+        best, best_score = None, None
+        for d in range(n_days):
+            if load[d] >= max_daily:
+                continue
+            s = _assignment_score(load[d], city[d], balance_conf)
+            if best_score is None or s > best_score:
+                best_score, best = s, d
+        load[best] += 1
+        city[best] += 1
+    return sorted(load, reverse=True)
+
+
+def test_balance_off_packs_same_city_onto_one_day():
+    # Default behavior must be unchanged: fill-first packs the first covering day.
+    assert _simulate(8, 2, None) == [8, 0]
+    assert _simulate(8, 2, {"enabled": False}) == [8, 0]
+
+
+def test_balance_on_splits_evenly_and_fluidly():
+    # Fluid even spread that adapts to the week's count — Israel's examples exactly.
+    assert _simulate(8, 2, {"enabled": True}) == [4, 4]
+    assert _simulate(7, 2, {"enabled": True}) == [4, 3]
+    assert _simulate(6, 2, {"enabled": True}) == [3, 3]
+
+
+def test_balance_on_spreads_across_three_covering_days():
+    assert _simulate(9, 3, {"enabled": True}) == [3, 3, 3]
+    assert _simulate(8, 3, {"enabled": True}) == [3, 3, 2]
+
+
+def test_balance_respects_max_daily_cap():
+    # Even with balance off, a day can't exceed max_daily — overflow lands on day 2.
+    assert _simulate(12, 2, None, max_daily=9) == [9, 3]
+
 
 # 0=depot, 1=A (near, depot dist 10), 2=B (far, depot dist 30).
 # Closed-tour costs are direction-symmetric (10+20+30 == 30+20+10), so the

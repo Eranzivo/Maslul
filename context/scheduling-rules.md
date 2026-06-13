@@ -260,7 +260,11 @@ POST `/batch-schedule` on the Railway backend auto-assigns all pending tasks for
 ### Workload balancing across covering tech-days (config-gated — see ⚠️ state)
 **Rule (Israel):** workload should be *divided between technicians*, not dumped on whoever is first. When one city/zone holds many jobs and **multiple tech-days cover that zone** in the range, the jobs should spread across them — e.g. 8 same-city jobs split **4-4 or 5-3** across two techs working that zone on different days. This is a **soft** balancing preference (job rotation / even utilization), *not* a hard rule, and never overrides a customer's specific date/window request or the zone-rotation constraint.
 
-⚠️ **Current state:** the greedy `count*100 - city_load*50` does **not** achieve this — the fill-first term mathematically dominates the city penalty, so same-city jobs pack onto the first covering tech-day up to `max_daily` before any spill. A dedicated **balance term** (config-gated `scheduling.balance` / `equal_city_distribution`, weight-tunable, default off) is the planned fix so absent config keeps today's packing behavior. Related: B3 `balanceAdjust` already does the *cross-tech weekly* balance for live dispatch (`_candidatesZone`/`_candidatesOpen`); the batch needs the same idea in its assignment loop.
+✅ **Implemented (June 2026) — `scheduling.balance.enabled`:** the batch assignment score is now `_assignment_score(count, city_load, balance_conf)` in `batch_schedule.py`:
+- **Balance off / absent (default, all tenants):** `count*100 - city_load*50` — today's fill-first packing, unchanged.
+- **Balance on:** prefer the **least-loaded** covering tech-day (`-count*w - city_load*(w//2)`). Greedy-applied this yields the fluid splits Israel described — **8→4-4, 7→4-3, 6→3-3, 9 across 3 days→3-3-3** — adapting to each week's real count. It is **soft** (never a hard cap), still bounded by `max_daily` and (future) customer date/window requests. `weight` tunable (default 50).
+
+Same config key as B3 `balanceAdjust` (the live `_candidatesZone`/`_candidatesOpen` cross-tech weekly balance) — one knob (`scheduling.balance {enabled, weight}`) drives both batch and live. Enable for PureWater via SQL; absent = unchanged for every other tenant. Tests: `backend/tests/test_batch_schedule.py` (greedy simulation proves the split outcomes).
 
 ### Key invariants
 - Zone rotation enforced hard — a task in zone A can only go to the tech assigned zone A that day

@@ -93,6 +93,24 @@ def resolve_route_strategy(config: Optional[dict]) -> str:
     return "flexible"
 
 
+def _assignment_score(count: int, city_load: int, balance_conf: Optional[dict]) -> float:
+    """Score a candidate (tech, day) for one task — higher is better.
+
+    Default (balance off / absent): fill active days first (`count*100`), penalise
+    over-concentration of one city. This is today's behaviour — absent config = unchanged.
+
+    Balance on (`scheduling.balance.enabled`): fluid even workload spread — prefer the
+    LEAST-loaded covering tech-day (negative count), with a same-city nudge so identical-
+    city jobs split across the covering days. Greedy-applied this yields 8→4-4, 7→4-3,
+    6→3-3, adapting to each week's actual count. Soft (never a hard cap); still bounded by
+    max_daily and customer date/window requests. Tunable via `balance.weight`."""
+    bal = balance_conf or {}
+    if bal.get("enabled"):
+        w = bal.get("weight", 50)
+        return -count * w - city_load * (w // 2)
+    return count * 100 - city_load * 50
+
+
 def optimize_day(matrix, durations, start_t, end_t, return_node, route_strategy):
     """Order one tech-day with the authoritative v2 solver (the same engine the
     live path uses) so the batch reflects route_strategy physics (far→near),
@@ -144,6 +162,7 @@ async def run_batch_schedule(
     config = tenant_rows[0]["config"] if tenant_rows else {}
     arrival_window_h = config.get("arrival_window_hours", 3)
     route_strategy = resolve_route_strategy(config)
+    balance_conf = (config.get("scheduling") or {}).get("balance")  # None ⇒ today's fill-first packing
 
     # 2. Build lookup tables
     cat_duration = {c["id"]: c.get("duration_minutes", 30) for c in cats_raw}
@@ -207,7 +226,7 @@ async def run_batch_schedule(
             continue
 
         best_key: Optional[tuple] = None
-        best_score = -999
+        best_score = float("-inf")  # balance-on scores are negative — never seed at a finite floor
 
         cur = d_start
         while cur <= d_end:
@@ -223,9 +242,9 @@ async def run_batch_schedule(
 
                 nc = _norm(task["city"])
                 city_load = city_counts[tech["id"]].get(nc, 0)
-                # fill_first: prefer days already active (count*100)
-                # equal_city_distribution: penalize same-city overload (-50 per existing)
-                score = count * 100 - city_load * 50
+                # Balance off ⇒ fill-first packing (today's behavior); balance on ⇒ fluid
+                # even spread across covering tech-days (8→4-4, 7→4-3). See _assignment_score.
+                score = _assignment_score(count, city_load, balance_conf)
 
                 if score > best_score:
                     best_score = score
