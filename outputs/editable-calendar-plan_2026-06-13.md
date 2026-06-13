@@ -36,3 +36,16 @@ HTML5 drag-and-drop does NOT fire on touch devices. So editing needs **two paths
 ## Verification
 Slices 1–2 need browser QA (desktop drag + mobile tap) before deploy — drag interactions
 can't be unit-tested; the `reassignTask` core is covered by `tests/sched.test.js`.
+
+## QA log / open items (2026-06-13, deferred to later QA pass)
+- **Weekly drag works** (verified live: dragged a call into Wednesday). ✅
+- **Order-after-move:** a dragged call cleared its exact time and floated to the top of the cell
+  (empty time sorts first). **Fixed** — weekly cells now sort by service window first, then time
+  (`renderPlannerWeekly`), so a 13:00–16:00 call stays below the 10:00–13:00 group on drop.
+- **Open for later QA:**
+  - Verify `auto_sequence` actually re-sequences the receiving day on drop (assigns correct
+    intra-window times/order) for PureWater — the optimizer round-trip, not just the display sort.
+  - Drag across **technicians** (tech-row → tech-row) and across the week edges.
+  - Daily within-grid drag QA (snap indicator + band landing).
+  - **Weekly view shows one chip per call, not grouped-by-window** — this is by design (the
+    window-grouped *block* layout is the daily view). Revisit if Israel wants weekly grouping too.

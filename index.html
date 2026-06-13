@@ -7119,7 +7119,12 @@ function renderPlannerWeekly(days){
       const techTasks=tasks.filter(t=>String(t.techId)===String(tech.id)&&t.date===ds&&t.status!=='cancelled');
       const bg=isToday?'#F0F7FF':isDayOff?'var(--line-2)':'';
       if(isDayOff) return`<td style="background:var(--line-2);vertical-align:top;padding:6px;border-left:1px solid var(--line-2);"><div class="planner-day-off">יום חופש</div></td>`;
-      const sorted=techTasks.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+      // Sort by service window first, then exact time within it. A just-dragged call has its
+      // time cleared (so the day can re-sequence) — sorting by time alone would float it to the
+      // top; window-first keeps it in the right band (e.g. a 13:00–16:00 call stays below 10:00–13:00).
+      const sorted=techTasks.sort((a,b)=>
+        (a.windowStart||a.time||'').localeCompare(b.windowStart||b.time||'')
+        ||(a.time||'').localeCompare(b.time||''));
       const cellId=`pc-${tech.id}-${ds}`;
       const chips=sorted.map(_plannerTaskChip).join('');
       const canOptimize=CONFIG.OPTIMIZER_URL&&techTasks.length>=2&&ds>=todayStr();
