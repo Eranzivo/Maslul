@@ -26,9 +26,12 @@ HTML5 drag-and-drop does NOT fire on touch devices. So editing needs **two paths
    `reassignTask(task, techId, date)` (tested). *(this slice)*
 2. **Tap-to-place (mobile + desktop):** task-detail modal gains tech/day/window editors +
    save → same `reassignTask` core. Covers placing חרב/טבריה. Works on touch.
-3. **Daily within-window placement:** drag/tap a tray task into a 3-hour window band.
-4. **Needs-attention surfacing:** flagged `needs_location` + overflow pending shown at top
-   of the tray with one-tap actions.
+3. **Daily within-window placement:** ✅ done — drag a scheduled row or tray/needs-attention
+   call onto the daily grid; `windowAtOffset` (pure, tested) snaps it to the 3-hour band under
+   the pointer, with a dashed snap indicator. `_onGridDrop` assigns tech/day/window, clears time,
+   persists, marks dirty. Mobile keeps tap-to-place. *(needs browser QA)*
+4. **Needs-attention surfacing:** ✅ done — `_needsAttentionStrip()` renders every `status='pending'`
+   call at the top of both planner views, tappable + draggable.
 
 ## Verification
 Slices 1–2 need browser QA (desktop drag + mobile tap) before deploy — drag interactions

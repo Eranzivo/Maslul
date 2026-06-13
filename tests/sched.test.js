@@ -148,5 +148,18 @@ suite('layoutColumns', () => {
   check('returns one entry per input, order preserved', e.length===3 && e.every(x=>typeof x.col==='number'));
 });
 
+suite('windowAtOffset (daily-grid drag snapping)', () => {
+  // Day 07:00–18:00, 3h windows → bands 07-10, 10-13, 13-16, 16-18.
+  const w = (y) => ctx.windowAtOffset(y, 7, 18, 3);
+  check('top of grid → first band 07:00–10:00', w(0).ws==='07:00' && w(0).we==='10:00');
+  check('mid first band stays 07:00', w(90).ws==='07:00');
+  check('start of second band (180px=10:00) → 10:00–13:00', w(180).ws==='10:00' && w(180).we==='13:00');
+  check('third band (13:00) at 360px', w(360).ws==='13:00' && w(360).we==='16:00');
+  check('last partial band clamps to 16:00–18:00', w(540).ws==='16:00' && w(540).we==='18:00');
+  check('overshoot past end clamps into last band', w(99999).ws==='16:00' && w(99999).we==='18:00');
+  check('negative offset clamps to first band', w(-50).ws==='07:00');
+  check('topMins/heightMins reflect the band', w(180).topMins===180 && w(180).heightMins===180);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

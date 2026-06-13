@@ -14,6 +14,7 @@
 - [ ] **Variable window length per task** (not hardcoded 3h — saw 1.5h/3h/4h in real data).
 - [ ] **Basic CRM structured fields** (the next-client direction; already needed by Israel): `product`/model, `price`/quote, `job_type` (לקחת/לספק/להתקין/לתקן), `contact`. Schema accurate + connected end-to-end. See `context/clients/purewater.md` → "Signals from Israel's real calendar".
 - [ ] Tech view redesign
+- [ ] **Geo corrections loop / self-healing place brain** — additive, does NOT touch routing. Phases: (1) write `place_resolution_log` + `confidence` on `geo_places`; (2) super_admin Geo Health page (see→fix→save→re-assign→log, reversible); (3) on-demand digest output; (4) typeahead-constrained city input at all entry doors; (5) bulk-door fuzzy+centroid ladder; (6) technician-GPS ground-truth healing. Two-store confidence model (high bar to enter the brain, below-bar surfaces as work). Fail-soft, never blocks. Full design: `outputs/geo-corrections-loop-design_2026-06-13.md`.
 - [ ] **UI/UX design pass** — clean friendly SaaS look (colour-coded calendar + side panel, KPI strip), operable by a non-technical user. Refs: `outputs/ui-references_2026-06-13.md`. After the editable-calendar engine slices.
 - [ ] Dashboard & analytics — charts, KPIs (like timing.tech)
 - [ ] Customer ETA portal — SMS/WhatsApp link → customer sees tech ETA + can rate
