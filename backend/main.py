@@ -57,6 +57,19 @@ def _total_elements(technicians) -> int:
     return total
 
 
+# Per-day /optimize call counter — visibility for resource/load planning (auto-sequence
+# fires one call per touched tech-day, debounced). Resets each UTC day, per-process.
+_opt_calls = {"day": None, "calls": 0, "tech_days": 0, "tasks": 0}
+
+def _track_optimize(technicians) -> None:
+    today = str(date.today())
+    if _opt_calls["day"] != today:
+        _opt_calls.update(day=today, calls=0, tech_days=0, tasks=0)
+    _opt_calls["calls"] += 1
+    _opt_calls["tech_days"] += len(technicians)
+    _opt_calls["tasks"] += sum(len(t.tasks) for t in technicians)
+
+
 # ── Models ────────────────────────────────────────────────────────────────────
 
 class Task(BaseModel):
@@ -108,15 +121,19 @@ def health():
     gmaps_key = os.getenv("GOOGLE_MAPS_API_KEY")
     today = str(date.today())
     used = _counter["elements"] if _counter["day"] == today else 0
+    oc = _opt_calls if _opt_calls["day"] == today else {"calls": 0, "tech_days": 0, "tasks": 0}
     return {
         "status": "ok",
         "service": "maslul-optimizer",
-        "version": "1.1.0",
+        "version": "1.2.0",
         "gmaps": "configured" if gmaps_key else "missing — using haversine fallback",
         "route_cache": "configured" if os.getenv("SUPABASE_SERVICE_KEY") else "missing SUPABASE_SERVICE_KEY — optimizer works but never caches",
         "daily_elements_used": used,
         "daily_elements_limit": _DAILY_LIMIT,
         "daily_elements_remaining": max(0, _DAILY_LIMIT - used),
+        "optimize_calls_today": oc["calls"],
+        "tech_days_sequenced_today": oc["tech_days"],
+        "tasks_sequenced_today": oc["tasks"],
     }
 
 
@@ -150,6 +167,7 @@ async def geocode(req: GeocodeRequest):
 async def optimize(req: OptimizeRequest):
     if not req.technicians:
         raise HTTPException(status_code=400, detail="No technicians provided")
+    _track_optimize(req.technicians)
 
     google_maps_key = os.getenv("GOOGLE_MAPS_API_KEY") or None
     service_key = os.getenv("SUPABASE_SERVICE_KEY", "")
