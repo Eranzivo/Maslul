@@ -8,7 +8,7 @@ import os
 from datetime import date, timedelta
 from typing import Optional
 import httpx
-from optimizer import solve_route, build_matrix_local
+from optimizer import solve_route_v2, build_matrix_local
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://pxpqcdfxogaajwstwdtk.supabase.co")
 
@@ -79,6 +79,31 @@ def _min_to_time(m: int) -> str:
     return f"{m // 60:02d}:{m % 60:02d}"
 
 
+# ── Engine wiring (pure, testable) ────────────────────────────────────────────
+
+def resolve_route_strategy(config: Optional[dict]) -> str:
+    """Mirror of the JS resolveRouteStrategy — absent config NEVER defaults to
+    far_to_near (that is PureWater-specific tenant config, not a global default)."""
+    sched = (config or {}).get("scheduling") or {}
+    rs = sched.get("route_strategy")
+    if rs:
+        return rs
+    if sched.get("route_logic"):  # legacy boolean flag
+        return "far_to_near"
+    return "flexible"
+
+
+def optimize_day(matrix, durations, start_t, end_t, return_node, route_strategy):
+    """Order one tech-day with the authoritative v2 solver (the same engine the
+    live path uses) so the batch reflects route_strategy physics (far→near),
+    hard work-hours, and drop-if-overfull. Returns (ordered_idx, arrivals, dropped_idx)."""
+    tasks_v2 = [{"duration": d, "window_start": None, "window_end": None,
+                 "locked": False, "scheduled_time": None} for d in durations]
+    res = solve_route_v2(matrix, tasks_v2, start_t, end_t, breaks=[],
+                         return_node=return_node, route_strategy=route_strategy)
+    return res["ordered"], res["arrivals"], res["dropped"]
+
+
 # ── Main entry point ──────────────────────────────────────────────────────────
 
 async def run_batch_schedule(
@@ -118,6 +143,7 @@ async def run_batch_schedule(
 
     config = tenant_rows[0]["config"] if tenant_rows else {}
     arrival_window_h = config.get("arrival_window_hours", 3)
+    route_strategy = resolve_route_strategy(config)
 
     # 2. Build lookup tables
     cat_duration = {c["id"]: c.get("duration_minutes", 30) for c in cats_raw}
@@ -237,17 +263,23 @@ async def run_batch_schedule(
 
         # Tasks at city-level only (no street/coords) — haversine is equivalent
         # to Google Maps for city-center→city-center and avoids burning API quota.
+        # Real drive-time refinement happens later via the live cache-backed sequencer.
         matrix = build_matrix_local(locations)
 
-        ordered_idx, arrivals = solve_route(
-            base_city=base,
-            task_cities=[t["city"] for t in day_tasks],
-            task_durations=durations,
+        ordered_idx, arrivals, dropped_idx = optimize_day(
             matrix=matrix,
-            start_time_str=start_t,
-            end_time_str=end_t,
-            return_city=return_loc,
+            durations=durations,
+            start_t=start_t,
+            end_t=end_t,
+            return_node=bool(return_loc),
+            route_strategy=route_strategy,
         )
+
+        # Over-full day: the solver dropped these rather than fail — leave them
+        # pending and surface them so the coordinator can re-place or extend hours.
+        for di in dropped_idx:
+            dt = day_tasks[di]
+            unassigned.append({"id": dt["id"], "city": dt["city"], "reason": "day_over_capacity"})
 
         win_mins = arrival_window_h * 60
         for i, arr in zip(ordered_idx, arrivals):

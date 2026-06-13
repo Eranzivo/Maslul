@@ -252,8 +252,13 @@ POST `/batch-schedule` on the Railway backend auto-assigns all pending tasks for
    - Tech's rotation zone for that day must contain the task's city
    - Score: `count * 100 - city_load * 50` — fill active days first, penalise over-concentration of one city
    - Saturday always skipped; empty rotation string = tech off that day
-2. **Per-day optimization**: for each `(tech, date)` group, run OR-Tools to order tasks by travel time (haversine), assign `scheduled_time` + `scheduled_window_start/end`
+2. **Per-day optimization** (`optimize_day`, June 2026): each `(tech, date)` group runs the **authoritative `solve_route_v2`** — the same engine the live path uses — with `route_strategy` resolved from `tenants.config` (`resolve_route_strategy`, mirrors the JS helper; absent ⇒ `flexible`, never far_to_near). This gives the batch the real route-direction physics (PureWater far→near), hard work-hours, and drop-if-overfull (dropped tasks stay pending, reported as `day_over_capacity`). Matrix is still city-level haversine (no quota burn); real-drive-time refinement happens later via the cache-backed live sequencer.
 3. **Window formula**: `slot_num = (arr_min - start_min) // 180; window_start = start_min + slot_num * 180`
+
+### Workload balancing across covering tech-days (config-gated — see ⚠️ state)
+**Rule (Israel):** workload should be *divided between technicians*, not dumped on whoever is first. When one city/zone holds many jobs and **multiple tech-days cover that zone** in the range, the jobs should spread across them — e.g. 8 same-city jobs split **4-4 or 5-3** across two techs working that zone on different days. This is a **soft** balancing preference (job rotation / even utilization), *not* a hard rule, and never overrides a customer's specific date/window request or the zone-rotation constraint.
+
+⚠️ **Current state:** the greedy `count*100 - city_load*50` does **not** achieve this — the fill-first term mathematically dominates the city penalty, so same-city jobs pack onto the first covering tech-day up to `max_daily` before any spill. A dedicated **balance term** (config-gated `scheduling.balance` / `equal_city_distribution`, weight-tunable, default off) is the planned fix so absent config keeps today's packing behavior. Related: B3 `balanceAdjust` already does the *cross-tech weekly* balance for live dispatch (`_candidatesZone`/`_candidatesOpen`); the batch needs the same idea in its assignment loop.
 
 ### Key invariants
 - Zone rotation enforced hard — a task in zone A can only go to the tech assigned zone A that day
