@@ -216,7 +216,8 @@ Customers receive a **3-hour arrival window** (e.g., 07:00–10:00), not an exac
 - **Editable (Phase 3, June 2026):** two complementary paths —
   - *Desktop drag:* weekly-view chips drag between tech/day cells → `reassignTask` (pure, tested).
   - *Tap-to-place (mobile + desktop):* the task-detail modal has a שיבוץ/העברה panel (tech `<select>` + date input + 3-hour-window `<select>`) → `placeTaskDetail` assigns/moves the call, flips pending→assigned (places flagged חרב/טבריה), persists, marks both days dirty.
-  - Both keep the customer window where chosen, clear exact time so the receiving day re-sequences. Plan + remaining slices (daily within-window placement; needs-attention strip): `outputs/editable-calendar-plan_2026-06-13.md`. **Needs browser QA before relying on it.**
+  - *Needs-attention strip:* `_needsAttentionStrip()` renders at the top of both planner views — every `status='pending'` call (which has no tech and so shows in no column), tappable (→ place) and draggable. Surfaces flagged חרב (needs location) + טבריה (overflow) so they're findable.
+  - Both keep the customer window where chosen, clear exact time so the receiving day re-sequences. Plan + remaining slice (daily within-window drag): `outputs/editable-calendar-plan_2026-06-13.md`. **Needs browser QA before relying on it.**
 
 ## Authoritative Auto-Sequencing (`features.auto_sequence`) ✅ implemented 2026-06-12
 

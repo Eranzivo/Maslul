@@ -7009,6 +7009,22 @@ function _plannerTaskChip(t){
   </div>`;
 }
 
+// Needs-attention strip: unassigned/flagged pending calls (e.g. חרב=needs location,
+// טבריה=overflow). They have no tech, so they appear in no tech column — surface them
+// here, tappable (→ modal → place) and draggable (→ weekly cell) on desktop.
+function _needsAttentionStrip(){
+  const pend=tasks.filter(t=>t.status==='pending').sort((a,b)=>(a.city||'').localeCompare(b.city||''));
+  if(!pend.length) return '';
+  const items=pend.map(t=>`<button draggable="true" ondragstart="event.stopPropagation();_onTaskDragStart(event,'${t.id}')" onclick="openTaskDetail('${t.id}')" title="${h(t.notes||'')}" style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:var(--white);border:1px solid #FCD34D;border-radius:8px;cursor:grab;font-family:'Heebo',sans-serif;font-size:0.74rem;max-width:240px;">
+      <span style="font-weight:700;white-space:nowrap;">${h(t.client||'קריאה')}</span>
+      <span style="color:var(--ink-3);white-space:nowrap;">${h(t.city||'')}</span>
+      ${t.notes&&t.notes.indexOf('⚠')>=0?'<span style="font-size:0.66rem;">⚠️</span>':''}
+    </button>`).join('');
+  return`<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 12px;margin-bottom:12px;">
+    <div style="font-size:0.74rem;font-weight:800;color:#92400E;margin-bottom:7px;">⚠️ ממתינות לטיפול (${pend.length}) — לחץ לשיבוץ ידני</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">${items}</div>
+  </div>`;
+}
 function renderPlannerWeekly(days){
   const content=document.getElementById('planner-content');
   const selTechs=technicians.filter(t=>plannerSelectedTechs.includes(t.id));
@@ -7043,7 +7059,7 @@ function renderPlannerWeekly(days){
         </div>
       </td>${cells}</tr>`;
   }).join('');
-  content.innerHTML=`<table style="border-collapse:collapse;width:100%;background:var(--white);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh);border:1px solid var(--line);">
+  content.innerHTML=_needsAttentionStrip()+`<table style="border-collapse:collapse;width:100%;background:var(--white);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh);border:1px solid var(--line);">
     <thead><tr>
       <th style="background:var(--line-2);padding:10px 14px;font-size:0.75rem;font-weight:800;color:var(--ink-3);text-align:right;white-space:nowrap;position:sticky;top:0;right:0;z-index:5;border-left:2px solid var(--line-2);border-bottom:3px solid transparent;">${LBL('workers')}</th>
       ${dayHeaders}
@@ -7161,7 +7177,7 @@ function renderPlannerDaily(days){
       <span style="color:var(--ink-3);font-size:0.72rem;">${h(t.city||'')}</span>
     </div>`).join('')}
   </div>`:'';
-  content.innerHTML=`
+  content.innerHTML=_needsAttentionStrip()+`
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${dayTabs}</div>
     ${techTabs?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${techTabs}</div>`:''}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
