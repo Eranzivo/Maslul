@@ -234,6 +234,8 @@ The OR-Tools optimizer is the **single source of truth** for a tech-day's order 
 
 **Quota honesty:** with the cache active, the daily Google counter charges only **actual** fetches (cache hits are free); legacy path unchanged.
 
+**Single optimize seam (June 2026):** both the auto-sequencer (`sequenceDay`) and the **manual "🔀 מסלול מיטבי" button** (`runOptimize`→`optimizeDay`) now POST through one shared helper `_postOptimize(tech,date,dayTasks)`, and both apply results through `applySequenceResult` (locked-safe, window-preserving). This closed a drift bug: the manual button previously sent a pre-v2 payload (no `window_start/end`, no `locked`, no `breaks`) and overwrote customer windows — so it could move a 🔒 locked task and schedule over a break. There is now no second, lower-fidelity optimize path. (The old v1 `solve_route` in `optimizer.py` has **no production caller** — only its own unit tests reference it.)
+
 Rollout: enable per tenant via `config.features.auto_sequence`. PureWater stays OFF until the shadow-compare sign-off. Still deferred: lock/unlock UI (drag-to-pin).
 
 ### B3 additions ✅ implemented 2026-06-12

@@ -4791,23 +4791,31 @@ function markDayDirty(techId,date){
   clearTimeout(_seqTimers[k]);
   _seqTimers[k]=setTimeout(()=>sequenceDay(techId,date),1000);
 }
+// Shared v2 optimize call — the SINGLE source of truth for the request payload.
+// Both the auto-sequencer (sequenceDay) and the manual "🔀 מסלול מיטבי" button
+// (optimizeDay) go through here so they can never drift: same windows, locked pins,
+// breaks, route_strategy, and base/return resolution. Returns the single tech result.
+async function _postOptimize(tech,date,dayTasks){
+  const durationOf=(t)=>{const c=categories.find(c=>c.id===t.catId);return (tech.durationOverrides||{})[t.catId]||(c&&c.time)||settings.regularTime||30;};
+  const sched=getTechDaySchedule(tech,date);
+  const brk=getTechPartialBlocks(tech,date).map(b=>({from:minsToTime(b.from),to:minsToTime(b.to)}));
+  const res=await fetch(`${CONFIG.OPTIMIZER_URL}/optimize`,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({date,scheduling:{route_strategy:resolveRouteStrategy(tenantConfig.scheduling)},technicians:[{id:String(tech.id),name:tech.name,
+      base_city:(tech.address&&tech.base)?`${tech.address}, ${tech.base}`:(tenantConfig.depot&&tenantConfig.depot.lat&&tenantConfig.depot.lon)?`${tenantConfig.depot.lat},${tenantConfig.depot.lon}`:(tech.base||''),
+      return_city:tech.return_city||tech.base||'',
+      start_time:sched.start||'07:00',end_time:sched.end||'18:00',breaks:brk,
+      tasks:buildSequencePayload(dayTasks,durationOf)}]})});
+  if(!res.ok) throw new Error('optimizer '+res.status);
+  const data=await res.json();
+  return (data.optimized||[])[0]||null;
+}
 async function sequenceDay(techId,date){
   const k=`${techId}|${date}`, sentEpoch=_seqEpochs[k];
   const tech=technicians.find(t=>String(t.id)===String(techId)); if(!tech) return;
   const dayTasks=tasks.filter(t=>String(t.techId)===String(techId)&&t.date===date&&t.status!=='cancelled');
   if(dayTasks.length<2) return;
-  const durationOf=(t)=>{const c=categories.find(c=>c.id===t.catId);return (tech.durationOverrides||{})[t.catId]||(c&&c.time)||settings.regularTime||30;};
-  const sched=getTechDaySchedule(tech,date);
-  const brk=getTechPartialBlocks(tech,date).map(b=>({from:minsToTime(b.from),to:minsToTime(b.to)}));
   try{
-    const res=await fetch(`${CONFIG.OPTIMIZER_URL}/optimize`,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({date,scheduling:{route_strategy:resolveRouteStrategy(tenantConfig.scheduling)},technicians:[{id:String(tech.id),name:tech.name,
-        base_city:(tech.address&&tech.base)?`${tech.address}, ${tech.base}`:(tech.base||''),
-        return_city:tech.return_city||tech.base||'',
-        start_time:sched.start||'07:00',end_time:sched.end||'18:00',breaks:brk,
-        tasks:buildSequencePayload(dayTasks,durationOf)}]})});
-    if(!res.ok) throw new Error('optimizer '+res.status);
-    const data=await res.json(); const r=(data.optimized||[])[0]; if(!r) return;
+    const r=await _postOptimize(tech,date,dayTasks); if(!r) return;
     // Optimistic version check: if another coordinator changed any of these tasks while
     // we were solving, abort and re-sequence from fresh state (needs tasks.updated_at —
     // until the migration runs, updatedAt is null and the check is skipped).
@@ -5358,38 +5366,8 @@ async function optimizeDay(techId, date) {
   );
   if (dayTasks.length < 2) return null;
   try {
-    const body = {
-      date,
-      scheduling: tenantConfig.scheduling || { mode: 'zone' },
-      technicians: [{
-        id: String(tech.id),
-        name: tech.name,
-        base_city: (tech.address && tech.base) ? `${tech.address}, ${tech.base}` : (tenantConfig.depot?.lat && tenantConfig.depot?.lon) ? `${tenantConfig.depot.lat},${tenantConfig.depot.lon}` : (tech.base || ''),
-        return_city: tech.return_city || tech.base || '',
-        start_time: getTechDaySchedule(tech,date).start || '07:00',
-        end_time: getTechDaySchedule(tech,date).end || '18:00',
-        tasks: dayTasks.map(t => {
-          const cat = categories.find(c => c.id === t.catId);
-          return {
-            id: String(t.id),
-            city: t.city,
-            address: t.street || null,
-            lat: t.lat || null,
-            lon: t.lon || null,
-            duration_minutes: cat ? cat.time : 30,
-            scheduled_time: t.time || null,
-          };
-        }),
-      }],
-    };
-    const res = await fetch(`${CONFIG.OPTIMIZER_URL}/optimize`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.optimized?.[0] || null;
+    // Shared v2 path — same payload as the auto-sequencer (windows, locked, breaks, route_strategy)
+    return await _postOptimize(tech, date, dayTasks);
   } catch (e) {
     console.warn('Optimizer unavailable, using local scheduling', e);
     return null;
@@ -5404,23 +5382,16 @@ async function runOptimize(techId, date){
   const result=await optimizeDay(techId, targetDate);
   if(btn){btn.disabled=false;btn.textContent='🔀';}
   if(!result){showToast('לא ניתן לבצע אופטימיזציה — בדוק חיבור לשרת','error');return;}
-  const _oTech=technicians.find(t=>String(t.id)===String(techId));
-  const _oStart=timeToMins(getTechDaySchedule(_oTech,targetDate).start||'07:00');
-  const _oWinMins=(tenantConfig.arrival_window_hours||3)*60;
-  result.ordered_tasks.forEach(taskId=>{
-    const t=tasks.find(x=>String(x.id)===taskId||String(x._dbId)===taskId);
-    const arrival=result.estimated_times?.[taskId];
-    if(t&&arrival){
-      t.time=arrival;
-      const arrMin=timeToMins(arrival);
-      const slot=Math.max(0,Math.floor((arrMin-_oStart)/_oWinMins));
-      t.windowStart=minsToTime(_oStart+slot*_oWinMins);
-      t.windowEnd=minsToTime(_oStart+(slot+1)*_oWinMins);
-      saveTaskToSupabase(t);
-    }
-  });
+  // Apply through the SAME locked-safe, window-preserving applier the auto-sequencer uses.
+  // applySequenceResult never moves a locked task and never rewrites customer windows.
+  const dayTasks=tasks.filter(t=>String(t.techId)===String(techId)&&t.date===targetDate&&t.status!=='cancelled');
+  const {dropped}=applySequenceResult(dayTasks, result, 1, 1);
+  for(const t of dayTasks){ if(!t.locked) saveTaskToSupabase(t); }
+  if(dropped.length) _seqDropToTray(dropped);
+  if(result.conflict) showToast('⚠️ שתי קריאות נעולות מתנגשות — יש לשחרר אחת מהן','error');
+  if(date) _seqTraces[`${techId}|${date}`]=result.trace||{};
   save();renderHomeTechCards();renderTasks();if(date)renderPlannerContent();
-  showToast(`מסלול מיטבי ${result.mode==='gmaps'?'(Google Maps)':'(הערכה)'}  ✓ — ${result.total_drive_minutes} דק׳ נסיעה`);
+  showToast(`מסלול מיטבי ${result.mode==='gmaps'||result.mode==='gmaps-cached'?'(Google Maps)':'(הערכה)'}  ✓ — ${result.total_drive_minutes} דק׳ נסיעה`);
 }
 
 // ═══ GEOCODING ═══
