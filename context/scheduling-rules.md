@@ -276,6 +276,14 @@ Same config key as B3 `balanceAdjust` (the live `_candidatesZone`/`_candidatesOp
 ### City normalization
 `_CITY_ALIASES` in `batch_schedule.py` mirrors `normalizeCity()` in JS. Both must stay in sync when adding city variants.
 
+### Unlocatable cities → flag, never guess (June 2026)
+A city can be **in a zone** (assignable to a tech-day) yet have **no coordinates** (unknown settlement / typo / new-client test data). Coordinates are needed to *order* the day and check it fits in work hours — without them the optimizer used to fall back to Tel Aviv, which silently corrupted the route (a northern kibbutz stamped at TLV looked impossibly far → blew the day budget → got dropped). Now:
+- `cities.resolve_coords(city)` returns `None` for genuinely unlocatable cities (never guesses). `get_coords` still TLV-fallbacks for callers that must have a coordinate.
+- The batch flags such a task as `unassigned` with reason **`needs_location`**, leaves it **pending**, and writes a coordinator note (`⚠️ חסר מיקום — להשלים כתובת`). The coordinator completes the address (geocodes → real coords) and re-runs. Client-agnostic — protects every tenant's manual/test data. (This is why the daily schedule must be easily editable.)
+- Real settlements should be added to `cities.CITY_COORDS` so they route correctly rather than being flagged (15 PureWater settlements added 2026-06-13: יקנעם, באר יעקב, קרית חיים, נווה דניאל, בני דקלים, כפר מימון, מרחביה, שמשית, etc.).
+
+**PureWater re-dispatch (2026-06-13, 7-day window 14–18/6):** 106/108 placed with fluid balance (אלירן 41 · בני 37 · מיכאל 28); 2 pending & flagged — חרב (`needs_location`) and one טבריה (`day_over_capacity`: the north zone gets only מיכאל's Tue from the far-south אשקלון base, so the 7th northern job doesn't fit). Backup: `tasks_backup_20260613`.
+
 ---
 
 ## Return City in Optimizer (June 2026) ✅ implemented 2026-06-08

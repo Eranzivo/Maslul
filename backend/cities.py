@@ -170,14 +170,46 @@ CITY_COORDS: dict[str, tuple[float, float]] = {
     'עין ורד': (32.2656, 34.9278),
     'כפר נטר': (32.2778, 34.9058),
     'פוריה': (32.7556, 35.5011),
+    # ── Settlements / kibbutzim / moshavim (added 2026-06-13 — were silently
+    #    falling back to Tel Aviv, which corrupted route ordering in their zones) ──
+    'באר יעקב': (31.9430, 34.8336),
+    'בארותיים': (32.2950, 34.9450),
+    'בלפוריה': (32.6030, 35.3000),
+    'בני דקלים': (31.4050, 34.6600),
+    'טלמון': (31.9450, 35.1230),
+    'יקנעם': (32.6614, 35.1100),
+    'כפר אחים': (31.7400, 34.7200),
+    'כפר בן נון': (31.8330, 34.9330),
+    'כפר מימון': (31.3600, 34.6100),
+    'מרחביה': (32.6020, 35.3100),
+    'נווה דניאל': (31.6800, 35.1300),
+    'סלעית': (32.2100, 35.0400),
+    'קיבוץ שובל': (31.4000, 34.7400),
+    'קרית חיים': (32.8300, 35.0700),
+    'שמשית': (32.7400, 35.2200),
 }
 
-def get_coords(city: str) -> tuple[float, float]:
-    if city in CITY_COORDS:
-        return CITY_COORDS[city]
+def resolve_coords(city: str):
+    """Return real (lat, lon) for a city, or None if it genuinely cannot be located.
+
+    Unlike get_coords, this NEVER guesses — an unlocatable city returns None so the
+    caller can flag the task for the coordinator instead of routing it at a fake
+    position (which silently corrupts the day's order). Client-agnostic safeguard."""
+    if not city:
+        return None
+    c = city.strip()
+    if c in CITY_COORDS:
+        return CITY_COORDS[c]
     for key, val in CITY_COORDS.items():
-        if key in city or city in key:
+        if key in c or c in key:
             return val
+    return None
+
+
+def get_coords(city: str) -> tuple[float, float]:
+    coords = resolve_coords(city)
+    if coords is not None:
+        return coords
     import logging
     logging.warning("[cities] Unknown city '%s' — falling back to Tel Aviv coords. Add it to CITY_COORDS.", city)
-    return (32.0853, 34.7818)  # fallback: Tel Aviv
+    return (32.0853, 34.7818)  # fallback: Tel Aviv (callers that need a flag use resolve_coords)

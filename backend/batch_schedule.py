@@ -9,6 +9,7 @@ from datetime import date, timedelta
 from typing import Optional
 import httpx
 from optimizer import solve_route_v2, build_matrix_local
+from cities import resolve_coords
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://pxpqcdfxogaajwstwdtk.supabase.co")
 
@@ -223,6 +224,17 @@ async def run_batch_schedule(
         zone_id = find_zone(task["city"])
         if not zone_id:
             unassigned.append({"id": task["id"], "city": task["city"], "reason": "city_not_in_zone"})
+            continue
+
+        # Location must be locatable for sane routing. If the task has no coords AND its
+        # city can't be resolved by either its raw or normalized spelling (unknown
+        # settlement / typo / new-client test data), DON'T guess — leave it pending and
+        # flag it so the coordinator completes the address. Routing uses the raw city, so
+        # the raw spelling resolving is sufficient (avoids false flags from alias rewrites).
+        if (not (task.get("lat") and task.get("lon"))
+                and resolve_coords(task["city"]) is None
+                and resolve_coords(_norm(task["city"])) is None):
+            unassigned.append({"id": task["id"], "city": task["city"], "reason": "needs_location"})
             continue
 
         best_key: Optional[tuple] = None

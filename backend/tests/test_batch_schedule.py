@@ -1,6 +1,24 @@
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from batch_schedule import optimize_day, resolve_route_strategy, _assignment_score
+from cities import resolve_coords, get_coords
+
+
+def test_resolve_coords_locates_known_and_flags_unknown():
+    # real settlements must resolve (they were silently TLV-guessed before)
+    assert resolve_coords('יקנעם') is not None
+    assert resolve_coords('באר יעקב') is not None
+    assert resolve_coords('קרית חיים') is not None
+    # genuinely unlocatable → None so the caller can flag it (never guess)
+    assert resolve_coords('חרב') is None
+    assert resolve_coords('עיר דמיונית 999') is None
+    assert resolve_coords('') is None
+
+
+def test_added_settlements_are_not_tel_aviv_fallback():
+    tlv = (32.0853, 34.7818)
+    for c in ['יקנעם', 'קרית חיים', 'מרחביה', 'נווה דניאל', 'בני דקלים', 'שמשית']:
+        assert get_coords(c) != tlv, f'{c} still falls back to Tel Aviv'
 
 
 # ── Fluid workload balance ────────────────────────────────────────────────────
