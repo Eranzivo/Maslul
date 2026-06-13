@@ -4776,6 +4776,19 @@ function applySequenceResult(dayTasks, result, sentEpoch, currentEpoch){
 }
 // True when this tenant uses zones (mode 'zone' or absent). open/radius ⇒ no zones.
 function usesZones(sc){ return ((sc && sc.mode) || 'zone') === 'zone'; }
+// Move a call to a new tech/day (drag or tap-to-place). Keeps the customer window (the
+// promise) but clears the exact time so the receiving day re-sequences it (or shows it at
+// the window start). Pure — caller persists + marks days dirty. Returns the patched fields.
+function reassignTask(task, techId, date){
+  return {
+    techId: String(techId),
+    date: String(date),
+    time: '',
+    windowStart: (task && task.windowStart) || '',
+    windowEnd: (task && task.windowEnd) || '',
+    status: (task && task.status === 'pending') ? 'assigned' : (task && task.status) || 'assigned',
+  };
+}
 // </sched-logic>
 function appUsesZones(){ return usesZones(tenantConfig && tenantConfig.scheduling); }
 // ═══ AUTO-SEQUENCING SEAM (features.auto_sequence) ═══════════════════════════
@@ -6925,6 +6938,28 @@ function changePlannerWeek(dir){
   renderPlannerContent();
 }
 
+// ── Editable planner: drag a call between tech/day cells (desktop) ──────────────
+// Mobile uses tap-to-place (task-detail modal) — HTML5 DnD doesn't fire on touch.
+let _dragTaskId=null;
+function _onTaskDragStart(ev,id){
+  _dragTaskId=String(id);
+  try{ ev.dataTransfer.effectAllowed='move'; ev.dataTransfer.setData('text/plain',String(id)); }catch(e){}
+}
+function _onCellDragOver(ev){ ev.preventDefault(); try{ev.dataTransfer.dropEffect='move';}catch(e){} }
+function _onCellDrop(ev,techId,ds){
+  ev.preventDefault();
+  const id=_dragTaskId||(ev.dataTransfer&&ev.dataTransfer.getData('text/plain')); _dragTaskId=null;
+  const t=tasks.find(x=>String(x.id)===String(id)); if(!t) return;
+  if(String(t.techId)===String(techId)&&t.date===ds) return; // dropped on its own cell — no-op
+  const oldTech=t.techId, oldDate=t.date;
+  Object.assign(t, reassignTask(t, techId, ds));
+  save(); saveTaskToSupabase(t);
+  if(oldTech&&oldDate) markDayDirty(oldTech,oldDate);
+  markDayDirty(techId,ds);
+  renderPlannerContent();
+  const tn=(technicians.find(x=>String(x.id)===String(techId))||{}).name||'';
+  showToast('✓ הקריאה הועברה ל'+tn+' · '+new Date(ds).toLocaleDateString('he-IL'));
+}
 function renderPlannerContent(){
   const today=new Date();
   const dayOfWeek=today.getDay();
@@ -6956,7 +6991,7 @@ function _plannerTaskChip(t){
   };
   const col=statusColors[t.status]||{bg:'#EFF6FF',fg:'#1D4ED8'};
   const timeLabel=t.windowStart?`${t.windowStart}–${t.windowEnd}`:(t.time||'');
-  return`<div class="planner-task-chip" style="background:${col.bg};color:${col.fg};border-color:${col.fg}28;border-right-color:${col.fg};" onclick="openTaskDetail('${t.id}')">
+  return`<div class="planner-task-chip" draggable="true" ondragstart="event.stopPropagation();_onTaskDragStart(event,'${t.id}')" style="background:${col.bg};color:${col.fg};border-color:${col.fg}28;border-right-color:${col.fg};cursor:grab;" onclick="openTaskDetail('${t.id}')">
     <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.72rem;">${h(t.client||'לקוח')}</div>
     <div style="display:flex;align-items:center;gap:4px;margin-top:2px;">
       ${timeLabel?`<span style="font-size:0.63rem;font-weight:600;opacity:0.9;">${timeLabel}</span><span style="opacity:0.35;font-size:0.6rem;">·</span>`:''}
@@ -6989,7 +7024,7 @@ function renderPlannerWeekly(days){
       const chips=sorted.map(_plannerTaskChip).join('');
       const canOptimize=CONFIG.OPTIMIZER_URL&&techTasks.length>=2&&ds>=todayStr();
       const optBtn=canOptimize?`<button id="opt-btn-${tech.id}-${ds}" onclick="runOptimize('${tech.id}','${ds}')" title="מסלול מיטבי" style="display:block;width:100%;text-align:center;background:var(--blue-l);border:1px solid var(--blue);border-radius:4px;font-size:0.65rem;color:var(--blue-d);padding:2px 4px;cursor:pointer;font-family:'Heebo',sans-serif;font-weight:700;margin-top:3px;">🔀 מסלול מיטבי</button>`:'';
-      return`<td style="vertical-align:top;padding:5px;border-left:1px solid var(--line-2);${bg?'background:'+bg+';':''}min-width:110px;">${chips||'<div style="height:32px;"></div>'}${optBtn}</td>`;
+      return`<td ondragover="_onCellDragOver(event)" ondragenter="this.style.boxShadow='inset 0 0 0 2px var(--blue)'" ondragleave="this.style.boxShadow=''" ondrop="this.style.boxShadow='';_onCellDrop(event,'${tech.id}','${ds}')" style="vertical-align:top;padding:5px;border-left:1px solid var(--line-2);${bg?'background:'+bg+';':''}min-width:110px;">${chips||'<div style="height:32px;color:var(--ink-4);font-size:0.6rem;text-align:center;">—</div>'}${optBtn}</td>`;
     }).join('');
     return`<tr style="border-bottom:1px solid var(--line-2);">
       <td style="padding:10px 14px;white-space:nowrap;vertical-align:middle;background:var(--white);position:sticky;right:0;z-index:1;border-left:2px solid var(--line-2);box-shadow:-2px 0 4px rgba(0,0,0,0.04);">

@@ -123,5 +123,18 @@ suite('rankGapFill', () => {
   check('caps at 5', ctx.rankGapFill(freed,Array.from({length:9},(_,i)=>({id:i,status:'pending',city:'x'})),()=>1).length===5);
 });
 
+suite('reassignTask', () => {
+  const t = {id:'7', techId:'A', date:'2026-06-07', time:'09:30', windowStart:'07:00', windowEnd:'10:00', status:'assigned'};
+  const r = ctx.reassignTask(t, 'B', '2026-06-09');
+  check('moves to new tech', r.techId === 'B');
+  check('moves to new day', r.date === '2026-06-09');
+  check('keeps the customer window', r.windowStart === '07:00' && r.windowEnd === '10:00');
+  check('clears exact time for re-sequencing', r.time === '');
+  check('original task untouched (pure)', t.techId === 'A' && t.date === '2026-06-07');
+  const p = ctx.reassignTask({id:'9', status:'pending'}, 'C', '2026-06-10');
+  check('placing a pending task makes it assigned', p.status === 'assigned');
+  check('no window → empty window kept', p.windowStart === '' && p.windowEnd === '');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

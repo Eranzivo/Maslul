@@ -213,6 +213,7 @@ Customers receive a **3-hour arrival window** (e.g., 07:00–10:00), not an exac
 - Tasks without windows: shown at their exact time with duration height
 - Unscheduled tasks (no time, no window): listed below the grid in "ממתין לשיבוץ" section
 - One tech at a time — tech tabs at top of daily view
+- **Editable (Phase 3, June 2026):** weekly-view chips are draggable between tech/day cells (desktop) → `reassignTask` (pure, tested) keeps the customer window, clears exact time, persists, marks both days dirty. Mobile uses tap-to-place (modal) — HTML5 DnD doesn't fire on touch. Plan + remaining slices: `outputs/editable-calendar-plan_2026-06-13.md`. **Needs browser QA before relying on it.**
 
 ## Authoritative Auto-Sequencing (`features.auto_sequence`) ✅ implemented 2026-06-12
 
