@@ -4,6 +4,7 @@ from typing import Optional
 from ortools.constraint_solver import routing_enums_pb2, pywrapcp
 from cities import get_coords
 import route_cache
+import geo_resolver
 
 
 # ── Distance helpers ──────────────────────────────────────────────────────────
@@ -32,7 +33,10 @@ def _parse_loc(loc: str) -> tuple[float, float]:
             return float(parts[0].strip()), float(parts[1].strip())
         except ValueError:
             pass
-    return get_coords(loc)
+    hit = geo_resolver.resolve(loc)   # shared brain (geo_places + aliases) → cities.py
+    if hit is not None:
+        return hit
+    return get_coords(loc)             # TLV last-resort keeps the matrix solvable
 
 
 def _task_location(t) -> str:
@@ -406,6 +410,7 @@ async def optimize_routes(technicians: list, google_maps_api_key: Optional[str],
                           route_strategy: str = "flexible") -> list[dict]:
     global LAST_GOOGLE_ELEMENTS
     LAST_GOOGLE_ELEMENTS = 0
+    await geo_resolver.ensure_loaded(service_key)  # load the shared brain once (fail-open)
     results = []
 
     for tech in technicians:

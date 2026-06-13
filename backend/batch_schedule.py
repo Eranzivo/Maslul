@@ -10,6 +10,7 @@ from typing import Optional
 import httpx
 from optimizer import solve_route_v2, build_matrix_local
 from cities import resolve_coords
+import geo_resolver
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://pxpqcdfxogaajwstwdtk.supabase.co")
 
@@ -133,6 +134,8 @@ async def run_batch_schedule(
     service_key: str,
 ) -> dict:
 
+    await geo_resolver.ensure_loaded(service_key)  # load the shared geo brain (fail-open)
+
     # 1. Fetch all required data
     tasks_raw = await _sb_get("tasks", {
         "tenant_id": f"eq.{tenant_id}",
@@ -232,8 +235,8 @@ async def run_batch_schedule(
         # flag it so the coordinator completes the address. Routing uses the raw city, so
         # the raw spelling resolving is sufficient (avoids false flags from alias rewrites).
         if (not (task.get("lat") and task.get("lon"))
-                and resolve_coords(task["city"]) is None
-                and resolve_coords(_norm(task["city"])) is None):
+                and geo_resolver.resolve(task["city"]) is None
+                and geo_resolver.resolve(_norm(task["city"])) is None):
             unassigned.append({"id": task["id"], "city": task["city"], "reason": "needs_location"})
             continue
 

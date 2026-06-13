@@ -3,9 +3,11 @@
 > **Status (2026-06-13):** Layer-A schema **applied + seeded + verified** — `geo_places` (157
 > from `cities.py`), `place_aliases` (14, incl. corrective `seed-fix` for נהריה/קרית שמונה/זיכרון
 > יעקב divergences), `place_resolution_log`. Every PureWater city (tasks + zones) resolves except
-> חרב. Canonicalizer (`canonicalize.py`) built + tested. **No live behavior change yet** — the
-> optimizer still reads `cities.py`; wiring resolution through `canonicalize.py` + `geo_places` is
-> the next deliberate step. Migration record: `outputs/migration-geo-foundation_2026-06-13.sql`.
+> חרב. Canonicalizer (`canonicalize.py`) built + tested. **Wired (fail-safe):** `geo_resolver.py`
+> loads the brain into memory (TTL-cached); `resolve()` backs the optimizer's `_parse_loc` and the
+> batch `needs_location` check — brain → `cities.py` → TLV last-resort, so a brain outage degrades
+> to exactly today's behavior. Backend 64/64. **Pending:** geocode-on-entry (new city → geocode
+> once → store) + resolution logging. Migration: `outputs/migration-geo-foundation_2026-06-13.sql`.
 
 **Eran's aim (2026-06-13):** every city any client enters should be saved — coordinates,
 distances/times between cities, eventually traffic patterns — so the system *learns* an area's
