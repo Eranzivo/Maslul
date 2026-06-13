@@ -158,7 +158,7 @@ Resolved via `resolveRouteStrategy(sc)` — **absent config ⇒ `flexible`** (th
 `isRouteLogical` / `wouldBacktrack` are **strategy-aware sanity guards** (via `isPairOrdered(strategy, earlierIdx, laterIdx)`); for `far_to_near` they behave exactly as before. `_candidatesZone` enables geographic gating for any non-`flexible` strategy.
 
 ### Manual override (`tasks.locked`)
-A `locked` task is pinned by the coordinator and is a **fixed constraint** — the (Plan B) auto-sequencer must never move, reorder, or gap-fill it. `splitLockedFlexible(dayTasks)` separates locked (immovable) from flexible (sequenceable). The flag round-trips DB↔JS today; the draw-to-create UI and sequencer integration land in Plan B (Slices 3–7). See `outputs/scheduling-engine-design_2026-06-10.md`.
+A `locked` task is pinned by the coordinator and is a **fixed constraint** — the (Plan B) auto-sequencer must never move, reorder, or gap-fill it. `splitLockedFlexible(dayTasks)` separates locked (immovable) from flexible (sequenceable). The flag round-trips DB↔JS and the coordinator toggles it from the task-detail modal (`toggleTaskLock` — 🔒/🔓 button → persists → re-sequences the day so flexible calls re-flow around the pin). See `outputs/scheduling-engine-design_2026-06-10.md`.
 
 _2026-06-10 — Slices 1–2: honest strategies + safe `flexible` default + `locked` seam._
 
