@@ -99,7 +99,7 @@ Weights in use: **400** (body), **500** (medium), **600** (semibold), **700** (b
 ## Cards
 
 ```css
-.card             /* white, 1px --border, --sh, --r-lg, p20 */
+.card             /* white, 1px --border, --sh, --r-lg, p24 */
 .card-title       /* 11px/800 uppercase --ink-4, letter-spacing 0.8px, mb16 */
 .kpi-card         /* card variant — border-right:4px solid transparent; position:relative; cursor:pointer */
 .kpi-card:hover   /* sh-md + translateY(-2px) */
