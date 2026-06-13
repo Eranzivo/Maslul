@@ -1711,6 +1711,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       </div>
       <button class="btn btn-blue btn-sm" style="margin-top:8px;width:100%;" onclick="placeTaskDetail()">שבץ כאן ✓</button>
     </div>
+    <button class="btn btn-sm" id="td-lock-btn" style="width:100%;margin-bottom:1rem;" onclick="toggleTaskLock()"></button>
     <div class="fg">
       <label class="fl">הערות</label>
       <textarea class="fc" id="td-notes" rows="3" style="resize:vertical;" placeholder="הוסף הערה..."></textarea>
@@ -7321,6 +7322,17 @@ function openTaskDetail(id){
     _winOpts+=`<option value="${ws}|${we}" ${t.windowStart===ws?'selected':''}>${ws}–${we}</option>`;
   }
   document.getElementById('td-window').innerHTML=_winOpts;
+  // Lock toggle — a locked call is pinned: the auto-sequencer never moves/reorders it.
+  const _lockBtn=document.getElementById('td-lock-btn');
+  if(_lockBtn){
+    if(t.locked){
+      _lockBtn.innerHTML='🔒 נעול — לחץ לשחרור';
+      _lockBtn.style.cssText='width:100%;margin-bottom:1rem;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;font-weight:700;';
+    }else{
+      _lockBtn.innerHTML='🔓 נעל קריאה (קבע במקום)';
+      _lockBtn.style.cssText='width:100%;margin-bottom:1rem;background:var(--white);color:var(--ink-2);border:1px solid var(--line);';
+    }
+  }
   document.getElementById('td-status-opts').innerHTML=s.next.map(ns=>{
     const ni=STATUS_MAP[ns];
     return`<button class="btn btn-outline btn-sm" onclick="setDetailStatus('${ns}')"><span class="badge ${ni.badge}">${ni.label}</span></button>`;
@@ -7339,6 +7351,21 @@ async function setDetailStatus(ns){
   showToast('סטטוס עודכן ✓');
 }
 
+// Pin / unpin a call. Locked = the auto-sequencer treats it as a fixed constraint
+// (splitLockedFlexible) and never moves, reorders, or gap-fills it. Re-sequence the day
+// after toggling so the flexible calls re-flow around the new pin (or fill a freed one).
+async function toggleTaskLock(){
+  const t=tasks.find(x=>String(x.id)===String(detailTaskId));
+  if(!t)return;
+  t.locked=!t.locked;
+  await saveTaskToSupabase(t); // await — the pin must reach Supabase before any refresh
+  save();
+  if(t.techId&&t.date) markDayDirty(t.techId,t.date);
+  openTaskDetail(detailTaskId); // refresh the button state
+  const _pp=document.getElementById('page-planner');
+  if(_pp&&!_pp.classList.contains('hidden')) renderPlannerContent();
+  showToast(t.locked?'הקריאה ננעלה 🔒':'הקריאה שוחררה 🔓');
+}
 async function saveTaskDetail(){
   const t=tasks.find(x=>String(x.id)===String(detailTaskId));
   if(!t)return;
