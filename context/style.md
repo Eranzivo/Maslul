@@ -203,9 +203,9 @@ Mobile (`max-width:900px`): drawer takes `right:0; width:100%`.
 .sidebar          /* fixed right-0, w220, h100vh, --surface-1, border-left --border */
 .sb-nav           /* scrollable nav area */
 .sb-sec           /* section label — 11px/600 uppercase --ink-4, letter-spacing 0.06em */
-.ni-btn           /* nav item — h36, px12, --r, 14px/500 --ink-2, full width */
+.ni-btn           /* nav item — h40, px12, gap10, r8, 14px/500 --ink-2; inset pill (margin 2px 8px) */
 .ni-btn:hover     /* --surface-2 bg */
-.ni-btn.active    /* --accent-light bg, --accent text, 600, border-right 2px --accent */
+.ni-btn.active    /* --accent-light bg, --accent-hover text, 700, inset 3px --accent edge bar */
 .role-chip        /* tenant switcher chip in sidebar bottom */
 .role-chip.active /* --blue-l bg, --blue border/text */
 ```
@@ -215,7 +215,7 @@ Mobile (`max-width:900px`): drawer takes `right:0; width:100%`.
 ## Layout Utilities
 
 ```css
-.page             /* p: 2rem 2.5rem, max-w 1200px, fade-in animation */
+.page             /* p: 2rem 2.75rem, max-w 1240px, fade-in animation */
 .ph               /* page header block, mb 1.75rem */
 .ph-row           /* flex between, wrap */
 .ph-title         /* 26px/900, letter-spacing -0.8px */

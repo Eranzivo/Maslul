@@ -1,5 +1,12 @@
 # Maslul — Backlog & History
 
+> **North star + reprioritized roadmap (2026-06-13):** `outputs/product-vision-roadmap_2026-06-13.md`
+> — *Maslul is an AI dispatch cockpit, not a calendar.* Buckets below mirror it.
+
+## 🟢 NOW — UI/UX pass (cockpit reframe)
+- [ ] **Pass 1 — design system + shell / side-panel redesign.** Tokens (whitespace, status→colour, typography, buttons); Linear-style side panel; dashboard reframed as a cockpit (pending/in-progress/completed/today + per-tech utilization); extract reusable components. Then Pass 2 (planner), Pass 3 (other screens).
+- [ ] **Explainability v1** — "why this tech" panel on the assignment recommendation from signals the engine already computes (same zone · km saved · uses active day · avoids new route · load impact) + hover tooltips.
+
 ## 🟠 Next
 - [x] **Out-of-zone drop safeguard** ✅ 2026-06-13 — `confirmZoneDrop`/`zoneDropMismatch` on all three placement paths warn (fail-soft) when a call's city is in a different zone than the tech's day zone; ⚠ flag via `taskOutOfZone`. Config `scheduling.zone_drop_guard` (default ON, zone-mode). Needs browser QA.
 - [ ] **Calculate/batch-schedule PureWater's 108 tasks** — DEFERRED until all scheduling changes land (mode-aware UI + Plan B). Prereqs: (1) re-run rotation SQL so tech rotations re-link to current zone IDs; (2) verify Israel's tech-zone-per-day division (confirmed 2026-06-10 = `migration-purewater-zones-rotation_2026-06-05.sql`); (3) city aliases קש→קריית שמונה, זכרון→זכרון יעקב (added 2026-06-10, JS + backend). Then run batch assignment respecting the rotation.
