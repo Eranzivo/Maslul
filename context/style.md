@@ -116,7 +116,7 @@ Weights in use: **400** (body), **500** (medium), **600** (semibold), **700** (b
 .tech-home-card:hover  /* sh-md + translateY(-2px) */
 .tech-home-card.dimmed  /* opacity:0.4; pointer-events:none — KPI filter inactive state */
 .th-color-bar     /* display:none (replaced by border-right) */
-.th-body          /* padding:1rem 1.125rem; flex col gap:8px; text-align:right */
+.th-body          /* padding:1.125rem 1.25rem; flex col gap:9px; text-align:right */
 .th-top           /* flex between, avatar + name + status badge */
 .th-avatar        /* 36px colored circle, initials, white 800 */
 .th-name          /* 15px/700 --ink */
