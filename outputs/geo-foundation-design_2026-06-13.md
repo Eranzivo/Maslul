@@ -1,5 +1,12 @@
 # Geo Foundation — Shared "Brain" + Per-Tenant Logic
 
+> **Status (2026-06-13):** Layer-A schema **applied + seeded + verified** — `geo_places` (157
+> from `cities.py`), `place_aliases` (14, incl. corrective `seed-fix` for נהריה/קרית שמונה/זיכרון
+> יעקב divergences), `place_resolution_log`. Every PureWater city (tasks + zones) resolves except
+> חרב. Canonicalizer (`canonicalize.py`) built + tested. **No live behavior change yet** — the
+> optimizer still reads `cities.py`; wiring resolution through `canonicalize.py` + `geo_places` is
+> the next deliberate step. Migration record: `outputs/migration-geo-foundation_2026-06-13.sql`.
+
 **Eran's aim (2026-06-13):** every city any client enters should be saved — coordinates,
 distances/times between cities, eventually traffic patterns — so the system *learns* an area's
 movement and **reuses that knowledge across all clients**. The optimizer's *physics* is shared;
