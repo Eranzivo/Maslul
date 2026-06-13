@@ -19,12 +19,13 @@
 | `scheduling.zone_match` | `city_list` | matches by city list (not polygon) |
 | `scheduling.route_strategy` | `far_to_near` | **PureWater/Israel-specific — set explicitly.** Engine default is now `flexible` (`resolveRouteStrategy`); far_to_near is never the global fallback. |
 | `scheduling.fill_first` | `true` | fill active zone-days before opening new ones |
+| `scheduling.balance.enabled` | `true` | even workload spread across techs, fluid (fill-first still respected) |
 | `scheduling.slot_release` | enabled (72/48/24h) | hold early slots for farther cities |
 | `defaults.arrival_window_hours` | 3 | customers get a 3-hour service window |
 | `defaults.max_daily_jobs` | 9 | per tech per day |
 | `defaults.work_start` / `work_end` | 07:00 / 18:00 | per-tech `weekly_schedule` can override |
 | Features | whatsapp, google_maps (distance matrix), geocoding (enabled 2026-06-07) | `tenants.config.features` |
-| `features.auto_sequence` | **OFF** (absent) | Authoritative auto-sequencing stays off for PureWater until the B3 dry-run shadow-compare validates routes against the live schedule |
+| `features.auto_sequence` | **ON** (verified live 2026-06-13) | Authoritative auto-sequencing — drop or edit a call and the day re-sequences via OR-Tools. Turned on after the B3 shadow-compare gate; the extra optimizer calls are cheap (drive-time cache, `route_cache:configured`) |
 
 ## Zones & rotation
 9 city-list zones covering Israel (דרום · לוד-אשדוד · נהריה-חיפה · תל אביב והסביבה · ראש העין והסביבה · ירושלים · זכרון-הרצליה · יקנעם-נתניה · קריית שמונה-עפולה); all 3 techs start from the Ashkelon depot (`base_city = אשקלון`). Day-of-week rotation (0=Sun … 4=Thu; Fri/Sat off):
@@ -77,6 +78,7 @@ Israel's live task cards reveal structure currently buried in free-text `notes`:
 ## Change log
 | Date | Change |
 |---|---|
+| 2026-06-13 | `auto_sequence` turned **ON** (live-verified); `balance.enabled` ON; editable calendar shipped (weekly + daily-grid drag, lock/unlock pin). Geo foundation wired (fail-safe). |
 | 2026-06-10 | Engine default `route_strategy` flipped to `flexible` (far_to_near is PureWater-specific). **Audit required**: confirm `tenants.config` sets `route_strategy:far_to_near` explicitly before this ships to main. |
 | 2026-06-09 | Standardized to client template; recorded `zone_match = city_list`; flagged far-to-near as PureWater-specific |
 | 2026-06-08 | 108 tasks batch-scheduled; service windows live |

@@ -4,7 +4,7 @@ Read the following files in order, then confirm your understanding:
 2. Read `context/business.md` (what the product is, who it's for, the goal)
 3. Read `context/architecture.md` (tech stack, file map, hard rules, gotchas)
 4. Read `context/scheduling-rules.md` (scheduling logic — do not break)
-5. Read `context/client-israel.md` (current pilot client details)
+5. Read `context/clients/purewater.md` (current pilot client details — the live source-of-truth mirror of `tenants.config`)
 
 After reading all five files, respond with a short confirmation (3–5 sentences) covering:
 - Who the current client is and what stage we're at

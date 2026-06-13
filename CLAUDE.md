@@ -54,6 +54,6 @@ Eran (infomaslul@gmail.com) → Maslul Admin → 🔀 PureWater chip to imperson
 ---
 
 ## 🔴 Urgent
-- [ ] **Railway env var** — add `SUPABASE_SERVICE_KEY` (service_role secret) in Railway → Variables to activate the drive-time cache (`gmaps-cached` mode). Railway plan upgraded to Hobby ✓ 2026-06-12.
+- _(none — Railway `SUPABASE_SERVICE_KEY` resolved 2026-06-13: `/health` reports `route_cache:configured`, cache live.)_
 
 Full backlog + milestone log → `context/backlog.md`
