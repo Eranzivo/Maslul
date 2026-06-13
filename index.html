@@ -4695,6 +4695,30 @@ function isCityInTechZone(tech,city,dateStr){
   const r=resolveZone(city,null,null,tenantConfig,zones);
   return r.matched && r.zoneId===zid;
 }
+// ── Out-of-zone drop safeguard (`scheduling.zone_drop_guard`; default ON for zone-mode
+// tenants, opt out with `false`). A coordinator can drag a far city into the wrong zone-day;
+// the optimizer orders by real coords, so the detour blows the day's drive budget. We WARN
+// (fail-soft) only on a *definite* cross-zone drop — the call's zone is known AND differs from
+// the tech's assigned zone that day. Unknown-zone cities (e.g. חרב) are handled by needs_location.
+function zoneDropMismatch(tech,city,dateStr){
+  if(!appUsesZones()||!tech||!city||!dateStr) return null;
+  if(tenantConfig&&tenantConfig.scheduling&&tenantConfig.scheduling.zone_drop_guard===false) return null;
+  const dayZid=getTechZoneId(tech,dateStr); if(!dayZid) return null;       // no zone that day → nothing to compare
+  const r=resolveZone(city,null,null,tenantConfig,zones);
+  if(!r.matched||!r.zoneId||r.zoneId===dayZid) return null;                // unknown city, or already in-zone ✓
+  return { cityZone:(zones.find(z=>z.id===r.zoneId)||{}).name||'', dayZone:(zones.find(z=>z.id===dayZid)||{}).name||'' };
+}
+// Returns true to proceed with the drop/place, false to abort (coordinator declined the warning).
+function confirmZoneDrop(techId,city,dateStr){
+  const m=zoneDropMismatch(technicians.find(x=>String(x.id)===String(techId)),city,dateStr);
+  if(!m) return true;
+  return confirm(`⚠️ "${city}" שייכת לאזור "${m.cityZone}", אך הטכנאי מבצע ביום זה את אזור "${m.dayZone}".\n\nשיבוץ רחוק מהאזור עלול להאריך מאוד את המסלול ולפגוע בשאר הקריאות של היום.\n\nלשבץ בכל זאת?`);
+}
+// Render-time flag (no persisted state — always accurate, auto-clears when moved back in-zone).
+function taskOutOfZone(t){
+  if(!t||!t.techId||!t.date) return false;
+  return !!zoneDropMismatch(technicians.find(x=>String(x.id)===String(t.techId)),t.city,t.date);
+}
 
 // SLOT RESERVATION: early time slots are held for farther cities.
 // As the date approaches, near-city slots are progressively released.
@@ -6998,6 +7022,7 @@ async function _onCellDrop(ev,techId,ds){
   const id=_dragTaskId||(ev.dataTransfer&&ev.dataTransfer.getData('text/plain')); _dragTaskId=null;
   const t=tasks.find(x=>String(x.id)===String(id)); if(!t) return;
   if(String(t.techId)===String(techId)&&t.date===ds) return; // dropped on its own cell — no-op
+  if(!confirmZoneDrop(techId,t.city,ds)) return; // out-of-zone safeguard
   const oldTech=t.techId, oldDate=t.date;
   Object.assign(t, reassignTask(t, techId, ds));
   save();
@@ -7034,6 +7059,7 @@ async function _onGridDrop(ev,techId,ds){
   const t=tasks.find(x=>String(x.id)===String(id)); if(!t) return;
   const w=_gridWindowAtY(ev.clientY-grid.getBoundingClientRect().top);
   if(String(t.techId)===String(techId)&&t.date===ds&&t.windowStart===w.ws&&t.windowEnd===w.we) return; // no-op
+  if(!confirmZoneDrop(techId,t.city,ds)) return; // out-of-zone safeguard
   const oldTech=t.techId, oldDate=t.date;
   t.techId=String(techId); t.date=ds; t.windowStart=w.ws; t.windowEnd=w.we; t.time='';
   if(t.status==='pending') t.status='assigned';
@@ -7079,6 +7105,7 @@ function _plannerTaskChip(t){
     <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.72rem;">${h(t.client||'לקוח')}</div>
     <div style="display:flex;align-items:center;gap:4px;margin-top:2px;">
       ${timeLabel?`<span style="font-size:0.63rem;font-weight:600;opacity:0.9;">${timeLabel}</span><span style="opacity:0.35;font-size:0.6rem;">·</span>`:''}
+      ${taskOutOfZone(t)?'<span title="מחוץ לאזור היום" style="color:#D97706;font-weight:800;">⚠</span>':''}
       <span style="font-size:0.63rem;opacity:0.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h(t.city||'')}</span>
     </div>
   </div>`;
@@ -7243,7 +7270,7 @@ function renderPlannerDaily(days){
     const rows=grp.map(t=>`<div draggable="true" ondragstart="event.stopPropagation();_onTaskDragStart(event,'${t.id}')" onclick="openTaskDetail('${t.id}')" style="padding:3px 0;cursor:grab;border-bottom:1px solid ${tc}18;border-radius:3px;transition:background 0.1s;" onmouseover="this.style.background='${tc}14'" onmouseout="this.style.background=''">
       <div style="display:flex;align-items:center;gap:5px;">
         <span style="width:6px;height:6px;border-radius:50%;background:${statusFg[t.status]||tc};flex-shrink:0;box-shadow:0 0 0 2px ${(statusFg[t.status]||tc)}30;"></span>
-        <span style="font-size:0.69rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${t.locked?'🔒 ':''}${h(t.client||'—')}</span>
+        <span style="font-size:0.69rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${t.locked?'🔒 ':''}${taskOutOfZone(t)?'<span title="מחוץ לאזור היום" style="color:#D97706;">⚠ </span>':''}${h(t.client||'—')}</span>
         <span style="font-size:0.63rem;color:var(--ink-3);font-weight:600;">${t.time||''}</span>
       </div>
       ${_trc[String(t.id)]?`<div style="font-size:0.6rem;color:var(--ink-4);padding-right:11px;margin-top:1px;">🚗 ${_trc[String(t.id)].drive_minutes} דק׳ מ-${h(_trc[String(t.id)].prev)}</div>`:''}
@@ -7395,6 +7422,7 @@ async function placeTaskDetail(){
   const date=document.getElementById('td-date').value;
   const win=document.getElementById('td-window').value;
   if(!techId||!date){ showToast('בחר טכנאי ותאריך','error'); return; }
+  if(!confirmZoneDrop(techId,t.city,date)) return; // out-of-zone safeguard
   const oldTech=t.techId, oldDate=t.date;
   const [ws,we]=win?win.split('|'):['',''];
   t.techId=String(techId); t.date=date;
