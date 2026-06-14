@@ -5,7 +5,12 @@
 
 ## 🟢 NOW — coordinator flow redesign (Israel demo feedback 2026-06-14)
 > Full triage: `outputs/israel-feedback-triage_2026-06-14.md`. Theme: dead-simple dispatcher flow, optimization behind the scenes.
-- [ ] **Simplified scheduling flow (Feedback #3 + 1.4/1.6/1.7)** — Search (city/address) → **3 recommendation cards** (Day · Date · Time-window only, no tech/route/scores) → confirm. Reveal tech/route/existing-day-jobs only *after* a card is picked. Replaces the current multi-slot `showCandidate`.
+
+> **✅ UI redesign port SHIPPED & DEPLOYED 2026-06-15** (7 slices on `md-*` design system, pushed to live):
+> detail side-panel, weekly 3h window-blocks, daily grid polish, coordinator **3-card chooser** (additive over `showCandidate`),
+> home dashboard, nav sidebar. All handlers preserved, 61+18 tests green. Source: `mockups/claude-design/`, log: `mockups/DESIGN-LOG.md`.
+- [ ] **⭐ Manual E2E/QA pass — every section** (Eran request 2026-06-15; small fixes expected, nothing broken so far). Click through + verify each: home (KPI + tech→weekly), dispatch/coordinator (search→3 cards→reveal→confirm→back-home), task detail (assign/transfer, lock, status, save), weekly board (window-blocks, drag, optimize), daily grid (drop geometry, now-line, tray), nav + role/tenant switch, calls tab, reports, technicians, zones, clients, settings. Log each fix as found.
+- [ ] **Simplified scheduling flow (Feedback #3 + 1.4/1.6/1.7)** — Search (city/address) → **3 recommendation cards** (Day · Date · Time-window only, no tech/route/scores) → confirm. Reveal tech/route/existing-day-jobs only *after* a card is picked. Replaces the current multi-slot `showCandidate`. **(card chooser shipped 2026-06-15; remaining: "check specific date" calendar view, auto-return-home polish.)**
   - [ ] **"Find Another Date"** → next-best optimized option (then 3rd…), all still rule-compliant.
   - [ ] **"Check Specific Date"** → run the same engine against a coordinator-chosen date; show that day's open windows calendar-style (#1.7/2.5).
   - [ ] After confirm: **"נקבע ✓" → auto-return to home/search** (#1.9/2.9).
@@ -17,6 +22,7 @@
 ## 🟠 Next
 ### Scheduling-engine capabilities (Israel feedback 2026-06-14)
 - [ ] **Fill-first over balance (#1.5/2.3/2.7)** — Israel wants consolidation (pack one tech's day to max before opening another), NOT even-spread. Flip PureWater `scheduling.balance.enabled` → OFF. Re-validate `_assignment_score` fill-first path. ⚠ reverses the 2026-06-13 balance-ON decision.
+- [ ] **⭐ Bulk-import → batch engine ("fill a week at once")** — `runBulkImport()`/`importCsvRows()` currently create calls as `status:'pending'` only (no engine). Wire them to the batch scheduler (`/batch-schedule` + `batch_schedule.py`) so an import is placed in ONE optimal pass instead of call-by-call re-sequencing. Eran flagged this as mandatory (2026-06-15). Writes live data → do deliberately, after backups.
 - [ ] **Strict daily-region HARD block in dispatch UI (#1.3/1.11)** — batch engine already blocks cross-region (`batch_schedule.py:251`); the live `_candidatesZone`/drag path is fail-soft (warn). Make region violations a hard exclude when `scheduling.zone_strict` (+ remove N/S boundary, #1.2/2.11).
 - [ ] **Technician skills / categories (#2.1)** — required `technicians.skills[]`; candidate engine filters techs by skill. Not every tech does every job type.
 - [ ] **Per-category daily limits (#2.4)** — `technicians.category_limits` (e.g. ≤2 service calls, ≤5 installs/day); assigner respects them.
