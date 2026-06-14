@@ -7589,17 +7589,22 @@ function renderPlannerDaily(days){
     const width=`calc(${_avail} / ${ncol} - 4px)`;
     const label=hasWin?`${first.windowStart} — ${first.windowEnd}`:first.time;
     const _trc=_seqTraces[`${tech.id}|${ds}`]||{};
-    const rows=grp.map(t=>`<div draggable="true" ondragstart="event.stopPropagation();_onTaskDragStart(event,'${t.id}')" onclick="openTaskDetail('${t.id}')" style="padding:3px 0;cursor:grab;border-bottom:1px solid ${tc}18;border-radius:3px;transition:background 0.1s;" onmouseover="this.style.background='${tc}14'" onmouseout="this.style.background=''">
-      <div style="display:flex;align-items:center;gap:5px;">
-        <span style="width:6px;height:6px;border-radius:50%;background:${statusFg[t.status]||tc};flex-shrink:0;box-shadow:0 0 0 2px ${(statusFg[t.status]||tc)}30;"></span>
-        <span style="font-size:0.69rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${t.locked?'🔒 ':''}${taskOutOfZone(t)?'<span title="מחוץ לאזור היום" style="color:#D97706;">⚠ </span>':''}${h(t.client||'—')}</span>
-        <span style="font-size:0.63rem;color:var(--ink-3);font-weight:600;">${t.time||''}</span>
+    const rows=grp.map(t=>`<div draggable="true" ondragstart="event.stopPropagation();_onTaskDragStart(event,'${t.id}')" onclick="openTaskDetail('${t.id}')" style="display:flex;gap:7px;padding:6px 10px;border-top:1px dashed ${tc}28;cursor:grab;transition:background 0.12s;" onmouseover="this.style.background='${tc}0d'" onmouseout="this.style.background=''">
+      <span style="font-size:11px;font-weight:700;color:var(--ink-2);direction:ltr;font-feature-settings:'tnum';flex:0 0 34px;padding-top:1px;white-space:nowrap;">${t.time||''}</span>
+      <div style="min-width:0;flex:1;">
+        <div style="display:flex;align-items:center;gap:5px;">
+          <span style="width:6px;height:6px;border-radius:50%;background:${statusFg[t.status]||tc};flex:0 0 6px;"></span>
+          <span style="font-size:12.5px;font-weight:600;color:${t.status==='completed'?'var(--ink-3)':'var(--ink)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${t.locked?'🔒 ':''}${taskOutOfZone(t)?'<span title="מחוץ לאזור היום" style="color:#D97706;">⚠ </span>':''}${h(t.client||'—')}</span>
+        </div>
+        ${_trc[String(t.id)]?`<div style="display:flex;align-items:center;gap:4px;margin-top:2px;font-size:11px;color:var(--ink-3);padding-right:11px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 12px;color:var(--ink-4);"><path d="M3 13l1.6-4.2A2 2 0 0 1 6.5 7.5h11a2 2 0 0 1 1.9 1.3L21 13"/><path d="M3 13h18v3.5a1 1 0 0 1-1 1h-1.5"/><path d="M5.5 17.5H4a1 1 0 0 1-1-1V13"/><circle cx="7" cy="17.5" r="1.6"/><circle cx="16" cy="17.5" r="1.6"/></svg>${_trc[String(t.id)].drive_minutes} דק׳ מ-${h(_trc[String(t.id)].prev)}</div>`:''}
+        ${t.notes?`<div style="font-size:11px;color:var(--ink-3);padding-right:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">📝 ${h(t.notes)}</div>`:''}
       </div>
-      ${_trc[String(t.id)]?`<div style="font-size:0.6rem;color:var(--ink-4);padding-right:11px;margin-top:1px;">🚗 ${_trc[String(t.id)].drive_minutes} דק׳ מ-${h(_trc[String(t.id)].prev)}</div>`:''}
-      ${t.notes?`<div style="font-size:0.6rem;color:var(--ink-3);padding-right:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;">📝 ${h(t.notes)}</div>`:''}
     </div>`).join('');
-    return`<div style="position:absolute;top:${top}px;left:${left};width:${width};height:${height}px;background:#fff;border:1.5px solid ${tc}55;border-right:4px solid ${tc};border-radius:7px;padding:5px 8px 5px 7px;overflow:hidden;box-sizing:border-box;z-index:2;box-shadow:0 1px 4px rgba(0,0,0,0.10),0 0 0 1px ${tc}10;">
-      <div style="font-size:0.66rem;font-weight:800;color:${tc};margin-bottom:3px;letter-spacing:0.2px;border-bottom:1px solid ${tc}22;padding-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</div>
+    return`<div style="position:absolute;top:${top}px;left:${left};width:${width};height:${height}px;background:${tc}08;border:1px solid ${tc}30;border-right:3px solid ${tc};border-radius:9px;overflow:hidden;box-sizing:border-box;z-index:2;box-shadow:0 1px 3px rgba(17,24,39,0.06),0 0 0 1px ${tc}12;">
+      <div style="display:flex;align-items:center;gap:7px;padding:6px 10px 5px;border-bottom:1px solid ${tc}22;background:${tc}12;">
+        <span style="font-size:12px;font-weight:800;color:${tc};direction:ltr;font-feature-settings:'tnum';white-space:nowrap;flex:1;">${label}</span>
+        <span style="min-width:18px;height:18px;padding:0 5px;border-radius:5px;background:var(--white);border:1px solid ${tc}30;display:inline-flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:var(--ink-2);">${grp.length}</span>
+      </div>
       ${rows}
     </div>`;
   }).join('');
@@ -7609,13 +7614,18 @@ function renderPlannerDaily(days){
   const shadowBtn=(canOpt&&typeof currentUserSuperAdmin!=='undefined'&&currentUserSuperAdmin)?`<button onclick="shadowCompare('${tech.id}','${ds}')" style="display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--white);border:1px dashed var(--blue);border-radius:6px;font-size:0.8rem;color:var(--blue-d);font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer;">🔍 השוואת מסלול</button>`:'';
   const optBtn=(canOpt?`<button id="opt-btn-${tech.id}-${ds}" onclick="runOptimize('${tech.id}','${ds}')" style="display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--blue-l);border:1px solid var(--blue);border-radius:6px;font-size:0.8rem;color:var(--blue-d);font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer;">🔀 מסלול מיטבי</button>`:'')+shadowBtn;
   // Unscheduled section
-  const unschedHtml=unscheduled.length?`<div style="margin-top:12px;padding:10px 12px;background:var(--white);border-radius:8px;border:1px solid var(--line);">
-    <div style="font-size:0.72rem;font-weight:800;color:var(--ink-3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.4px;">ממתין לשיבוץ (${unscheduled.length})</div>
-    ${unscheduled.map(t=>`<div draggable="true" ondragstart="event.stopPropagation();_onTaskDragStart(event,'${t.id}')" onclick="openTaskDetail('${t.id}')" style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid var(--line-2);cursor:grab;font-size:0.8rem;">
-      <span style="width:6px;height:6px;border-radius:50%;background:${statusFg[t.status]||tc};flex-shrink:0;"></span>
-      <span style="font-weight:700;">${h(t.client||'—')}</span>
-      <span style="color:var(--ink-3);font-size:0.72rem;">${h(t.city||'')}</span>
+  const unschedHtml=unscheduled.length?`<div style="margin-top:14px;padding:12px 14px;background:var(--white);border-radius:10px;border:1px solid var(--line);box-shadow:0 1px 2px rgba(17,24,39,0.04);">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span style="font-size:0.74rem;font-weight:800;color:var(--ink-2);">ממתין לשיבוץ</span>
+      <span style="font-size:11.5px;font-weight:700;color:var(--amber);background:#FEF3C7;border-radius:999px;padding:1px 8px;">${unscheduled.length}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+    ${unscheduled.map(t=>`<div draggable="true" ondragstart="event.stopPropagation();_onTaskDragStart(event,'${t.id}')" onclick="openTaskDetail('${t.id}')" style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--white);border:1px solid var(--line);border-radius:8px;cursor:grab;transition:border-color 0.15s,box-shadow 0.15s;" onmouseover="this.style.borderColor='${tc}55';this.style.boxShadow='0 2px 8px rgba(17,24,39,0.07)'" onmouseout="this.style.borderColor='var(--line)';this.style.boxShadow=''">
+      <span style="width:7px;height:7px;border-radius:50%;background:${statusFg[t.status]||tc};flex-shrink:0;"></span>
+      <span style="font-size:13.5px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h(t.client||'—')}</span>
+      <span style="font-size:11.5px;font-weight:600;color:var(--ink-3);white-space:nowrap;">${h(t.city||'')}</span>
     </div>`).join('')}
+    </div>
   </div>`:'';
   content.innerHTML=_needsAttentionStrip()+`
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${dayTabs}</div>
