@@ -27,6 +27,10 @@
 - [ ] Dashboard & analytics — charts, KPIs (like timing.tech)
 - [ ] Customer ETA portal — SMS/WhatsApp link → customer sees tech ETA + can rate
 
+## 🟢 Foundations / infra ("on me")
+- [ ] **⭐ Supabase Free → Pro (~$25/mo) — at PureWater go-live.** Driver is data safety + reliability: Free **pauses after 7d inactivity** and has **no auto-backups** (we've had data-loss incidents). The first real foundational spend. Full plan: `outputs/infra-cost-roadmap_2026-06-14.md`.
+- _Client-driven costs (storage/photos, SMTP, Twilio/WhatsApp, domain, higher Maps budget) = "on the way", added per client need and covered by their price — see the infra-cost-roadmap doc._
+
 ## 🟡 After Client #2
 - [ ] Custom domain (maslul.co.il) + Cloudflare
 - [ ] Client #2 onboarding — `context/clients/[name].md` + SQL script
