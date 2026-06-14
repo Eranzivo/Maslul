@@ -98,6 +98,21 @@ footer "פתיחת מסלול יומי". Maps to our home dashboard + `tech-home
 - **Tech identity colors:** yossi #6366F1, dana #7C3AED, omer #0D9488, ran #D97706, maya #E11D48.
 - **Token match is ~1:1** with `style.md` — minimal translation needed.
 
+## Phase 2 — IA / page organization (Eran feedback 2026-06-15)
+A structural rethink of how pages are ordered/distributed, using all refs (Linear, shapes.co, the
+compact top-nav). To be designed as a proposal before building.
+- **Move "חופשות" (vacations/day-off) → Technicians view** — not commonly used; keep operational pages lean.
+- **Calls tab action row is too long / ugly** — split the long row (filters: הכל/ממתינות/משובצות/הושלמו/
+  בוטלו/חזרות/תבניות vs actions: +הוסף קריאה/ייבא CSV/ייבא מרובה). Condense; group; don't cram one line.
+- **Bulk import ("ייבא מרובה") must feed the DECISION ENGINE, not call-by-call.** Eran's framing (correct):
+  the right way to "fill a week from scratch" is import-many → **batch schedule once** (the engine we
+  already have: `run_batch_schedule` / `batch_schedule.py`), so the optimizer assigns the whole set in
+  one optimal pass instead of re-sequencing 100× as calls trickle in. Treat bulk-import → pending →
+  batch-assign as a first-class, mandatory flow. Wire the UI button to it.
+- **Compact top-nav reference** (347×62 screenshot: Home/Messages/Discover/Wallet/Projects) — same
+  size/colors, well-organized, items sorted into their appropriate product areas.
+- **Re-order/distribute pages by area** (תפעול / CRM / הגדרות) per the design system + references.
+
 ## Open items to resolve during the port
 - ⚠ **Class-name collisions:** the mockups use generic names (`.btn .card .page .nav .pill .status-pill .kpi-*`)
   that ALSO exist in `index.html`. Port requires **namespacing** (e.g. prefix new screens) — do NOT paste raw.
