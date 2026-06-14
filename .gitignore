@@ -2,3 +2,7 @@
 PWs.txt
 .env
 .mcp.json
+
+# temp PureWater restore data (live tenant data — never commit)
+backend/_pw_*
+backend/_restore_run.py

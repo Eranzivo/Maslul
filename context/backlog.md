@@ -3,12 +3,28 @@
 > **North star + reprioritized roadmap (2026-06-13):** `outputs/product-vision-roadmap_2026-06-13.md`
 > — *Maslul is an AI dispatch cockpit, not a calendar.* Buckets below mirror it.
 
-## 🟢 NOW — UI/UX pass (cockpit reframe)
-- [ ] **Pass 1 — design system + shell / side-panel redesign.** Tokens (whitespace, status→colour, typography, buttons); Linear-style side panel; dashboard reframed as a cockpit (pending/in-progress/completed/today + per-tech utilization); extract reusable components. Then Pass 2 (planner), Pass 3 (other screens).
-- [ ] **Explainability v1** — "why this tech" panel on the assignment recommendation from signals the engine already computes (same zone · km saved · uses active day · avoids new route · load impact) + hover tooltips.
+## 🟢 NOW — coordinator flow redesign (Israel demo feedback 2026-06-14)
+> Full triage: `outputs/israel-feedback-triage_2026-06-14.md`. Theme: dead-simple dispatcher flow, optimization behind the scenes.
+- [ ] **Simplified scheduling flow (Feedback #3 + 1.4/1.6/1.7)** — Search (city/address) → **3 recommendation cards** (Day · Date · Time-window only, no tech/route/scores) → confirm. Reveal tech/route/existing-day-jobs only *after* a card is picked. Replaces the current multi-slot `showCandidate`.
+  - [ ] **"Find Another Date"** → next-best optimized option (then 3rd…), all still rule-compliant.
+  - [ ] **"Check Specific Date"** → run the same engine against a coordinator-chosen date; show that day's open windows calendar-style (#1.7/2.5).
+  - [ ] After confirm: **"נקבע ✓" → auto-return to home/search** (#1.9/2.9).
+- [ ] **Home = technician names only (#1.10)** — click a tech → structured weekly view (days · windows · cities · addresses · service types · status). Replaces current task/city dashboard.
+- [ ] **Chronological ordering audit (#1.8/2.8)** — never 10:00 before 07:00; weekly sort fixed, audit all views. Calendar shows **only confirmed/completed**, never drafts/candidates.
+- [ ] **Pass 1 — design system + shell / side-panel redesign.** Tokens, Linear-style side panel, cockpit dashboard, reusable components. (In progress.)
+- [ ] **Explainability v1** — "why this tech" panel from signals the engine already computes (same zone · km saved · uses active day · avoids new route · load impact) + hover tooltips. (Now deferred behind the card flow — shown *after* selection per #3.)
 
 ## 🟠 Next
-- [x] **Out-of-zone drop safeguard** ✅ 2026-06-13 — `confirmZoneDrop`/`zoneDropMismatch` on all three placement paths warn (fail-soft) when a call's city is in a different zone than the tech's day zone; ⚠ flag via `taskOutOfZone`. Config `scheduling.zone_drop_guard` (default ON, zone-mode). Needs browser QA.
+### Scheduling-engine capabilities (Israel feedback 2026-06-14)
+- [ ] **Fill-first over balance (#1.5/2.3/2.7)** — Israel wants consolidation (pack one tech's day to max before opening another), NOT even-spread. Flip PureWater `scheduling.balance.enabled` → OFF. Re-validate `_assignment_score` fill-first path. ⚠ reverses the 2026-06-13 balance-ON decision.
+- [ ] **Strict daily-region HARD block in dispatch UI (#1.3/1.11)** — batch engine already blocks cross-region (`batch_schedule.py:251`); the live `_candidatesZone`/drag path is fail-soft (warn). Make region violations a hard exclude when `scheduling.zone_strict` (+ remove N/S boundary, #1.2/2.11).
+- [ ] **Technician skills / categories (#2.1)** — required `technicians.skills[]`; candidate engine filters techs by skill. Not every tech does every job type.
+- [ ] **Per-category daily limits (#2.4)** — `technicians.category_limits` (e.g. ≤2 service calls, ≤5 installs/day); assigner respects them.
+- [ ] **Rotation variety + busy-zone coverage (#2.2)** — up to 5 weekly regions/tech, ensure a tech isn't stuck in one area all week; **give under-covered busy zones a 3rd covering day** (תל אביב = 27 calls vs 2 covering tech-days is the current overflow cause).
+- [ ] **Mandatory tech config + real boundary engine (#2.10/2.11)** — can't create a tech without regions, skills, hours, durations, max-daily, categories; recommendations never exceed the defined operating range (region/coords based, not N/S).
+- [ ] **Bulk region creation (#2.12)** — paste a list of ~100 cities into a region at once (zone authoring; pairs with `canonicalCity` guard).
+- [ ] **45-min "package" category (#1.1)** — add the DB category; durations already flow through the engine (standard 30 / package 45).
+- [x] **Out-of-zone drop safeguard** ✅ 2026-06-13 — `confirmZoneDrop`/`zoneDropMismatch` on all three placement paths warn (fail-soft) when a call's city is in a different zone than the tech's day zone; ⚠ flag via `taskOutOfZone`. Config `scheduling.zone_drop_guard` (default ON, zone-mode). Needs browser QA. **→ upgrade to hard-block per #1.3.**
 - [ ] **Calculate/batch-schedule PureWater's 108 tasks** — DEFERRED until all scheduling changes land (mode-aware UI + Plan B). Prereqs: (1) re-run rotation SQL so tech rotations re-link to current zone IDs; (2) verify Israel's tech-zone-per-day division (confirmed 2026-06-10 = `migration-purewater-zones-rotation_2026-06-05.sql`); (3) city aliases קש→קריית שמונה, זכרון→זכרון יעקב (added 2026-06-10, JS + backend). Then run batch assignment respecting the rotation.
 - [ ] Israel fills in client details on 108 tasks (via ✏️ edit button)
 - [ ] Israel testing — real dispatch scenarios, feedback collection

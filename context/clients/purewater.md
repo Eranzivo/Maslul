@@ -19,10 +19,10 @@
 | `scheduling.zone_match` | `city_list` | matches by city list (not polygon) |
 | `scheduling.route_strategy` | `far_to_near` | **PureWater/Israel-specific — set explicitly.** Engine default is now `flexible` (`resolveRouteStrategy`); far_to_near is never the global fallback. |
 | `scheduling.fill_first` | `true` | fill active zone-days before opening new ones |
-| `scheduling.balance.enabled` | `true` | even workload spread across techs, fluid (fill-first still respected) |
+| `scheduling.balance.enabled` | **`false`** | **OFF since 2026-06-14** — Israel wants fill-first *consolidation* (pack one tech's day to max before opening another), not even-spread. Reverses the 2026-06-13 balance-ON trial. See feedback #1.5/2.3/2.7. |
 | `scheduling.slot_release` | enabled (72/48/24h) | hold early slots for farther cities |
 | `defaults.arrival_window_hours` | 3 | customers get a 3-hour service window |
-| `defaults.max_daily_jobs` | 9 | per tech per day |
+| `defaults.max_daily_jobs` | 9 | per tech per day. Per-tech `max_daily` also set to **9** for all 3 (was 15/12/9, normalized 2026-06-14 per Israel's stated rule). |
 | `defaults.work_start` / `work_end` | 07:00 / 18:00 | per-tech `weekly_schedule` can override |
 | Features | whatsapp, google_maps (distance matrix), geocoding (enabled 2026-06-07) | `tenants.config.features` |
 | `features.auto_sequence` | **ON** (verified live 2026-06-13) | Authoritative auto-sequencing — drop or edit a call and the day re-sequences via OR-Tools. Turned on after the B3 shadow-compare gate; the extra optimizer calls are cheap (drive-time cache, `route_cache:configured`) |
@@ -78,7 +78,8 @@ Israel's live task cards reveal structure currently buried in free-text `notes`:
 ## Change log
 | Date | Change |
 |---|---|
-| 2026-06-13 | `auto_sequence` turned **ON** (live-verified); `balance.enabled` ON; editable calendar shipped (weekly + daily-grid drag, lock/unlock pin). Geo foundation wired (fail-safe). |
+| 2026-06-14 | **Israel demo feedback** (3 docs) triaged → `outputs/israel-feedback-triage_2026-06-14.md` + backlog. Live config: `balance.enabled` → **OFF** (fill-first consolidation, #1.5); per-tech `max_daily` normalized to **9** (was 15/12/9). 108 tasks re-calculated by the engine (fill-first, 9/9/9): **88 assigned / 20 pending** written to the tenant for Jun 7–11. 20 pending = structural תל אביב overflow (27 calls vs 2 covering tech-days, #2.2) + 1 needs-location (חרב). All UI-flow + engine-capability feedback queued (NOT engine-hardcoded — generic config knobs). |
+| 2026-06-13 | `auto_sequence` turned **ON** (live-verified); `balance.enabled` ON (trial — reversed 2026-06-14); editable calendar shipped (weekly + daily-grid drag, lock/unlock pin). Geo foundation wired (fail-safe). |
 | 2026-06-10 | Engine default `route_strategy` flipped to `flexible` (far_to_near is PureWater-specific). **Audit required**: confirm `tenants.config` sets `route_strategy:far_to_near` explicitly before this ships to main. |
 | 2026-06-09 | Standardized to client template; recorded `zone_match = city_list`; flagged far-to-near as PureWater-specific |
 | 2026-06-08 | 108 tasks batch-scheduled; service windows live |
