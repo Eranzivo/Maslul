@@ -82,6 +82,13 @@ footer "פתיחת מסלול יומי". Maps to our home dashboard + `tech-home
 
 ---
 
+## Reference inspirations
+- **Linear / Invo / Okd** (earlier) — the primary target: clean, minimal, side-panel SaaS.
+- **shapes.co** (HR SaaS, 2026-06-15) — Eran likes the **minimality, confident type, warm-gradient hero,
+  soft elevated cards, professional restraint**. Side-panel icon-rail is *not* the favorite (prefer the
+  labeled nav). Use as a polish bar: this redesign should "step up a few levels," not one — it's the
+  pre-client-outreach level-up. A full manual E2E/QA pass across the product follows this, with PureWater.
+
 ## Cross-cutting facts (verified in the source files)
 - **RTL time-range is already fixed** — all window labels use `direction:ltr` + `font-feature-settings:"tnum"`.
   (My earlier screenshot note about "10:00 — 07:00" was the render before this; the HTML handles it.)
