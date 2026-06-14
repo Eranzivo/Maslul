@@ -171,6 +171,9 @@ Weights in use: **400** (body), **500** (medium), **600** (semibold), **700** (b
 .mo-box           /* white, --r-xl, --sh-lg, p24, max-w480, max-h90vh scroll */
 .mo-title         /* 17px/700, mb20 */
 .mo-actions       /* flex end, gap8, mt24, pt16, border-top --border */
+.mo.mo-panel      /* modifier: present a modal as a right-side slide-in panel (Linear-style) —
+                     box pinned beside the sidebar (right:220px, w420, h100vh), slideInPanel anim;
+                     full-width on mobile. Reuses .mo/.mo-box content+handlers. Used by #mo-task-detail */
 ```
 
 ---

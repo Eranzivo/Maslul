@@ -259,6 +259,11 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .mo-box{background:#fff;border:1px solid var(--border);border-radius:var(--r-xl);box-shadow:var(--sh-lg);padding:24px;max-width:480px;width:calc(100% - 32px);max-height:90vh;overflow-y:auto;position:relative;}
 .mo-title{font-size:1.0625rem;font-weight:700;color:var(--ink);margin-bottom:20px;}
 .mo-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:24px;padding-top:16px;border-top:1px solid var(--border);}
+/* Side-panel presentation for a modal (Linear-style right slide-in). Reuses .mo/.mo-box
+   content + handlers; just repositions the box beside the sidebar. Add class "mo-panel". */
+.mo.mo-panel .mo-box{position:fixed;top:0;right:220px;height:100vh;max-height:100vh;width:420px;max-width:calc(100vw - 220px);border-radius:0;border:none;border-left:1px solid var(--border);margin:0;animation:slideInPanel 0.22s cubic-bezier(0.4,0,0.2,1);}
+@keyframes slideInPanel{from{transform:translateX(24px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+@media(max-width:900px){.mo.mo-panel .mo-box{right:0;width:100%;max-width:100%;}}
 /* ═══ DRAWER ═══ */
 .drawer-overlay{position:fixed;inset:0;z-index:499;background:rgba(0,0,0,0.25);opacity:0;pointer-events:none;transition:opacity 0.2s;}
 .drawer-overlay.open{opacity:1;pointer-events:auto;}
@@ -1691,9 +1696,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   </div>
 </div>
 
-<!-- MODAL: TASK DETAIL -->
-<div class="mo hidden" id="mo-task-detail">
-  <div class="mo-box" style="max-width:500px;">
+<!-- MODAL: TASK DETAIL (presented as a right-side panel via .mo-panel) -->
+<div class="mo mo-panel hidden" id="mo-task-detail">
+  <div class="mo-box">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
       <div>
         <div style="font-size:1.125rem;font-weight:900;" id="td-client"></div>
