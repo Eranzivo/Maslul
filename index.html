@@ -481,6 +481,51 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .md-kpi-card .k-num{font-size:30px;font-weight:900;letter-spacing:-1px;margin:4px 0 2px;}
 .md-kpi-card .k-sub{font-size:12px;color:var(--ink-4);}
 @media(max-width:760px){.md-kpi{grid-template-columns:repeat(2,1fr);}}
+
+/* ── Slice 5: Recommendation-card chooser (md-rc*) ──────────────────────── */
+.md-rc-section{margin-bottom:8px;}
+.md-rc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.md-rc-head h3{font-size:14px;font-weight:700;color:var(--ink);}
+.md-rc-head .md-rc-count{font-size:12px;color:var(--ink-4);font-weight:500;}
+.md-rc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+@media(max-width:700px){.md-rc-grid{grid-template-columns:1fr;}}
+/* Single recommendation card */
+.md-rc{position:relative;background:var(--surface-0);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px 18px 16px;display:flex;flex-direction:column;gap:16px;cursor:pointer;transition:transform .12s ease,box-shadow .15s ease,border-color .15s ease;box-shadow:var(--sh);}
+.md-rc:hover{transform:translateY(-2px);box-shadow:var(--sh-md);}
+/* Best / recommended card accent */
+.md-rc.best{border-color:var(--accent);box-shadow:0 0 0 3px rgba(99,102,241,.10),0 8px 24px rgba(99,102,241,.13);}
+.md-rc.best:hover{box-shadow:0 0 0 3px rgba(99,102,241,.14),0 12px 28px rgba(99,102,241,.17);}
+/* "מומלץ" badge (top-left in RTL = top:16px; left:16px) */
+.md-rc-badge{position:absolute;top:14px;left:14px;display:inline-flex;align-items:center;gap:4px;background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;}
+.md-rc-badge svg{width:11px;height:11px;}
+/* Day / date block */
+.md-rc-when .md-rc-day{font-size:22px;font-weight:800;letter-spacing:-0.02em;line-height:1.15;color:var(--ink);}
+.md-rc-when .md-rc-date{font-size:12.5px;color:var(--ink-3);margin-top:3px;font-weight:500;}
+/* Time window chip */
+.md-rc-win{display:inline-flex;align-items:center;gap:7px;align-self:flex-start;background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:14px;font-weight:700;color:var(--ink-2);}
+.md-rc-win svg{width:15px;height:15px;color:var(--ink-4);flex-shrink:0;}
+.md-rc.best .md-rc-win{background:var(--accent-light);border-color:var(--accent-border);color:var(--accent-hover);}
+.md-rc.best .md-rc-win svg{color:var(--accent);}
+/* Select button inside card */
+.md-rc-btn{width:100%;height:40px;border-radius:var(--r);font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .15s,border-color .15s,transform .05s ease;}
+.md-rc-btn:active{transform:translateY(1px);}
+.md-rc-btn.filled{background:var(--accent);border:1px solid var(--accent);color:#fff;}
+.md-rc-btn.filled:hover{background:var(--accent-hover);border-color:var(--accent-hover);}
+.md-rc-btn.outline{background:var(--surface-0);border:1px solid var(--border);color:var(--ink-2);}
+.md-rc-btn.outline:hover{border-color:var(--accent-border);color:var(--accent-hover);background:var(--accent-light);}
+/* Alt-action row below cards */
+.md-rc-alt{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;}
+@media(max-width:700px){.md-rc-alt{grid-template-columns:1fr;}}
+.md-rc-alt-btn{height:44px;background:var(--surface-0);border:1px solid var(--border);border-radius:var(--r);font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink-2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:border-color .15s,background .15s,color .15s;}
+.md-rc-alt-btn svg{width:16px;height:16px;color:var(--ink-4);}
+.md-rc-alt-btn:hover{border-color:var(--accent-border);background:var(--accent-light);color:var(--accent-hover);}
+.md-rc-alt-btn:hover svg{color:var(--accent);}
+.md-rc-alt-btn:disabled,.md-rc-alt-btn[disabled]{opacity:.38;cursor:not-allowed;}
+.md-rc-alt-btn:disabled:hover,.md-rc-alt-btn[disabled]:hover{border-color:var(--border);background:var(--surface-0);color:var(--ink-2);}
+/* Back link inside detail view */
+.md-rc-back{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:var(--ink-3);cursor:pointer;padding:4px 2px;border:none;background:none;font-family:inherit;margin-bottom:10px;transition:color .15s;}
+.md-rc-back:hover{color:var(--accent);}
+.md-rc-back svg{width:14px;height:14px;}
 </style>
 </head>
 <body>
@@ -923,7 +968,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div id="dispatch-result" class="hidden">
     <div id="d-alert" class="hidden"></div>
     <div id="suggestion-card"></div>
-    <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
+    <div id="dispatch-result-nav" style="display:none;gap:10px;margin-top:12px;flex-wrap:wrap;">
       <button class="btn btn-outline" onclick="findNextSlot()">🔄 מצא מועד אחר</button>
       <div style="display:flex;align-items:center;gap:8px;flex:1;">
         <span style="font-size:0.875rem;color:var(--ink-3);white-space:nowrap;">בדוק תאריך:</span>
@@ -5604,7 +5649,82 @@ function findBestSlot(){
   document.getElementById('dispatch-search-card').style.pointerEvents='none';
   document.getElementById('dispatch-result').classList.remove('hidden');
   document.getElementById('dispatch-success').classList.add('hidden');
-  showCandidate(0);
+  showCandidateCards(0);
+}
+// ─── Slice 5: 3-card recommendation chooser ─────────────────────────────────
+function showCandidateCards(offset){
+  offset=offset||0;
+  // Clamp offset so it never starts past the last candidate
+  const total=allCandidates.length;
+  if(offset>=total)offset=Math.max(0,total-1);
+  // Hide old-style nav (findNextSlot / specific-date row)
+  const navRow=document.getElementById('dispatch-result-nav');
+  if(navRow)navRow.style.display='none';
+  document.getElementById('d-alert').classList.add('hidden');
+  // Build up to 3 cards starting at offset
+  const slotH=settings.window||3;
+  const clockSvg=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`;
+  const starSvg=`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.8.7-5 4.6 1.4 6.7L12 17.8 5.9 20.3l1.4-6.7-5-4.6 6.8-.7z"/></svg>`;
+  const arrowSvg=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>`;
+  const cards=[];
+  for(let i=0;i<3;i++){
+    const gi=offset+i; // global index into allCandidates
+    if(gi>=total)break;
+    const c=allCandidates[gi];
+    const d=c.date.d;
+    const dayHe=`יום ${DAYS_HE[d.getDay()]}׳`;
+    const dateHe=`${d.getDate()} ב${MONTHS_HE[d.getMonth()]} ${d.getFullYear()}`;
+    // Derive time window from optTime + window length
+    const [oh,om]=(c.optTime||'08:00').split(':').map(Number);
+    const winStart=pad(oh)+':'+pad(om);
+    const winEnd=minsToTime(oh*60+om+slotH*60);
+    const isBest=(i===0&&offset===0);
+    const btnClass=isBest?'filled':'outline';
+    cards.push(`
+      <div class="md-rc${isBest?' best':''}" onclick="showCandidateFromCards(${gi})">
+        ${isBest?`<span class="md-rc-badge">${starSvg}מומלץ</span>`:''}
+        <div class="md-rc-when">
+          <div class="md-rc-day">${dayHe}</div>
+          <div class="md-rc-date">${dateHe}</div>
+        </div>
+        <div class="md-rc-win md-win">${clockSvg}<span class="md-num">${winStart} — ${winEnd}</span></div>
+        <button class="md-rc-btn ${btnClass}" onclick="event.stopPropagation();showCandidateFromCards(${gi})">
+          בחירה${isBest?' '+arrowSvg:''}
+        </button>
+      </div>`);
+  }
+  // Alt-action buttons
+  const hasMore=(offset+3)<total;
+  const nextOffset=offset+3;
+  const altNext=`<button class="md-rc-alt-btn" ${hasMore?'':'disabled'} onclick="showCandidateCards(${nextOffset})">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8"/><path d="M3 3v5h5"/></svg>
+      מצא מועד אחר
+    </button>`;
+  const altDate=`<button class="md-rc-alt-btn" onclick="focusSpecificDate()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      בדוק תאריך מסוים
+    </button>`;
+  document.getElementById('suggestion-card').innerHTML=`
+    <div class="md-rc-section">
+      <div class="md-rc-head">
+        <h3>המלצות שיבוץ</h3>
+        <span class="md-rc-count">${total} מועדים זמינים</span>
+      </div>
+      <div class="md-rc-grid">${cards.join('')}</div>
+      <div class="md-rc-alt">${altNext}${altDate}</div>
+    </div>`;
+}
+function showCandidateFromCards(globalIdx){
+  currentCandidateIdx=globalIdx;
+  selectedTimeSlot=null;
+  showCandidate(globalIdx);
+}
+function focusSpecificDate(){
+  // Show the legacy specific-date row and focus the input
+  const navRow=document.getElementById('dispatch-result-nav');
+  if(navRow){navRow.style.display='flex';}
+  const inp=document.getElementById('specific-date');
+  if(inp){inp.scrollIntoView({behavior:'smooth',block:'nearest'});inp.focus();}
 }
 function findNextSlot(){
   currentCandidateIdx++;selectedTimeSlot=null;
@@ -5700,6 +5820,10 @@ function showCandidate(idx){
   const assignId=genId();
   window._currentSlots=slots;window._currentIdx=idx;
   document.getElementById('suggestion-card').innerHTML=`
+    <button class="md-rc-back" onclick="showCandidateCards(0)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      ← חזרה לכל המועדים
+    </button>
     <div class="suggestion-result">
       <div class="sr-header">
         <div class="sr-avatar" style="background:${tech.color};">${h(initials(tech.name))}</div>
