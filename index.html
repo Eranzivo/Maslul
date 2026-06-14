@@ -187,29 +187,57 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .status-pill{padding:4px 12px;border-radius:20px;font-size:0.7rem;font-weight:700;cursor:pointer;letter-spacing:0.2px;}
 .assign-id-tag{font-family:monospace;font-size:0.65rem;font-weight:700;color:var(--ink-4);background:var(--line-2);padding:2px 6px;border-radius:4px;}
 /* HOME */
-.home-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:1.75rem;}
-.kpi-card{background:var(--white);border:1px solid var(--line);border-right:4px solid transparent;border-radius:var(--r-lg);padding:1.25rem 1.5rem 1.25rem 2.75rem;box-shadow:var(--sh);display:flex;flex-direction:column;gap:6px;position:relative;cursor:pointer;transition:box-shadow 0.15s,transform 0.15s;}
+.home-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:1.75rem;}
+/* KPI card — top colour bar, icon chip, label / big-num / sub layout */
+.kpi-card{background:var(--white);border:1px solid var(--line);border-top:3px solid var(--kpi-color,var(--accent));border-radius:var(--r-lg);padding:16px 18px;box-shadow:var(--sh);display:flex;flex-direction:column;gap:0;cursor:pointer;transition:box-shadow 0.15s,transform 0.15s;}
 .kpi-card:hover{box-shadow:var(--sh-md);transform:translateY(-2px);}
 .kpi-card.kpi-active{box-shadow:var(--sh-md);outline:2px solid var(--accent-border);}
-.kpi-icon{position:absolute;top:14px;left:14px;width:18px;height:18px;opacity:0.65;}
-.kpi-val{font-size:1.875rem;font-weight:900;letter-spacing:-1px;line-height:1;}
+.kpi-card .k-top-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.kpi-card .k-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--kpi-ico-bg,var(--blue-l));color:var(--kpi-ico-fg,var(--blue-d));}
+.kpi-card .k-ico svg{width:15px;height:15px;}
+.kpi-card .k-lbl{font-size:12.5px;font-weight:600;color:var(--ink-3);}
+.kpi-val{font-size:1.875rem;font-weight:900;letter-spacing:-1px;line-height:1;margin-bottom:6px;}
 .kpi-lbl{font-size:0.75rem;color:var(--ink-4);font-weight:500;}
-.tech-home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;margin-top:1rem;}
-.tech-home-card{background:var(--white);border:1px solid var(--line);border-right:3px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);cursor:pointer;transition:all 0.18s;overflow:hidden;}
-.tech-home-card:hover{box-shadow:var(--sh-md);transform:translateY(-2px);}
+/* KPI colour variants */
+.kpi-card.k-amber{--kpi-color:var(--amber);--kpi-ico-bg:#FEF3C7;--kpi-ico-fg:#B45309;}
+.kpi-card.k-indigo{--kpi-color:var(--accent);--kpi-ico-bg:var(--blue-l);--kpi-ico-fg:var(--blue-d);}
+.kpi-card.k-green{--kpi-color:var(--green);--kpi-ico-bg:var(--green-l);--kpi-ico-fg:#047857;}
+.kpi-card.k-slate{--kpi-color:var(--line);--kpi-ico-bg:var(--line-2);--kpi-ico-fg:var(--ink-3);}
+/* section header before tech grid */
+.home-team-head{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;}
+.home-team-head h2{font-size:1rem;font-weight:700;color:var(--ink);}
+.home-team-head .ht-hint{font-size:12px;color:var(--ink-4);}
+/* Tech home grid & cards */
+.tech-home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-top:0;}
+.tech-home-card{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh);cursor:pointer;transition:transform 0.12s,box-shadow 0.15s,border-color 0.15s;overflow:hidden;}
+.tech-home-card:hover{box-shadow:var(--sh-md);transform:translateY(-2px);border-color:var(--th-border-hover,var(--blue-m));}
 .tech-home-card.dimmed{opacity:0.4;pointer-events:none;}
 .th-color-bar{display:none;}
-.th-body{padding:1.125rem 1.25rem;display:flex;flex-direction:column;gap:9px;text-align:right;}
-.th-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-.th-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.875rem;font-weight:800;color:white;flex-shrink:0;}
-.th-name{font-size:0.9375rem;font-weight:700;color:var(--ink);}
-.th-status{display:inline-flex;align-items:center;font-size:0.6875rem;font-weight:700;padding:3px 8px;border-radius:20px;}
-.th-capacity{display:flex;align-items:center;gap:8px;font-size:0.8125rem;color:var(--ink-3);}
-.load-bar{flex:1;height:5px;background:var(--line-2);border-radius:3px;overflow:hidden;}
-.load-fill{height:100%;border-radius:3px;transition:width 0.4s ease;}
-.th-next{font-size:0.8125rem;color:var(--ink-3);}
-.th-next strong{color:var(--ink-2);font-weight:600;}
-.th-actions{display:flex;justify-content:flex-end;margin-top:2px;}
+.th-body{padding:18px;display:flex;flex-direction:column;gap:14px;text-align:right;}
+.th-top{display:flex;align-items:center;gap:12px;}
+.th-avatar{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:0.9375rem;font-weight:800;color:white;flex-shrink:0;}
+.th-name{font-size:15.5px;font-weight:700;color:var(--ink);}
+.th-zone{font-size:12px;color:var(--ink-3);margin-top:1px;}
+/* status pill with dot */
+.th-status{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap;}
+.th-status .ts-dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:0.8;}
+/* capacity row */
+.th-capacity{display:flex;flex-direction:column;gap:6px;}
+.th-cap-row{display:flex;align-items:baseline;justify-content:space-between;}
+.th-cap-lbl{font-size:12px;color:var(--ink-3);font-weight:500;}
+.th-cap-val{font-size:13px;font-weight:700;}
+.th-cap-val .cap-max{color:var(--ink-4);font-weight:500;}
+.load-bar{height:7px;background:var(--line-2);border-radius:999px;overflow:hidden;}
+.load-fill{height:100%;border-radius:999px;transition:width 0.4s ease;}
+/* next job line */
+.th-next{display:flex;align-items:center;gap:9px;padding-top:14px;border-top:1px solid var(--line-2);font-size:12.5px;color:var(--ink-3);}
+.th-next .tn-ico{width:26px;height:26px;border-radius:7px;background:var(--line-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.th-next .tn-ico svg{width:14px;height:14px;color:var(--ink-3);}
+.th-next .tn-lbl{font-size:11px;color:var(--ink-4);}
+.th-next .tn-val{font-weight:600;color:var(--ink);font-size:13px;}
+.th-next .tn-val .tn-city{font-weight:700;}
+.th-next.tn-none .tn-val{color:var(--ink-3);font-weight:400;}
+.th-actions{display:flex;justify-content:flex-end;gap:6px;}
 /* WEEKLY CALENDAR */
 .week-nav{display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;}
 .week-nav-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;}
@@ -350,11 +378,13 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   .ph{margin-bottom:1.25rem;}
   /* KPI 2x2 */
   .home-kpi{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:1rem;}
-  .kpi-card{padding:0.75rem 1rem 0.75rem 2.25rem;}
+  .kpi-card{padding:12px 14px;}
   .kpi-val{font-size:1.5rem;}
   /* Tech cards 2-col */
   .tech-home-grid{grid-template-columns:repeat(2,1fr);gap:10px;}
-  .th-body{padding:0.75rem;}
+  .th-body{padding:14px;gap:10px;}
+  .th-avatar{width:36px;height:36px;border-radius:9px;}
+  .th-name{font-size:14px;}
   /* Dispatch card */
   .dispatch-search{padding:1rem;border-radius:var(--r-lg);}
   .dispatch-search h2{font-size:1rem;margin-bottom:1rem;}
@@ -856,6 +886,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   </div>
   <div id="client-search-results" class="hidden"></div>
   <div id="home-kpi" class="home-kpi"></div>
+  <div class="home-team-head"><h2>צוות בשטח</h2><span class="ht-hint">לחצו על טכנאי לצפייה בלוח השבועי</span></div>
   <div id="home-tech-grid" class="tech-home-grid"></div>
   <div id="weekly-cal" class="hidden" style="margin-top:1.5rem;">
     <div class="flex-between" style="margin-bottom:1rem;">
@@ -4532,21 +4563,21 @@ function renderHomeTechCards(){
     const active=todayTasks.filter(t=>['en_route','arrived'].includes(t.status)).length;
     const unassigned=tasks.filter(t=>t.status==='pending'&&!t.date).length;
     kpiEl.innerHTML=`
-      <div class="kpi-card${kpiFilter==='today'?' kpi-active':''}" onclick="filterByKpi('today')" style="border-right-color:var(--accent);">
-        <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-        <div class="kpi-val">${todayTasks.length}</div><div class="kpi-lbl">${LBL('tasks')} היום</div>
+      <div class="kpi-card k-slate${kpiFilter==='today'?' kpi-active':''}" onclick="filterByKpi('today')">
+        <div class="k-top-row"><span class="k-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg></span><span class="k-lbl">היום</span></div>
+        <div class="kpi-val">${todayTasks.length}</div><div class="kpi-lbl">סך ${LBL('tasks')} להיום</div>
       </div>
-      <div class="kpi-card${kpiFilter==='active'?' kpi-active':''}" onclick="filterByKpi('active')" style="border-right-color:var(--amber);">
-        <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <div class="kpi-val">${active}</div><div class="kpi-lbl">בביצוע</div>
+      <div class="kpi-card k-amber${kpiFilter==='active'?' kpi-active':''}" onclick="filterByKpi('active')">
+        <div class="k-top-row"><span class="k-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="k-lbl">בביצוע</span></div>
+        <div class="kpi-val">${active}</div><div class="kpi-lbl">טכנאים בדרך ללקוח</div>
       </div>
-      <div class="kpi-card${kpiFilter==='done'?' kpi-active':''}" onclick="filterByKpi('done')" style="border-right-color:var(--green);">
-        <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        <div class="kpi-val">${done}</div><div class="kpi-lbl">הושלמו</div>
+      <div class="kpi-card k-green${kpiFilter==='done'?' kpi-active':''}" onclick="filterByKpi('done')">
+        <div class="k-top-row"><span class="k-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><span class="k-lbl">הושלמו</span></div>
+        <div class="kpi-val">${done}</div><div class="kpi-lbl">בוצעו עד כה היום</div>
       </div>
-      <div class="kpi-card${kpiFilter==='pending'?' kpi-active':''}" onclick="filterByKpi('pending')" style="border-right-color:var(--red);">
-        <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
-        <div class="kpi-val" style="color:${unassigned>0?'var(--red)':'var(--ink-4)'};">${unassigned}</div><div class="kpi-lbl">ממתינות לשיבוץ</div>
+      <div class="kpi-card k-indigo${kpiFilter==='pending'?' kpi-active':''}" onclick="filterByKpi('pending')">
+        <div class="k-top-row"><span class="k-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="k-lbl">ממתין לשיבוץ</span></div>
+        <div class="kpi-val" style="color:${unassigned>0?'var(--red)':'inherit'};">${unassigned}</div><div class="kpi-lbl">${LBL('tasks')} בהמתנה להקצאה</div>
       </div>`;
   }
   // Tech cards
@@ -4557,9 +4588,17 @@ function renderHomeTechCards(){
     const fc=lp>=85?'var(--red)':lp>=60?'var(--amber)':'var(--green)';
     const st=getTechStatus(tech,today);
     const next=getNextJob(tech,today);
+    const todayZone=getTechZoneForDate(tech,today);
+    const zoneLabel=todayZone?h(todayZone.name):(tech.baseCity?h(tech.baseCity):'');
     const nextHtml=next
-      ?`<div class="th-next">הבא: <strong>${next.time}</strong> — ${h(next.city)}</div>`
-      :`<div class="th-next" style="color:var(--ink-4);">אין קריאות היום</div>`;
+      ?`<div class="th-next">
+          <span class="tn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></span>
+          <div><div class="tn-lbl">הבא בתור</div><div class="tn-val" dir="ltr" style="direction:rtl;">${next.time} · <span class="tn-city">${h(next.city)}</span></div></div>
+        </div>`
+      :`<div class="th-next tn-none">
+          <span class="tn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></span>
+          <div><div class="tn-lbl">הבא בתור</div><div class="tn-val">אין קריאות היום</div></div>
+        </div>`;
     const optBtn=CONFIG.OPTIMIZER_URL&&cnt>=2
       ?`<button class="btn btn-outline btn-sm" style="font-size:0.72rem;" onclick="event.stopPropagation();runOptimize('${tech.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> מסלול</button>`:'';
     let dimmed='';
@@ -4573,18 +4612,24 @@ function renderHomeTechCards(){
       const hasDone=tasks.some(t=>t.techId===tech.id&&t.date===today&&t.status==='completed');
       if(!hasDone)dimmed=' dimmed';
     }
-    return`<div class="tech-home-card${dimmed}" style="border-right-color:${tech.color};" onclick="openTechWeekly('${tech.id}')">
+    const tcBorderHover=tech.color?`color-mix(in srgb, ${tech.color} 35%, #fff)`:'';;
+    return`<div class="tech-home-card${dimmed}" style="--th-border-hover:${tcBorderHover};" onclick="openTechWeekly('${tech.id}')">
       <div class="th-color-bar"></div>
       <div class="th-body">
         <div class="th-top">
           <div class="th-avatar" style="background:${tech.color};">${h(initials(tech.name))}</div>
-          <div style="flex:1;"><div class="th-name">${h(tech.name)}</div></div>
-          <div class="th-status" style="background:${st.bg};color:${st.color};">${st.label}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="th-name">${h(tech.name)}</div>
+            ${zoneLabel?`<div class="th-zone">${zoneLabel}</div>`:''}
+          </div>
+          <div class="th-status" style="background:${st.bg};color:${st.color};"><span class="ts-dot"></span>${st.label}</div>
         </div>
         <div class="th-capacity">
-          <span style="font-weight:700;color:${fc};">${cnt}</span><span style="color:var(--ink-4);">/ ${tech.max}</span>
+          <div class="th-cap-row">
+            <span class="th-cap-lbl">עומס יומי</span>
+            <span class="th-cap-val" style="color:${fc};">${cnt}<span class="cap-max"> / ${tech.max} קריאות</span></span>
+          </div>
           <div class="load-bar"><div class="load-fill" style="width:${lp}%;background:${fc};"></div></div>
-          <span style="font-size:0.75rem;color:var(--ink-4);">${lp}%</span>
         </div>
         ${nextHtml}
         <div class="th-actions">
