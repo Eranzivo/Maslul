@@ -6,3 +6,8 @@ PWs.txt
 # temp PureWater restore data (live tenant data — never commit)
 backend/_pw_*
 backend/_restore_run.py
+
+# design zip (large binary, do not commit)
+Maslul design.zip
+mockups/claude-design/.thumbnail
+mockups/claude-design/scraps/

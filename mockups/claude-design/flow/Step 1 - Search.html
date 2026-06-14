@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>שיבוץ קריאה חדשה — Maslul</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --accent: #6366F1;
+    --accent-hover: #4F46E5;
+    --accent-fill: #EEF2FF;
+    --accent-border: #C7D2FE;
+    --page: #F7F7F8;
+    --surface: #FFFFFF;
+    --border: #E4E4E7;
+    --text: #111827;
+    --text-2: #374151;
+    --muted: #6B7280;
+    --faint: #9CA3AF;
+    --radius-btn: 6px;
+    --radius-card: 10px;
+    --radius-panel: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: 'Heebo', sans-serif;
+    background: var(--page);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ── Top bar ─────────────────────────────── */
+  .topbar {
+    height: 60px;
+    flex: 0 0 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .brand-mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--accent);
+    position: relative;
+    flex: 0 0 28px;
+  }
+  .brand-mark::after {
+    content: "";
+    position: absolute;
+    inset: 9px;
+    border-radius: 50%;
+    border: 2.5px solid #fff;
+    border-bottom-color: transparent;
+    transform: rotate(45deg);
+  }
+  .brand-name {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .topbar-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-2);
+    font-weight: 500;
+  }
+  .avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--accent-fill);
+    color: var(--accent-hover);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  /* ── Stage ───────────────────────────────── */
+  .stage {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px 80px;
+  }
+
+  .search-wrap {
+    width: 100%;
+    max-width: 460px;
+  }
+
+  /* Step indicator */
+  .stepper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+  .stepper .dot {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border);
+    transition: all .2s ease;
+  }
+  .stepper .dot.active {
+    width: 28px;
+    background: var(--accent);
+  }
+  .stepper .dot.idle { width: 6px; }
+
+  /* Heading block */
+  .head {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .head h1 {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 10px;
+  }
+  .head p {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--muted);
+    max-width: 380px;
+    margin: 0 auto;
+    text-wrap: pretty;
+  }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-panel);
+    padding: 28px;
+    box-shadow: 0 1px 2px rgba(17,24,39,.04), 0 8px 24px rgba(17,24,39,.05);
+  }
+
+  .field { margin-bottom: 18px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-2);
+    margin-bottom: 7px;
+  }
+  .field label .opt {
+    font-weight: 500;
+    color: var(--faint);
+    font-size: 12px;
+  }
+
+  .control {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .control .ico {
+    position: absolute;
+    right: 12px;
+    width: 18px;
+    height: 18px;
+    color: var(--faint);
+    pointer-events: none;
+  }
+  .control input,
+  .control select {
+    width: 100%;
+    height: 44px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-btn);
+    background: var(--surface);
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--text);
+    padding: 0 40px 0 14px;
+    transition: border-color .15s ease, box-shadow .15s ease;
+    outline: none;
+  }
+  .control input::placeholder { color: var(--faint); }
+  .control input:hover,
+  .control select:hover { border-color: #d4d4d8; }
+  .control input:focus,
+  .control select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99,102,241,.12);
+  }
+  .control select {
+    appearance: none;
+    -webkit-appearance: none;
+    color: var(--text);
+    cursor: pointer;
+    padding-left: 40px;
+  }
+  .control select:invalid { color: var(--faint); }
+  .control .chevron {
+    position: absolute;
+    left: 12px;
+    right: auto;
+    width: 16px;
+    height: 16px;
+    color: var(--faint);
+  }
+
+  .row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 14px;
+  }
+
+  .submit {
+    width: 100%;
+    height: 46px;
+    margin-top: 6px;
+    border: none;
+    border-radius: var(--radius-btn);
+    background: var(--accent);
+    color: #fff;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background .15s ease, transform .05s ease;
+  }
+  .submit:hover { background: var(--accent-hover); }
+  .submit:active { transform: translateY(1px); }
+  .submit svg { width: 18px; height: 18px; }
+
+  .footnote {
+    text-align: center;
+    margin-top: 18px;
+    font-size: 12.5px;
+    color: var(--faint);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .footnote svg { width: 14px; height: 14px; }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-name">משׂלוּל</div>
+    </div>
+    <div class="topbar-user">
+      <span>מרכז הזמנות · נעמה</span>
+      <div class="avatar">נ</div>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="search-wrap">
+
+      <div class="stepper">
+        <span class="dot active"></span>
+        <span class="dot idle"></span>
+        <span class="dot idle"></span>
+      </div>
+
+      <div class="head">
+        <h1>שיבוץ קריאה חדשה</h1>
+        <p>הזינו היכן ממוקמת הקריאה — והמערכת תמצא את המועד הטוב ביותר לפי מסלולי הטכנאים. בלי לוחות שנה ובלי בחירות מיותרות.</p>
+      </div>
+
+      <form class="card" onsubmit="event.preventDefault();">
+
+        <div class="row-2">
+          <div class="field">
+            <label for="city">עיר</label>
+            <div class="control">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/><path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/></svg>
+              <input id="city" type="text" placeholder="חיפה" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="addr">כתובת</label>
+            <div class="control">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              <input id="addr" type="text" placeholder="רחוב הרצל 42, דירה 5" autocomplete="off" />
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="svc">סוג שירות <span class="opt">· רשות</span></label>
+          <div class="control">
+            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2-2 2.6-2.6Z"/></svg>
+            <select id="svc" required>
+              <option value="" disabled selected>בחירת סוג שירות</option>
+              <option>התקנה</option>
+              <option>תיקון</option>
+              <option>אחזקה תקופתית</option>
+              <option>בדיקה / אבחון</option>
+            </select>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+        </div>
+
+        <button class="submit" type="submit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          חיפוש מועדים
+        </button>
+
+        <div class="footnote">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>
+          המערכת מחשבת את המסלול האופטימלי עבורכם
+        </div>
+
+      </form>
+
+    </div>
+  </main>
+
+</body>
+</html>

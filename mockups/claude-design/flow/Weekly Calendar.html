@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>לוח שבועי — Maslul</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --accent: #6366F1;
+    --accent-hover: #4F46E5;
+    --accent-fill: #EEF2FF;
+    --accent-border: #C7D2FE;
+    --page: #F7F7F8;
+    --surface: #FFFFFF;
+    --border: #E4E4E7;
+    --text: #111827;
+    --text-2: #374151;
+    --muted: #6B7280;
+    --faint: #9CA3AF;
+    --green: #10B981;
+    --amber: #F59E0B;
+    --radius-btn: 6px;
+    --radius-card: 10px;
+    --radius-panel: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Heebo', sans-serif;
+    background: var(--page);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ── Top bar ─────────────────────────────── */
+  .topbar {
+    height: 60px; flex: 0 0 60px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px; border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-mark { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); position: relative; flex: 0 0 28px; }
+  .brand-mark::after { content: ""; position: absolute; inset: 9px; border-radius: 50%; border: 2.5px solid #fff; border-bottom-color: transparent; transform: rotate(45deg); }
+  .brand-name { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+  .nav { display: flex; align-items: center; gap: 4px; margin-right: 28px; }
+  .nav a { font-size: 13.5px; font-weight: 600; color: var(--muted); text-decoration: none; padding: 7px 12px; border-radius: 6px; transition: background .15s, color .15s; }
+  .nav a:hover { background: var(--page); color: var(--text-2); }
+  .nav a.active { color: var(--accent-hover); background: var(--accent-fill); }
+  .brand-wrap { display: flex; align-items: center; }
+  .topbar-user { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-2); font-weight: 500; }
+  .avatar-top { width: 30px; height: 30px; border-radius: 50%; background: var(--accent-fill); color: var(--accent-hover); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+
+  /* ── Page ────────────────────────────────── */
+  .page { flex: 1 1 auto; padding: 28px 32px 56px; max-width: 1280px; width: 100%; margin: 0 auto; }
+
+  .page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .page-head .title { display: flex; align-items: baseline; gap: 12px; }
+  .page-head h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+  .page-head .range { font-size: 14px; color: var(--muted); font-weight: 500; }
+  .week-nav { display: flex; align-items: center; gap: 8px; }
+  .week-nav button {
+    width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-2); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: border-color .15s, background .15s;
+  }
+  .week-nav button:hover { border-color: var(--accent-border); background: var(--accent-fill); color: var(--accent-hover); }
+  .week-nav button svg { width: 16px; height: 16px; }
+  .week-nav .today {
+    height: 34px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); font-family: inherit; font-size: 13px; font-weight: 600; color: var(--text-2);
+    cursor: pointer; transition: border-color .15s, background .15s, color .15s;
+  }
+  .week-nav .today:hover { border-color: var(--accent-border); background: var(--accent-fill); color: var(--accent-hover); }
+
+  /* ── Technician filter pills ─────────────── */
+  .filters { display: flex; align-items: center; gap: 8px; margin-bottom: 22px; flex-wrap: wrap; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    height: 32px; padding: 0 13px 0 11px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--surface);
+    font-size: 13px; font-weight: 600; color: var(--text-2);
+    cursor: pointer; transition: border-color .15s, background .15s, opacity .15s;
+    user-select: none;
+  }
+  .pill .swatch { width: 9px; height: 9px; border-radius: 50%; }
+  .pill.all { color: var(--muted); }
+  .pill.active { border-color: var(--accent-border); background: var(--accent-fill); color: var(--text); }
+  .pill.dim { opacity: .42; }
+  .pill:hover { border-color: var(--accent-border); }
+
+  /* ── Calendar grid ───────────────────────── */
+  .calendar {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+  }
+  .day-col { min-width: 0; }
+  .day-head {
+    display: flex; align-items: baseline; gap: 8px;
+    padding: 0 4px 12px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .day-head .dname { font-size: 14px; font-weight: 700; }
+  .day-head .ddate { font-size: 12.5px; color: var(--faint); font-weight: 500; }
+  .day-col.today .day-head { border-bottom-color: var(--accent); }
+  .day-col.today .day-head .dname { color: var(--accent-hover); }
+  .day-col.today .day-head .badge-today {
+    font-size: 11px; font-weight: 700; color: #fff; background: var(--accent);
+    border-radius: 999px; padding: 2px 8px; margin-right: auto;
+  }
+
+  .day-body { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; }
+
+  /* Window block */
+  .wblock {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(17,24,39,.03);
+  }
+  .wblock-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 11px;
+    border-bottom: 1px solid var(--border);
+    background: var(--tint, var(--page));
+  }
+  .wblock-head .tch {
+    width: 22px; height: 22px; border-radius: 6px; flex: 0 0 22px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 800; color: #fff;
+    background: var(--tcolor);
+  }
+  .wblock-head .win {
+    font-size: 12.5px; font-weight: 700; color: var(--text-2);
+    font-feature-settings: "tnum"; letter-spacing: .01em;
+    direction: ltr;
+  }
+  .wblock-head .tname { font-size: 11.5px; color: var(--muted); margin-right: auto; font-weight: 500; }
+
+  .wblock-rows { display: flex; flex-direction: column; }
+  .job-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 11px;
+  }
+  .job-row + .job-row { border-top: 1px dashed var(--border); }
+  .job-row .dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 7px; }
+  .job-row .dot.pending { background: var(--amber); }
+  .job-row .dot.assigned { background: var(--accent); }
+  .job-row .dot.done { background: var(--green); }
+  .job-row .city { font-size: 13.5px; font-weight: 600; color: var(--text); }
+  .job-row .sub { font-size: 11.5px; color: var(--faint); margin-right: auto; font-weight: 500; }
+  .job-row.done .city { color: var(--muted); }
+
+  /* Legend */
+  .legend {
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+    margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--border);
+  }
+  .legend .item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); font-weight: 500; }
+  .legend .item .dot { width: 8px; height: 8px; border-radius: 50%; }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand-wrap">
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <div class="brand-name">משׂלוּל</div>
+      </div>
+      <nav class="nav">
+        <a href="Step 1 — Search.html">שיבוץ חדש</a>
+        <a href="#" class="active">לוח שבועי</a>
+      </nav>
+    </div>
+    <div class="topbar-user">
+      <span>מרכז הזמנות · נעמה</span>
+      <div class="avatar-top">נ</div>
+    </div>
+  </header>
+
+  <main class="page">
+
+    <div class="page-head">
+      <div class="title">
+        <h1>לוח שבועי</h1>
+        <span class="range">15–19 ביוני 2026</span>
+      </div>
+      <div class="week-nav">
+        <button aria-label="שבוע הבא"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+        <button class="today">היום</button>
+        <button aria-label="שבוע קודם"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+      </div>
+    </div>
+
+    <div class="filters" id="filters"></div>
+
+    <div class="calendar" id="calendar"></div>
+
+    <div class="legend">
+      <span class="item"><span class="dot" style="background:var(--accent)"></span>משובץ</span>
+      <span class="item"><span class="dot" style="background:var(--amber)"></span>ממתין</span>
+      <span class="item"><span class="dot" style="background:var(--green)"></span>הושלם</span>
+    </div>
+
+  </main>
+
+  <script>
+    const TECHS = {
+      yossi: { name: 'יוסי',  initials: 'י.ב', color: '#6366F1' },
+      dana:  { name: 'דנה',   initials: 'ד.כ', color: '#7C3AED' },
+      omer:  { name: 'עומר',  initials: 'ע.ל', color: '#0D9488' },
+      ran:   { name: 'רן',    initials: 'ר.מ', color: '#D97706' },
+    };
+
+    // tint = very light wash of the technician color
+    function tint(hex){ return `color-mix(in srgb, ${hex} 8%, #fff)`; }
+
+    const DAYS = [
+      { name: 'יום א׳', date: '15.6', today: true, blocks: [
+        { tech:'yossi', win:'07:00–10:00', jobs:[
+          { city:'תל אביב', sub:'דיזנגוף 120', st:'assigned' },
+          { city:'רמת גן', sub:'ביאליק 8', st:'assigned' },
+        ]},
+        { tech:'dana', win:'10:00–13:00', jobs:[
+          { city:'חולון', sub:'סוקולוב 24', st:'done' },
+          { city:'בת ים', sub:'בלפור 60', st:'done' },
+        ]},
+        { tech:'omer', win:'13:00–16:00', jobs:[
+          { city:'גבעתיים', sub:'כצנלסון 33', st:'assigned' },
+        ]},
+      ]},
+      { name: 'יום ב׳', date: '16.6', blocks: [
+        { tech:'ran', win:'08:00–11:00', jobs:[
+          { city:'ראשון לציון', sub:'הרצל 90', st:'pending' },
+          { city:'נס ציונה', sub:'ויצמן 12', st:'pending' },
+        ]},
+        { tech:'yossi', win:'11:00–14:00', jobs:[
+          { city:'הרצליה', sub:'סוקולוב 5', st:'assigned' },
+          { city:'רעננה', sub:'אחוזה 110', st:'assigned' },
+          { city:'כפר סבא', sub:'ויצמן 40', st:'assigned' },
+        ]},
+        { tech:'omer', win:'14:00–17:00', jobs:[
+          { city:'פתח תקווה', sub:'ז׳בוטינסקי 101', st:'assigned' },
+        ]},
+      ]},
+      { name: 'יום ג׳', date: '17.6', blocks: [
+        { tech:'dana', win:'09:00–12:00', jobs:[
+          { city:'ירושלים', sub:'יפו 200', st:'assigned' },
+          { city:'מבשרת ציון', sub:'הכרמל 7', st:'assigned' },
+        ]},
+        { tech:'yossi', win:'13:00–16:00', jobs:[
+          { city:'מודיעין', sub:'עמק זבולון 3', st:'pending' },
+        ]},
+      ]},
+      { name: 'יום ד׳', date: '18.6', blocks: [
+        { tech:'omer', win:'07:00–10:00', jobs:[
+          { city:'נתניה', sub:'הרצל 55', st:'assigned' },
+          { city:'חדרה', sub:'הגיבורים 18', st:'assigned' },
+        ]},
+        { tech:'ran', win:'10:00–13:00', jobs:[
+          { city:'כפר יונה', sub:'השרון 9', st:'pending' },
+        ]},
+        { tech:'dana', win:'14:00–17:00', jobs:[
+          { city:'רמלה', sub:'הרצל 14', st:'assigned' },
+          { city:'לוד', sub:'הרצל 88', st:'assigned' },
+        ]},
+      ]},
+      { name: 'יום ה׳', date: '19.6', blocks: [
+        { tech:'yossi', win:'08:00–11:00', jobs:[
+          { city:'באר שבע', sub:'רגר 60', st:'assigned' },
+        ]},
+        { tech:'ran', win:'11:00–14:00', jobs:[
+          { city:'אשדוד', sub:'רוגוזין 4', st:'pending' },
+          { city:'אשקלון', sub:'בן גוריון 22', st:'pending' },
+        ]},
+      ]},
+    ];
+
+    let activeTechs = new Set(Object.keys(TECHS));
+
+    function renderFilters(){
+      const el = document.getElementById('filters');
+      const all = document.createElement('button');
+      all.className = 'pill all' + (activeTechs.size === Object.keys(TECHS).length ? ' active' : '');
+      all.innerHTML = 'כל הצוות';
+      all.onclick = () => { activeTechs = new Set(Object.keys(TECHS)); render(); };
+      el.appendChild(all);
+
+      for (const [id, t] of Object.entries(TECHS)) {
+        const p = document.createElement('button');
+        const on = activeTechs.has(id);
+        p.className = 'pill' + (on ? ' active' : ' dim');
+        p.innerHTML = `<span class="swatch" style="background:${t.color}"></span>${t.name}`;
+        p.onclick = () => {
+          if (activeTechs.size === Object.keys(TECHS).length) { activeTechs = new Set([id]); }
+          else if (activeTechs.has(id)) { activeTechs.delete(id); if(activeTechs.size===0) activeTechs = new Set(Object.keys(TECHS)); }
+          else { activeTechs.add(id); }
+          render();
+        };
+        el.appendChild(p);
+      }
+    }
+
+    function renderCalendar(){
+      const cal = document.getElementById('calendar');
+      cal.innerHTML = '';
+      DAYS.forEach(day => {
+        const col = document.createElement('div');
+        col.className = 'day-col' + (day.today ? ' today' : '');
+        const head = `<div class="day-head"><span class="dname">${day.name}</span><span class="ddate">${day.date}</span>${day.today ? '<span class="badge-today">היום</span>' : ''}</div>`;
+        const body = document.createElement('div');
+        body.className = 'day-body';
+
+        day.blocks.filter(b => activeTechs.has(b.tech)).forEach(b => {
+          const t = TECHS[b.tech];
+          const rows = b.jobs.map(j => `
+            <div class="job-row ${j.st}">
+              <span class="dot ${j.st}"></span>
+              <span class="city">${j.city}</span>
+              <span class="sub">${j.sub}</span>
+            </div>`).join('');
+          const block = document.createElement('div');
+          block.className = 'wblock';
+          block.style.setProperty('--tcolor', t.color);
+          block.style.setProperty('--tint', tint(t.color));
+          block.innerHTML = `
+            <div class="wblock-head">
+              <span class="tch">${t.initials}</span>
+              <span class="win">${b.win}</span>
+              <span class="tname">${t.name}</span>
+            </div>
+            <div class="wblock-rows">${rows}</div>`;
+          body.appendChild(block);
+        });
+
+        col.innerHTML = head;
+        col.appendChild(body);
+        cal.appendChild(col);
+      });
+    }
+
+    function render(){
+      document.getElementById('filters').innerHTML = '';
+      renderFilters();
+      renderCalendar();
+    }
+
+    render();
+  </script>
+
+</body>
+</html>

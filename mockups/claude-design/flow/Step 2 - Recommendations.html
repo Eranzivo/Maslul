@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>המלצות שיבוץ — Maslul</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --accent: #6366F1;
+    --accent-hover: #4F46E5;
+    --accent-fill: #EEF2FF;
+    --accent-border: #C7D2FE;
+    --page: #F7F7F8;
+    --surface: #FFFFFF;
+    --border: #E4E4E7;
+    --text: #111827;
+    --text-2: #374151;
+    --muted: #6B7280;
+    --faint: #9CA3AF;
+    --radius-btn: 6px;
+    --radius-card: 10px;
+    --radius-panel: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Heebo', sans-serif;
+    background: var(--page);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ── Top bar ─────────────────────────────── */
+  .topbar {
+    height: 60px;
+    flex: 0 0 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-mark {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--accent); position: relative; flex: 0 0 28px;
+  }
+  .brand-mark::after {
+    content: ""; position: absolute; inset: 9px; border-radius: 50%;
+    border: 2.5px solid #fff; border-bottom-color: transparent; transform: rotate(45deg);
+  }
+  .brand-name { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+  .topbar-user { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-2); font-weight: 500; }
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%; background: var(--accent-fill);
+    color: var(--accent-hover); display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+  }
+
+  /* ── Stage ───────────────────────────────── */
+  .stage {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 36px 24px 72px;
+  }
+  .wrap { width: 100%; max-width: 880px; }
+
+  .stepper {
+    display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 30px;
+  }
+  .stepper .dot { height: 6px; border-radius: 3px; background: var(--border); }
+  .stepper .dot.active { width: 28px; background: var(--accent); }
+  .stepper .dot.done { width: 6px; background: var(--accent-border); }
+  .stepper .dot.idle { width: 6px; }
+
+  /* ── Summary bar ─────────────────────────── */
+  .summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 12px 16px;
+    margin-bottom: 30px;
+    box-shadow: 0 1px 2px rgba(17,24,39,.03);
+  }
+  .summary .pin {
+    width: 34px; height: 34px; border-radius: 8px;
+    background: var(--accent-fill); color: var(--accent-hover);
+    display: flex; align-items: center; justify-content: center; flex: 0 0 34px;
+  }
+  .summary .pin svg { width: 18px; height: 18px; }
+  .summary .loc { display: flex; align-items: baseline; gap: 8px; flex: 1 1 auto; min-width: 0; }
+  .summary .loc .city { font-size: 15px; font-weight: 700; }
+  .summary .loc .addr { font-size: 13.5px; color: var(--muted); }
+  .summary .loc .sep { color: var(--border); font-weight: 400; }
+  .summary .svc-tag {
+    font-size: 12px; font-weight: 600; color: var(--text-2);
+    background: var(--page); border: 1px solid var(--border);
+    border-radius: 999px; padding: 4px 10px;
+  }
+  .summary .edit {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 13px; font-weight: 600; color: var(--accent);
+    text-decoration: none; padding: 6px 8px; border-radius: 6px;
+    transition: background .15s ease;
+  }
+  .summary .edit:hover { background: var(--accent-fill); }
+  .summary .edit svg { width: 14px; height: 14px; }
+
+  /* ── Section label ───────────────────────── */
+  .section-head {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+  }
+  .section-head h2 { font-size: 15px; font-weight: 700; color: var(--text); }
+  .section-head .count { font-size: 12.5px; color: var(--faint); font-weight: 500; }
+
+  /* ── Recommendation cards ────────────────── */
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+  .rcard {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 22px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    transition: transform .12s ease, box-shadow .15s ease, border-color .15s ease;
+  }
+  .rcard:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(17,24,39,.07); }
+
+  .rcard.best {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99,102,241,.10), 0 10px 28px rgba(99,102,241,.14);
+  }
+  .rcard.best:hover { box-shadow: 0 0 0 3px rgba(99,102,241,.12), 0 14px 32px rgba(99,102,241,.18); }
+
+  .badge {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 9px;
+    border-radius: 999px;
+  }
+  .badge svg { width: 12px; height: 12px; }
+
+  .rcard .when .day {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .rcard .when .date {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+    font-weight: 500;
+  }
+
+  .timechip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    align-self: flex-start;
+    background: var(--page);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    font-feature-settings: "tnum";
+  }
+  .timechip svg { width: 16px; height: 16px; color: var(--muted); }
+  .rcard.best .timechip {
+    background: var(--accent-fill);
+    border-color: var(--accent-border);
+    color: var(--accent-hover);
+  }
+  .rcard.best .timechip svg { color: var(--accent); }
+
+  .select-btn {
+    width: 100%;
+    height: 42px;
+    border-radius: var(--radius-btn);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background .15s ease, border-color .15s ease, transform .05s ease;
+  }
+  .select-btn svg { width: 16px; height: 16px; }
+  .select-btn:active { transform: translateY(1px); }
+
+  .select-btn.filled {
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    color: #fff;
+  }
+  .select-btn.filled:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+  .select-btn.outline {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-2);
+  }
+  .select-btn.outline:hover { border-color: var(--accent-border); color: var(--accent-hover); background: var(--accent-fill); }
+
+  /* ── Alt actions ─────────────────────────── */
+  .alt-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 24px;
+  }
+  .alt-btn {
+    height: 46px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-btn);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: border-color .15s ease, background .15s ease, color .15s ease;
+  }
+  .alt-btn svg { width: 17px; height: 17px; color: var(--muted); }
+  .alt-btn:hover { border-color: var(--accent-border); background: var(--accent-fill); color: var(--accent-hover); }
+  .alt-btn:hover svg { color: var(--accent); }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-name">משׂלוּל</div>
+    </div>
+    <div class="topbar-user">
+      <span>מרכז הזמנות · נעמה</span>
+      <div class="avatar">נ</div>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="wrap">
+
+      <div class="stepper">
+        <span class="dot done"></span>
+        <span class="dot active"></span>
+        <span class="dot idle"></span>
+      </div>
+
+      <!-- Summary bar -->
+      <div class="summary">
+        <div class="pin">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div class="loc">
+          <span class="city">תל אביב</span>
+          <span class="sep">·</span>
+          <span class="addr">דיזנגוף 120</span>
+        </div>
+        <span class="svc-tag">התקנה</span>
+        <a class="edit" href="Step 1 — Search.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          שינוי
+        </a>
+      </div>
+
+      <!-- Section label -->
+      <div class="section-head">
+        <h2>המלצות שיבוץ</h2>
+        <span class="count">לפי המסלול האופטימלי</span>
+      </div>
+
+      <!-- Cards -->
+      <div class="cards">
+
+        <!-- Best -->
+        <div class="rcard best">
+          <span class="badge">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.8.7-5 4.6 1.4 6.7L12 17.8 5.9 20.3l1.4-6.7-5-4.6 6.8-.7z"/></svg>
+            מומלץ
+          </span>
+          <div class="when">
+            <div class="day">יום א׳</div>
+            <div class="date">15 ביוני 2026</div>
+          </div>
+          <div class="timechip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            07:00 — 10:00
+          </div>
+          <button class="select-btn filled">
+            בחירה
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+        </div>
+
+        <!-- Alt 1 -->
+        <div class="rcard">
+          <div class="when">
+            <div class="day">יום ב׳</div>
+            <div class="date">16 ביוני 2026</div>
+          </div>
+          <div class="timechip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            11:30 — 14:30
+          </div>
+          <button class="select-btn outline">בחירה</button>
+        </div>
+
+        <!-- Alt 2 -->
+        <div class="rcard">
+          <div class="when">
+            <div class="day">יום ג׳</div>
+            <div class="date">17 ביוני 2026</div>
+          </div>
+          <div class="timechip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            14:00 — 17:00
+          </div>
+          <button class="select-btn outline">בחירה</button>
+        </div>
+
+      </div>
+
+      <!-- Alternative actions -->
+      <div class="alt-actions">
+        <button class="alt-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8"/><path d="M3 3v5h5"/></svg>
+          מצא מועד אחר
+        </button>
+        <button class="alt-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          בדוק תאריך מסוים
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+</body>
+</html>

@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>מסלול יומי — Maslul</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --accent: #6366F1;
+    --accent-hover: #4F46E5;
+    --accent-fill: #EEF2FF;
+    --accent-border: #C7D2FE;
+    --page: #F7F7F8;
+    --surface: #FFFFFF;
+    --border: #E4E4E7;
+    --border-soft: #F0F0F2;
+    --text: #111827;
+    --text-2: #374151;
+    --muted: #6B7280;
+    --faint: #9CA3AF;
+    --green: #10B981;
+    --amber: #F59E0B;
+    --red: #EF4444;
+    /* technician identity */
+    --tc: #0D9488;
+    --tc-fill: color-mix(in srgb, var(--tc) 6%, #fff);
+    --tc-border: color-mix(in srgb, var(--tc) 26%, #fff);
+    --radius-btn: 6px;
+    --radius-card: 10px;
+    --radius-panel: 14px;
+    --hour: 80px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Heebo', sans-serif;
+    background: var(--page);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  button { font-family: inherit; }
+
+  /* ── Top bar ─────────────────────────────── */
+  .topbar {
+    height: 60px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px; border-bottom: 1px solid var(--border); background: var(--surface);
+    position: sticky; top: 0; z-index: 20;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-mark { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); position: relative; flex: 0 0 28px; }
+  .brand-mark::after { content: ""; position: absolute; inset: 9px; border-radius: 50%; border: 2.5px solid #fff; border-bottom-color: transparent; transform: rotate(45deg); }
+  .brand-name { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+  .crumbs { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--muted); }
+  .crumbs a { color: var(--muted); text-decoration: none; transition: color .15s; }
+  .crumbs a:hover { color: var(--accent-hover); }
+  .crumbs .cur { color: var(--text); font-weight: 600; }
+  .crumbs svg { width: 15px; height: 15px; color: var(--faint); }
+  .topbar-user { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-2); font-weight: 500; }
+  .me { width: 30px; height: 30px; border-radius: 50%; background: var(--accent-fill); color: var(--accent-hover); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+
+  .wrap { max-width: 940px; margin: 0 auto; padding: 28px 28px 64px; }
+
+  /* ── Header line ─────────────────────────── */
+  .sched-head { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 22px; flex-wrap: wrap; }
+  .tech { display: flex; align-items: center; gap: 13px; }
+  .tech .av { width: 48px; height: 48px; border-radius: 13px; background: var(--tc); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; flex: 0 0 48px; }
+  .tech .who .nm { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+  .tech .who .meta { display: flex; align-items: center; gap: 8px; margin-top: 3px; font-size: 13px; color: var(--muted); }
+  .tech .who .meta .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--tc); }
+  .tech .who .meta .day { color: var(--text-2); font-weight: 600; }
+
+  .head-right { display: flex; align-items: center; gap: 14px; }
+  .util { display: flex; align-items: center; gap: 11px; padding: 8px 14px 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+  .util .ring { width: 38px; height: 38px; flex: 0 0 38px; }
+  .util .txt .n { font-size: 15px; font-weight: 800; font-feature-settings: "tnum"; }
+  .util .txt .n span { color: var(--faint); font-weight: 600; }
+  .util .txt .l { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+  .optimize {
+    height: 42px; padding: 0 18px; border: none; border-radius: var(--radius-btn);
+    background: var(--accent); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; gap: 8px; transition: background .15s, transform .05s;
+  }
+  .optimize:hover { background: var(--accent-hover); }
+  .optimize:active { transform: translateY(1px); }
+  .optimize svg { width: 17px; height: 17px; }
+
+  /* ── Grid ────────────────────────────────── */
+  .grid-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-panel); padding: 8px 18px 18px; box-shadow: 0 1px 2px rgba(17,24,39,.03); }
+  .grid { display: flex; gap: 0; }
+  .gutter { width: 52px; flex: 0 0 52px; position: relative; }
+  .gutter .hlabel { position: absolute; right: 0; left: 6px; transform: translateY(-50%); text-align: left; font-size: 11.5px; font-weight: 600; color: var(--faint); font-feature-settings: "tnum"; direction: ltr; }
+  .lane { position: relative; flex: 1 1 auto; min-width: 0; }
+  .hline { position: absolute; left: 0; right: 0; border-top: 1px solid var(--border-soft); }
+  .hline.solid { border-top-color: var(--border); }
+
+  /* Now line */
+  .nowline { position: absolute; left: 0; right: -52px; z-index: 6; pointer-events: none; }
+  .nowline .ln { border-top: 1.5px solid var(--red); }
+  .nowline .dot { position: absolute; right: -56px; top: -4px; display: flex; align-items: center; gap: 5px; }
+  .nowline .dot .pt { width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+  .nowline .dot .tm { font-size: 11px; font-weight: 800; color: var(--red); font-feature-settings: "tnum"; direction: ltr; background: var(--surface); padding: 0 2px; }
+
+  /* Window block */
+  .rwin {
+    position: absolute; overflow: hidden;
+    background: var(--tc-fill); border: 1px solid var(--tc-border);
+    border-right: 3px solid var(--tc); border-radius: 9px;
+    box-shadow: 0 1px 2px rgba(17,24,39,.03);
+  }
+  .rwin-head { display: flex; align-items: center; gap: 8px; padding: 8px 11px 7px; }
+  .rwin-time { font-size: 12.5px; font-weight: 800; color: var(--tc); font-feature-settings: "tnum"; direction: ltr; white-space: nowrap; }
+  .rwin-cnt { margin-right: auto; min-width: 19px; height: 19px; padding: 0 6px; border-radius: 6px; background: var(--surface); border: 1px solid var(--tc-border); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--text-2); }
+  .rwin-rows { display: flex; flex-direction: column; }
+
+  .jrow { display: flex; gap: 9px; padding: 7px 11px; border-top: 1px dashed var(--tc-border); }
+  .jrow .jtime { font-size: 12px; font-weight: 700; color: var(--text-2); font-feature-settings: "tnum"; direction: ltr; flex: 0 0 38px; padding-top: 1px; }
+  .jrow .jbody { min-width: 0; flex: 1 1 auto; }
+  .jrow .jname { font-size: 13.5px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; }
+  .jrow .jname .sd { width: 6px; height: 6px; border-radius: 50%; flex: 0 0 6px; }
+  .jrow .jname .sd.assigned { background: var(--accent); }
+  .jrow .jname .sd.done { background: var(--green); }
+  .jrow .jname .sd.pending { background: var(--amber); }
+  .jrow .jhint { display: flex; align-items: center; gap: 5px; margin-top: 3px; font-size: 11.5px; color: var(--muted); }
+  .jrow .jhint svg { width: 13px; height: 13px; color: var(--faint); flex: 0 0 13px; }
+  .jrow.done .jname { color: var(--muted); }
+
+  .rwin.tentative { border-style: dashed; border-right-style: solid; background: color-mix(in srgb, var(--tc) 10%, #fff); }
+  .rwin.tentative .tag { position: absolute; top: 8px; left: 10px; font-size: 10px; font-weight: 800; color: #fff; background: var(--tc); border-radius: 999px; padding: 2px 7px; }
+
+  /* ── Tray ────────────────────────────────── */
+  .tray { margin-top: 22px; }
+  .tray-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .tray-head .lbl { font-size: 14px; font-weight: 700; }
+  .tray-head .cnt { font-size: 12px; font-weight: 700; color: var(--amber); background: #FEF3C7; border-radius: 999px; padding: 2px 9px; }
+  .tray-head .hint { margin-right: auto; font-size: 12px; color: var(--faint); display: flex; align-items: center; gap: 6px; }
+  .tray-head .hint svg { width: 14px; height: 14px; }
+  .tray-list { display: flex; flex-direction: column; gap: 8px; }
+  .tray-row {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card);
+    padding: 11px 14px; cursor: grab; transition: border-color .15s, box-shadow .15s, transform .1s, opacity .2s;
+  }
+  .tray-row:hover { border-color: var(--accent-border); box-shadow: 0 4px 12px rgba(17,24,39,.06); }
+  .tray-row.dragging { opacity: .4; }
+  .tray-row .handle { color: var(--faint); display: flex; flex: 0 0 auto; }
+  .tray-row .handle svg { width: 16px; height: 16px; }
+  .tray-row .nm { font-size: 14px; font-weight: 700; }
+  .tray-row .chips { display: flex; align-items: center; gap: 8px; margin-right: auto; }
+  .tray-row .chip { font-size: 11.5px; font-weight: 600; color: var(--text-2); background: var(--page); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; }
+  .tray-row .chip.svc { color: var(--accent-hover); background: var(--accent-fill); border-color: var(--accent-border); }
+  .tray-empty { font-size: 13px; color: var(--faint); text-align: center; padding: 22px; border: 1px dashed var(--border); border-radius: var(--radius-card); }
+
+  .lane.drop-active { outline: 2px dashed var(--accent-border); outline-offset: -2px; border-radius: 10px; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #111827; color: #fff; font-size: 13.5px; font-weight: 600;
+    padding: 11px 18px; border-radius: 10px; display: flex; align-items: center; gap: 9px;
+    opacity: 0; visibility: hidden; transition: opacity .22s, transform .22s; z-index: 60; box-shadow: 0 12px 30px rgba(0,0,0,.2);
+  }
+  .toast.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+  .toast svg { width: 16px; height: 16px; color: #6ee7b7; }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div style="display:flex; align-items:center; gap:22px;">
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <div class="brand-name">משׂלוּל</div>
+      </div>
+      <div class="crumbs">
+        <a href="Dispatch Board.html">לוח שיבוצים</a>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        <span class="cur">עומר לוי · יום א׳</span>
+      </div>
+    </div>
+    <div class="topbar-user">
+      <span>מרכז הזמנות · נעמה</span>
+      <div class="me">נ</div>
+    </div>
+  </header>
+
+  <div class="wrap">
+
+    <!-- Header line -->
+    <div class="sched-head">
+      <div class="tech">
+        <div class="av">ע.ל</div>
+        <div class="who">
+          <div class="nm">עומר לוי</div>
+          <div class="meta">
+            <span class="dot"></span>
+            <span>אזור השרון והצפון</span>
+            <span style="color:var(--border)">·</span>
+            <span class="day">יום א׳, 15 ביוני</span>
+          </div>
+        </div>
+      </div>
+      <div class="head-right">
+        <div class="util">
+          <svg class="ring" viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r="15.5" fill="none" stroke="#EFEFF1" stroke-width="4"/>
+            <circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--tc)" stroke-width="4" stroke-linecap="round" stroke-dasharray="97.4" stroke-dashoffset="0" transform="rotate(-90 18 18)"/>
+          </svg>
+          <div class="txt">
+            <div class="n">9<span> / 9</span></div>
+            <div class="l">קריאות מתוזמנות</div>
+          </div>
+        </div>
+        <button class="optimize" id="optBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v2M12 19v2M5 12H3M21 12h-2M6.3 6.3 4.9 4.9M19.1 19.1l-1.4-1.4M17.7 6.3l1.4-1.4M4.9 19.1l1.4-1.4"/><circle cx="12" cy="12" r="3.5"/></svg>
+          מסלול מיטבי
+        </button>
+      </div>
+    </div>
+
+    <!-- Grid -->
+    <div class="grid-card">
+      <div class="grid">
+        <div class="gutter" id="gutter"></div>
+        <div class="lane" id="lane"></div>
+      </div>
+    </div>
+
+    <!-- Tray -->
+    <div class="tray">
+      <div class="tray-head">
+        <span class="lbl">ממתין לשיבוץ</span>
+        <span class="cnt" id="trayCnt">3</span>
+        <span class="hint">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9 2 12l3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
+          גררו אל הלוח כדי לשבץ
+        </span>
+      </div>
+      <div class="tray-list" id="trayList"></div>
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+    <span id="toastMsg"></span>
+  </div>
+
+<script>
+  const START = 7, END = 18, SPAN = END - START, HOUR = 80;
+
+  const carSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13l1.6-4.2A2 2 0 0 1 6.5 7.5h11a2 2 0 0 1 1.9 1.3L21 13"/><path d="M3 13h18v3.5a1 1 0 0 1-1 1h-1.5"/><path d="M5.5 17.5H4a1 1 0 0 1-1-1V13"/><circle cx="7" cy="17.5" r="1.6"/><circle cx="16" cy="17.5" r="1.6"/></svg>';
+
+  // s/e = start/end hour; jobs: time, name, from(prev city), drive(min), st
+  let WINDOWS = [
+    { s:7, e:10, jobs:[
+      { t:'07:15', nm:'מעדניית רוזן', from:'מהמחסן', drive:12, st:'done' },
+      { t:'08:45', nm:'הום סטייל', from:'מרוזן', drive:18, st:'done' },
+    ]},
+    { s:9, e:12, jobs:[
+      { t:'09:30', nm:'אלפא סנטר', from:'מהום סטייל', drive:9, st:'done' },
+      { t:'11:00', nm:'אופטיק ליין', from:'מאלפא סנטר', drive:15, st:'assigned' },
+    ]},
+    { s:12, e:15, jobs:[
+      { t:'12:20', nm:'בית קפה הנמל', from:'מאופטיק ליין', drive:11, st:'assigned' },
+      { t:'13:30', nm:'טק פוינט', from:'מבית הקפה', drive:8, st:'assigned' },
+      { t:'14:30', nm:'מחשבים קלים', from:'מטק פוינט', drive:12, st:'assigned' },
+    ]},
+    { s:14, e:17, jobs:[
+      { t:'14:45', nm:'קניון הכרמל', from:'ממחשבים קלים', drive:20, st:'assigned' },
+      { t:'16:00', nm:'ספורט פלוס', from:'מהכרמל', drive:13, st:'assigned' },
+    ]},
+  ];
+
+  let TRAY = [
+    { nm:'סושי בר', city:'נתניה', svc:'התקנה' },
+    { nm:'סיטי מרקט', city:'רעננה', svc:'תיקון' },
+    { nm:'חנות הספרים', city:'כפר סבא', svc:'אחזקה' },
+  ];
+
+  /* Column packing for overlapping windows */
+  function layout(blocks){
+    const sorted = blocks.map((b,i)=>({...b,_i:i})).sort((a,b)=> a.s-b.s || a.e-b.e);
+    let clusters=[], cur=[], curEnd=-1;
+    sorted.forEach(b=>{
+      if(cur.length && b.s>=curEnd){ clusters.push(cur); cur=[]; curEnd=-1; }
+      cur.push(b); curEnd=Math.max(curEnd,b.e);
+    });
+    if(cur.length) clusters.push(cur);
+    clusters.forEach(cl=>{
+      const colEnds=[];
+      cl.forEach(b=>{
+        let placed=false;
+        for(let i=0;i<colEnds.length;i++){ if(b.s>=colEnds[i]){ b.col=i; colEnds[i]=b.e; placed=true; break; } }
+        if(!placed){ b.col=colEnds.length; colEnds.push(b.e); }
+      });
+      cl.forEach(b=> b.cols=colEnds.length);
+    });
+    return sorted;
+  }
+
+  function renderGutter(){
+    const g = document.getElementById('gutter');
+    g.innerHTML = '';
+    for(let h=START; h<=END; h++){
+      const l = document.createElement('div');
+      l.className = 'hlabel';
+      l.style.top = ((h-START)*HOUR) + 'px';
+      l.textContent = String(h).padStart(2,'0') + ':00';
+      g.appendChild(l);
+    }
+  }
+
+  function renderLane(){
+    const lane = document.getElementById('lane');
+    lane.style.height = (SPAN*HOUR) + 'px';
+    lane.innerHTML = '';
+
+    // hour lines
+    for(let h=START; h<=END; h++){
+      const ln = document.createElement('div');
+      ln.className = 'hline' + (h===START||h===END ? ' solid' : '');
+      ln.style.top = ((h-START)*HOUR) + 'px';
+      lane.appendChild(ln);
+    }
+
+    // window blocks
+    const placed = layout(WINDOWS);
+    placed.forEach(b=>{
+      const w = 100 / b.cols;
+      const el = document.createElement('div');
+      el.className = 'rwin' + (b.tentative ? ' tentative' : '');
+      el.style.top = ((b.s-START)*HOUR) + 'px';
+      el.style.height = ((b.e-b.s)*HOUR - 6) + 'px';
+      el.style.right = `calc(${b.col*w}% + ${b.col? 5:0}px)`;
+      el.style.width = `calc(${w}% - ${b.cols>1? 5:0}px)`;
+      const win = `${String(b.s).padStart(2,'0')}:00–${String(b.e).padStart(2,'0')}:00`;
+      const rows = b.jobs.map(j=>`
+        <div class="jrow ${j.st}">
+          <span class="jtime">${j.t}</span>
+          <div class="jbody">
+            <div class="jname"><span class="sd ${j.st}"></span>${j.nm}</div>
+            ${j.drive!=null ? `<div class="jhint">${carSvg}${j.drive} דק׳ · ${j.from}</div>` : ''}
+          </div>
+        </div>`).join('');
+      el.innerHTML = `${b.tentative?'<span class="tag">חדש</span>':''}<div class="rwin-head"><span class="rwin-time">${win}</span><span class="rwin-cnt">${b.jobs.length}</span></div><div class="rwin-rows">${rows}</div>`;
+      lane.appendChild(el);
+    });
+
+    // now line
+    let now = new Date();
+    let nowH = now.getHours() + now.getMinutes()/60;
+    if(nowH < START+0.3 || nowH > END-0.3) nowH = 11 + 20/60; // demo fallback
+    const nl = document.createElement('div');
+    nl.className = 'nowline';
+    nl.style.top = ((nowH-START)*HOUR) + 'px';
+    const hh = String(Math.floor(nowH)).padStart(2,'0');
+    const mm = String(Math.round((nowH%1)*60)).padStart(2,'0');
+    nl.innerHTML = `<div class="ln"></div><div class="dot"><span class="tm">${hh}:${mm}</span><span class="pt"></span></div>`;
+    lane.appendChild(nl);
+  }
+
+  function renderTray(){
+    const list = document.getElementById('trayList');
+    document.getElementById('trayCnt').textContent = TRAY.length;
+    list.innerHTML = '';
+    if(!TRAY.length){
+      list.innerHTML = '<div class="tray-empty">כל הקריאות שובצו 🎉</div>';
+      return;
+    }
+    TRAY.forEach((j, idx)=>{
+      const r = document.createElement('div');
+      r.className = 'tray-row';
+      r.draggable = true;
+      r.innerHTML = `<span class="handle"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+        <span class="nm">${j.nm}</span>
+        <span class="chips"><span class="chip">${j.city}</span><span class="chip svc">${j.svc}</span></span>`;
+      r.addEventListener('dragstart', e=>{ e.dataTransfer.setData('text/plain', idx); r.classList.add('dragging'); });
+      r.addEventListener('dragend', ()=> r.classList.remove('dragging'));
+      list.appendChild(r);
+    });
+  }
+
+  /* Drag onto lane */
+  const lane = document.getElementById('lane');
+  lane.addEventListener('dragover', e=>{ e.preventDefault(); lane.classList.add('drop-active'); });
+  lane.addEventListener('dragleave', e=>{ if(e.target===lane) lane.classList.remove('drop-active'); });
+  lane.addEventListener('drop', e=>{
+    e.preventDefault();
+    lane.classList.remove('drop-active');
+    const idx = parseInt(e.dataTransfer.getData('text/plain'), 10);
+    if(isNaN(idx) || !TRAY[idx]) return;
+    const rect = lane.getBoundingClientRect();
+    let hour = START + (e.clientY - rect.top) / HOUR;
+    hour = Math.max(START, Math.min(END-1, Math.round(hour)));
+    const job = TRAY[idx];
+    WINDOWS.push({ s:hour, e:hour+1, tentative:true, jobs:[{ t:`${String(hour).padStart(2,'0')}:00`, nm:job.nm, from:job.city, drive:null, st:'pending' }] });
+    TRAY.splice(idx,1);
+    renderLane(); renderTray();
+    toast(`${job.nm} שובץ ל-${String(hour).padStart(2,'0')}:00`);
+  });
+
+  /* Optimize */
+  document.getElementById('optBtn').addEventListener('click', ()=>{
+    toast('המסלול חושב מחדש — סדר מיטבי עודכן');
+  });
+
+  let toastT;
+  function toast(msg){
+    const t = document.getElementById('toast');
+    document.getElementById('toastMsg').textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastT);
+    toastT = setTimeout(()=> t.classList.remove('show'), 2400);
+  }
+
+  renderGutter();
+  renderLane();
+  renderTray();
+</script>
+</body>
+</html>

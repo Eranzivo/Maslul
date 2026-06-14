@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maslul — Coordinator Flow (mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ── Maslul design tokens (mirror of context/style.md) ───────────────────── */
+:root{
+  --surface-0:#FFFFFF; --surface-1:#F7F7F8; --surface-2:#EFEFEF;
+  --border:#E4E4E7; --line:#E4E4E7; --line-2:#F0F0F1;
+  --ink:#111827; --ink-2:#374151; --ink-3:#6B7280; --ink-4:#9CA3AF;
+  --accent:#6366F1; --accent-hover:#4F46E5; --accent-light:#EEF2FF; --accent-border:#C7D2FE;
+  --blue:#6366F1; --blue-d:#4F46E5; --blue-l:#EEF2FF;
+  --green:#10B981; --green-l:#ECFDF5; --red:#EF4444; --red-l:#FEF2F2;
+  --amber:#F59E0B; --amber-l:#FFFBEB; --purple:#7C3AED; --purple-l:#F5F3FF;
+  --r:6px; --r-lg:10px; --r-xl:14px;
+  --sh:0 1px 2px rgba(0,0,0,0.05); --sh-md:0 4px 12px rgba(0,0,0,0.08); --sh-lg:0 8px 32px rgba(0,0,0,0.14);
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:'Heebo',sans-serif;background:var(--surface-1);color:var(--ink);-webkit-font-smoothing:antialiased;}
+@keyframes fi{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── Page shell ──────────────────────────────────────────────────────────── */
+.wrap{max-width:760px;margin:0 auto;padding:2.5rem 1.5rem 4rem;animation:fi .25s ease;}
+.ph-title{font-size:26px;font-weight:900;letter-spacing:-0.8px;margin:0;}
+.ph-sub{font-size:14px;color:var(--ink-4);margin:4px 0 0;}
+
+/* ── Search summary (Step 1 result — minimal, the "what we're booking") ──── */
+.search-bar{display:flex;align-items:center;gap:14px;background:var(--surface-0);border:1px solid var(--border);
+  border-radius:var(--r-lg);box-shadow:var(--sh);padding:14px 18px;margin:22px 0 30px;}
+.search-bar .pin{width:38px;height:38px;border-radius:10px;background:var(--accent-light);color:var(--accent);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;}
+.search-bar .loc{flex:1;min-width:0;}
+.search-bar .loc .city{font-size:16px;font-weight:700;}
+.search-bar .loc .addr{font-size:13px;color:var(--ink-3);margin-top:1px;}
+.search-bar .edit{font-size:13px;font-weight:600;color:var(--accent);background:none;border:none;cursor:pointer;padding:6px 8px;border-radius:var(--r);}
+.search-bar .edit:hover{background:var(--accent-light);}
+
+/* ── Section label ───────────────────────────────────────────────────────── */
+.sec-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:var(--ink-4);
+  margin:0 0 14px;display:flex;align-items:center;gap:8px;}
+
+/* ── Recommendation cards (Step 2 — date · window only, no tech/route) ───── */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.rc{position:relative;background:var(--surface-0);border:1.5px solid var(--border);border-radius:var(--r-lg);
+  box-shadow:var(--sh);padding:20px 18px 18px;cursor:pointer;text-align:center;
+  transition:border-color .15s, box-shadow .15s, transform .15s;}
+.rc:hover{border-color:var(--accent-border);box-shadow:var(--sh-md);transform:translateY(-3px);}
+.rc.best{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light);}
+.rc .rank{position:absolute;top:12px;inset-inline-start:12px;font-size:11px;font-weight:800;color:var(--ink-4);}
+.rc .best-badge{position:absolute;top:-11px;inset-inline-end:14px;background:var(--accent);color:#fff;
+  font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;box-shadow:var(--sh);}
+.rc .dow{font-size:20px;font-weight:800;margin:10px 0 2px;letter-spacing:-0.3px;}
+.rc .date{font-size:13px;color:var(--ink-3);font-weight:500;}
+.rc .win{display:inline-flex;align-items:center;gap:6px;margin-top:16px;padding:8px 14px;border-radius:var(--r);
+  background:var(--surface-1);border:1px solid var(--border);font-size:15px;font-weight:700;color:var(--ink-2);}
+.rc.best .win{background:var(--accent-light);border-color:var(--accent-border);color:var(--accent-hover);}
+.rc .pick{margin-top:16px;width:100%;height:40px;border-radius:var(--r);border:1px solid var(--border);
+  background:var(--surface-0);color:var(--ink-2);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;}
+.rc:hover .pick{border-color:var(--accent-border);color:var(--accent-hover);}
+.rc.best .pick{background:var(--accent);border-color:var(--accent);color:#fff;}
+.rc.best .pick:hover{background:var(--accent-hover);}
+
+/* ── Alternative actions ─────────────────────────────────────────────────── */
+.alts{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap;}
+.alt-btn{flex:1;min-width:200px;height:48px;border-radius:var(--r-lg);border:1px solid var(--border);
+  background:var(--surface-0);color:var(--ink-2);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:var(--sh);transition:border-color .15s,background .15s;}
+.alt-btn:hover{border-color:var(--accent-border);background:var(--accent-light);color:var(--accent-hover);}
+.alt-btn .ic{font-size:16px;}
+
+.note{margin-top:34px;padding:14px 16px;border-radius:var(--r-lg);background:var(--accent-light);
+  border:1px solid var(--accent-border);font-size:13px;color:var(--ink-2);line-height:1.6;}
+.note b{color:var(--accent-hover);}
+
+@media(max-width:640px){.cards{grid-template-columns:1fr;}.rc .win{font-size:16px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1 class="ph-title">שיבוץ קריאה חדשה</h1>
+  <p class="ph-sub">המערכת בחרה את המסלול היעיל ביותר — בחר/י מועד</p>
+
+  <!-- Step 1 result: what we're booking (minimal, editable) -->
+  <div class="search-bar">
+    <div class="pin">📍</div>
+    <div class="loc">
+      <div class="city">תל אביב</div>
+      <div class="addr">דיזנגוף 120, דירה 4</div>
+    </div>
+    <button class="edit">שינוי ✎</button>
+  </div>
+
+  <!-- Step 2: top-3 recommendations — date + window only -->
+  <div class="sec-label">המלצות שיבוץ</div>
+  <div class="cards">
+
+    <div class="rc best">
+      <div class="best-badge">מומלץ</div>
+      <div class="rank">1</div>
+      <div class="dow">יום א׳</div>
+      <div class="date">15 ביוני 2026</div>
+      <div class="win">🕐 07:00 — 10:00</div>
+      <button class="pick">בחירה ✓</button>
+    </div>
+
+    <div class="rc">
+      <div class="rank">2</div>
+      <div class="dow">יום ב׳</div>
+      <div class="date">16 ביוני 2026</div>
+      <div class="win">🕐 08:00 — 11:00</div>
+      <button class="pick">בחירה</button>
+    </div>
+
+    <div class="rc">
+      <div class="rank">3</div>
+      <div class="dow">יום ג׳</div>
+      <div class="date">17 ביוני 2026</div>
+      <div class="win">🕐 09:00 — 12:00</div>
+      <button class="pick">בחירה</button>
+    </div>
+
+  </div>
+
+  <!-- Alternative actions -->
+  <div class="alts">
+    <button class="alt-btn"><span class="ic">🔄</span> מצא מועד אחר</button>
+    <button class="alt-btn"><span class="ic">📅</span> בדוק תאריך מסוים</button>
+  </div>
+
+  <div class="note">
+    <b>הערה (לא מוצג ללקוח):</b> טכנאי, מסלול ושאר הקריאות באותו יום יתגלו רק <b>אחרי</b> בחירת מועד —
+    כדי לשמור על מסך נקי. המנוע כבר חישב את הכל מאחורי הקלעים (אזור · מילוי יום קיים · רצף נסיעה).
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>לוח בקרה — Maslul</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --accent: #6366F1; --accent-hover: #4F46E5; --accent-fill: #EEF2FF; --accent-border: #C7D2FE;
+    --page: #F7F7F8; --surface: #FFFFFF; --border: #E4E4E7; --border-soft: #F0F0F2;
+    --text: #111827; --text-2: #374151; --muted: #6B7280; --faint: #9CA3AF;
+    --green: #10B981; --amber: #F59E0B; --red: #EF4444;
+    --radius-btn: 6px; --radius-card: 10px; --radius-panel: 14px; --nav: 220px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: 'Heebo', sans-serif; background: var(--page); color: var(--text); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  button { font-family: inherit; }
+
+  /* ── Right nav ── */
+  .nav { position: fixed; top: 0; right: 0; bottom: 0; width: var(--nav); background: var(--page); border-left: 1px solid var(--border); display: flex; flex-direction: column; padding: 18px 14px 14px; z-index: 10; }
+  .nav .brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 18px; }
+  .nav .brand-mark { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); position: relative; flex: 0 0 30px; }
+  .nav .brand-mark::after { content: ""; position: absolute; inset: 9.5px; border-radius: 50%; border: 2.5px solid #fff; border-bottom-color: transparent; transform: rotate(45deg); }
+  .nav .brand-name { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; }
+  .nav-section { font-size: 11px; font-weight: 700; color: var(--faint); letter-spacing: .08em; padding: 6px 12px 8px; }
+  .nav-item { position: relative; display: flex; align-items: center; gap: 11px; height: 42px; padding: 0 12px; border-radius: 9px; margin-bottom: 2px; font-size: 14px; font-weight: 500; color: var(--text-2); text-decoration: none; cursor: pointer; transition: background .15s, color .15s; }
+  .nav-item svg { width: 19px; height: 19px; color: var(--faint); transition: color .15s; }
+  .nav-item:hover { background: #efeff1; color: var(--text); }
+  .nav-item.active { background: var(--accent-fill); color: var(--accent-hover); font-weight: 700; }
+  .nav-item.active svg { color: var(--accent); }
+  .nav-item.active::before { content: ""; position: absolute; right: -14px; top: 50%; transform: translateY(-50%); width: 3px; height: 20px; border-radius: 0 3px 3px 0; background: var(--accent); }
+  .nav-spacer { flex: 1 1 auto; }
+  .tenant { display: flex; align-items: center; gap: 10px; padding: 10px 11px; border-radius: 11px; background: var(--surface); border: 1px solid var(--border); margin-bottom: 10px; }
+  .tenant .logo { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg,#6366F1,#7C3AED); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; flex: 0 0 32px; }
+  .tenant .t .co { font-size: 13px; font-weight: 700; }
+  .tenant .t .role { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+  .user { display: flex; align-items: center; gap: 10px; padding: 4px 11px; }
+  .user .av { width: 30px; height: 30px; border-radius: 50%; background: var(--accent-fill); color: var(--accent-hover); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex: 0 0 30px; }
+  .user .nm { font-size: 13px; font-weight: 600; }
+  .user .out { margin-right: auto; color: var(--faint); display: flex; cursor: pointer; }
+  .user .out svg { width: 16px; height: 16px; }
+
+  /* ── Main ── */
+  .main { margin-right: var(--nav); min-height: 100vh; padding: 34px 38px 56px; }
+  .main-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 22px; }
+  .main-head h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+  .main-head .sub { font-size: 13.5px; color: var(--muted); margin-top: 5px; }
+  .main-head .right { display: flex; align-items: center; gap: 10px; }
+  .ghost-btn { height: 38px; padding: 0 14px; border: 1px solid var(--border); background: var(--surface); border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--text-2); cursor: pointer; display: flex; align-items: center; gap: 7px; transition: border-color .15s, background .15s, color .15s; }
+  .ghost-btn:hover { border-color: var(--accent-border); background: var(--accent-fill); color: var(--accent-hover); }
+  .ghost-btn svg { width: 16px; height: 16px; }
+  .primary-btn { height: 38px; padding: 0 16px; border: none; background: var(--accent); color: #fff; border-radius: 8px; font-size: 13.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 7px; transition: background .15s; }
+  .primary-btn:hover { background: var(--accent-hover); }
+  .primary-btn svg { width: 16px; height: 16px; }
+
+  /* ── KPI strip ── */
+  .kpi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+  .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-panel); padding: 16px 18px; box-shadow: 0 1px 2px rgba(17,24,39,.03); }
+  .kpi-card .k-top { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .kpi-card .k-ico { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex: 0 0 30px; }
+  .kpi-card .k-ico svg { width: 16px; height: 16px; }
+  .kpi-card .k-label { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .kpi-card .k-num { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; font-feature-settings: "tnum"; }
+  .kpi-card .k-sub { font-size: 12px; color: var(--faint); margin-top: 7px; }
+  .k-amber .k-ico { background: #FEF3C7; color: #B45309; }
+  .k-indigo .k-ico { background: var(--accent-fill); color: var(--accent-hover); }
+  .k-green .k-ico { background: #D1FAE5; color: #047857; }
+  .k-slate .k-ico { background: var(--page); color: var(--text-2); }
+
+  /* ── Section ── */
+  .sec-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+  .sec-head h2 { font-size: 16px; font-weight: 700; }
+  .sec-head .c { font-size: 12.5px; color: var(--faint); }
+
+  /* ── Technician cards ── */
+  .tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(308px, 1fr)); gap: 16px; }
+  .tcard {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-panel);
+    padding: 18px; cursor: pointer; transition: transform .12s, box-shadow .15s, border-color .15s;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .tcard:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(17,24,39,.08); border-color: var(--tc-border, var(--accent-border)); }
+  .tcard .t-head { display: flex; align-items: center; gap: 12px; }
+  .tcard .av { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; color: #fff; flex: 0 0 44px; }
+  .tcard .who { min-width: 0; flex: 1 1 auto; }
+  .tcard .who .nm { font-size: 15.5px; font-weight: 700; }
+  .tcard .who .rg { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+  .tpill { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+  .tpill .d { width: 6px; height: 6px; border-radius: 50%; }
+  .tpill.route { background: #D1FAE5; color: #047857; } .tpill.route .d { background: var(--green); }
+  .tpill.free { background: var(--accent-fill); color: var(--accent-hover); } .tpill.free .d { background: var(--accent); }
+  .tpill.break { background: #FEF3C7; color: #92660B; } .tpill.break .d { background: var(--amber); }
+  .tpill.off { background: var(--page); color: var(--muted); } .tpill.off .d { background: var(--faint); }
+
+  .cap .cap-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 7px; }
+  .cap .cap-row .lbl { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+  .cap .cap-row .val { font-size: 13px; font-weight: 700; font-feature-settings: "tnum"; }
+  .cap .cap-row .val span { color: var(--faint); font-weight: 600; }
+  .cap .bar { height: 8px; background: var(--page); border-radius: 999px; overflow: hidden; }
+  .cap .bar .fill { height: 100%; border-radius: 999px; transition: width .4s ease; }
+  .fill.green { background: var(--green); } .fill.amber { background: var(--amber); } .fill.red { background: var(--red); }
+  .val.green { color: var(--green); } .val.amber { color: #B45309; } .val.red { color: var(--red); }
+
+  .next { display: flex; align-items: center; gap: 9px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+  .next .ico { width: 28px; height: 28px; border-radius: 8px; background: var(--page); display: flex; align-items: center; justify-content: center; flex: 0 0 28px; }
+  .next .ico svg { width: 15px; height: 15px; color: var(--muted); }
+  .next .txt { font-size: 13px; min-width: 0; }
+  .next .txt .l { color: var(--faint); font-size: 11.5px; }
+  .next .txt .v { font-weight: 600; color: var(--text); font-feature-settings: "tnum"; }
+  .next .txt .v .city { font-weight: 700; }
+  .next .chev { margin-right: auto; color: var(--faint); display: flex; }
+  .next .chev svg { width: 17px; height: 17px; }
+  .next.none .v { color: var(--muted); font-weight: 500; }
+
+  /* ── Weekly slide-in ── */
+  .scrim { position: fixed; inset: 0; background: rgba(17,24,39,.18); opacity: 0; visibility: hidden; transition: opacity .2s; z-index: 30; }
+  .scrim.show { opacity: 1; visibility: visible; }
+  .week-panel { position: fixed; top: 0; bottom: 0; left: 0; width: 480px; max-width: 94vw; background: var(--surface); border-right: 1px solid var(--border); z-index: 35; transform: translateX(-100%); transition: transform .28s cubic-bezier(.32,.72,.3,1); display: flex; flex-direction: column; box-shadow: 22px 0 50px -28px rgba(17,24,39,.35); }
+  .week-panel.show { transform: translateX(0); }
+  .wp-head { padding: 22px 24px 18px; border-bottom: 1px solid var(--border); }
+  .wp-head .top { display: flex; align-items: center; justify-content: space-between; }
+  .wp-head .tech-chip { display: flex; align-items: center; gap: 12px; }
+  .wp-head .tech-chip .av { width: 42px; height: 42px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: #fff; flex: 0 0 42px; }
+  .wp-head .tech-chip .nm { font-size: 18px; font-weight: 800; }
+  .wp-head .tech-chip .rg { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+  .wp-head .close { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .15s, color .15s; }
+  .wp-head .close:hover { background: var(--page); color: var(--text); }
+  .wp-head .summary { display: flex; gap: 18px; margin-top: 16px; }
+  .wp-head .summary .s .n { font-size: 17px; font-weight: 800; font-feature-settings: "tnum"; }
+  .wp-head .summary .s .l { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+
+  .wp-body { flex: 1 1 auto; overflow: auto; padding: 12px 24px 24px; }
+  .day-sec { padding: 16px 0; border-bottom: 1px solid var(--border-soft); }
+  .day-sec:last-child { border-bottom: none; }
+  .day-sec .dh { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .day-sec .dh .dn { font-size: 14px; font-weight: 700; }
+  .day-sec .dh .dd { font-size: 12px; color: var(--faint); }
+  .day-sec .dh .badge { margin-right: auto; font-size: 11px; font-weight: 700; color: var(--text-2); background: var(--page); border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; }
+  .day-sec.empty .dh .dn { color: var(--faint); }
+  .day-sec .empty-line { font-size: 12.5px; color: #c8cdd6; padding: 2px 2px 4px; }
+
+  .wblk { border: 1px solid var(--border); border-right: 3px solid var(--wc); border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
+  .wblk-h { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: color-mix(in srgb, var(--wc) 5%, #fff); }
+  .wblk-h .w { font-size: 12.5px; font-weight: 800; color: var(--wc); direction: ltr; font-feature-settings: "tnum"; }
+  .wblk-h .c { margin-right: auto; font-size: 11px; font-weight: 700; color: var(--muted); }
+  .wstop { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; }
+  .wstop + .wstop { border-top: 1px dashed var(--border); }
+  .wstop .tm { font-size: 12px; font-weight: 700; color: var(--text-2); direction: ltr; font-feature-settings: "tnum"; flex: 0 0 40px; padding-top: 1px; }
+  .wstop .body { flex: 1 1 auto; min-width: 0; }
+  .wstop .body .ln1 { display: flex; align-items: center; gap: 8px; }
+  .wstop .body .city { font-size: 13.5px; font-weight: 700; }
+  .wstop .body .sd { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 7px; }
+  .wstop .body .sd.assigned { background: var(--accent); } .wstop .body .sd.done { background: var(--green); } .wstop .body .sd.pending { background: var(--amber); }
+  .wstop .body .ln2 { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .wstop .svc { margin-right: auto; font-size: 11px; font-weight: 600; color: var(--accent-hover); background: var(--accent-fill); border: 1px solid var(--accent-border); border-radius: 6px; padding: 2px 8px; white-space: nowrap; }
+  .wp-foot { padding: 14px 24px; border-top: 1px solid var(--border); }
+  .wp-foot a { display: flex; align-items: center; justify-content: center; gap: 8px; height: 42px; border-radius: var(--radius-btn); background: var(--accent); color: #fff; text-decoration: none; font-size: 14px; font-weight: 700; transition: background .15s; }
+  .wp-foot a:hover { background: var(--accent-hover); }
+  .wp-foot a svg { width: 16px; height: 16px; }
+</style>
+</head>
+<body>
+
+  <!-- Right nav -->
+  <aside class="nav">
+    <div class="brand"><div class="brand-mark"></div><div class="brand-name">משׂלוּל</div></div>
+    <div class="nav-section">ניווט</div>
+    <a class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>לוח בקרה</a>
+    <a class="nav-item" href="Dispatch Board.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4"/></svg>שיבוץ</a>
+    <a class="nav-item" href="Dispatch Board.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 8h18M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg>יומן</a>
+    <a class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/></svg>טכנאים</a>
+    <a class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3 3 6v15l6-3 6 3 6-3V3l-6 3-6-3Z"/><path d="M9 3v15M15 6v15"/></svg>אזורים</a>
+    <a class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>דוחות</a>
+    <div class="nav-spacer"></div>
+    <div class="tenant"><div class="logo">ש+</div><div class="t"><div class="co">שירות פלוס בע״מ</div><div class="role">מנהלת תפעול</div></div></div>
+    <div class="user"><div class="av">נ</div><div class="nm">נעמה לוי</div><span class="out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></span></div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="main-head">
+      <div>
+        <h1>לוח בקרה</h1>
+        <div class="sub">יום א׳, 15 ביוני 2026 · מבט תפעולי</div>
+      </div>
+      <div class="right">
+        <button class="ghost-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8"/><path d="M3 3v5h5"/></svg>רענון</button>
+        <button class="primary-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>שיבוץ קריאה</button>
+      </div>
+    </div>
+
+    <!-- KPI strip -->
+    <div class="kpi">
+      <div class="kpi-card k-amber">
+        <div class="k-top"><span class="k-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="k-label">ממתין לשיבוץ</span></div>
+        <div class="k-num">4</div>
+        <div class="k-sub">קריאות בהמתנה להקצאה</div>
+      </div>
+      <div class="kpi-card k-indigo">
+        <div class="k-top"><span class="k-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg></span><span class="k-label">משובץ</span></div>
+        <div class="k-num">27</div>
+        <div class="k-sub">משובצות לטכנאים להיום</div>
+      </div>
+      <div class="kpi-card k-green">
+        <div class="k-top"><span class="k-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="k-label">הושלם</span></div>
+        <div class="k-num">3</div>
+        <div class="k-sub">בוצעו עד כה היום</div>
+      </div>
+      <div class="kpi-card k-slate">
+        <div class="k-top"><span class="k-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span class="k-label">היום</span></div>
+        <div class="k-num">30</div>
+        <div class="k-sub">סך הקריאות ליום א׳</div>
+      </div>
+    </div>
+
+    <div class="sec-head">
+      <h2>צוות בשטח</h2>
+      <span class="c">לחצו על טכנאי לצפייה בלוח השבועי</span>
+    </div>
+    <div class="tech-grid" id="techGrid"></div>
+  </main>
+
+  <!-- Weekly slide-in -->
+  <div class="scrim" id="scrim"></div>
+  <aside class="week-panel" id="weekPanel">
+    <div class="wp-head">
+      <div class="top">
+        <div class="tech-chip">
+          <div class="av" id="wpAv"></div>
+          <div><div class="nm" id="wpName"></div><div class="rg" id="wpRegion"></div></div>
+        </div>
+        <button class="close" id="wpClose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="summary">
+        <div class="s"><div class="n" id="wpWeekTotal"></div><div class="l">קריאות השבוע</div></div>
+        <div class="s"><div class="n" id="wpToday"></div><div class="l">היום</div></div>
+        <div class="s"><div class="n" id="wpDays"></div><div class="l">ימי פעילות</div></div>
+      </div>
+    </div>
+    <div class="wp-body" id="wpBody"></div>
+    <div class="wp-foot">
+      <a href="Daily Route Grid.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M6 16V9a4 4 0 0 1 4-4h5"/></svg>פתיחת מסלול יומי</a>
+    </div>
+  </aside>
+
+<script>
+  const J = (t, city, addr, svc, st) => ({ t, city, addr, svc, st });
+  const W = (s, e, jobs) => ({ s, e, win: `${String(s).padStart(2,'0')}:00–${String(e).padStart(2,'0')}:00`, jobs });
+
+  const TECHS = [
+    { id:'yossi', name:'יוסי בר־און', initials:'י.ב', color:'#6366F1', region:'תל אביב והסביבה', status:'route',
+      week:[
+        [ W(7,10,[J('07:15','תל אביב','דיזנגוף 120','התקנה','done'),J('08:30','רמת גן','ביאליק 8','אחזקה','assigned')]), W(11,14,[J('11:30','הרצליה','סוקולוב 5','תיקון','assigned'),J('12:45','רעננה','אחוזה 110','התקנה','assigned')]), W(14,17,[J('14:30','כפר סבא','ויצמן 40','בדיקה','assigned'),J('16:00','הוד השרון','רמתיים 12','תיקון','assigned')]) ],
+        [ W(8,11,[J('08:30','תל אביב','אבן גבירול 30','התקנה','assigned'),J('10:00','גבעתיים','כצנלסון 33','תיקון','assigned')]) ],
+        [ W(9,12,[J('09:30','רמת גן','הרצל 5','אחזקה','assigned')]) ],
+        [],
+        [ W(8,11,[J('08:00','תל אביב','רוטשילד 22','התקנה','assigned')]) ],
+      ]},
+    { id:'dana', name:'דנה כהן', initials:'ד.כ', color:'#7C3AED', region:'ירושלים והשפלה', status:'route',
+      week:[
+        [ W(9,12,[J('09:30','ירושלים','יפו 200','תיקון','assigned'),J('11:00','מבשרת ציון','הכרמל 7','התקנה','assigned')]), W(13,16,[J('13:30','בית שמש','נחל שורק 4','אחזקה','assigned'),J('14:45','מודיעין','עמק זבולון 3','בדיקה','assigned'),J('15:30','רמלה','הרצל 14','תיקון','assigned')]) ],
+        [ W(10,13,[J('10:30','ירושלים','קינג ג׳ורג׳ 18','התקנה','assigned')]) ],
+        [ W(9,12,[J('09:00','לוד','הרצל 88','תיקון','assigned'),J('10:30','רמלה','ביאליק 9','אחזקה','assigned')]) ],
+        [],
+        [ W(11,14,[J('11:00','ירושלים','עמק רפאים 40','בדיקה','assigned')]) ],
+      ]},
+    { id:'omer', name:'עומר לוי', initials:'ע.ל', color:'#0D9488', region:'השרון והצפון', status:'route',
+      week:[
+        [ W(7,10,[J('07:15','נתניה','הרצל 55','התקנה','done'),J('08:30','חדרה','הגיבורים 18','תיקון','done'),J('09:15','כפר יונה','השרון 9','אחזקה','assigned')]), W(10,13,[J('10:30','נתניה','שמורק 12','בדיקה','assigned'),J('11:30','חדרה','בלפור 60','התקנה','assigned'),J('12:15','פרדס חנה','הדקל 3','תיקון','assigned')]), W(14,17,[J('14:30','חיפה','מוריה 88','אחזקה','assigned'),J('15:30','קריית אתא','העצמאות 5','בדיקה','assigned'),J('16:30','טירת כרמל','הרצל 2','תיקון','assigned')]) ],
+        [ W(8,11,[J('08:30','נתניה','דגניה 4','התקנה','assigned')]) ],
+        [ W(9,12,[J('09:30','חיפה','הנשיא 20','תיקון','assigned')]) ],
+        [ W(7,10,[J('07:30','חדרה','אחד העם 7','אחזקה','assigned')]) ],
+        [],
+      ]},
+    { id:'ran', name:'רן מזרחי', initials:'ר.מ', color:'#D97706', region:'הדרום', status:'route',
+      week:[
+        [ W(8,11,[J('08:00','ראשון לציון','הרצל 90','התקנה','assigned'),J('09:15','נס ציונה','ויצמן 12','תיקון','assigned'),J('10:15','רחובות','הרצל 150','אחזקה','assigned')]), W(12,15,[J('12:30','אשדוד','רוגוזין 4','בדיקה','assigned'),J('13:30','אשקלון','בן גוריון 22','התקנה','assigned')]), W(15,18,[J('15:30','קריית גת','לכיש 8','תיקון','assigned'),J('16:45','באר שבע','רגר 60','אחזקה','assigned')]) ],
+        [ W(9,12,[J('09:00','אשדוד','שבי ציון 3','התקנה','assigned')]) ],
+        [],
+        [ W(10,13,[J('10:00','באר שבע','הנרייטה סולד 5','תיקון','assigned')]) ],
+        [ W(11,14,[J('11:30','אשקלון','הנביאים 14','בדיקה','assigned')]) ],
+      ]},
+    { id:'maya', name:'מאיה שלו', initials:'מ.ש', color:'#E11D48', region:'מרכז והשרון', status:'free',
+      week:[
+        [ W(10,13,[J('10:00','פתח תקווה','ז׳בוטינסקי 101','התקנה','assigned'),J('11:30','ראש העין','שבזי 6','תיקון','assigned')]), W(14,17,[J('14:30','קריית אונו','לוי אשכול 9','אחזקה','assigned')]) ],
+        [ W(9,12,[J('09:30','פתח תקווה','חובבי ציון 22','בדיקה','assigned')]) ],
+        [ W(11,14,[J('11:00','אלעד','שמעיה 4','התקנה','assigned')]) ],
+        [],
+        [ W(8,11,[J('08:30','פתח תקווה','העצמאות 40','תיקון','assigned')]) ],
+      ]},
+    { id:'arez', name:'ארז גל', initials:'א.ג', color:'#0EA5E9', region:'צפון', status:'off',
+      week:[ [], [W(9,12,[J('09:00','עפולה','יזרעאל 3','התקנה','assigned')])], [], [W(10,13,[J('10:00','כרמיאל','החרושת 5','תיקון','assigned')])], [] ]},
+  ];
+
+  const DAYS = [ {dn:'יום א׳',dd:'15.6'}, {dn:'יום ב׳',dd:'16.6'}, {dn:'יום ג׳',dd:'17.6'}, {dn:'יום ד׳',dd:'18.6'}, {dn:'יום ה׳',dd:'19.6'} ];
+  const STATUS = { route:{l:'במסלול',c:'route'}, free:{l:'זמין',c:'free'}, break:{l:'בהפסקה',c:'break'}, off:{l:'לא פעיל',c:'off'} };
+  const SVCNONE = '';
+  const CAP = 9;
+
+  function dayCount(day){ return day.reduce((a,b)=> a + b.jobs.length, 0); }
+  function todayLoad(t){ return dayCount(t.week[0]); }
+  function weekTotal(t){ return t.week.reduce((a,d)=> a + dayCount(d), 0); }
+  function activeDays(t){ return t.week.filter(d=> d.length).length; }
+  function capColor(load){ const p = load/CAP; return p < 0.6 ? 'green' : p < 0.85 ? 'amber' : 'red'; }
+  function nextStop(t){
+    for(const blk of t.week[0]){ for(const j of blk.jobs){ if(j.st!=='done') return j; } }
+    return null;
+  }
+
+  function renderCards(){
+    const grid = document.getElementById('techGrid');
+    grid.innerHTML = '';
+    TECHS.forEach(t=>{
+      const load = todayLoad(t);
+      const pct = Math.min(100, Math.round(load/CAP*100));
+      const cc = capColor(load);
+      const st = STATUS[t.status];
+      const nx = nextStop(t);
+      const card = document.createElement('div');
+      card.className = 'tcard';
+      card.style.setProperty('--tc-border', `color-mix(in srgb, ${t.color} 40%, #fff)`);
+      card.innerHTML = `
+        <div class="t-head">
+          <div class="av" style="background:${t.color}">${t.initials}</div>
+          <div class="who"><div class="nm">${t.name}</div><div class="rg">${t.region}</div></div>
+          <span class="tpill ${st.c}"><span class="d"></span>${st.l}</span>
+        </div>
+        <div class="cap">
+          <div class="cap-row"><span class="lbl">עומס יומי</span><span class="val ${cc}">${load} <span>/ ${CAP} קריאות</span></span></div>
+          <div class="bar"><div class="fill ${cc}" style="width:${pct}%"></div></div>
+        </div>
+        <div class="next ${nx?'':'none'}">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></span>
+          <div class="txt"><div class="l">הבא בתור</div><div class="v">${nx ? `${nx.t} · <span class="city">${nx.city}</span>` : 'אין שיבוצים היום'}</div></div>
+          <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></span>
+        </div>`;
+      card.onclick = ()=> openWeek(t.id);
+      grid.appendChild(card);
+    });
+  }
+
+  function openWeek(id){
+    const t = TECHS.find(x=> x.id===id); if(!t) return;
+    document.getElementById('wpAv').textContent = t.initials;
+    document.getElementById('wpAv').style.background = t.color;
+    document.getElementById('wpName').textContent = t.name;
+    document.getElementById('wpRegion').textContent = t.region;
+    document.getElementById('wpWeekTotal').textContent = weekTotal(t);
+    document.getElementById('wpToday').textContent = todayLoad(t);
+    document.getElementById('wpDays').textContent = activeDays(t) + '/5';
+    const body = document.getElementById('wpBody');
+    body.innerHTML = t.week.map((day, di)=>{
+      const cnt = dayCount(day);
+      if(!day.length){
+        return `<div class="day-sec empty"><div class="dh"><span class="dn">${DAYS[di].dn}</span><span class="dd">${DAYS[di].dd}</span></div><div class="empty-line">— אין שיבוצים —</div></div>`;
+      }
+      const blocks = day.map(blk=>{
+        const stops = blk.jobs.map(j=>`
+          <div class="wstop">
+            <span class="tm">${j.t}</span>
+            <div class="body">
+              <div class="ln1"><span class="sd ${j.st}"></span><span class="city">${j.city}</span><span class="svc">${j.svc}</span></div>
+              <div class="ln2">${j.addr}</div>
+            </div>
+          </div>`).join('');
+        return `<div class="wblk" style="--wc:${t.color}"><div class="wblk-h"><span class="w">${blk.win}</span><span class="c">${blk.jobs.length} עצירות</span></div>${stops}</div>`;
+      }).join('');
+      return `<div class="day-sec"><div class="dh"><span class="dn">${DAYS[di].dn}</span><span class="dd">${DAYS[di].dd}</span><span class="badge">${cnt} קריאות</span></div>${blocks}</div>`;
+    }).join('');
+    document.getElementById('scrim').classList.add('show');
+    document.getElementById('weekPanel').classList.add('show');
+  }
+  function closeWeek(){
+    document.getElementById('scrim').classList.remove('show');
+    document.getElementById('weekPanel').classList.remove('show');
+  }
+  document.getElementById('scrim').onclick = closeWeek;
+  document.getElementById('wpClose').onclick = closeWeek;
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeWeek(); });
+
+  renderCards();
+</script>
+</body>
+</html>
