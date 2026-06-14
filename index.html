@@ -408,6 +408,79 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .td-field:last-child{border:none;}
 .td-key{color:var(--ink-3);font-weight:500;}
 .td-val{font-weight:700;text-align:left;}
+
+/* ════════════ md-* — Redesign design-system (Claude Design port, 2026-06-15) ════════════
+   Namespaced so it never collides with legacy .btn/.card/.nav/.pill/.status-pill.
+   Uses existing :root tokens. Plan: outputs/ui-port-plan_2026-06-15.md  Log: mockups/DESIGN-LOG.md */
+.md-num,.md-win{direction:ltr;font-feature-settings:"tnum";} /* keep time ranges/numbers LTR in RTL */
+
+/* Buttons */
+.md-btn{height:40px;padding:0 14px;border-radius:var(--r);font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--border);background:var(--surface-0);color:var(--ink-2);transition:background .15s,border-color .15s,color .15s;}
+.md-btn svg{width:16px;height:16px;}
+.md-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.md-btn.primary:hover{background:var(--accent-hover);border-color:var(--accent-hover);}
+.md-btn.ghost{background:transparent;border-color:transparent;color:var(--ink-3);}
+.md-btn.ghost:hover{background:var(--surface-2);color:var(--ink);}
+.md-btn.icon{width:40px;padding:0;flex:0 0 40px;}
+.md-btn.icon:hover,.md-btn:hover{border-color:var(--accent-border);background:var(--accent-light);color:var(--accent-hover);}
+.md-btn.icon.locked{background:var(--accent-light);border-color:var(--accent-border);color:var(--accent-hover);}
+.md-btn.danger{color:var(--red);}
+.md-btn.danger:hover{background:var(--red-l);border-color:#FECACA;color:var(--red);}
+.md-btn.lg{height:48px;font-size:15px;border-radius:var(--r-lg);}
+
+/* Card */
+.md-card{background:var(--surface-0);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);}
+
+/* Tech avatar (square, colour set inline) */
+.md-av{display:flex;align-items:center;justify-content:center;border-radius:7px;color:#fff;font-weight:800;font-size:10px;flex-shrink:0;}
+
+/* Filter pill */
+.md-pill{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 13px;border-radius:999px;border:1px solid var(--border);background:var(--surface-0);font-family:inherit;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer;user-select:none;transition:border-color .15s,background .15s,opacity .15s;}
+.md-pill .swatch{width:9px;height:9px;border-radius:50%;}
+.md-pill:hover{border-color:var(--accent-border);}
+.md-pill.active{border-color:var(--accent-border);background:var(--accent-light);color:var(--ink);}
+.md-pill.dim{opacity:.42;}
+
+/* Status pill */
+.md-status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;white-space:nowrap;}
+.md-status .d{width:7px;height:7px;border-radius:50%;}
+.md-status.assigned{background:var(--blue-l);color:var(--blue-d);} .md-status.assigned .d{background:var(--accent);}
+.md-status.done{background:var(--green-l);color:#047857;} .md-status.done .d{background:var(--green);}
+.md-status.pending{background:var(--amber-l);color:#92660B;} .md-status.pending .d{background:var(--amber);}
+.md-status.cancelled{background:var(--red-l);color:#B91C1C;} .md-status.cancelled .d{background:var(--red);}
+
+/* Segmented toggle */
+.md-seg{display:inline-flex;background:var(--surface-0);border:1px solid var(--border);border-radius:9px;padding:3px;gap:2px;}
+.md-seg button{height:32px;padding:0 14px;border:none;background:none;border-radius:var(--r);font-family:inherit;font-size:13px;font-weight:600;color:var(--ink-3);cursor:pointer;transition:background .15s,color .15s;}
+.md-seg button.active{background:var(--accent-light);color:var(--accent-hover);}
+
+/* Window block (shared by daily + weekly calendars) */
+.md-wblock{background:var(--surface-0);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh);}
+.md-wblock-head{display:flex;align-items:center;gap:8px;padding:9px 11px;border-bottom:1px solid var(--border);background:var(--md-tint,var(--surface-1));}
+.md-wblock-head .tch{width:22px;height:22px;border-radius:6px;flex:0 0 22px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;background:var(--md-tcolor,var(--accent));}
+.md-wblock-head .md-win{font-size:12.5px;font-weight:700;color:var(--ink-2);}
+.md-wblock-head .tname{font-size:11.5px;color:var(--ink-3);margin-right:auto;font-weight:500;}
+.md-job-row{display:flex;align-items:center;gap:8px;padding:9px 11px;}
+.md-job-row+.md-job-row{border-top:1px dashed var(--border);}
+.md-job-row .dot{width:7px;height:7px;border-radius:50%;flex:0 0 7px;}
+.md-job-row .dot.pending{background:var(--amber);} .md-job-row .dot.assigned{background:var(--accent);} .md-job-row .dot.done{background:var(--green);}
+.md-job-row .city{font-size:13.5px;font-weight:600;color:var(--ink);}
+.md-job-row.done .city{color:var(--ink-3);}
+.md-job-row .sub{font-size:11.5px;color:var(--ink-4);margin-right:auto;font-weight:500;}
+
+/* Slide-in panel + scrim (detail / weekly) */
+.md-scrim{position:fixed;inset:0;background:rgba(17,24,39,.16);opacity:0;visibility:hidden;transition:opacity .2s;z-index:1100;}
+.md-scrim.show{opacity:1;visibility:visible;}
+.md-panel{position:fixed;top:0;bottom:0;left:0;width:420px;max-width:92vw;background:var(--surface-0);border-right:1px solid var(--border);z-index:1110;transform:translateX(-100%);transition:transform .28s cubic-bezier(.32,.72,.3,1);display:flex;flex-direction:column;box-shadow:22px 0 50px -28px rgba(17,24,39,.35);}
+.md-panel.show{transform:translateX(0);}
+
+/* KPI strip */
+.md-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.md-kpi-card{position:relative;background:var(--surface-0);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:16px 18px;border-top:3px solid var(--md-kcolor,var(--accent));}
+.md-kpi-card .k-label{font-size:12px;color:var(--ink-3);font-weight:600;}
+.md-kpi-card .k-num{font-size:30px;font-weight:900;letter-spacing:-1px;margin:4px 0 2px;}
+.md-kpi-card .k-sub{font-size:12px;color:var(--ink-4);}
+@media(max-width:760px){.md-kpi{grid-template-columns:repeat(2,1fr);}}
 </style>
 </head>
 <body>
