@@ -1082,17 +1082,20 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div class="ph-row ph">
     <div><div class="ph-title" data-label="tasks">קריאות</div></div>
     <div class="flex-gap">
-      <button class="btn btn-outline btn-sm" onclick="openAddTaskModal()">+ הוסף קריאה</button>
-      <button class="btn btn-outline btn-sm" onclick="openCsvImportModal()" title="ייבוא קריאות מקובץ CSV / Excel">📥 ייבא CSV</button>
-      <button class="btn btn-outline btn-sm" onclick="document.getElementById('mo-bulk-import').classList.remove('hidden')">⇪ ייבוא מרובה</button>
-      <span class="badge badge-blue" id="tf-all" onclick="filterTasks('all')" style="cursor:pointer;padding:5px 12px;">הכל</span>
-      <span class="badge badge-gray" id="tf-pending" onclick="filterTasks('pending')" style="cursor:pointer;padding:5px 12px;">ממתינות</span>
-      <span class="badge badge-gray" id="tf-assigned" onclick="filterTasks('assigned')" style="cursor:pointer;padding:5px 12px;">משובצות</span>
-      <span class="badge badge-gray" id="tf-completed" onclick="filterTasks('completed')" style="cursor:pointer;padding:5px 12px;">הושלמו</span>
-      <span class="badge badge-gray" id="tf-cancelled" onclick="filterTasks('cancelled')" style="cursor:pointer;padding:5px 12px;">בוטלו</span>
-      <span class="badge badge-gray" id="tf-recurring_unassigned" onclick="filterTasks('recurring_unassigned')" style="cursor:pointer;padding:5px 12px;">⚠️ חוזרות ממתינות</span>
-      <span class="badge badge-gray" id="tf-recurring_templates" onclick="showRecurringTemplates()" style="cursor:pointer;padding:5px 12px;">🔁 תבניות</span>
+      <button class="btn btn-blue btn-sm" onclick="openAddTaskModal()">+ הוסף קריאה</button>
+      <button class="btn btn-outline btn-sm" onclick="openCsvImportModal()" title="ייבוא קריאות מקובץ CSV / Excel (כולל תבנית להורדה)">📥 ייבא CSV</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('mo-bulk-import').classList.remove('hidden')" title="הדבקת רשימת כתובות לשיבוץ אוטומטי">⇪ ייבוא מרובה</button>
     </div>
+  </div>
+  <div class="task-filterbar" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:14px;">
+    <span class="badge badge-blue" id="tf-all" onclick="filterTasks('all')" style="cursor:pointer;padding:5px 12px;">הכל</span>
+    <span class="badge badge-gray" id="tf-pending" onclick="filterTasks('pending')" style="cursor:pointer;padding:5px 12px;">ממתינות</span>
+    <span class="badge badge-gray" id="tf-assigned" onclick="filterTasks('assigned')" style="cursor:pointer;padding:5px 12px;">משובצות</span>
+    <span class="badge badge-gray" id="tf-completed" onclick="filterTasks('completed')" style="cursor:pointer;padding:5px 12px;">הושלמו</span>
+    <span class="badge badge-gray" id="tf-cancelled" onclick="filterTasks('cancelled')" style="cursor:pointer;padding:5px 12px;">בוטלו</span>
+    <span style="width:1px;height:18px;background:var(--line);margin:0 4px;"></span>
+    <span class="badge badge-gray" id="tf-recurring_unassigned" onclick="filterTasks('recurring_unassigned')" style="cursor:pointer;padding:5px 12px;">⚠️ חוזרות ממתינות</span>
+    <span class="badge badge-gray" id="tf-recurring_templates" onclick="showRecurringTemplates()" style="cursor:pointer;padding:5px 12px;">🔁 תבניות</span>
   </div>
   <div class="card">
     <div class="sb-bar"><span style="color:var(--ink-4);">🔍</span><input class="fc" id="task-search" placeholder="חיפוש..." oninput="renderTasks()" style="border:none;padding:6px 0;font-size:0.875rem;"></div>
