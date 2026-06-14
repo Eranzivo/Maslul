@@ -6371,7 +6371,78 @@ async function runBulkImport(){
   }
   save();renderTasks();
   const _unmCta = appUsesZones() ? `<br><button class="btn btn-blue btn-sm" style="margin-top:6px;" onclick="goPage('zones')">תקן אזורים</button>` : '';
-  out.innerHTML=`✅ נוצרו ${made} קריאות.`+(unmatched.length?`<div style="color:var(--amber);margin-top:6px;"><strong>${unmatched.length} לא שובצו:</strong><br>${unmatched.map(h).join('<br>')}${_unmCta}</div>`:'');
+  const _batchCta = made ? `<div style="margin-top:10px;"><button class="btn btn-blue btn-sm" onclick="previewBatchSchedule()">⚡ שבץ אוטומטית את כל הממתינות</button><div style="font-size:0.72rem;color:var(--ink-3);margin-top:3px;">המערכת תחשב מסלול מיטבי לכל הקריאות הממתינות בבת אחת</div></div>` : '';
+  out.innerHTML=`✅ נוצרו ${made} קריאות.`+(unmatched.length?`<div style="color:var(--amber);margin-top:6px;"><strong>${unmatched.length} לא שובצו:</strong><br>${unmatched.map(h).join('<br>')}${_unmCta}</div>`:'')+_batchCta;
+}
+
+// ═══ BATCH SCHEDULE — import-many → optimal one-pass assignment ═══════════════
+// Sends ALL pending tasks for the tenant to the decision engine in a single pass
+// (vs. re-sequencing call-by-call). Two stages: a dry-run PREVIEW that writes
+// nothing, then an explicit commit. Auth = the user's own Supabase session token;
+// the backend forces the batch to the caller's tenant (super_admin may impersonate).
+function _batchScheduleDates(){
+  const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const from=new Date();
+  const to=new Date();to.setDate(to.getDate()+13); // two-week horizon — covers each zone's weekday rotation
+  return {from:fmt(from),to:fmt(to)};
+}
+
+async function _postBatchSchedule(dryRun){
+  const {data:{session}}=await sb.auth.getSession();
+  const token=session?.access_token;
+  if(!token) throw new Error('no-session');
+  const {from,to}=_batchScheduleDates();
+  const res=await fetch(`${CONFIG.OPTIMIZER_URL}/batch-schedule`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+    body:JSON.stringify({tenant_id:currentTenantId,date_from:from,date_to:to,dry_run:dryRun}),
+  });
+  if(!res.ok) throw new Error('batch-failed-'+res.status);
+  return res.json();
+}
+
+function _renderBatchPreview(r){
+  const out=document.getElementById('bulk-result');
+  const techLines=Object.entries(r.by_tech||{}).map(([tech,days])=>{
+    const total=Object.values(days).reduce((a,c)=>a+c.length,0);
+    return `<div style="margin-top:2px;"><strong>${h(tech)}</strong> — ${total} קריאות ב-${Object.keys(days).length} ימים</div>`;
+  }).join('');
+  const unm=r.unassigned?`<div style="color:var(--amber);margin-top:6px;">${r.unassigned} לא ניתנות לשיבוץ (עיר ללא אזור / חסרת מיקום / יום מלא)</div>`:'';
+  out.innerHTML=`<div class="md-card" style="padding:10px;">
+    <div style="font-weight:700;margin-bottom:4px;">תצוגה מקדימה · המערכת תשבץ ${r.assigned} קריאות</div>
+    ${techLines}${unm}
+    <div class="mo-actions" style="margin-top:10px;">
+      <button class="btn btn-blue" style="flex:1;" onclick="commitBatchSchedule()" ${r.assigned?'':'disabled'}>אשר ושבץ ${r.assigned}</button>
+      <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('bulk-result').innerHTML='';">ביטול</button>
+    </div>
+  </div>`;
+}
+
+function _batchScheduleError(e){
+  console.error('[batch-schedule]',e);
+  const out=document.getElementById('bulk-result');
+  const msg=e&&e.message==='no-session'?'החיבור פג — התחברו מחדש ונסו שוב.':'השיבוץ האוטומטי נכשל. נסו שוב או שבצו ידנית.';
+  out.innerHTML=`<div style="color:var(--red);">${msg}</div>`;
+}
+
+async function previewBatchSchedule(){
+  const out=document.getElementById('bulk-result');
+  out.innerHTML='<span style="color:var(--ink-3);">המערכת מחשבת מסלול מיטבי…</span>';
+  try{ _renderBatchPreview(await _postBatchSchedule(true)); }
+  catch(e){ _batchScheduleError(e); }
+}
+
+async function commitBatchSchedule(){
+  const out=document.getElementById('bulk-result');
+  out.innerHTML='<span style="color:var(--ink-3);">משבץ…</span>';
+  try{
+    const r=await _postBatchSchedule(false);
+    await loadFromSupabase();
+    renderTasks();
+    if(typeof renderPlannerView==='function')try{renderPlannerView();}catch(_){}
+    out.innerHTML=`<div style="color:var(--green);font-weight:700;">✅ שובצו ${r.assigned} קריאות בהצלחה.</div>`+(r.unassigned?`<div style="color:var(--amber);margin-top:4px;">${r.unassigned} נותרו ממתינות.</div>`:'');
+    showToast(`שובצו ${r.assigned} קריאות ✓`);
+  }catch(e){ _batchScheduleError(e); }
 }
 
 // ═══ ADD CITY FROM DISPATCH ═══

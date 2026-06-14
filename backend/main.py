@@ -9,8 +9,49 @@ from dotenv import load_dotenv
 from optimizer import optimize_routes
 import optimizer as optimizer_module
 from batch_schedule import run_batch_schedule
+from batch_auth import resolve_effective_tenant, AuthzError
 
 load_dotenv()
+
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://pxpqcdfxogaajwstwdtk.supabase.co")
+
+
+async def _introspect_user_token(token: str, service_key: str) -> Optional[str]:
+    """Validate a Supabase user JWT by asking GoTrue who it belongs to.
+    Returns the auth user id (uid) if the token is valid, else None. Fail-closed."""
+    if not token:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=8) as c:
+            r = await c.get(
+                f"{SUPABASE_URL}/auth/v1/user",
+                headers={"apikey": service_key, "Authorization": f"Bearer {token}"},
+            )
+        if r.status_code != 200:
+            return None
+        return r.json().get("id")
+    except Exception:
+        return None
+
+
+async def _get_user_row(uid: str, service_key: str) -> Optional[dict]:
+    """Read the caller's tenant + role from public.users using the service key
+    (server-side, RLS-bypassing). Returns {tenant_id, role, super_admin} or None."""
+    if not uid:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=8) as c:
+            r = await c.get(
+                f"{SUPABASE_URL}/rest/v1/users",
+                headers={"apikey": service_key, "Authorization": f"Bearer {service_key}"},
+                params={"id": f"eq.{uid}", "select": "tenant_id,role,super_admin"},
+            )
+        if r.status_code != 200:
+            return None
+        rows = r.json()
+        return rows[0] if rows else None
+    except Exception:
+        return None
 
 app = FastAPI(title="Maslul Optimizer", version="1.0.0")
 
@@ -19,7 +60,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_methods=["POST", "GET"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # ── Daily element counter ─────────────────────────────────────────────────────
@@ -212,16 +253,33 @@ async def batch_schedule(req: BatchScheduleRequest, request: Request):
     Respects zone rotation, fill-first, equal city distribution, and
     runs OR-Tools per tech-day to produce service windows.
 
-    Protected: requires Authorization: Bearer <SUPABASE_SERVICE_KEY> header.
+    Auth — two accepted Bearer tokens:
+      • SUPABASE_SERVICE_KEY  → full-trust admin/cron path; req.tenant_id is used as-is.
+      • A Supabase user JWT    → introspected; the batch is FORCED to the caller's own
+        tenant (super_admin may target another via req.tenant_id). Techs are denied.
     Use dry_run=true to preview the schedule without writing to the DB.
     """
     service_key = os.getenv("SUPABASE_SERVICE_KEY", "")
+    if not service_key:
+        raise HTTPException(status_code=503, detail="Scheduler not configured")
+
     auth = request.headers.get("Authorization", "")
-    if not service_key or auth != f"Bearer {service_key}":
-        raise HTTPException(status_code=401, detail="Unauthorized — provide service key as Bearer token")
+    token = auth[7:] if auth.startswith("Bearer ") else ""
+
+    if token and token == service_key:
+        # Full-trust service path (cron / Eran admin tooling).
+        effective_tenant = req.tenant_id
+    else:
+        # Browser user-JWT path — verify the session, then force the tenant.
+        uid = await _introspect_user_token(token, service_key)
+        user_row = await _get_user_row(uid, service_key) if uid else None
+        try:
+            effective_tenant = resolve_effective_tenant(user_row, req.tenant_id)
+        except AuthzError as e:
+            raise HTTPException(status_code=e.status, detail=e.detail)
 
     result = await run_batch_schedule(
-        tenant_id=req.tenant_id,
+        tenant_id=effective_tenant,
         date_from=req.date_from,
         date_to=req.date_to,
         dry_run=req.dry_run,
