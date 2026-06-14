@@ -7196,6 +7196,39 @@ function _plannerTaskChip(t){
   </div>`;
 }
 
+// Weekly cell — group a tech-day's calls into 3-hour service-window blocks (md-wblock),
+// each holding stacked job rows. Matches the dispatch-board mockup + PureWater's window model.
+// Preserves drag (_onTaskDragStart) + tap (openTaskDetail); rows stopPropagation so the cell's
+// own drop/dragover handlers still work for empty space.
+function _plannerWeekCell(tech, sorted){
+  if(!sorted.length) return '';
+  const tc=tech.color||'#2563EB';
+  const groups={};
+  for(const t of sorted){
+    const key=t.windowStart?`${t.windowStart}|${t.windowEnd}`:(t.time||'—');
+    (groups[key]=groups[key]||[]).push(t);
+  }
+  return Object.entries(groups).map(([key,grp])=>{
+    const first=grp[0];
+    const label=first.windowStart?`${first.windowStart}–${first.windowEnd}`:(first.time||'');
+    const rows=grp.map(t=>{
+      const dotCls=t.status==='completed'?'done':t.status==='pending'?'pending':'assigned';
+      return`<div class="md-job-row" draggable="true" ondragstart="event.stopPropagation();_onTaskDragStart(event,'${t.id}')" onclick="event.stopPropagation();openTaskDetail('${t.id}')" style="padding:5px 8px;cursor:grab;">
+        <span class="dot ${dotCls}"></span>
+        <span class="city" style="font-size:0.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${taskOutOfZone(t)?'<span title="מחוץ לאזור היום" style="color:var(--amber);font-weight:800;">⚠ </span>':''}${h(t.city||'—')}</span>
+        <span class="sub" style="font-size:0.6rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:46px;">${h(t.client||'')}</span>
+      </div>`;
+    }).join('');
+    return`<div class="md-wblock" style="--md-tcolor:${tc};--md-tint:${tc}14;margin-bottom:6px;">
+      <div class="md-wblock-head" style="padding:5px 8px;">
+        <span class="tch" style="width:16px;height:16px;font-size:8px;border-radius:5px;">${grp.length}</span>
+        <span class="md-win" style="font-size:0.68rem;">${label}</span>
+      </div>
+      <div>${rows}</div>
+    </div>`;
+  }).join('');
+}
+
 // Needs-attention strip: unassigned/flagged pending calls (e.g. חרב=needs location,
 // טבריה=overflow). They have no tech, so they appear in no tech column — surface them
 // here, tappable (→ modal → place) and draggable (→ weekly cell) on desktop.
@@ -7238,7 +7271,7 @@ function renderPlannerWeekly(days){
         (a.windowStart||a.time||'').localeCompare(b.windowStart||b.time||'')
         ||(a.time||'').localeCompare(b.time||''));
       const cellId=`pc-${tech.id}-${ds}`;
-      const chips=sorted.map(_plannerTaskChip).join('');
+      const chips=_plannerWeekCell(tech,sorted);
       const canOptimize=CONFIG.OPTIMIZER_URL&&techTasks.length>=2&&ds>=todayStr();
       const optBtn=canOptimize?`<button id="opt-btn-${tech.id}-${ds}" onclick="runOptimize('${tech.id}','${ds}')" title="מסלול מיטבי" style="display:block;width:100%;text-align:center;background:var(--blue-l);border:1px solid var(--blue);border-radius:4px;font-size:0.65rem;color:var(--blue-d);padding:2px 4px;cursor:pointer;font-family:'Heebo',sans-serif;font-weight:700;margin-top:3px;">🔀 מסלול מיטבי</button>`:'';
       return`<td ondragover="_onCellDragOver(event)" ondragenter="this.style.boxShadow='inset 0 0 0 2px var(--blue)'" ondragleave="this.style.boxShadow=''" ondrop="this.style.boxShadow='';_onCellDrop(event,'${tech.id}','${ds}')" style="vertical-align:top;padding:5px;border-left:1px solid var(--line-2);${bg?'background:'+bg+';':''}min-width:110px;">${chips||'<div style="height:32px;color:var(--ink-4);font-size:0.6rem;text-align:center;">—</div>'}${optBtn}</td>`;
