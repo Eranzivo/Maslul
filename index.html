@@ -1771,33 +1771,41 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 
 <!-- MODAL: TASK DETAIL (presented as a right-side panel via .mo-panel) -->
 <div class="mo mo-panel hidden" id="mo-task-detail">
-  <div class="mo-box">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
-      <div>
-        <div style="font-size:1.125rem;font-weight:900;" id="td-client"></div>
+  <div class="mo-box" style="padding:0;display:flex;flex-direction:column;">
+    <!-- header -->
+    <div style="padding:22px 24px 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span style="font-size:0.72rem;font-weight:600;color:var(--ink-4);letter-spacing:0.02em;">פרטי קריאה</span>
+        <button class="md-btn icon" style="height:32px;width:32px;" onclick="closeMo('mo-task-detail')" title="סגור">✕</button>
       </div>
-      <span id="td-status-badge" class="badge" style="font-size:0.75rem;padding:4px 10px;"></span>
-    </div>
-    <div id="td-details" style="background:var(--bg);border-radius:var(--r);padding:12px 14px;margin-bottom:1rem;"></div>
-    <div class="fg" style="background:var(--blue-l);border-radius:var(--r);padding:10px 12px;margin-bottom:1rem;">
-      <label class="fl" style="margin-bottom:6px;">שיבוץ / העברה</label>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <select class="fc" id="td-tech"></select>
-        <input class="fc" type="date" id="td-date">
-        <select class="fc" id="td-window" style="grid-column:1/-1;"></select>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+        <div style="font-size:1.375rem;font-weight:800;letter-spacing:-0.01em;" id="td-client"></div>
+        <span id="td-status-badge" class="badge"></span>
       </div>
-      <button class="btn btn-blue btn-sm" style="margin-top:8px;width:100%;" onclick="placeTaskDetail()">שבץ כאן ✓</button>
     </div>
-    <button class="btn btn-sm" id="td-lock-btn" style="width:100%;margin-bottom:1rem;" onclick="toggleTaskLock()"></button>
-    <div class="fg">
-      <label class="fl">הערות</label>
-      <textarea class="fc" id="td-notes" rows="3" style="resize:vertical;" placeholder="הוסף הערה..."></textarea>
+    <!-- scrollable body -->
+    <div style="flex:1;overflow:auto;padding:10px 24px 20px;">
+      <div id="td-details" style="margin-bottom:1rem;"></div>
+      <div class="md-card" style="padding:12px 14px;margin-bottom:1rem;background:var(--accent-light);border-color:var(--accent-border);box-shadow:none;">
+        <label class="fl" style="margin-bottom:6px;">שיבוץ / העברה</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <select class="fc" id="td-tech"></select>
+          <input class="fc" type="date" id="td-date">
+          <select class="fc" id="td-window" style="grid-column:1/-1;"></select>
+        </div>
+        <button class="md-btn primary" style="margin-top:8px;width:100%;" onclick="placeTaskDetail()">שבץ כאן ✓</button>
+      </div>
+      <button class="btn btn-sm" id="td-lock-btn" style="width:100%;margin-bottom:1rem;" onclick="toggleTaskLock()"></button>
+      <div class="fg">
+        <label class="fl">הערות</label>
+        <textarea class="fc" id="td-notes" rows="3" style="resize:vertical;" placeholder="הוסף הערה..."></textarea>
+      </div>
     </div>
-    <div class="mo-actions" style="flex-wrap:wrap;gap:8px;">
-      <button class="btn btn-outline" onclick="closeMo('mo-task-detail')">סגור</button>
-      <button class="btn btn-outline" onclick="editTaskFromDetail()">ערוך ✏</button>
+    <!-- footer -->
+    <div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex-shrink:0;">
+      <button class="md-btn" onclick="editTaskFromDetail()">ערוך ✏</button>
       <div id="td-status-opts" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
-      <button class="btn btn-blue" style="margin-right:auto;" onclick="saveTaskDetail()">שמור הערה ✓</button>
+      <button class="md-btn primary" style="margin-right:auto;" onclick="saveTaskDetail()">שמור ✓</button>
     </div>
   </div>
 </div>
