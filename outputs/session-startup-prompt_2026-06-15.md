@@ -19,7 +19,9 @@ GitHub Pages deploys on push to main). Before doing ANYTHING, load context:
 2. Read mockups/DESIGN-LOG.md (8 approved screens + Phase-2 IA) and
    outputs/ui-port-plan_2026-06-15.md (mockup → index.html function → engine wiring map).
 3. Read your memory index MEMORY.md, then the memories: ui-redesign-port, ui-design-northstar,
-   product-philosophy, ai-dispatcher-northstar, feedback_engine-work-process.
+   product-philosophy, ai-dispatcher-northstar, explanation-style, feedback_engine-work-process,
+   design-living-docs. (product-philosophy = architecture logic/why; explanation-style = the
+   language + how to explain; design-living-docs = where design + handoff docs live.)
 
 WHERE WE ARE (as of 2026-06-15): the 8-screen UI redesign is ported (md-* namespaced foundation +
 detail panel, weekly/daily grids, coordinator 3-card chooser, home, sidebar). Bulk-import now feeds
