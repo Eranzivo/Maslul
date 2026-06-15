@@ -90,6 +90,14 @@ Core functions: `findBestSlot()` / `buildCandidates()`
 - `isTechAvailable(tech, dateStr)` — checks `dayoffs` array AND `weekly_schedule`
 - `getTechDaySchedule(tech, dateStr)` — returns day-specific hours, falls back to global `tech.start`/`tech.end`
 
+## Tenant Working Days (configurable) ✅ 2026-06-15
+- `tenants.config.defaults.work_days` = array of working weekday ints (0=Sun … 6=Sat), e.g. PureWater `[0,1,2,3,4]` (Sun–Thu).
+- **Absent/empty ⇒ today's behavior: Saturday off, every other day on** (fully back-compatible).
+- Pure helpers (mirror each other): JS `isTenantWorkDay(dow, config)` (in `<zone-logic>`, tested in `tests/zones.test.js`) + Python `tenant_works_day(dow, config)` (in `batch_schedule.py`, tested in `tests/test_batch_schedule.py`).
+- **Honored by BOTH paths:** live `getNextDates()` skips non-work-days and `isTechAvailable()` gates on it; batch `tech_is_working()` gates on it (replaced the hardcoded Saturday check).
+- **Effective availability = tenant work-day AND per-tech `weekly_schedule[dow].work` AND no day-off** (AND): a tenant-closed day blocks everyone; an open day still respects each tech's own off-days.
+- UI: Settings page **"ימי עבודה"** toggle row (tenant default) + the existing per-tech `weekly_schedule` override in the tech drawer. Set in `saveSettings`/`renderSettings`; persists via `saveSettingsToSupabase` (defaults spread).
+
 ## Weekly Schedule Per Technician
 - `weekly_schedule` JSONB in technicians table: `{"0": {"work": true, "start": "07:00", "end": "17:00"}, ...}`
 - Keys 0–5 = Sunday–Friday. Saturday always skipped.

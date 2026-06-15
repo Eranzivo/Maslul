@@ -68,5 +68,21 @@ suite('tenant separation', () => {
   check('Tenant A ignores coords', ctx.resolveZone('עיר אחרת',32.05,34.85,A,zones).matched === false);
 });
 
+suite('isTenantWorkDay', () => {
+  // absent config ⇒ today's behavior: Saturday(6) off, every other day on (back-compat)
+  check('absent config → Sat off', ctx.isTenantWorkDay(6, {}) === false);
+  check('absent config → Sun on', ctx.isTenantWorkDay(0, {}) === true);
+  check('null config → Thu on', ctx.isTenantWorkDay(4, null) === true);
+  // explicit Sun–Thu (PureWater)
+  const pw = { defaults: { work_days: [0, 1, 2, 3, 4] } };
+  check('Sun-Thu → Sun on', ctx.isTenantWorkDay(0, pw) === true);
+  check('Sun-Thu → Thu on', ctx.isTenantWorkDay(4, pw) === true);
+  check('Sun-Thu → Fri off', ctx.isTenantWorkDay(5, pw) === false);
+  check('Sun-Thu → Sat off', ctx.isTenantWorkDay(6, pw) === false);
+  // empty/garbage list ⇒ fall back to default (never "no working days")
+  check('empty work_days → default Sat off', ctx.isTenantWorkDay(6, { defaults: { work_days: [] } }) === false);
+  check('empty work_days → default Sun on', ctx.isTenantWorkDay(0, { defaults: { work_days: [] } }) === true);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

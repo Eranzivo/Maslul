@@ -172,6 +172,7 @@ outputs/migration-zones-polygons_2026-06-09.sql       — polygons JSONB on zone
                  "arrival_window_hours": 3, "max_daily_jobs": 9,
                  "lookahead_days": 30, "monthly_volume": 300,
                  "work_start": "07:00", "work_end": "18:00",
+                 "work_days": [0,1,2,3,4],
                  "break": { "enabled": true, "start": "12:00", "end": "13:00" } },
   "scheduling": { "mode": "zone", "zone_match": "city_list", "zone_strict": true, "fill_first": true,
                   "route_logic": true, "route_strategy": "far_to_near" },

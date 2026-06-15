@@ -1,7 +1,30 @@
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from batch_schedule import optimize_day, resolve_route_strategy, _assignment_score
+from batch_schedule import optimize_day, resolve_route_strategy, _assignment_score, tenant_works_day
 from cities import resolve_coords, get_coords
+
+
+# ── Configurable working days (tenant default) ────────────────────────────────
+def test_tenant_works_day_absent_config_defaults_saturday_off():
+    # Back-compat: no work_days config ⇒ Saturday (6) off, every other day on
+    for d in range(6):
+        assert tenant_works_day(d, {}) is True
+        assert tenant_works_day(d, None) is True
+    assert tenant_works_day(6, {}) is False
+
+
+def test_tenant_works_day_honors_explicit_work_days():
+    cfg = {"defaults": {"work_days": [0, 1, 2, 3, 4]}}  # Sun–Thu (PureWater)
+    assert tenant_works_day(0, cfg) is True
+    assert tenant_works_day(4, cfg) is True
+    assert tenant_works_day(5, cfg) is False  # Friday off
+    assert tenant_works_day(6, cfg) is False  # Saturday off
+
+
+def test_tenant_works_day_empty_list_falls_back_to_default():
+    # empty/garbage work_days ⇒ treat as absent (Sat-off default), never "no working days"
+    assert tenant_works_day(0, {"defaults": {"work_days": []}}) is True
+    assert tenant_works_day(6, {"defaults": {"work_days": []}}) is False
 
 
 def test_resolve_coords_locates_known_and_flags_unknown():

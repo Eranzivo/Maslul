@@ -1197,6 +1197,19 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       </div>
     </div>
     <div class="set-sec">
+      <div class="set-title">📅 ימי עבודה</div>
+      <div style="font-size:0.8125rem;color:var(--ink-3);margin-bottom:12px;">ימי הפעילות של העסק — קריאות לא ישובצו בימים שאינם מסומנים. ניתן לדרוס לכל טכנאי בנפרד בהגדרות הטכנאי.</div>
+      <div id="set-workdays" style="display:flex;gap:8px;flex-wrap:wrap;">
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;user-select:none;"><input type="checkbox" id="set-wd-0">א׳</label>
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;user-select:none;"><input type="checkbox" id="set-wd-1">ב׳</label>
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;user-select:none;"><input type="checkbox" id="set-wd-2">ג׳</label>
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;user-select:none;"><input type="checkbox" id="set-wd-3">ד׳</label>
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;user-select:none;"><input type="checkbox" id="set-wd-4">ה׳</label>
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;user-select:none;"><input type="checkbox" id="set-wd-5">ו׳</label>
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;user-select:none;"><input type="checkbox" id="set-wd-6">ש׳</label>
+      </div>
+    </div>
+    <div class="set-sec">
       <div class="set-title">זמני קריאה (דקות)</div>
       <div class="fg-2">
         <div class="fg"><label class="fl">קריאה רגילה</label><input class="fc" id="set-regular-time" type="number" value="30"></div>
@@ -3451,6 +3464,10 @@ function renderSettings(){
   if(brkChk){brkChk.checked=brkEnabled;document.getElementById('set-break-fields').classList.toggle('hidden',!brkEnabled);}
   const brkS=document.getElementById('set-break-start');const brkE=document.getElementById('set-break-end');
   if(brkS)brkS.value=brkStart;if(brkE)brkE.value=brkEnd;
+  // Working days: explicit work_days, else back-compat default (Sun–Fri on, Sat off)
+  const wd=tenantConfig.defaults?.work_days;
+  const wdArr=Array.isArray(wd)&&wd.length?wd:[0,1,2,3,4,5];
+  for(let i=0;i<7;i++){const el=document.getElementById('set-wd-'+i);if(el)el.checked=wdArr.includes(i);}
   const f=tenantConfig.features||{};
   const sec=document.getElementById('sec-features');
   if(sec){
@@ -4853,6 +4870,17 @@ function resolveZone(city, lat, lon, conf, zonesList){
 }
 // </zone-logic>
 function getCityZone(city){const r=resolveZone(city,null,null,tenantConfig,zones);return r.zoneId?zones.find(z=>z.id===r.zoneId):null;}
+// <zone-logic>
+// Tenant working-days: which weekdays the business operates (0=Sun … 6=Sat).
+// Reads config.defaults.work_days (array of weekday ints). Absent/empty ⇒ today's
+// behavior: Saturday off, every other day on. Per-tech weekly_schedule.work and
+// day_offs are applied on top (AND). Pure + tested; mirrors Python tenant_works_day.
+function isTenantWorkDay(dow, config){
+  const wd = config && config.defaults && config.defaults.work_days;
+  if(!Array.isArray(wd) || wd.length===0) return dow !== 6;
+  return wd.includes(dow);
+}
+// </zone-logic>
 function getTechDaySchedule(tech,dateStr){
   const dow=new Date(dateStr).getDay();
   const ws=tech.weekly_schedule||{};
@@ -4861,6 +4889,7 @@ function getTechDaySchedule(tech,dateStr){
   return day;
 }
 function isTechAvailable(tech,dateStr){
+  if(!isTenantWorkDay(new Date(dateStr).getDay(),tenantConfig))return false; // tenant off-day
   if(dayoffs.some(d=>d.techId===tech.id&&d.date===dateStr&&d.type==='full'))return false;
   return getTechDaySchedule(tech,dateStr).work!==false;
 }
@@ -5644,7 +5673,7 @@ function getNextDates(){
   const dates=[];const d=new Date();let i=1;
   while(dates.length<(settings.lookahead||30)&&i<90){
     const nd=new Date(d);nd.setDate(d.getDate()+i);
-    if(nd.getDay()!==6){const ds=nd.toISOString().split('T')[0];dates.push({str:ds,d:nd});}
+    if(isTenantWorkDay(nd.getDay(),tenantConfig)){const ds=nd.toISOString().split('T')[0];dates.push({str:ds,d:nd});}
     i++;
   }
   return dates;
@@ -7264,6 +7293,10 @@ function saveSettings(){
   const brkEnd=(brkEndEl?.options?.length>0?brkEndEl.value:null)||tenantConfig.defaults?.break?.end||'13:00';
   if(!tenantConfig.defaults)tenantConfig.defaults={};
   tenantConfig.defaults.break={enabled:brkEnabled,start:brkStart,end:brkEnd};
+  // Working days → config.defaults.work_days (engine honors it both live + batch). Empty
+  // selection falls back to default behavior (Sat off) rather than scheduling zero days.
+  const workDays=[];for(let i=0;i<7;i++){if(document.getElementById('set-wd-'+i)?.checked)workDays.push(i);}
+  tenantConfig.defaults.work_days=workDays;
   save();saveSettingsToSupabase().then(ok=>{if(ok!==false)showToast('הגדרות נשמרו ✓');});
 }
 function exportSettings(){

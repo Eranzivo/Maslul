@@ -95,6 +95,17 @@ def resolve_route_strategy(config: Optional[dict]) -> str:
     return "flexible"
 
 
+def tenant_works_day(dow: int, config: Optional[dict]) -> bool:
+    """Is `dow` (0=Sun … 6=Sat) a tenant working day? Reads
+    `config.defaults.work_days` (array of weekday ints). Absent/empty ⇒ today's
+    behavior: Saturday (6) off, every other day on. Per-tech `weekly_schedule.work`
+    and `day_offs` are applied separately (AND). Mirrors JS `isTenantWorkDay`."""
+    wd = ((config or {}).get("defaults") or {}).get("work_days")
+    if not isinstance(wd, list) or not wd:
+        return dow != 6
+    return dow in wd
+
+
 def _assignment_score(count: int, city_load: int, balance_conf: Optional[dict]) -> float:
     """Score a candidate (tech, day) for one task — higher is better.
 
@@ -190,7 +201,7 @@ async def run_batch_schedule(
         return rotation.get(str(_dow(d)))
 
     def tech_is_working(tech: dict, d: date) -> bool:
-        if _dow(d) == 6:  # Saturday — never work
+        if not tenant_works_day(_dow(d), config):  # tenant-level off-day (Sat off by default)
             return False
         ws = tech.get("weekly_schedule") or {}
         day_cfg = ws.get(str(_dow(d)), {})

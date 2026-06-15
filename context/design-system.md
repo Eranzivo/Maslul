@@ -68,6 +68,7 @@ calendar reads `tasks`) → check 1/2/3+ techs + narrow widths → parse-check i
 
 | Date | Change | Skill/superpower | Commit |
 |---|---|---|---|
+| 2026-06-15 | **Settings "ימי עבודה" row** — 7 day toggles (א׳–ש׳) writing `config.defaults.work_days`, in `#page-settings` after שעות עבודה. Inline-styled (no new CSS class, per hard-rule #1). Wired in `renderSettings`/`saveSettings`. | brainstorming → TDD (engine helpers) + inline UI | _(pending commit)_ |
 | 2026-06-15 | **קריאות action-row declutter** — actions in header (+ הוסף קריאה primary; ייבא CSV/מרובה secondary), 7 filters moved to their own wrap bar with a divider. `tf-*` ids + handlers preserved. | Inline (contained restyle) | `40629f9` |
 | 2026-06-15 | **Bulk-import → batch engine** UI: ⚡ שבץ אוטומטית → dry-run preview → commit (in `runBulkImport` result). Backend user-JWT auth. | Inline + TDD (backend `batch_auth` 8 tests) | `5acf4cd` |
 | 2026-06-15 | **Slice 3** daily-grid visual polish (`renderPlannerDaily` blocks/rows; geometry untouched). | subagent-driven-development | `25214e3` |
