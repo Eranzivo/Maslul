@@ -881,7 +881,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     <div><div class="ph-title">דף הבית</div><div class="ph-sub" id="home-date"></div></div>
     <div class="flex-gap">
       <button class="btn btn-ghost btn-sm" id="live-map-btn" onclick="toggleCoordinatorMap()" title="מפה חיה — מיקום טכנאים בשטח"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/></svg> מפה חיה</button>
-      <button class="btn btn-ghost btn-sm" onclick="openDayoffModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/></svg> חופשות</button>
       <button class="btn btn-blue" onclick="goPage('dispatch')">+ שיבוץ קריאה</button>
     </div>
   </div>
@@ -1142,7 +1141,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 <div id="page-technicians" class="page hidden">
   <div class="ph-row ph">
     <div><div class="ph-title" data-label="workers">טכנאים</div><div class="ph-sub" id="tech-count-sub"></div></div>
-    <button class="btn btn-blue" onclick="openAddTechModal()">+ הוסף</button>
+    <div class="flex-gap">
+      <button class="btn btn-ghost btn-sm" onclick="openDayoffModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/></svg> חופשות</button>
+      <button class="btn btn-blue" onclick="openAddTechModal()">+ הוסף</button>
+    </div>
   </div>
   <div class="tech-grid" id="tech-grid"></div>
 </div>
