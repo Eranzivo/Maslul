@@ -318,6 +318,22 @@ def solve_route_v2(matrix, tasks, start_time_str, end_time_str, breaks,
             for r in range(n_nodes):
                 cost_m[r][0] = 0
 
+    # ── Direction enforcement (scheduling-rules.md priority #1 > fuel #4) ──────────
+    # far_to_near must NEVER drive outward (farther from base) from one task to another —
+    # that is a backtrack/zigzag ("better to start later than to far-near-far"). A dominant
+    # per-arc penalty makes a clean far→near order beat any drive-time saving, so direction
+    # is genuinely enforced (not the old ≤3-min nudge that real geometry swamped). It stays
+    # well below the 100000 disjunction drop penalty, so direction never forces a task to be
+    # dropped — fail-open. Equal-distance stops (same city) are unpenalized → they stay
+    # clustered. flexible/nearest_first are unaffected (each tenant picks its own strategy).
+    if route_strategy == "far_to_near":
+        DIRECTION_PENALTY = 10000
+        d_base = [full[0][k] for k in range(base_n)]  # node 0 = base depot
+        for i in range(1, n_tasks + 1):
+            for j in range(1, n_tasks + 1):
+                if i != j and d_base[j] > d_base[i]:
+                    cost_m[i][j] += DIRECTION_PENALTY
+
     if return_node:
         manager = pywrapcp.RoutingIndexManager(n_nodes, 1, [0], [base_n - 1])
     else:

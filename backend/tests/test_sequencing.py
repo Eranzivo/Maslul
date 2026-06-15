@@ -1,6 +1,6 @@
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from optimizer import solve_route_v2, time_to_min
+from optimizer import solve_route_v2, time_to_min, build_matrix_local
 
 # 3-node toy matrix: 0=depot, 1=A, 2=B (minutes)
 M = [
@@ -72,13 +72,74 @@ def test_far_to_near_counts_return_home_and_prefers_far_first():
     assert r["ordered"][0] == 1  # farther-from-depot first
 
 
-def test_far_to_near_bias_never_overrides_big_savings():
-    # asymmetric return: near-first closed tour = 10+35+15 = 60, far-first = 40+35+10 = 85
-    # → min-drive must still win despite the far-first preference.
+def test_far_to_near_never_drops_a_fitting_task_for_direction():
+    # SPEC CHANGE (2026-06-15): direction is now ENFORCED (was a soft bias here — this test
+    # previously asserted min-drive beat far-first; superseded by scheduling-rules #1 > #4,
+    # see test_far_to_near_direction_beats_drive_savings). Direction stays FAIL-OPEN, though:
+    # its penalty is below the drop penalty, so a task that fits in work-hours is never
+    # dropped just to satisfy far→near.
     m = [[0, 10, 40], [10, 0, 35], [15, 35, 0]]
     tasks = base_tasks()
     r = solve_route_v2(m, tasks, "07:00", "18:00", breaks=[], route_strategy="far_to_near")
-    assert r["ordered"][0] == 0  # cheaper route preserved despite bias
+    assert r["dropped"] == []                 # both tasks fit → none dropped for direction
+    assert sorted(r["ordered"]) == [0, 1]     # both visited
+    assert r["ordered"][0] == 1               # far stop first (direction enforced)
+
+
+# ── far_to_near: ENFORCES direction / no-backtrack (scheduling-rules priority #1) ──
+# Per context/scheduling-rules.md, route direction & no-backtrack is the #1 priority,
+# ABOVE fuel (#4): "better to start later than to create a far-near-far zigzag".
+# far_to_near is PureWater's chosen, config-selected strategy — when selected it must
+# truly enforce far→near, not merely nudge. These tests pin that contract on REAL data.
+
+def _purewater_north_day():
+    # Real bug fixture: אלירן's Tue north-zone day. Base אשקלון (far south), 4 clustered
+    # northern cities, קרית ים twice. Live batch produced a backtrack:
+    # חיפה → קרית ים → נהריה → קרית ים → קרית חיים (climbs out to נהריה, revisits קרית ים).
+    base = "אשקלון"
+    cities = ["חיפה", "קרית ים", "נהריה", "קרית ים", "קרית חיים"]
+    m = build_matrix_local([base] + cities)
+    tasks = [{"duration": 30, "window_start": None, "window_end": None,
+              "locked": False, "scheduled_time": None} for _ in cities]
+    return m, tasks, cities
+
+
+def test_far_to_near_real_purewater_day_has_no_backtrack():
+    m, tasks, cities = _purewater_north_day()
+    r = solve_route_v2(m, tasks, "07:00", "18:00", breaks=[], route_strategy="far_to_near")
+    # distance-from-base for each visited stop (matrix row 0 = base → node)
+    d = [m[0][i + 1] for i in r["ordered"]]
+    TOL = 20  # minutes — intra-cluster near-equidistant stops may swap; real backtracks are big
+    for k in range(len(d) - 1):
+        assert d[k] >= d[k + 1] - TOL, (
+            f"backtrack: stop {k} '{cities[r['ordered'][k]]}' (d={d[k]}) → "
+            f"'{cities[r['ordered'][k+1]]}' (d={d[k+1]}) climbs back out from base"
+        )
+
+
+def test_far_to_near_visits_farthest_city_first():
+    m, tasks, cities = _purewater_north_day()
+    r = solve_route_v2(m, tasks, "07:00", "18:00", breaks=[], route_strategy="far_to_near")
+    first_city = cities[r["ordered"][0]]
+    assert first_city == "נהריה", f"far→near must start at the farthest city נהריה, got {first_city}"
+
+
+def test_far_to_near_keeps_same_city_jobs_adjacent():
+    m, tasks, cities = _purewater_north_day()
+    r = solve_route_v2(m, tasks, "07:00", "18:00", breaks=[], route_strategy="far_to_near")
+    # the two קרית ים jobs are input indices 1 and 3 — never leave and return to a city
+    pos_a, pos_b = r["ordered"].index(1), r["ordered"].index(3)
+    assert abs(pos_a - pos_b) == 1, (
+        f"same-city קרית ים jobs split across the day (positions {pos_a}, {pos_b})"
+    )
+
+
+def test_far_to_near_direction_beats_drive_savings():
+    # SPEC CHANGE (2026-06-15): direction (#1) outranks fuel (#4). depot→A=10 (near),
+    # depot→B=40 (far). Near-first is cheaper to drive, but the rule requires far (B) first.
+    m = [[0, 10, 40], [10, 0, 35], [15, 35, 0]]
+    r = solve_route_v2(m, base_tasks(), "07:00", "18:00", breaks=[], route_strategy="far_to_near")
+    assert r["ordered"][0] == 1, "far_to_near must visit the farther stop first, even at higher drive cost"
 
 
 def test_flexible_keeps_open_end_semantics():
