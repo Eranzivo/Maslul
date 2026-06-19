@@ -5765,6 +5765,9 @@ function findBestSlot(){
   document.getElementById('dispatch-result').classList.remove('hidden');
   document.getElementById('dispatch-success').classList.add('hidden');
   showCandidateCards(0);
+  // The result renders below a tall search card — bring it into view so the
+  // coordinator sees the recommendations without hunting/scrolling (QA 2026-06-16).
+  document.getElementById('dispatch-result').scrollIntoView({behavior:'smooth',block:'start'});
 }
 // ─── Slice 5: 3-card recommendation chooser ─────────────────────────────────
 function showCandidateCards(offset){
