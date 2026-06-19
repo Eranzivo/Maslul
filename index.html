@@ -862,7 +862,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       </div>
     </div>
     <!-- technician impersonation chips removed from side panel (2026-06-15, keep nav clean).
-         switchRoleTo/techview remain in code; to be re-surfaced from the Technicians page (Phase 2). -->
+         Re-surfaced on the Technicians page (#role-chips, 2026-06-16) via buildRoleSelect(); exit via techview "↩ חזרה לתצוגת מנהל". -->
     <div class="sb-user">
       <div class="sb-user-av" id="user-av-sb">?</div>
       <div style="flex:1;min-width:0;">
@@ -1145,6 +1145,11 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <button class="btn btn-ghost btn-sm" onclick="openDayoffModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/></svg> חופשות</button>
       <button class="btn btn-blue" onclick="openAddTechModal()">+ הוסף</button>
     </div>
+  </div>
+  <!-- View-as-technician impersonation (relocated from sidebar, Phase-2 IA). Rendered by buildRoleSelect() on nav to this page. -->
+  <div id="role-chips-wrap" style="margin-bottom:16px;">
+    <div style="font-size:0.7rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">צפייה כטכנאי</div>
+    <div class="role-chips" id="role-chips"></div>
   </div>
   <div class="tech-grid" id="tech-grid"></div>
 </div>
@@ -6858,7 +6863,11 @@ function renderTechView(){
     </div>`;
   };
   const gpsActive = !!_gpsWatchId;
+  // A manager (admin/coordinator/super_admin) only reaches techview by impersonating a tech —
+  // give them an explicit exit (the old return path was the sidebar chips, now relocated).
+  const canExitImpersonation=(currentUserRole==='admin'||currentUserRole==='coordinator'||currentUserSuperAdmin);
   document.getElementById('techview-content').innerHTML=`<div class="page">
+    ${canExitImpersonation?`<button class="btn btn-outline btn-sm" onclick="switchRoleTo('admin')" style="margin-bottom:14px;">↩ חזרה לתצוגת מנהל</button>`:''}
     <div style="margin-bottom:20px;padding-bottom:1.25rem;border-bottom:1px solid var(--line);">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
         <div style="width:48px;height:48px;border-radius:50%;background:${tech.color};color:white;font-size:1rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${h(initials(tech.name))}</div>

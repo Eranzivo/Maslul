@@ -68,6 +68,7 @@ calendar reads `tasks`) → check 1/2/3+ techs + narrow widths → parse-check i
 
 | Date | Change | Skill/superpower | Commit |
 |---|---|---|---|
+| 2026-06-16 | **Phase-2 IA: re-surfaced technician impersonation** — added `#role-chips` ("צפייה כטכנאי") to the Technicians page (`buildRoleSelect()` already fired on nav) + a "↩ חזרה לתצוגת מנהל" exit in `renderTechView` (manager-only) so the impersonate→return round-trip works after the sidebar chips were removed. Clears the QA `role-chips` finding; `.role-chip*` CSS live again. Verified it was a parked feature, not dead code, before acting. | Inline (verify-first) | _(pending commit)_ |
 | 2026-06-16 | **Dispatch results auto-scroll** — `findBestSlot` scrolls `#dispatch-result` into view after מצא שיבוץ אופטימלי so the 3 recommendation cards aren't below the fold (QA: coordinator thought it failed, had to scroll). Auto-scroll = the "minimum direct-to-location" fix; true popup is a heavier separate slice. | Inline (contained fix) | `65e405a` |
 | 2026-06-15 | **Phase-2 IA: moved חופשות → Technicians** — relocated the `openDayoffModal()` button from the home header to the Technicians page header (keeps the operational home lean). Button + handler + `mo-dayoff` modal unchanged. | Inline (contained move) | `f5a2444` |
 | 2026-06-15 | **Settings "ימי עבודה" row** — 7 day toggles (א׳–ש׳) writing `config.defaults.work_days`, in `#page-settings` after שעות עבודה. Inline-styled (no new CSS class, per hard-rule #1). Wired in `renderSettings`/`saveSettings`. | brainstorming → TDD (engine helpers) + inline UI | `79dd2fb` |
@@ -86,5 +87,6 @@ calendar reads `tasks`) → check 1/2/3+ techs + narrow widths → parse-check i
 
 ## Open design threads (Phase 2 — IA / page organization)
 From `mockups/DESIGN-LOG.md` "Phase 2": ~~move **חופשות → Technicians view**~~ ✅ done 2026-06-15; **compact top-nav**
-reference; **re-order/distribute pages by area** (תפעול / CRM / הגדרות); re-surface technician-view
-impersonation inside the Technicians page. To be designed as a proposal (brainstorming) before building.
+reference; **re-order/distribute pages by area** (תפעול / CRM / הגדרות); ~~re-surface technician-view
+impersonation inside the Technicians page~~ ✅ done 2026-06-16. The remaining items (compact top-nav,
+page re-order) to be designed as a proposal (brainstorming) before building.
