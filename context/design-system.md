@@ -68,7 +68,7 @@ calendar reads `tasks`) → check 1/2/3+ techs + narrow widths → parse-check i
 
 | Date | Change | Skill/superpower | Commit |
 |---|---|---|---|
-| 2026-06-16 | **Dispatch results auto-scroll** — `findBestSlot` scrolls `#dispatch-result` into view after מצא שיבוץ אופטימלי so the 3 recommendation cards aren't below the fold (QA: coordinator thought it failed, had to scroll). Auto-scroll = the "minimum direct-to-location" fix; true popup is a heavier separate slice. | Inline (contained fix) | _(pending commit)_ |
+| 2026-06-16 | **Dispatch results auto-scroll** — `findBestSlot` scrolls `#dispatch-result` into view after מצא שיבוץ אופטימלי so the 3 recommendation cards aren't below the fold (QA: coordinator thought it failed, had to scroll). Auto-scroll = the "minimum direct-to-location" fix; true popup is a heavier separate slice. | Inline (contained fix) | `65e405a` |
 | 2026-06-15 | **Phase-2 IA: moved חופשות → Technicians** — relocated the `openDayoffModal()` button from the home header to the Technicians page header (keeps the operational home lean). Button + handler + `mo-dayoff` modal unchanged. | Inline (contained move) | `f5a2444` |
 | 2026-06-15 | **Settings "ימי עבודה" row** — 7 day toggles (א׳–ש׳) writing `config.defaults.work_days`, in `#page-settings` after שעות עבודה. Inline-styled (no new CSS class, per hard-rule #1). Wired in `renderSettings`/`saveSettings`. | brainstorming → TDD (engine helpers) + inline UI | `79dd2fb` |
 | 2026-06-15 | **קריאות action-row declutter** — actions in header (+ הוסף קריאה primary; ייבא CSV/מרובה secondary), 7 filters moved to their own wrap bar with a divider. `tf-*` ids + handlers preserved. | Inline (contained restyle) | `40629f9` |
