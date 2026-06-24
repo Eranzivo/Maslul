@@ -4945,29 +4945,50 @@ function isCityInTechZone(tech,city,dateStr){
   const r=resolveZone(city,null,null,tenantConfig,zones);
   return r.matched && r.zoneId===zid;
 }
-// ── Out-of-zone drop safeguard (`scheduling.zone_drop_guard`; default ON for zone-mode
-// tenants, opt out with `false`). A coordinator can drag a far city into the wrong zone-day;
-// the optimizer orders by real coords, so the detour blows the day's drive budget. We WARN
-// (fail-soft) only on a *definite* cross-zone drop — the call's zone is known AND differs from
-// the tech's assigned zone that day. Unknown-zone cities (e.g. חרב) are handled by needs_location.
+// <zone-logic>
+// Policy for a confirmed cross-zone MANUAL placement (drag/tap). Pure + testable.
+// Mirrors the dispatch-search + batch hard-exclude: under `scheduling.zone_strict` (default true)
+// a cross-zone drop is a HARD block (no override) — a selected per-tenant rule must truly enforce.
+// When a tenant relaxes `zone_strict:false`, fall back to the soft `zone_drop_guard` warn (override
+// allowed), or 'allow' if the guard is explicitly off. zone_strict DOMINATES the soft guard.
+function zoneDropDecision(sc, hasMismatch){
+  if(!hasMismatch) return 'allow';
+  const strict = !sc || sc.zone_strict !== false;        // default true
+  if(strict) return 'block';
+  if(sc && sc.zone_drop_guard === false) return 'allow'; // relaxed + opted out of the soft guard
+  return 'warn';                                         // relaxed → soft confirm
+}
+// </zone-logic>
+// ── Out-of-zone safeguard. `zoneDropMismatch` is pure geometric detection (the call's zone is
+// known AND differs from the tech's assigned zone that day); the *policy* (block/warn/allow) is
+// `zoneDropDecision`, driven by `zone_strict` (hard) then `zone_drop_guard` (soft). The optimizer
+// orders by real coords, so a cross-zone detour blows the day's drive budget — under zone_strict
+// it is forbidden outright, matching `_candidatesZone` + the batch engine. Unknown-zone cities
+// (e.g. חרב) are handled by needs_location, never flagged here.
 function zoneDropMismatch(tech,city,dateStr){
   if(!appUsesZones()||!tech||!city||!dateStr) return null;
-  if(tenantConfig&&tenantConfig.scheduling&&tenantConfig.scheduling.zone_drop_guard===false) return null;
   const dayZid=getTechZoneId(tech,dateStr); if(!dayZid) return null;       // no zone that day → nothing to compare
   const r=resolveZone(city,null,null,tenantConfig,zones);
   if(!r.matched||!r.zoneId||r.zoneId===dayZid) return null;                // unknown city, or already in-zone ✓
   return { cityZone:(zones.find(z=>z.id===r.zoneId)||{}).name||'', dayZone:(zones.find(z=>z.id===dayZid)||{}).name||'' };
 }
-// Returns true to proceed with the drop/place, false to abort (coordinator declined the warning).
+// Returns true to proceed with the drop/place, false to abort (hard block, or coordinator declined the warning).
 function confirmZoneDrop(techId,city,dateStr){
   const m=zoneDropMismatch(technicians.find(x=>String(x.id)===String(techId)),city,dateStr);
-  if(!m) return true;
+  const decision=zoneDropDecision((tenantConfig||{}).scheduling, !!m);
+  if(decision==='allow') return true;
+  if(decision==='block'){
+    showToast(`"${city}" שייכת לאזור "${m.cityZone}" — הטכנאי מבצע ביום זה את אזור "${m.dayZone}". שיבוץ מחוץ לאזור חסום.`, 'error');
+    return false;
+  }
   return confirm(`⚠️ "${city}" שייכת לאזור "${m.cityZone}", אך הטכנאי מבצע ביום זה את אזור "${m.dayZone}".\n\nשיבוץ רחוק מהאזור עלול להאריך מאוד את המסלול ולפגוע בשאר הקריאות של היום.\n\nלשבץ בכל זאת?`);
 }
 // Render-time flag (no persisted state — always accurate, auto-clears when moved back in-zone).
+// Flags whenever the policy is not 'allow' (hard block under strict, or soft warn when relaxed).
 function taskOutOfZone(t){
   if(!t||!t.techId||!t.date) return false;
-  return !!zoneDropMismatch(technicians.find(x=>String(x.id)===String(t.techId)),t.city,t.date);
+  const m=zoneDropMismatch(technicians.find(x=>String(x.id)===String(t.techId)),t.city,t.date);
+  return zoneDropDecision((tenantConfig||{}).scheduling, !!m) !== 'allow';
 }
 
 // SLOT RESERVATION: early time slots are held for farther cities.

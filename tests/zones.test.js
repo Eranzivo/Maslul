@@ -84,5 +84,24 @@ suite('isTenantWorkDay', () => {
   check('empty work_days → default Sun on', ctx.isTenantWorkDay(0, { defaults: { work_days: [] } }) === true);
 });
 
+suite('zoneDropDecision', () => {
+  const strict = { zone_strict: true };
+  const relaxed = { zone_strict: false };
+  const relaxedNoGuard = { zone_strict: false, zone_drop_guard: false };
+  // no cross-zone mismatch ⇒ always allow the placement
+  check('no mismatch → allow (strict)', ctx.zoneDropDecision(strict, false) === 'allow');
+  check('no mismatch → allow (relaxed)', ctx.zoneDropDecision(relaxed, false) === 'allow');
+  // mismatch under zone_strict ⇒ HARD block (no override) — matches batch + dispatch search
+  check('mismatch + strict → block', ctx.zoneDropDecision(strict, true) === 'block');
+  check('mismatch + default(undefined strict) → block', ctx.zoneDropDecision({}, true) === 'block');
+  check('mismatch + null sc → block (default strict)', ctx.zoneDropDecision(null, true) === 'block');
+  // mismatch under relaxed (zone_strict:false) ⇒ soft warn (today's behavior)
+  check('mismatch + relaxed → warn', ctx.zoneDropDecision(relaxed, true) === 'warn');
+  // relaxed + guard explicitly off ⇒ opted out → allow
+  check('mismatch + relaxed + guard off → allow', ctx.zoneDropDecision(relaxedNoGuard, true) === 'allow');
+  // zone_strict DOMINATES the soft guard — a strict tenant can't be downgraded by guard:false
+  check('strict beats guard-off → block', ctx.zoneDropDecision({ zone_strict: true, zone_drop_guard: false }, true) === 'block');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
