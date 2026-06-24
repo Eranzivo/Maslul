@@ -3,6 +3,12 @@
 > Eran set this aside mid-session ("still seems off, we need to get back to it"). This captures
 > the full state so we can resume without re-deriving. Nothing was written to live data.
 
+> **⚠️ STATUS UPDATE 2026-06-24:** the far→near fix `995bc28` (+ `79dd2fb` work_days) is now **pushed to
+> `origin/main` and Railway is live at v1.2.0** — the "not pushed / OLD engine still deployed" lines below
+> were a mid-session snapshot and are now stale. Net effect on the resume plan: **step 4 no longer needs a
+> deploy**, just a positive confirmation that the running build is the far→near one (dry-run a known north day
+> → expect נהריה→…→חיפה, no קרית ים revisit). Orphan-zone cleanup + Israel's capacity decision still stand.
+
 ## What's confirmed
 - **Task data is clean & complete.** Israel's authoritative weekly list = **108 tasks**, matches the
   DB 100% (every city + count). Only abbreviation diffs (ב״ש=באר שבע, ראשל״צ=ראשון לציון,
