@@ -48,6 +48,13 @@ needed:** (a) 3rd covering day for the 3 busy zones (spare exists: נהריה-ח
 6 orphans not in any rotation, overlapping the real zones, causing `find_zone` misroutes:
 **גוש דן, גליל, חיפה וקריות, שפלה, שרון, + empty אזור חדש**. Should be deleted.
 
+## End-goal (Eran, 2026-06-24)
+The target is to **fit all 108 in one week again** — which it did before the 06-14 `max_daily` 15/12/9 → 9/9/9
+change (that normalization is the regression; 2×9=18 < the dense-zone demand). Eran will **re-coordinate exact
+zones with Israel and collect real call addresses** first, so optimizing runs on geocoded points instead of
+city-only coords. Only then re-calculate. So the capacity decision (step 3 below) is explicitly biased toward
+**restoring single-week fit** (higher caps and/or a 3rd covering day for the dense zones), not just placing what fits.
+
 ## Resume plan (each step = explicit go; live zone edits not reversible)
 1. Delete the 6 orphan zones.
 2. Fix סלעית (move/pending) + add זכרון יעקב/חרב coords or leave pending.
