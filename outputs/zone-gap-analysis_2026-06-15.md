@@ -53,9 +53,11 @@ zero task loss. Coordinate-verified strays re-homed first (נהריה-חיפה +
 **↳ ✅ Geocoded 2026-06-27** (via `/geocode`, added to `cities.py` — were router-blind): all 10 now
 have real coords. **Placed by nearest-zone:** דרום +מושב הודיה(31.68,34.64); קש-עפולה +קיבוץ דן
 (33.24,35.65)/גן נר(32.53,35.34); נהריה-חיפה +בוסתן הגליל(32.95,35.08)/קיבוץ מצובה(33.06,35.16)/כפר
-מסריק(32.89,35.10). **⚠ 4 held for Israel confirm (near a zone boundary):** שער אפרים(32.29,35.00)
-& בת חפר(32.33,35.01)→lean יקנעם-נתניה; עילבון(32.83,35.40)→קש-עפולה vs נהריה-חיפה (~15km each);
-צופים(32.20,35.01, Samaria/קלקיליה)→ראש העין vs תל אביב. (שעיר אפרים corrected → **שער אפרים**.)
+מסריק(32.89,35.10). **✅ all 4 now placed via nearest-member-city method** (`outputs/zone-assignment-method_2026-06-27.md`):
+שער אפרים + בת חפר → יקנעם-נתניה; עילבון → קש-עפולה (⚠ near-tie w/ נהריה-חיפה כרמיאל, 0.8km);
+צופים → תל אביב והסביבה (⚠ its nearest neighbor is the mis-zoned **סלעית** 3.2km — **review צופים+סלעית
+together w/ Israel, likely both → ראש העין**). (שעיר אפרים corrected → **שער אפרים**.) Method validated all
+6 prior placements. **Long-term:** polygon zones for the Sharon-east/Samaria fringe.
 
 ## End-goal (Eran, 2026-06-24)
 The target is to **fit all 108 in one week again** — which it did before the 06-14 `max_daily` 15/12/9 → 9/9/9
