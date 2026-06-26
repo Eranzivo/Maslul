@@ -19,7 +19,7 @@
 | `scheduling.zone_match` | `city_list` | matches by city list (not polygon) |
 | `scheduling.route_strategy` | `far_to_near` | **PureWater/Israel-specific — set explicitly.** Engine default is now `flexible` (`resolveRouteStrategy`); far_to_near is never the global fallback. |
 | `scheduling.fill_first` | `true` | fill active zone-days before opening new ones |
-| `scheduling.balance.enabled` | **`false`** | **OFF since 2026-06-14** — Israel wants fill-first *consolidation* (pack one tech's day to max before opening another), not even-spread. Reverses the 2026-06-13 balance-ON trial. See feedback #1.5/2.3/2.7. |
+| `scheduling.balance.enabled` | **`true`** | **ON since 2026-06-27** (Eran) — fill-first OFF had piled **5 באר שבע on one tech-day** (+5 הרצליה, 5 ירושלים); balance caps same-city at ~3/tech-day across a zone's covering days. `fill_first` stays `true` (the two coexist: fill the closest *in-zone* day, never cross-zone; spread same-city within it). Note: does NOT change overflow (zone-capacity math). Reverses the 2026-06-14 consolidation choice — **confirm with Israel.** |
 | `scheduling.slot_release` | enabled (72/48/24h) | hold early slots for farther cities |
 | `defaults.arrival_window_hours` | 3 | customers get a 3-hour service window |
 | `defaults.max_daily_jobs` | 9 | per tech per day. Per-tech `max_daily` also set to **9** for all 3 (was 15/12/9, normalized 2026-06-14 per Israel's stated rule). |
