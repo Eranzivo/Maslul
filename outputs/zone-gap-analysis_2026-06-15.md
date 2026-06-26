@@ -50,9 +50,12 @@ were deleted — 14→9 zones. Every task-bearing orphan city already resolved t
 zero task loss. Coordinate-verified strays re-homed first (נהריה-חיפה +טירת כרמל/קרית אתא/עתלית;
 זכרון-הרצליה +אור עקיבא/פרדס חנה כרכור; קש-עפולה +נוף הגליל; דרום +מושב הודיה). Backup:
 `outputs/zones-orphan-backup_2026-06-27.json`. Plan: `outputs/zone-merge-plan_2026-06-27.md`.
-**↳ Still TODO (no coords in `cities.py`, were 0-task orphan-only cities — geocode then place):**
-מושב הודיה*, בת חפר, עילבון, צופים, שעיר אפרים(verify name), בוסתן הגליל, קיבוץ מצובה, כפר מסריק,
-גן נר, קיבוץ דן. (*מושב הודיה is now in דרום's list but still needs a coordinate to route.)
+**↳ ✅ Geocoded 2026-06-27** (via `/geocode`, added to `cities.py` — were router-blind): all 10 now
+have real coords. **Placed by nearest-zone:** דרום +מושב הודיה(31.68,34.64); קש-עפולה +קיבוץ דן
+(33.24,35.65)/גן נר(32.53,35.34); נהריה-חיפה +בוסתן הגליל(32.95,35.08)/קיבוץ מצובה(33.06,35.16)/כפר
+מסריק(32.89,35.10). **⚠ 4 held for Israel confirm (near a zone boundary):** שער אפרים(32.29,35.00)
+& בת חפר(32.33,35.01)→lean יקנעם-נתניה; עילבון(32.83,35.40)→קש-עפולה vs נהריה-חיפה (~15km each);
+צופים(32.20,35.01, Samaria/קלקיליה)→ראש העין vs תל אביב. (שעיר אפרים corrected → **שער אפרים**.)
 
 ## End-goal (Eran, 2026-06-24)
 The target is to **fit all 108 in one week again** — which it did before the 06-14 `max_daily` 15/12/9 → 9/9/9
