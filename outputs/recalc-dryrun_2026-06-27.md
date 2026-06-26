@@ -38,6 +38,14 @@ empty but those zones are already satisfied, while TLV/לוד-אשדוד/דרו�
 Before 2026-06-14 max_daily was **15/12/9**. With cap 15, TLV's 2 covering days = 30 ≥ 28 → fit. The
 9/9/9 normalization (2×9=18) is exactly what broke single-week fit for the 3 dense zones.
 
+## Balance principle (Eran 2026-06-27) — separate from overflow
+Eran flagged: don't pile 6-10 of one city on one tech in a row. **Confirmed:** with `balance.enabled=false`
+(current setting, fill-first consolidation chosen 06-14) the sim piles **באר שבע ×5 on אלירן Sun, הרצליה ×5,
+ירושלים ×5**. With `balance.enabled=true` the worst same-city-per-tech-day drops to **3**. **But total overflow
+is identical (18) in both modes** — balance redistributes *within* a zone's covering days, it cannot add
+capacity, so it does not change single-week fit. → Re-enabling balance is a **quality** fix (reverses the 06-14
+consolidation choice — confirm w/ Israel); the 18 overflow still needs a capacity lever below.
+
 ## Options to fit all 109 in one week (Eran/Israel decision)
 - **A — restore higher max_daily on dense days** (e.g. 14): TLV 28≤2×14, לוד 25≤28, דרום 19≤28 → all fit in
   the **current rotation**, mirrors the pre-06-14 behavior. Cost: longer tech days; reverses the 9-normalization.
