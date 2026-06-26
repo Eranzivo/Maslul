@@ -36,7 +36,14 @@ has time to draw them. See `context/zones-polygons.md` + [[geo-foundation-vision
 | כפר מסריק | עכו 4.1km | נהריה-חיפה | ✅ |
 | שער אפרים | בארותיים 5.1km | יקנעם-נתניה | ✅ |
 | בת חפר | בארותיים 7.8km | יקנעם-נתניה | ✅ |
-| עילבון | טבריה 12.8 / כרמיאל 13.6km | קש-עפולה | ⚠ near-tie w/ נהריה-חיפה |
-| צופים | סלעית 3.2 / כפר סבא 9.9km | תל אביב והסביבה | ⚠ review w/ סלעית (Samaria) |
+| עילבון | טבריה 12.8 / כרמיאל 13.6km | **נהריה-חיפה** | Eran broke the tie west (קש-עפולה = eastern spine) |
+| צופים | סלעית 3.2km | **ראש העין** | + סלעית moved here too (Samaria pair, eastern catchment) |
+
+> **2026-06-27 finalization (Eran):** עילבון → נהריה-חיפה (domain tie-break: קש-עפולה covers the
+> eastern spine Afula→Kiryat Shmona; עילבון leans west to כרמיאל/Haifa). צופים + the previously
+> mis-zoned **סלעית** → ראש העין (no better-matching zone for the Samaria fringe; ראש העין is the
+> closest sensible eastern catchment). The "כפר סבא" mention was a landmark, not the computed nearest —
+> ignored. This is a good example of the method giving a candidate, then **domain knowledge breaking a
+> genuine tie** — both belong in the loop.
 
 Reusable script: `scratchpad/nn.py` (haversine vs all zone members; feed it the live zone→cities map).

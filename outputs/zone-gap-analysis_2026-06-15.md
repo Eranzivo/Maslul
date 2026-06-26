@@ -26,8 +26,8 @@
 ## The gaps
 **1. Geography mismatches (→ pending per "if not certain → pending"):**
 - **חרב (1)** — no coordinates → can't route → pending until real address (Israel's "create city" case).
-- **סלעית (1)** — in זכרון-הרצליה, but resolves to (32.21, 35.04) = inland Samaria, ~30 km E of the
-  coastal זכרון/חדרה/קיסריה (≈32.5, 34.9). Doesn't fit → pending, or move to ראש העין/תל אביב.
+- **סלעית (1)** — ✅ RESOLVED 2026-06-27: was in זכרון-הרצליה but is inland Samaria (32.21, 35.04);
+  **moved to ראש העין והסביבה** (with its 3.2km neighbor צופים) per Eran — the eastern catchment.
 - **זכרון יעקב** — zone namesake, no coords in `cities.py`. Add before a task lands there.
 
 **2. Capacity vs coverage (max_daily = 9 fixed) — the real gap:**
@@ -53,11 +53,11 @@ zero task loss. Coordinate-verified strays re-homed first (נהריה-חיפה +
 **↳ ✅ Geocoded 2026-06-27** (via `/geocode`, added to `cities.py` — were router-blind): all 10 now
 have real coords. **Placed by nearest-zone:** דרום +מושב הודיה(31.68,34.64); קש-עפולה +קיבוץ דן
 (33.24,35.65)/גן נר(32.53,35.34); נהריה-חיפה +בוסתן הגליל(32.95,35.08)/קיבוץ מצובה(33.06,35.16)/כפר
-מסריק(32.89,35.10). **✅ all 4 now placed via nearest-member-city method** (`outputs/zone-assignment-method_2026-06-27.md`):
-שער אפרים + בת חפר → יקנעם-נתניה; עילבון → קש-עפולה (⚠ near-tie w/ נהריה-חיפה כרמיאל, 0.8km);
-צופים → תל אביב והסביבה (⚠ its nearest neighbor is the mis-zoned **סלעית** 3.2km — **review צופים+סלעית
-together w/ Israel, likely both → ראש העין**). (שעיר אפרים corrected → **שער אפרים**.) Method validated all
-6 prior placements. **Long-term:** polygon zones for the Sharon-east/Samaria fringe.
+מסריק(32.89,35.10). **✅ all 4 placed via nearest-member-city method** (`outputs/zone-assignment-method_2026-06-27.md`),
+finalized w/ Eran 2026-06-27: שער אפרים + בת חפר → יקנעם-נתניה; **עילבון → נהריה-חיפה** (Eran: קש-עפולה is
+the eastern spine Afula→קרית שמונה, עילבון leans west to כרמיאל/חיפה); **צופים + סלעית → ראש העין**
+(eastern catchment for the Samaria fringe; closed the סלעית mis-zone). (שעיר אפרים corrected → שער אפרים.)
+Method validated all 6 prior placements. **Long-term:** polygon zones for the Sharon-east/Samaria fringe.
 
 ## End-goal (Eran, 2026-06-24)
 The target is to **fit all 108 in one week again** — which it did before the 06-14 `max_daily` 15/12/9 → 9/9/9
