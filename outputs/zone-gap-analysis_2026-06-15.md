@@ -44,9 +44,15 @@ zones) fit a week ago *only because max_daily was 15/12/9*; with the **9/9/9** r
 needed:** (a) 3rd covering day for the 3 busy zones (spare exists: נהריה-חיפה 5/18, ירושלים 7/18,
 ראש העין 2/9), (b) spill overflow to next week, or (c) revisit the 9 cap for dense urban days.
 
-**3. Orphan/duplicate zones (data integrity) — still to clean:**
-6 orphans not in any rotation, overlapping the real zones, causing `find_zone` misroutes:
-**גוש דן, גליל, חיפה וקריות, שפלה, שרון, + empty אזור חדש**. Should be deleted.
+**3. Orphan/duplicate zones (data integrity) — ✅ CLEANED 2026-06-27:**
+The 5 orphans (**גוש דן, גליל, חיפה וקריות, שפלה, שרון**; the empty אזור חדש was already gone)
+were deleted — 14→9 zones. Every task-bearing orphan city already resolved to a rotation zone, so
+zero task loss. Coordinate-verified strays re-homed first (נהריה-חיפה +טירת כרמל/קרית אתא/עתלית;
+זכרון-הרצליה +אור עקיבא/פרדס חנה כרכור; קש-עפולה +נוף הגליל; דרום +מושב הודיה). Backup:
+`outputs/zones-orphan-backup_2026-06-27.json`. Plan: `outputs/zone-merge-plan_2026-06-27.md`.
+**↳ Still TODO (no coords in `cities.py`, were 0-task orphan-only cities — geocode then place):**
+מושב הודיה*, בת חפר, עילבון, צופים, שעיר אפרים(verify name), בוסתן הגליל, קיבוץ מצובה, כפר מסריק,
+גן נר, קיבוץ דן. (*מושב הודיה is now in דרום's list but still needs a coordinate to route.)
 
 ## End-goal (Eran, 2026-06-24)
 The target is to **fit all 108 in one week again** — which it did before the 06-14 `max_daily` 15/12/9 → 9/9/9
