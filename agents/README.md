@@ -17,7 +17,8 @@
 - **Bounded** (limits + guardrails + RBAC); **has memory**; **human** for money/legal/safety.
 - **Per-client config, not hardcoded.**
 
-## Before building any real agent
-**Brainstorm** (use the brainstorming skill) + **research** the best methodology, connections, and
-integrations for that specific purpose first. The Dona example is one illustration - take structure, not
-specifics. A different purpose needs its own tone, knowledge, and integrations.
+## Before building any real agent (rule: every agent, no exceptions)
+**Brainstorm first** (use the brainstorming skill) + **research** the best methodology, connections, and
+integrations for that specific purpose. We do this for **every** agent we build - properly, not by
+copy-paste. The Dona example is one illustration - take structure, not specifics. A different purpose needs
+its own tone, knowledge, and integrations.

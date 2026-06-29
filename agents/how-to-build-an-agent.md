@@ -9,8 +9,9 @@
 
 > **Status: living document.** Update it as we learn; it is a foundation, not gospel.
 >
-> **Before building any real agent (do this first):** invoke the **brainstorming skill** to fit the agent to
-> its purpose and to these principles, and **research the best methodology, connections, and integrations**
+> **Brainstorm every agent - for EVERY agent, no exceptions.** Before building any real agent, invoke the
+> **brainstorming skill** to fit the agent to its purpose and to these principles, and **research the best
+> methodology, connections, and integrations**
 > for that specific purpose. The Dona examples are **one illustration** (a very specific home-inspection
 > agent with its own warm-service tone) - take the **structure and principles**, not the specifics. A
 > different purpose needs its own tone, its own knowledge, and its own integrations.
@@ -63,6 +64,7 @@ This is the order to actually build in. Steps 1-2 are research; 3-11 are constru
 
 | # | Step | What you produce | Why it matters |
 |---|---|---|---|
+| 0 | **Brainstorm (mandatory, every agent)** | Purpose, users, success criteria, single vs multi-agent, required integrations - via the brainstorming skill | We build properly, not by copy-paste. Never skip this |
 | 1 | **Understand the business** | Who the users are, the customer journey, the brand voice, the real touchpoints | A tailored solution, not a generic one. See `examples/dona/step1-context-gathering-example.md` |
 | 2 | **Research the domain** | A facts file with sources + verification flags for anything uncertain | The grounding source of truth. See `step2-research-example.md` |
 | 3 | **Choose the architecture** | Single vs multi-agent; the layer map | Right structure for the risk profile |
