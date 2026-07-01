@@ -7,6 +7,10 @@ PWs.txt
 backend/_pw_*
 backend/_restore_run.py
 
+# live client pilot working data — raw customer CSV, demand dashboards, tenant
+# config backups (public repo → keep local + private backup, never commit)
+outputs/purewater-review_2026-06-29/
+
 # design zip (large binary, do not commit)
 Maslul design.zip
 mockups/claude-design/.thumbnail
