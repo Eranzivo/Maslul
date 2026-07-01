@@ -19,15 +19,26 @@ The Railway backend (`backend/optimizer.py`) builds a distance matrix by calling
 GOOGLE_MAPS_API_KEY — stored in `.env` (root) and in Railway env vars
 - **Server-side only** — verified NOT present in `index.html` (frontend loads only Google *Fonts*). Never put the Maps key in the frontend.
 
-## 💰 Cost-runaway protection (do before Client #2) — 2026-06-16
-A SaaS like ours can be billed thousands overnight if a loop hits the API with **no hard cap at Google's side**. Our app cap (`GMAPS_DAILY_ELEMENT_LIMIT`, default 1200) is **soft** — per-process, resets on restart, multiplies across Railway workers. Defense in depth:
+## 💰 Cost caps & budget — LIVE (set by Eran in GCP, 2026-07-01)
+Hard "circuit-breaker" quotas configured in GCP (via Cloud Shell) so that even a code bug or a leaked key **physically cannot** exceed a safe threshold — usage just stops (429) at the cap.
 
-1. **GCP → APIs & Services → Quotas (the real loop-killer):**
-   - Distance Matrix: **Elements/day = 3000**, **Elements/minute = 100**
-   - Geocoding: **Requests/day = 1000**, **Requests/minute = 60**
-   - The **per-minute** cap bounds a runaway loop to ~that/min (instant 429); per-day bounds the total.
-2. **GCP → Billing → Budgets & alerts:** budget **$25/mo**, alerts 50/90/100% (alerts notify; quotas stop — set both).
-3. **Restrict the key:** only Distance Matrix + Geocoding APIs; IP-restrict to Railway egress if possible.
-4. **Align app cap:** Railway `GMAPS_DAILY_ELEMENT_LIMIT=2000` (just below the 3000 GCP cap → graceful haversine fallback before Google hard-429s).
+| API | Hard daily cap | ~Monthly cost at cap |
+|---|---|---|
+| Distance Matrix | **700 elements/day** | ~$105/mo |
+| Geocoding | **700 requests/day** | ~$105/mo |
 
-Sizing for **PureWater + 1 client**: warm `route_cache` ⇒ near-zero real spend; cold worst-case ~2400 elem/day. 3000/day cap bounds catastrophe to ~$15/day while staying within the $200/mo free tier in normal use. Our code has no retry/loop bombs (haversine fallback not retry, bounded batch loops, debounced auto-sequence, metered `/geocode`). See [[google-maps-quota-review]].
+- **Worst-case total ≈ $210/mo**, offset by Google's **$200/mo free credit** → **~$10 (₪37) real out-of-pocket** max.
+- **Budget & alerts:** GCP Billing budget **$210/mo**, email alerts at **50% / 90% / 100%**.
+- Pricing basis: both APIs ≈ $5 / 1,000 calls → 700/day × 30 ≈ 21,000/mo × $5 ≈ $105 each.
+- **Key security:** restrict to only Distance Matrix + Geocoding APIs; server-side only (`.env` + Railway); never frontend.
+
+### ⚠️ Monitoring directive (Eran, 2026-07-01)
+Watch usage for patterns approaching these caps, or events needing more headroom (new client onboarding, address-level routing). **When I see it coming, flag it proactively** with the cause + options (raise cap / warm cache / stagger) so we plan the response *before* it bites. Standing task.
+
+### What to watch (my read)
+- **Distance Matrix 700/day is the binding constraint.** Steady-state PureWater is fine — `route_cache` serves repeat city-pairs, so daily *new* elements are near-zero once warm.
+- **Cold-start risk (Client #2 onboarding):** a new tenant's FIRST full batch has a cold cache; many unique city-pairs at once can exceed 700 elements in a day (~26 unique stops ⇒ 26² ≈ 676, right at the edge; more ⇒ over → premature haversine fallback / 429s). → On onboarding day, temporarily raise the DM cap or seed the cache incrementally.
+- **Address-level KB (future, [[geo-foundation-vision]]):** routing on street addresses multiplies unique points ⇒ more unique pairs (DM) **and** a burst of geocoding on import (a >700-address import hits the Geocoding cap). Flag when we build it.
+- **⚠️ App soft-cap now INVERTED — verify & fix:** the app's `GMAPS_DAILY_ELEMENT_LIMIT` should sit **below 700** (≈600) so we degrade to haversine *before* Google hard-429s. The earlier note set it to **2000** (below the *old* 3000 GCP cap) — that's now **above** the new 700 cap, so the graceful-fallback design is backwards. **Action:** check the Railway env var and lower it to ~600.
+
+Our code has no retry/loop bombs (haversine fallback is not a retry; bounded batch loops; debounced auto-sequence; metered `/geocode`). See [[google-maps-quota-review]].
