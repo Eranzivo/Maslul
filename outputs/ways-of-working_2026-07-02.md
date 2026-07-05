@@ -55,9 +55,20 @@ So: **no per-tenant agents.** One reusable *rules-catcher skill* that produces e
 6. **Polygon bug:** root-caused by reading the draw flow (`_detectCitiesInPolygon` scans static `CITY_COORDS_JS` only) + checking `geo_places` RLS (deny-all → frontend can't see the brain) + verifying live zones hold no polygons (fix needs no data migration). Systematic-debugging applied at the *reading* stage — no fix attempted before the root cause was proven.
 7. Findings written to `outputs/product-review-fable_2026-07-05.md` with file:line evidence for every claim.
 
-### Code-review methodology (to apply on upcoming diffs — logged per §5)
-- Review each diff for: knob enforcement symmetry (both engines), absent-config = unchanged behavior, fail-open on external services, awaited persists, no client-specific hardcoding, living-doc updated in the same commit.
-- Run `/code-review` skill on the branch diff; then `/test-all`; then dry-run against real PureWater data before any live write; log what was found here.
+### 2026-07-05 (cont.) — Slice 1 implementation (batch correctness pack, branch `batch-correctness`)
+How it was built (the replayable process):
+1. **brainstorming** → 2 user decisions captured via structured options (existing-call policy: "windows fixed, times may re-flow"; geo scope: names+coords first). Design specs to `outputs/` + committed BEFORE code.
+2. **writing-plans** → `outputs/batch-correctness-plan_2026-07-05.md` (7 tasks, interfaces pinned) → **executing-plans** inline on a branch.
+3. **Strict TDD:** every task = failing test → minimal implementation → green → commit (9 commits). E2E tests run `run_batch_schedule` against a fake in-memory Supabase with PureWater-shaped fixtures — this fixture harness (`FakeSB` in `test_batch_correctness.py`) is reusable for any future batch work.
+4. **Mid-task discovery handling:** the live `day_offs` table turned out to lack the documented `type/from_time/to_time` columns (migration never applied — the JS *save* path fails on live). Adapted the code to be schema-tolerant (mirror the JS load default) instead of assuming docs; flagged the migration to Eran.
+5. **Verification without a local service key:** exported the real tenant state read-only via Supabase MCP (tasks/zones/techs/config/geo brain) and ran the new engine **fully offline** against it (`outputs/batch-dryrun-diff_2026-07-05.md`). This "MCP-export → offline replay" pattern is the safe substitute for live dry-runs whenever the service key isn't local — zero live access, zero writes, real data.
+6. **Test-suite hygiene lesson:** new tests using `asyncio.run()` closed the thread's event loop and broke an older suite using `asyncio.get_event_loop()` (ordering-dependent failure). Fix: one persistent module-level loop. Rule of thumb — when adding async tests next to legacy ones, never `asyncio.run()`.
+
+### Code-review methodology (as executed on this diff — log per §5)
+- Ran `/code-review` at **high** effort. Adapted the skill's subagent fan-out to an in-session pass (author context already loaded; no-subagents session) while keeping its angle structure: line-by-line hunk scan → removed-behavior audit → cross-file caller trace → reuse/simplification/efficiency → altitude → CLAUDE.md conventions; then a recall-biased verify per candidate.
+- What was specifically looked for: knob-enforcement symmetry (both engines), absent-config = unchanged behavior, solver-infeasibility cascades, index-space consistency across snapshot/solve/emission, JS-parity of every mirrored helper, fail-open vs fail-closed boundaries, write minimality (dry-run airtightness).
+- Found 6 (all fixed same-branch, re-verified, dry-run re-run): fractional window-hours truncation; out-of-hours break ⇒ infeasible-day cascade (clamp added); retry bound not scaled to range length; gratuitous existing-call retimes on days that gained nothing; dead production wrapper (marked test-only); dead test code.
+- Full suites after fixes: 107 pytest + 96 JS green; offline dry-run reproduced identical results with 0 write patches.
 
 ### Pending fold-into-context (once Eran approves)
 - `context/knobs.md` (registry) — new file.
