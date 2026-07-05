@@ -205,6 +205,38 @@ def _assignment_score(count: int, city_load: int, balance_conf: Optional[dict]) 
     return count * 100 - city_load * 50
 
 
+def solve_day_with_existing(matrix, existing_v2, new_v2, start_t, end_t, breaks,
+                            return_node, route_strategy):
+    """Order one tech-day containing EXISTING calls (already promised) + NEW calls.
+
+    Policy (approved 2026-07-05): existing calls keep their customer window as a hard
+    constraint — their internal time may re-flow within it; locked calls are pinned at
+    their exact time; an existing call is NEVER dropped in favor of a new one. If the
+    first solve drops any existing call, re-solve with ALL existing pinned at their
+    current times so only new calls can drop (attempt 2).
+
+    Node order: 0 = depot, 1..n_e = existing, n_e+1.. = new (matrix must match).
+    Returns {"ordered": [combined_idx...], "arrivals": [abs-minute...],
+             "dropped_new": [combined_idx...], "pinned_fallback": bool}.
+    """
+    n_e = len(existing_v2)
+    tasks = list(existing_v2) + list(new_v2)
+    res = solve_route_v2(matrix, tasks, start_t, end_t, breaks=breaks,
+                         return_node=return_node, route_strategy=route_strategy)
+    pinned_fallback = False
+    if any(i < n_e for i in res["dropped"]):
+        # Existing commitments outrank new placements: pin them all, retry.
+        pinned = [dict(t, locked=True) for t in existing_v2]
+        res = solve_route_v2(matrix, pinned + list(new_v2), start_t, end_t, breaks=breaks,
+                             return_node=return_node, route_strategy=route_strategy)
+        pinned_fallback = True
+    dropped_new = [i for i in res["dropped"] if i >= n_e]
+    # An existing call still dropped here (e.g. locked-vs-locked conflict) is left
+    # untouched in the DB — the caller must not unassign it.
+    return {"ordered": res["ordered"], "arrivals": res["arrivals"],
+            "dropped_new": dropped_new, "pinned_fallback": pinned_fallback}
+
+
 def optimize_day(matrix, durations, start_t, end_t, return_node, route_strategy):
     """Order one tech-day with the authoritative v2 solver (the same engine the
     live path uses) so the batch reflects route_strategy physics (far→near),
@@ -428,8 +460,17 @@ async def run_batch_schedule(
             ck = (tech_id_key, best_key[1], cat_id)
             cat_counts[ck] = cat_counts.get(ck, 0) + 1
 
-    # 4. Optimize each tech+day and write results
+    # 4. Optimize each tech+day (existing + new together) and write results.
+    # Only days that RECEIVE new calls are solved — days the batch doesn't touch stay as-is.
     assignments = []
+    retimed_existing = 0
+
+    def _loc(t: dict) -> str:
+        if t.get("lat") and t.get("lon"):
+            return f"{t['lat']},{t['lon']}"
+        if t.get("street"):
+            return f"{t['street']}, {t['city']}"
+        return t["city"]
 
     for (tech_id, date_str), day_tasks in sorted(day_slots.items(), key=lambda x: (x[0][1], x[0][0])):
         tech = next(t for t in techs_raw if t["id"] == tech_id)
@@ -439,37 +480,51 @@ async def run_batch_schedule(
         ret  = tech.get("return_city") or ""
         return_loc = ret if (ret and ret != base) else ""
 
-        task_locs = [
-            f"{t['lat']},{t['lon']}" if t.get("lat") and t.get("lon")
-            else (f"{t['street']}, {t['city']}" if t.get("street") else t["city"])
-            for t in day_tasks
-        ]
-        locations = [base] + task_locs + ([return_loc] if return_loc else [])
-        durations = [t["_duration"] for t in day_tasks]
+        day_existing = existing_slots.get((tech_id, date_str), [])
+        locations = ([base] + [_loc(e) for e in day_existing] + [_loc(t) for t in day_tasks]
+                     + ([return_loc] if return_loc else []))
 
         # Tasks at city-level only (no street/coords) — haversine is equivalent
         # to Google Maps for city-center→city-center and avoids burning API quota.
         # Real drive-time refinement happens later via the live cache-backed sequencer.
         matrix = build_matrix_local(locations)
 
-        ordered_idx, arrivals, dropped_idx = optimize_day(
-            matrix=matrix,
-            durations=durations,
-            start_t=start_t,
-            end_t=end_t,
-            return_node=bool(return_loc),
-            route_strategy=route_strategy,
-        )
+        existing_v2 = [{
+            "duration": _effective_duration(e.get("category_id"), tech, cat_duration, config),
+            "window_start": e.get("scheduled_window_start"),
+            "window_end": e.get("scheduled_window_end"),
+            "locked": bool(e.get("locked")),
+            "scheduled_time": (e.get("scheduled_time") or "")[:5] or None,
+        } for e in day_existing]
+        new_v2 = [{"duration": t["_duration"], "window_start": None, "window_end": None,
+                   "locked": False, "scheduled_time": None} for t in day_tasks]
+        brk = tech_breaks(tech, config, dayoffs_partial.get((tech_id, date_str), []))
 
-        # Over-full day: the solver dropped these rather than fail — leave them
+        r = solve_day_with_existing(
+            matrix, existing_v2, new_v2, start_t, end_t, breaks=brk,
+            return_node=bool(return_loc), route_strategy=route_strategy)
+
+        n_e = len(day_existing)
+        # Over-full day: the solver dropped NEW calls rather than fail — leave them
         # pending and surface them so the coordinator can re-place or extend hours.
-        for di in dropped_idx:
-            dt = day_tasks[di]
+        # (Existing calls are never dropped/unassigned by the batch — see the solver policy.)
+        for di in r["dropped_new"]:
+            dt = day_tasks[di - n_e]
             unassigned.append({"id": dt["id"], "city": dt["city"], "reason": "day_over_capacity"})
 
         win_mins = arrival_window_h * 60
-        for i, arr in zip(ordered_idx, arrivals):
-            task = day_tasks[i]
+        for i, arr in zip(r["ordered"], r["arrivals"]):
+            if i < n_e:
+                # Existing call: window/date/tech/status untouchable; only the internal
+                # time may re-flow (within its window — enforced by the solver).
+                e = day_existing[i]
+                new_time = _min_to_time(arr)
+                if new_time != (e.get("scheduled_time") or "")[:5] and not e.get("locked"):
+                    retimed_existing += 1
+                    if not dry_run:
+                        await _sb_patch(e["id"], {"scheduled_time": new_time}, service_key)
+                continue
+            task = day_tasks[i - n_e]
             slot_num   = max(0, (arr - start_min) // win_mins)
             slot_start = start_min + slot_num * win_mins
             payload = {
@@ -499,6 +554,7 @@ async def run_batch_schedule(
         "assigned":        len(assignments),
         "unassigned":      len(unassigned),
         "unassigned_tasks": unassigned,
+        "retimed_existing": retimed_existing,
         "dry_run":         dry_run,
         "by_tech":         summary,
     }

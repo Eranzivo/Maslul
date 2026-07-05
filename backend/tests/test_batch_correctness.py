@@ -258,3 +258,67 @@ def test_window_hours_from_defaults_in_output(monkeypatch):
     ws = bs._time_to_min(body["scheduled_window_start"])
     we = bs._time_to_min(body["scheduled_window_end"])
     assert we - ws == 120, f"expected 2h window, got {body}"
+
+
+# ── Task 4: existing calls inside the day solve ──────────────────────────────
+# Policy (approved): windows fixed, times may re-flow; locked pinned exactly;
+# an existing call is NEVER dropped/unassigned in favor of a new one.
+
+def _v2(duration=30, ws=None, we=None, locked=False, time=None):
+    return {"duration": duration, "window_start": ws, "window_end": we,
+            "locked": locked, "scheduled_time": time}
+
+def _flat_matrix(n, minutes=10):
+    return [[0 if i == j else minutes for j in range(n)] for i in range(n)]
+
+def test_solve_day_existing_reflow_within_window():
+    # 1 existing (window 07:00-10:00, currently 09:30) + 2 new; roomy day.
+    existing = [_v2(ws="07:00", we="10:00", time="09:30")]
+    new = [_v2(), _v2()]
+    m = _flat_matrix(4)  # base + 1 existing + 2 new
+    r = bs.solve_day_with_existing(m, existing, new, "07:00", "17:00",
+                                   breaks=[], return_node=False,
+                                   route_strategy="flexible")
+    assert r["dropped_new"] == []
+    assert set(r["ordered"]) == {0, 1, 2}
+    # existing arrival stays inside its window (start early enough to finish by 10:00)
+    e_arr = r["arrivals"][r["ordered"].index(0)]
+    assert 7 * 60 <= e_arr <= 10 * 60 - 30
+
+def test_solve_day_locked_existing_pinned_exactly():
+    existing = [_v2(ws="07:00", we="10:00", time="08:00", locked=True)]
+    new = [_v2()]
+    m = _flat_matrix(3)
+    r = bs.solve_day_with_existing(m, existing, new, "07:00", "17:00",
+                                   breaks=[], return_node=False,
+                                   route_strategy="flexible")
+    e_arr = r["arrivals"][r["ordered"].index(0)]
+    assert e_arr == 8 * 60
+
+def test_solve_day_overload_drops_only_new():
+    # 07:00-10:00 day (180 min), 60-min jobs, zero travel: 3 fit.
+    # 2 existing + 4 new ⇒ both existing kept, drops come only from new.
+    existing = [_v2(duration=60, ws="07:00", we="10:00", time="07:00"),
+                _v2(duration=60, ws="07:00", we="10:00", time="08:00")]
+    new = [_v2(duration=60) for _ in range(4)]
+    m = _flat_matrix(7, minutes=0)
+    r = bs.solve_day_with_existing(m, existing, new, "07:00", "10:00",
+                                   breaks=[], return_node=False,
+                                   route_strategy="flexible")
+    assert 0 in r["ordered"] and 1 in r["ordered"], "existing must never be dropped"
+    assert all(i >= 2 for i in r["dropped_new"] or [2]), "drops must be new-only"
+    assert len(r["dropped_new"]) >= 1
+
+def test_e2e_existing_patch_carries_time_only(monkeypatch):
+    # Non-dry run: any patch to an existing call may contain scheduled_time ONLY.
+    fake = FakeSB(
+        pending=[_pending(i, "באר שבע") for i in range(3)],
+        existing=[_existing(0, "t1", SUN, "דימונה", time="09:30",
+                            ws="07:00", we="10:00")],
+        zones=_ZONES, techs=[_tech("t1", "אלירן", _ROT_SOUTH)], cats=_CATS)
+    _run(fake, monkeypatch, dry_run=False)
+    for task_id, body in fake.patches:
+        if task_id.startswith("e"):
+            assert set(body.keys()) == {"scheduled_time"}, f"existing patch leaked fields: {body}"
+    new_patches = [t for t, _ in fake.patches if t.startswith("p")]
+    assert len(new_patches) == 3
