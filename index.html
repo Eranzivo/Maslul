@@ -4877,11 +4877,18 @@ function normalizePlaceKeyJS(name){
 // legacy alias+קריית collapse (canonicalCity) → normalize noise → brain alias → key.
 // brain = {places:{key:[lat,lon]}, aliases:{variant:key}} (geo_places/place_aliases);
 // null/absent brain ⇒ normalize-only (fail-open, strict superset of the old behavior).
+// Memoized — canonicalCity runs a Levenshtein scan for unknown spellings, and this seam
+// sits in hot loops (resolveZone over every zone city × tech-day, _cityDistKm sorting).
+// Cache key distinguishes brain vs no-brain; brain content is stable within a session.
+const _cityMatchKeyCache={};
 function cityMatchKey(name, brain){
+  const ck=(brain?'b|':'s|')+name;
+  const hit=_cityMatchKeyCache[ck];
+  if(hit!==undefined)return hit;
   const c=canonicalCity(name).city||'';
   const k=normalizePlaceKeyJS(c);
   const aliases=(brain&&brain.aliases)||{};
-  return aliases[k]||k;
+  return (_cityMatchKeyCache[ck]=aliases[k]||k);
 }
 // </zone-logic>
 // <zone-logic>
