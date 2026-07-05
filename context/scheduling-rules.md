@@ -289,10 +289,21 @@ Same config key as B3 `balanceAdjust` (the live `_candidatesZone`/`_candidatesOp
 
 ### Key invariants
 - Zone rotation enforced hard — a task in zone A can only go to the tech assigned zone A that day
-- `arrival_window_hours` read from `tenants.config` (PureWater = 3)
+- `arrival_window_hours` read from `tenants.config.defaults` (PureWater = 3; the old top-level read was a bug — kept only as fallback)
 - `max_daily` read from technician row; falls back to `config.defaults.max_daily_jobs`
 - `dry_run=true` previews without writing to DB
 - Protected endpoint: requires `Authorization: Bearer <SUPABASE_SERVICE_KEY>`
+
+### Batch correctness pack ✅ 2026-07-05 (branch `batch-correctness`)
+The batch now **reads the live calendar and enforces the same tenant rules as the live JS path** (spec: `outputs/batch-correctness-design_2026-07-05.md`; offline dry-run vs real data: `outputs/batch-dryrun-diff_2026-07-05.md`):
+- **Live-state seeding:** fetches `assigned/en_route/arrived` tasks in range + `day_offs`; existing calls count toward `max_daily`, same-city counts, and per-category counts. Fixes the incremental-run overbooking bug (existing calls were invisible).
+- **Eligibility parity with `_candidatesZone`:** day_offs (full ⇒ day skipped; partial ⇒ break-block), `cat_limits` (existing+new), `skills` (exact JS mirror — empty skills + category ⇒ ineligible), `blocked_zones`, `blocked_cities`.
+- **Durations:** tech `duration_overrides` → category → `defaults.regular_job_minutes` → 30 (was: category → hardcoded 30).
+- **Breaks:** `tech_breaks()` (mirror of `getTechPartialBlocks`) feeds `solve_route_v2 breaks` per tech-day. PureWater unaffected (break disabled) — architecture-ready.
+- **Existing calls in the day solve** (`solve_day_with_existing`): windows are hard constraints, 🔒 locked pinned exactly, internal `scheduled_time` may re-flow within the window (persisted alone, only when changed); if a solve would drop an existing call, it re-solves with all existing pinned so **only new calls can drop — existing commitments outrank new placements**. Only days that *receive* new calls are touched.
+- **Bounded retry:** a new call dropped for time-capacity re-places on the next-best covering day (each covering day tried at most once) before flagging `day_over_capacity`.
+- **Schema tolerance:** live `day_offs` lacks `type/from_time/to_time` (migration never applied — the JS *save* path therefore fails on live; fix SQL pending). Absent `type` reads as a full day off, same as the JS load mapper.
+- Result field added: `retimed_existing`. Tests: `backend/tests/test_batch_correctness.py` (26).
 
 ### City normalization
 `_CITY_ALIASES` in `batch_schedule.py` mirrors `normalizeCity()` in JS. Both must stay in sync when adding city variants.
