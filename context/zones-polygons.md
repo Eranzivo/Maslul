@@ -63,17 +63,21 @@ The live helpers `getCityZone(city)` and `isCityInTechZone(tech, city, dateStr)`
 4. User draws a polygon with the Leaflet.Draw polygon tool
 5. `L.Draw.Event.CREATED` fires → `_drawnPolygon = latlngs`; `_updateDrawStatus()` shows city count
 6. "✓ הוסף ערים לאזור" button calls `confirmZoneDraw()`
-7. `confirmZoneDraw()` (rebuilt 2026-07-05 — the "polygon didn't capture all cities" fix):
-   - Runs `_detectCitiesInPolygon()` — ray-casting point-in-polygon over **the geo brain**
-     (`GEO_BRAIN.places`, 423+ cities and growing); static `CITY_COORDS_JS` only as fallback.
-     This was the bug root cause: detection previously saw only the static ~255.
-   - Adds detected cities to `zone.cities` with **canonical dedup** (`cityMatchKey` both sides —
-     a variant spelling already in the zone is never duplicated)
-   - **Multi-polygon zones** (timing.tech parity): if the zone already has rings, drawing
-     ASKS — add the new ring (default) or replace all. `zone.polygons` holds every ring;
-     `resolveZone` matches ANY ring. Existing rings render dashed on the draw map for context.
-     `zone.polygon = polygons[0]` stays as the legacy mirror.
-   - Calls `saveZoneToSupabase(zone)` — saves `cities` + `polygons` + `polygon`
+7. **WYSIWYG multi-polygon editor** (rebuilt twice 2026-07-05; final after Eran's live QA):
+   - The zone's SAVED rings load INTO the Leaflet.draw edit `FeatureGroup` — every ring
+     (old or new) is **vertex-editable and deletable** with the toolbar. Drawing ADDS a ring.
+   - **ALL brain places** render as small grey dots (the zone's own cities bigger, indigo);
+     dots inside any ring turn **green live** on every draw/edit/delete (`_refreshZoneDrawCapture`),
+     and the status line recounts (`N פוליגונים · נתפסו X ערים · Y חדשות`). The coordinator
+     literally sees what is and isn't captured before confirming.
+   - Detection universe = `_geoPlaceEntries()`: `GEO_BRAIN.places` (500+, grows with every
+     client); static `CITY_COORDS_JS` only as offline fallback. (The old static-only scan was
+     the "didn't capture all cities" root cause.)
+   - `confirmZoneDraw()` saves **exactly what's on the map**: `zone.polygons = all rings`
+     (no append/replace prompts); cities added with canonical dedup (`cityMatchKey`) — cities
+     are only ever ADDED, ring deletion never auto-removes them; an empty map offers polygon
+     removal; a sub-city ring capturing no city-centers saves after an explicit confirm.
+     `zone.polygon = polygons[0]` stays as the legacy mirror; `resolveZone` matches ANY ring.
 
 **`invalidateSize()` is called at 200ms and 600ms** after map init to handle container layout settling. The draw modal is enlarged (`min(96vw,1000px)` box, `min(70vh,620px)` map) for precise drawing.
 

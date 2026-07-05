@@ -8364,7 +8364,7 @@ async function uploadTaskPhoto(taskId, inputEl) {
 let _zoneDrawMap = null;
 let _zoneDrawId  = null;
 let _zoneDrawFeatureGroup = null;
-let _drawnPolygon = null;
+let _zoneDrawMarkers = [];
 
 function openZoneDraw(zoneId) {
   const z = zones.find(x => x.id === zoneId);
@@ -8373,7 +8373,6 @@ function openZoneDraw(zoneId) {
     if (!confirm(`"${z.name}" הוא אזור רשימת ערים. ציור פוליגון יסמן אותו כאזור פוליגון. להמשיך?`)) return;
   }
   _zoneDrawId = zoneId;
-  _drawnPolygon = null;
   if (!GEO_BRAIN) loadGeoBrain(); // lazy retry — detection uses the brain once loaded
   document.getElementById('mo-zone-draw-title').textContent = `צייר אזור — ${z ? z.name : ''}`;
   document.getElementById('zone-draw-status').textContent = '';
@@ -8428,27 +8427,33 @@ function _initZoneDrawMap() {
   setTimeout(() => { if (_zoneDrawMap) _zoneDrawMap.invalidateSize(); }, 200);
   setTimeout(() => { if (_zoneDrawMap) _zoneDrawMap.invalidateSize(); }, 600);
 
-  // Show existing zone cities as reference dots (brain-first coords — static fallback)
+  // Reference dots: ALL known places (geo brain, 500+; static fallback) as small grey
+  // dots — so the coordinator SEES what a polygon can capture before drawing. The zone's
+  // own cities render bigger in indigo. Captured dots turn green live while drawing/editing.
   const z = zones.find(x => x.id === _zoneDrawId);
-  if (z) {
-    z.cities.forEach(city => {
-      const coords = geoCityCoords(city);
-      if (coords) LF.circleMarker(coords, {radius:6,color:'#4f46e5',fillColor:'#4f46e5',fillOpacity:0.75,weight:2})
-        .bindTooltip(city, {direction:'top',permanent:false}).addTo(_zoneDrawMap);
-    });
-    // Render the zone's EXISTING polygons (dashed) so a new ring is drawn in context —
-    // required for multi-polygon zones (one city divided into several areas).
-    (z.polygons || []).forEach(p => {
-      try {
-        LF.polygon(p.map(pt => [pt.lat, pt.lng]),
-          {color:'#64748b', fillColor:'#64748b', fillOpacity:0.08, weight:1.5, dashArray:'5,5'})
-          .addTo(_zoneDrawMap);
-      } catch(e) { /* malformed legacy ring — skip, never break the draw modal */ }
-    });
-  }
+  _zoneDrawMarkers = [];
+  const brainForDraw = (typeof GEO_BRAIN !== 'undefined') ? GEO_BRAIN : null;
+  const zoneKeys = new Set((z ? z.cities : []).map(c => cityMatchKey(c, brainForDraw)));
+  _geoPlaceEntries().forEach(([city, coords]) => {
+    const isZoneCity = zoneKeys.has(cityMatchKey(city, brainForDraw));
+    const baseStyle = isZoneCity
+      ? {radius:6, color:'#4f46e5', fillColor:'#4f46e5', fillOpacity:0.75, weight:2}
+      : {radius:3, color:'#94a3b8', fillColor:'#94a3b8', fillOpacity:0.6, weight:1};
+    const marker = LF.circleMarker(coords, baseStyle)
+      .bindTooltip(city, {direction:'top', permanent:false}).addTo(_zoneDrawMap);
+    _zoneDrawMarkers.push({city, coords, marker, baseStyle});
+  });
 
-  // Draw control — polygon only
+  // WYSIWYG multi-polygon editing: the zone's SAVED rings load INTO the edit group, so
+  // every ring — old or new — is vertex-editable and deletable with the toolbar. What's
+  // on the map when you confirm is exactly what gets saved.
   _zoneDrawFeatureGroup = new LF.FeatureGroup().addTo(_zoneDrawMap);
+  (z && z.polygons || []).forEach(p => {
+    try {
+      _zoneDrawFeatureGroup.addLayer(LF.polygon(p.map(pt => [pt.lat, pt.lng]),
+        {color:'#2563eb', fillColor:'#2563eb', fillOpacity:0.15, weight:2}));
+    } catch(e) { /* malformed legacy ring — skip, never break the draw modal */ }
+  });
   const drawCtrl = new LF.Control.Draw({
     draw: {
       polygon: { allowIntersection: false, showArea: false,
@@ -8460,41 +8465,60 @@ function _initZoneDrawMap() {
   _zoneDrawMap.addControl(drawCtrl);
 
   _zoneDrawMap.on(LF.Draw.Event.CREATED, e => {
-    _zoneDrawFeatureGroup.clearLayers();
-    _zoneDrawFeatureGroup.addLayer(e.layer);
-    _drawnPolygon = e.layer.getLatLngs()[0];
-    _updateZoneDrawStatus();
+    _zoneDrawFeatureGroup.addLayer(e.layer);   // ADD a ring — never clear the others
+    _refreshZoneDrawCapture();
   });
-  _zoneDrawMap.on(LF.Draw.Event.EDITED, () => {
-    _drawnPolygon = null;
-    _zoneDrawFeatureGroup.eachLayer(l => { if(l.getLatLngs) _drawnPolygon = l.getLatLngs()[0]; });
-    _updateZoneDrawStatus();
-  });
-  _zoneDrawMap.on(LF.Draw.Event.DELETED, () => {
-    _drawnPolygon = null;
-    document.getElementById('zone-draw-status').textContent = '';
-  });
+  _zoneDrawMap.on(LF.Draw.Event.EDITED, _refreshZoneDrawCapture);
+  _zoneDrawMap.on(LF.Draw.Event.DELETED, _refreshZoneDrawCapture);
+  _refreshZoneDrawCapture(); // initial state (saved rings may already capture cities)
 
   // Force size recalculation with rAF + fallback timeout
   requestAnimationFrame(() => _zoneDrawMap.invalidateSize(true));
   setTimeout(() => { if(_zoneDrawMap){ _zoneDrawMap.invalidateSize(true); _zoneDrawMap.setView([31.5,34.85],8); } }, 400);
 }
 
-function _updateZoneDrawStatus() {
-  if (!_drawnPolygon) return;
-  const found = _detectCitiesInPolygon(_drawnPolygon);
+// All rings currently on the draw map (saved + newly drawn + edited) — WYSIWYG source.
+function _drawRingsFromGroup() {
+  const rings = [];
+  if (_zoneDrawFeatureGroup) _zoneDrawFeatureGroup.eachLayer(l => {
+    if (l.getLatLngs) { const ll = l.getLatLngs()[0]; if (ll && ll.length >= 3) rings.push(ll); }
+  });
+  return rings;
+}
+function _detectCitiesInRings(rings) {
+  if (!rings.length) return [];
+  return _geoPlaceEntries()
+    .filter(([, coords]) => rings.some(r => _pointInPolygon(coords[0], coords[1], r)))
+    .map(([city]) => city);
+}
+// Live feedback on every draw/edit/delete: captured dots turn green, status recounts.
+function _refreshZoneDrawCapture() {
+  const rings = _drawRingsFromGroup();
+  const inside = (coords) => rings.some(r => _pointInPolygon(coords[0], coords[1], r));
+  (_zoneDrawMarkers || []).forEach(m => {
+    const isIn = rings.length && inside(m.coords);
+    try { m.marker.setStyle(isIn ? {radius:6, color:'#16a34a', fillColor:'#16a34a', fillOpacity:0.9, weight:2} : m.baseStyle); } catch(e){}
+  });
+  _updateZoneDrawStatus(rings);
+}
+function _updateZoneDrawStatus(rings) {
+  rings = rings || _drawRingsFromGroup();
+  const statusEl = document.getElementById('zone-draw-status');
+  if (!statusEl) return;
+  if (!rings.length) { statusEl.textContent = 'צייר פוליגון אחד או יותר — ערים שנתפסות יסומנו בירוק'; statusEl.style.color = 'var(--ink-3)'; return; }
+  const found = _detectCitiesInRings(rings);
   const z = zones.find(x => x.id === _zoneDrawId);
   const brain = (typeof GEO_BRAIN !== 'undefined') ? GEO_BRAIN : null;
   const existingKeys = new Set((z ? z.cities : []).map(c => cityMatchKey(c, brain)));
   const newCities = found.filter(c => !existingKeys.has(cityMatchKey(c, brain)));
-  const statusEl = document.getElementById('zone-draw-status');
   if (!found.length) {
-    statusEl.textContent = 'לא נמצאו ערים ידועות בתוך האזור — נסה לצייר אזור גדול יותר';
+    statusEl.textContent = `${rings.length} פוליגונים · לא נתפסו ערים — הגדל את הפוליגון או ודא שהעיר קיימת במאגר`;
     statusEl.style.color = 'var(--amber)';
   } else {
+    const preview = newCities.slice(0, 12).join(', ') + (newCities.length > 12 ? ` +${newCities.length - 12}…` : '');
     statusEl.textContent = newCities.length
-      ? `נמצאו ${found.length} ערים · ${newCities.length} חדשות: ${newCities.join(', ')}`
-      : `נמצאו ${found.length} ערים (כולן כבר קיימות באזור)`;
+      ? `${rings.length} פוליגונים · נתפסו ${found.length} ערים · ${newCities.length} חדשות: ${preview}`
+      : `${rings.length} פוליגונים · נתפסו ${found.length} ערים (כולן כבר באזור)`;
     statusEl.style.color = newCities.length ? 'var(--green)' : 'var(--ink-3)';
   }
 }
@@ -8514,25 +8538,46 @@ function _pointInPolygon(lat, lon, polygon) {
 }
 // </zone-logic>
 
-function _detectCitiesInPolygon(latlngs) {
-  // Detect against the geo brain (423+ cities, growing with every client) — the static
-  // CITY_COORDS_JS is only the offline fallback. This was the root cause of "the polygon
-  // didn't capture all the cities beneath it": detection only saw the static 255.
-  const entries = (GEO_BRAIN && GEO_BRAIN.places && Object.keys(GEO_BRAIN.places).length)
+function _geoPlaceEntries() {
+  // The detection universe: the geo brain (500+ cities, growing with every client) —
+  // the static CITY_COORDS_JS is only the offline fallback. The old static-only scan
+  // was the root cause of "the polygon didn't capture all the cities beneath it".
+  return (typeof GEO_BRAIN !== 'undefined' && GEO_BRAIN && GEO_BRAIN.places && Object.keys(GEO_BRAIN.places).length)
     ? Object.entries(GEO_BRAIN.places)
     : Object.entries(CITY_COORDS_JS);
-  return entries
+}
+
+function _detectCitiesInPolygon(latlngs) {
+  return _geoPlaceEntries()
     .filter(([, coords]) => _pointInPolygon(coords[0], coords[1], latlngs))
     .map(([city]) => city);
 }
 
 function confirmZoneDraw() {
-  if (!_drawnPolygon) { showToast('לא צויר פוליגון עדיין', 'error'); return; }
-  const found = _detectCitiesInPolygon(_drawnPolygon);
-  if (!found.length) { showToast('לא נמצאו ערים ידועות בתוך האזור', 'error'); return; }
   const z = zones.find(x => x.id === _zoneDrawId);
   if (!z) return;
-  // Canonical-compare so a variant spelling already in the zone isn't duplicated
+  // WYSIWYG: whatever rings are on the map right now (saved rings loaded editable + any
+  // drawn/edited/deleted this session) become the zone's polygons. No append/replace
+  // prompts — the map IS the state.
+  const rings = _drawRingsFromGroup();
+  if (!rings.length) {
+    if (z.polygons && z.polygons.length) {
+      if (!confirm(`כל הפוליגונים נמחקו מהמפה. למחוק אותם גם מהאזור "${z.name}"?
+(רשימת הערים של האזור לא תשתנה)`)) return;
+      z.polygons = []; z.polygon = null;
+      save(); renderZones(); saveZoneToSupabase(z);
+      closeMo('mo-zone-draw');
+      if (_zoneDrawMap) { _zoneDrawMap.remove(); _zoneDrawMap = null; }
+      showToast('הפוליגונים הוסרו מהאזור ✓');
+      return;
+    }
+    showToast('לא צויר פוליגון עדיין', 'error'); return;
+  }
+  const found = _detectCitiesInRings(rings);
+  // A sub-city polygon can legitimately capture no city-center — allow, but confirm intent.
+  if (!found.length && !confirm('לא נתפסו ערים בתוך הפוליגונים (ייתכן פוליגון תת-עירוני). לשמור בכל זאת?')) return;
+  // Canonical-compare so a variant spelling already in the zone isn't duplicated.
+  // Cities are only ever ADDED here — removing a ring never auto-removes cities.
   const brain = (typeof GEO_BRAIN !== 'undefined') ? GEO_BRAIN : null;
   const existingKeys = new Set(z.cities.map(c => cityMatchKey(c, brain)));
   let added = 0;
@@ -8540,21 +8585,12 @@ function confirmZoneDraw() {
     const k = cityMatchKey(c, brain);
     if (!existingKeys.has(k)) { z.cities.push(c); existingKeys.add(k); added++; }
   });
-  const ring = _drawnPolygon.map(p => ({ lat: p.lat, lng: p.lng }));
-  // Multi-polygon zones (timing.tech parity): a zone may hold several rings — e.g. one
-  // city divided into a few polygons. Drawing ADDS a ring by default; replacing is the
-  // explicit opt-out. resolveZone already matches ANY ring in polygons[].
-  if (z.polygons && z.polygons.length) {
-    const addMore = confirm(`לאזור "${z.name}" כבר יש ${z.polygons.length} פוליגונים.\n\nאישור = הוספת הציור כפוליגון נוסף\nביטול = החלפת כל הפוליגונים הקיימים בציור החדש`);
-    z.polygons = addMore ? [...z.polygons, ring] : [ring];
-  } else {
-    z.polygons = [ring];
-  }
+  z.polygons = rings.map(r => r.map(p => ({ lat: p.lat, lng: p.lng })));
   z.polygon = z.polygons[0];   // legacy single-ring mirror
   save(); renderZones(); populateCitySelect(); saveZoneToSupabase(z);
   closeMo('mo-zone-draw');
   if (_zoneDrawMap) { _zoneDrawMap.remove(); _zoneDrawMap = null; }
-  showToast(added > 0 ? `נוספו ${added} ערים לאזור ✓ (${z.polygons.length} פוליגונים)` : 'כל הערים כבר קיימות באזור');
+  showToast(`נשמרו ${z.polygons.length} פוליגונים · נוספו ${added} ערים ✓`);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
