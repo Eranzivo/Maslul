@@ -161,5 +161,19 @@ suite('windowAtOffset (daily-grid drag snapping)', () => {
   check('topMins/heightMins reflect the band', w(180).topMins===180 && w(180).heightMins===180);
 });
 
+
+suite('placement policy: golden fixture (parity with backend resolve_placement_policy)', () => {
+  const fs2 = require('fs'), path2 = require('path');
+  const fx = JSON.parse(fs2.readFileSync(path2.join(__dirname, 'fixtures', 'policy-cases.json'), 'utf8'));
+  for (const c of fx.cases) {
+    check(`sc=${JSON.stringify(c.sc)} → ${c.expect}`, ctx.resolvePlacementPolicy(c.sc) === c.expect);
+  }
+  // score semantics: consolidate packs, spread splits, same-city nudges apart under spread
+  check('consolidate: active day beats empty', ctx.placementScore('consolidate',3,3,0,50) > ctx.placementScore('consolidate',0,0,0,50));
+  check('spread: least-loaded wins', ctx.placementScore('spread',0,0,0,50) > ctx.placementScore('spread',3,3,0,50));
+  check('spread: same-city penalized', ctx.placementScore('spread',1,1,0,50) > ctx.placementScore('spread',1,1,3,50));
+});
+
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

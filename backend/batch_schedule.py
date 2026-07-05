@@ -229,21 +229,43 @@ def tech_breaks(tech: dict, config: Optional[dict], partial_dayoffs: list) -> li
     return blocks
 
 
-def _assignment_score(count: int, city_load: int, balance_conf: Optional[dict]) -> float:
+def resolve_placement_policy(config: Optional[dict]) -> str:
+    """ONE placement philosophy per tenant — 'consolidate' | 'spread' — read identically
+    by the live JS path (resolvePlacementPolicy) and this batch. Decided by Israel's
+    handover (2026-07-06): consolidate = "fill the best nearby technician route first;
+    avoid creating multiple half-empty days" (his Scenario D). spread = fluid even split
+    across covering tech-days, for tenants that want balanced load over tight routes.
+
+    Legacy mapping: explicit `scheduling.placement_policy` wins; the old
+    `balance.enabled:true` flag maps to 'spread' (its batch semantics); absent ⇒
+    'consolidate' (today's fill-first default). Golden fixture: tests/fixtures/policy-cases.json."""
+    sched = (config or {}).get("scheduling") or {}
+    pp = sched.get("placement_policy")
+    if pp in ("consolidate", "spread"):
+        return pp
+    if (sched.get("balance") or {}).get("enabled"):
+        return "spread"
+    return "consolidate"
+
+
+def _assignment_score(count: int, city_load: int, policy, weight: int = 50) -> float:
     """Score a candidate (tech, day) for one task — higher is better.
 
-    Default (balance off / absent): fill active days first (`count*100`), penalise
-    over-concentration of one city. This is today's behaviour — absent config = unchanged.
+    consolidate: fill active days first (`count*100`); same-city stays a mild tie-break
+    penalty (grouping same-area work is a PLUS per the handover; the penalty only splits
+    ties between equally-active days).
+    spread: prefer the LEAST-loaded covering tech-day, same-city nudged apart — greedy-
+    applied this yields 8→4-4, 7→4-3, 6→3-3, adapting to each week's count. Soft; always
+    bounded by max_daily / cat_limits / windows.
 
-    Balance on (`scheduling.balance.enabled`): fluid even workload spread — prefer the
-    LEAST-loaded covering tech-day (negative count), with a same-city nudge so identical-
-    city jobs split across the covering days. Greedy-applied this yields 8→4-4, 7→4-3,
-    6→3-3, adapting to each week's actual count. Soft (never a hard cap); still bounded by
-    max_daily and customer date/window requests. Tunable via `balance.weight`."""
-    bal = balance_conf or {}
-    if bal.get("enabled"):
-        w = bal.get("weight", 50)
-        return -count * w - city_load * (w // 2)
+    `policy` may also be a legacy balance-conf dict (older callers/tests) — mapped with
+    the same semantics as resolve_placement_policy."""
+    if isinstance(policy, dict) or policy is None:  # legacy balance_conf calling shape
+        bal = policy or {}
+        weight = bal.get("weight", 50)
+        policy = "spread" if bal.get("enabled") else "consolidate"
+    if policy == "spread":
+        return -count * weight - city_load * (weight // 2)
     return count * 100 - city_load * 50
 
 
@@ -353,7 +375,9 @@ async def run_batch_schedule(
     config = tenant_rows[0]["config"] if tenant_rows else {}
     arrival_window_h = _arrival_window_hours(config)
     route_strategy = resolve_route_strategy(config)
-    balance_conf = (config.get("scheduling") or {}).get("balance")  # None ⇒ today's fill-first packing
+    sched_conf = config.get("scheduling") or {}
+    placement_policy = resolve_placement_policy(config)
+    placement_weight = (sched_conf.get("balance") or {}).get("weight", 50)
 
     # 2. Build lookup tables
     cat_duration = {c["id"]: c.get("duration_minutes", 30) for c in cats_raw}
@@ -500,9 +524,8 @@ async def run_batch_schedule(
                     continue
 
                 city_load = city_counts[tech["id"]].get(nc, 0)
-                # Balance off ⇒ fill-first packing (today's behavior); balance on ⇒ fluid
-                # even spread across covering tech-days (8→4-4, 7→4-3). See _assignment_score.
-                score = _assignment_score(count, city_load, balance_conf)
+                # ONE placement policy for both doors — see resolve_placement_policy.
+                score = _assignment_score(count, city_load, placement_policy, placement_weight)
 
                 if score > best_score:
                     best_score = score
