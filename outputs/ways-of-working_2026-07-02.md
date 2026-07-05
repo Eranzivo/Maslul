@@ -34,6 +34,24 @@ So: **no per-tenant agents.** One reusable *rules-catcher skill* that produces e
 - At most ONE custom agent definition is justified: `.claude/agents/engine-reviewer.md` — a review persona primed with `context/scheduling-rules.md`, the knob registry, and the parity list, for reviewing engine diffs. Trade-off: the `/code-review` skill + `/parity-audit` cover ~90% of this in-session at lower cost; recommend deferring the custom agent until diffs get big enough that main-session review dilutes context.
 - **subagent-driven-development** stays the pattern for multi-slice UI work (proven on the 06-15 port).
 
+### Standing security gate (Eran directive 2026-07-05 — applies to EVERY step/commit/change/review)
+Security is a foundation requirement as we scale to more customers and data. Every change passes this gate before commit; every review includes a security angle; every schema migration is followed by a Supabase advisor run.
+
+**Per-change checklist:**
+1. **New/changed table or policy:** RLS enabled + explicit policy decision recorded (tenant-scoped / deny-all backend-only / global-read PII-free — name which and why). `tenant_id` on every tenant table. Run `get_advisors(security)` after applying.
+2. **PII boundary:** global/shared tables (`route_cache`, `geo_places`, `place_aliases`, future `geo_addresses`) hold public geography ONLY — never client names/phones/addresses-with-identity. A change that would add PII to a shared table is redesigned, not shipped.
+3. **Public repo:** no secrets, no raw client exports, no keys in code/docs/outputs; secrets only in `.env` (gitignored) / Railway env. City-level aggregates are OK (already public in context/).
+4. **Backend endpoints:** every new endpoint is either authenticated (service key / user-JWT introspection like `/batch-schedule`) or quota-bounded (like `/geocode`); billable APIs always metered.
+5. **Fail direction:** fail-open ONLY for availability (cache/brain fallbacks); authz/tenant-isolation failures are always fail-closed.
+6. **Least privilege for reads:** frontend gets `SELECT`-only policies scoped to exactly the columns/tables it needs (e.g. geo brain: `geo_places` + `place_aliases` readable, `place_resolution_log` stays deny-all).
+- Applied to Geo Slice A: read-only policies, no write path for `authenticated`, PII-free tables, loader fail-open, resolution-log excluded.
+
+**Periodic (monthly + after every migration):** Supabase security+performance advisors via MCP; review new WARNs to zero.
+**Advisor batch APPLIED live 2026-07-05 (Eran authorized MCP writes):** geo brain read policies (SELECT-only for authenticated; `place_resolution_log` stays deny-all); superset backfill 82 rows (geo_places=505; junk city חרב deliberately excluded — junk must keep flagging); SECURITY DEFINER lockdown — revoked from **PUBLIC** (the first REVOKE from anon/authenticated alone didn't stick because roles inherit via PUBLIC — lesson recorded), 4 RLS helpers re-granted to `authenticated` only (policy expressions run with CALLER privileges — dropping that grant would break every tenant check); `pg_trgm` moved to `extensions` schema. **Verified by role simulation:** `SET ROLE authenticated` → helpers work, geo readable, tasks still RLS-zero; `SET ROLE anon` → 42501 denied; privilege matrix readback all-correct.
+**Still open:** leaked-password protection (dashboard toggle — not settable via SQL); drop stale `tasks_backup_20260613` (needs Eran's confirmation it's no longer needed); RLS-perf batch from the 06-12 review (wrap `auth.uid()`, index tenant FKs, consolidate permissive policies).
+
+**Platform setup (recommended, mostly one-time):** GitHub secret scanning + push protection ON (free for public repos) + Dependabot alerts; branch protection on `main` (require PR once a 2nd contributor exists); Supabase Pro at go-live (backups + no-pause — already planned); document a key-rotation runbook (anon key is public by design; service key lives ONLY in Railway env — rotate if ever exposed); CDN pinning + no-integrity rules already enforced in CLAUDE.md.
+
 ### Process skills (keep, already the culture)
 `brainstorming` before features → `writing-plans` for multi-step → `test-driven-development` with REAL tenant data for engine work → `systematic-debugging` for bugs → `code-review` on diffs → `verification-before-completion` before "done". Plus repo rules: branch for code, dry-run before live writes, SQL as chat blocks, living docs in the same commit, frozen PureWater config untouched without approval.
 

@@ -52,6 +52,13 @@ async def ensure_loaded(service_key: str, force: bool = False) -> None:
         pass  # fail-open
 
 
+def alias_map() -> dict:
+    """The brain's curated alias map ({normalized_variant: canonical_key}) for callers
+    that need name-identity (zone matching), not coordinates. {} when not loaded —
+    callers must treat that as fail-open (normalize-only matching)."""
+    return _brain["alias_to_key"]
+
+
 def lookup(name):
     """Resolve a name against the in-memory brain only. (lat, lon) or None — never guesses."""
     key = normalize_place_key(name)

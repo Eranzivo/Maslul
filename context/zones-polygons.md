@@ -63,11 +63,21 @@ The live helpers `getCityZone(city)` and `isCityInTechZone(tech, city, dateStr)`
 4. User draws a polygon with the Leaflet.Draw polygon tool
 5. `L.Draw.Event.CREATED` fires → `_drawnPolygon = latlngs`; `_updateDrawStatus()` shows city count
 6. "✓ הוסף ערים לאזור" button calls `confirmZoneDraw()`
-7. `confirmZoneDraw()`:
-   - Runs `_detectCitiesInPolygon()` — ray-casting point-in-polygon for each of the ~255 known cities
-   - Adds detected cities to `zone.cities` (no duplicates)
-   - Writes the ring to **`zone.polygons = [ring]`** (the array form used by `resolveZone`) and also `zone.polygon = ring` (legacy single, kept one release)
-   - Calls `saveZoneToSupabase(zone)` — saves `cities` + `polygons` + `polygon`
+7. **WYSIWYG multi-polygon editor** (rebuilt twice 2026-07-05; final after Eran's live QA):
+   - The zone's SAVED rings load INTO the Leaflet.draw edit `FeatureGroup` — every ring
+     (old or new) is **vertex-editable and deletable** with the toolbar. Drawing ADDS a ring.
+   - **ALL brain places** render as small grey dots (the zone's own cities bigger, indigo);
+     dots inside any ring turn **green live** on every draw/edit/delete (`_refreshZoneDrawCapture`),
+     and the status line recounts (`N פוליגונים · נתפסו X ערים · Y חדשות`). The coordinator
+     literally sees what is and isn't captured before confirming.
+   - Detection universe = `_geoPlaceEntries()`: `GEO_BRAIN.places` (500+, grows with every
+     client); static `CITY_COORDS_JS` only as offline fallback. (The old static-only scan was
+     the "didn't capture all cities" root cause.)
+   - `confirmZoneDraw()` saves **exactly what's on the map**: `zone.polygons = all rings`
+     (no append/replace prompts); cities added with canonical dedup (`cityMatchKey`) — cities
+     are only ever ADDED, ring deletion never auto-removes them; an empty map offers polygon
+     removal; a sub-city ring capturing no city-centers saves after an explicit confirm.
+     `zone.polygon = polygons[0]` stays as the legacy mirror; `resolveZone` matches ANY ring.
 
 **`invalidateSize()` is called at 200ms and 600ms** after map init to handle container layout settling. The draw modal is enlarged (`min(96vw,1000px)` box, `min(70vh,620px)` map) for precise drawing.
 
@@ -75,19 +85,30 @@ The live helpers `getCityZone(city)` and `isCityInTechZone(tech, city, dateStr)`
 
 ---
 
-## CITY_COORDS_JS
+## Geo brain in the frontend (one source of truth — 2026-07-05)
 
-`CITY_COORDS_JS` is a JS object in `index.html` with ~255 Israeli cities mapped to `[lat, lon]` arrays:
-```javascript
-const CITY_COORDS_JS = { 'תל אביב': [32.0853, 34.7818], ... };
-```
+`GEO_BRAIN` (`{places: {key:[lat,lon]}, aliases: {variant:key}}`) is loaded once per session
+from **`geo_places` + `place_aliases`** (read-only RLS SELECT for authenticated; public
+geography only, PII-free) via `loadGeoBrain()` — fire-and-forget after login, lazy-retried in
+`openZoneDraw`. **FAIL-OPEN:** if the fetch fails (or the policy isn't applied), every consumer
+falls back to the static lists — exactly the old behavior.
 
-Used for:
-1. Polygon draw — detect which cities fall inside drawn polygon
-2. Haversine fallback in the optimizer when no geocoded lat/lon exists
-3. Zone city dots on the draw map
+**The matching seam is `cityMatchKey(name, brain)`** (in `<zone-logic>`, tested): legacy
+alias + קריית collapse (`canonicalCity`) → `normalizePlaceKeyJS` (gershayim/hyphen noise) →
+brain alias → canonical key. Mirrors Python `_match_key` (batch_schedule) exactly; both are
+asserted against the same golden fixture `tests/fixtures/geo-cases.json` (JS harness + pytest)
+so ק"ש / קרית שמונה / קריית שמונה resolve identically everywhere — drift = failing test.
+Consumers: `resolveZone` city_list matching (both sides), `_cityDistKm` → `geoCityCoords()`
+(brain-first coords — this also sharpens far→near ordering for cities the static list lacks),
+polygon detection, zone-draw dots.
 
-Separate from `cities.py` (backend), which has a similar list for the Python optimizer.
+## CITY_COORDS_JS (offline fallback only)
+
+`CITY_COORDS_JS` (~255 cities) remains in `index.html` strictly as the offline fallback when
+the brain isn't loaded. `outputs/migration-geo-superset_2026-07-05.sql` backfills the 83
+static-only entries into `geo_places` so the brain is a strict superset. Same role for
+`cities.py` on the backend (via `geo_resolver`). **Never add a city to the static lists —
+add it to `geo_places`.**
 
 ---
 
