@@ -5821,13 +5821,20 @@ async function loadGeoBrain() {
   if (!currentTenantId || typeof sb === 'undefined' || !sb) return null; // demo/unauth
   _geoBrainLoading = (async () => {
     try {
-      const [p, a] = await Promise.all([
-        sb.from('geo_places').select('normalized_key,lat,lon'),
-        sb.from('place_aliases').select('normalized_variant,geo_places(normalized_key)'),
-      ]);
-      if (p.error || !p.data || !p.data.length) return null; // policy not applied → fallback
+      // PostgREST caps every response at 1000 rows — the brain holds 1,300+ places
+      // (national OSM import 2026-07-06), so page until a short page or it silently truncates.
+      const PAGE = 1000;
+      let placeRows = [];
+      for (let from = 0; ; from += PAGE) {
+        const p = await sb.from('geo_places').select('normalized_key,lat,lon').range(from, from + PAGE - 1);
+        if (p.error) { if (from === 0) return null; break; } // first-page failure → fallback; later → keep partial
+        placeRows = placeRows.concat(p.data || []);
+        if (!p.data || p.data.length < PAGE) break;
+      }
+      if (!placeRows.length) return null; // policy not applied → fallback
+      const a = await sb.from('place_aliases').select('normalized_variant,geo_places(normalized_key)').range(0, PAGE - 1);
       const places = {}, aliases = {};
-      p.data.forEach(r => { if (r.lat != null && r.lon != null) places[r.normalized_key] = [r.lat, r.lon]; });
+      placeRows.forEach(r => { if (r.lat != null && r.lon != null) places[r.normalized_key] = [r.lat, r.lon]; });
       (a.data || []).forEach(r => {
         const gp = r.geo_places;
         if (gp && gp.normalized_key) aliases[r.normalized_variant] = gp.normalized_key;
@@ -8480,14 +8487,18 @@ function _initZoneDrawMap() {
     draw: {
       polygon: { allowIntersection: false, showArea: false,
         shapeOptions: { color:'#2563eb', fillColor:'#2563eb', fillOpacity:0.15, weight:2 } },
-      polyline:false, rectangle:false, circle:false, circlemarker:false, marker:false
+      // Circle = the fast way to grab an area: click center, drag to size. Stored as a
+      // ring (see _circleToRing) so both engines keep matching with plain PNPOLY.
+      circle: { shapeOptions: { color:'#2563eb', fillColor:'#2563eb', fillOpacity:0.15, weight:2 } },
+      polyline:false, rectangle:false, circlemarker:false, marker:false
     },
     edit: { featureGroup: _zoneDrawFeatureGroup, remove: true }
   });
   _zoneDrawMap.addControl(drawCtrl);
 
   _zoneDrawMap.on(LF.Draw.Event.CREATED, e => {
-    _zoneDrawFeatureGroup.addLayer(e.layer);   // ADD a ring — never clear the others
+    const layer = (e.layerType === 'circle') ? _circleToRing(e.layer) : e.layer;
+    _zoneDrawFeatureGroup.addLayer(layer);   // ADD a ring — never clear the others
     _refreshZoneDrawCapture();
   });
   _zoneDrawMap.on(LF.Draw.Event.EDITED, _refreshZoneDrawCapture);
@@ -8497,6 +8508,19 @@ function _initZoneDrawMap() {
   // Force size recalculation with rAF + fallback timeout
   requestAnimationFrame(() => _zoneDrawMap.invalidateSize(true));
   setTimeout(() => { if(_zoneDrawMap){ _zoneDrawMap.invalidateSize(true); _zoneDrawMap.setView([31.5,34.85],8); } }, 400);
+}
+
+// A drawn circle becomes a 36-vertex ring: zones store rings only (PNPOLY on both
+// engines), and the edit toolbar then lets the user drag any vertex to reshape it.
+function _circleToRing(circle) {
+  const c = circle.getLatLng(), rM = circle.getRadius(), pts = [];
+  const dLat = rM / 111320;
+  const dLng = rM / (111320 * Math.cos(c.lat * Math.PI / 180));
+  for (let i = 0; i < 36; i++) {
+    const t = (i / 36) * 2 * Math.PI;
+    pts.push([c.lat + dLat * Math.sin(t), c.lng + dLng * Math.cos(t)]);
+  }
+  return LF.polygon(pts, {color:'#2563eb', fillColor:'#2563eb', fillOpacity:0.15, weight:2});
 }
 
 // All rings currently on the draw map (saved + newly drawn + edited) — WYSIWYG source.

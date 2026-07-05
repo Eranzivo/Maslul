@@ -30,17 +30,29 @@ async def ensure_loaded(service_key: str, force: bool = False) -> None:
     if not force and _brain["places"] and (time.time() - _brain["loaded_at"] < _TTL):
         return
     try:
+        # PostgREST caps every response at 1000 rows — the brain holds 1,300+ places
+        # (national OSM import 2026-07-06), so page until a short page or it silently truncates.
+        page = 1000
+        place_rows = []
         async with httpx.AsyncClient(timeout=10) as c:
-            pr = await c.get(f"{_SB_URL}/rest/v1/geo_places",
-                             headers=_headers(service_key),
-                             params={"select": "normalized_key,lat,lon"})
+            offset = 0
+            while True:
+                pr = await c.get(f"{_SB_URL}/rest/v1/geo_places",
+                                 headers={**_headers(service_key),
+                                          "Range": f"{offset}-{offset + page - 1}"},
+                                 params={"select": "normalized_key,lat,lon"})
+                pr.raise_for_status()
+                chunk = pr.json()
+                place_rows.extend(chunk)
+                if len(chunk) < page:
+                    break
+                offset += page
             ar = await c.get(f"{_SB_URL}/rest/v1/place_aliases",
                              headers=_headers(service_key),
                              params={"select": "normalized_variant,geo_places(normalized_key)"})
-            pr.raise_for_status()
             ar.raise_for_status()
         places = {r["normalized_key"]: (r["lat"], r["lon"])
-                  for r in pr.json() if r.get("lat") is not None and r.get("lon") is not None}
+                  for r in place_rows if r.get("lat") is not None and r.get("lon") is not None}
         alias_to_key = {}
         for r in ar.json():
             gp = r.get("geo_places")

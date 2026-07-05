@@ -72,9 +72,16 @@ The live helpers `getCityZone(city)` and `isCityInTechZone(tech, city, dateStr)`
      dots inside any ring turn **green live** on every draw/edit/delete (`_refreshZoneDrawCapture`),
      and the status line recounts (`N פוליגונים · נתפסו X ערים · Y חדשות`). The coordinator
      literally sees what is and isn't captured before confirming.
-   - Detection universe = `_geoPlaceEntries()`: `GEO_BRAIN.places` (500+, grows with every
-     client); static `CITY_COORDS_JS` only as offline fallback. (The old static-only scan was
-     the "didn't capture all cities" root cause.)
+   - Detection universe = `_geoPlaceEntries()`: `GEO_BRAIN.places`; static `CITY_COORDS_JS`
+     only as offline fallback. (The old static-only scan was the "didn't capture all cities"
+     root cause.) **2026-07-06 national import:** `geo_places` = **1,310 places** — every OSM
+     settlement in Israel (city/town/village/hamlet incl. kibbutzim, moshavim, Bedouin
+     villages; © OpenStreetMap contributors, ODbL; `source='osm_bulk'`, reversible by source
+     tag). This closed Eran's live QA misses (תפרח, משמר הנגב, גבעות בר…). Never guess
+     coordinates — imports come from a real geo source only.
+   - **Circle tool** (2026-07-06): click center + drag to size; stored as a 36-vertex ring
+     (`_circleToRing`) so both engines keep matching with plain PNPOLY, and every vertex stays
+     draggable in edit mode. Fastest way to grab an area, then fine-tune.
    - `confirmZoneDraw()` saves **exactly what's on the map**: `zone.polygons = all rings`
      (no append/replace prompts); cities added with canonical dedup (`cityMatchKey`) — cities
      are only ever ADDED, ring deletion never auto-removes them; an empty map offers polygon
@@ -93,7 +100,10 @@ The live helpers `getCityZone(city)` and `isCityInTechZone(tech, city, dateStr)`
 from **`geo_places` + `place_aliases`** (read-only RLS SELECT for authenticated; public
 geography only, PII-free) via `loadGeoBrain()` — fire-and-forget after login, lazy-retried in
 `openZoneDraw`. **FAIL-OPEN:** if the fetch fails (or the policy isn't applied), every consumer
-falls back to the static lists — exactly the old behavior.
+falls back to the static lists — exactly the old behavior. **Both loaders page in 1000-row
+chunks** (JS `.range()` loop; Py `Range`-header loop in `geo_resolver.ensure_loaded`,
+regression-tested): PostgREST caps every response at 1000 rows and the brain now holds 1,310
+places, so an unpaged fetch silently truncates.
 
 **The matching seam is `cityMatchKey(name, brain)`** (in `<zone-logic>`, tested): legacy
 alias + קריית collapse (`canonicalCity`) → `normalizePlaceKeyJS` (gershayim/hyphen noise) →
