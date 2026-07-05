@@ -106,18 +106,33 @@ def tenant_works_day(dow: int, config: Optional[dict]) -> bool:
     return dow in wd
 
 
-def _arrival_window_hours(config: Optional[dict]) -> int:
+def _arrival_window_hours(config: Optional[dict]) -> float:
     """Customer service-window length. Real location: `config.defaults.arrival_window_hours`
     (the shape every other defaults knob uses). The old top-level read was a bug — kept only
-    as a fallback so a tenant that was ever set that way keeps working."""
+    as a fallback so a tenant that was ever set that way keeps working. Fractional hours
+    (Israel's real cards show 1.5h windows) are preserved — minutes math rounds, never
+    truncates."""
     cfg = config or {}
     d = (cfg.get("defaults") or {}).get("arrival_window_hours")
-    if isinstance(d, (int, float)) and d > 0:
-        return int(d)
+    if isinstance(d, (int, float)) and not isinstance(d, bool) and d > 0:
+        return float(d)
     top = cfg.get("arrival_window_hours")
-    if isinstance(top, (int, float)) and top > 0:
-        return int(top)
-    return 3
+    if isinstance(top, (int, float)) and not isinstance(top, bool) and top > 0:
+        return float(top)
+    return 3.0
+
+
+def _clamp_blocks(blocks: list, start_t: str, end_t: str) -> list:
+    """Clamp break/partial blocks to the tech's work hours. A block entirely outside
+    the day is dropped — sending it to the solver as a mandatory pinned node would make
+    the whole model infeasible and cascade-drop every flexible call."""
+    s, e = _time_to_min(start_t), _time_to_min(end_t)
+    out = []
+    for b in blocks:
+        lo, hi = max(_time_to_min(b["from"]), s), min(_time_to_min(b["to"]), e)
+        if lo < hi:
+            out.append({"from": _min_to_time(lo), "to": _min_to_time(hi)})
+    return out
 
 
 def _effective_duration(cat_id, tech: dict, cat_duration: dict, config: Optional[dict]) -> int:
@@ -238,7 +253,8 @@ def solve_day_with_existing(matrix, existing_v2, new_v2, start_t, end_t, breaks,
 
 
 def optimize_day(matrix, durations, start_t, end_t, return_node, route_strategy):
-    """Order one tech-day with the authoritative v2 solver (the same engine the
+    """(Test/back-compat wrapper — the production path is solve_day_with_existing.)
+    Order one tech-day with the authoritative v2 solver (the same engine the
     live path uses) so the batch reflects route_strategy physics (far→near),
     hard work-hours, and drop-if-overfull. Returns (ordered_idx, arrivals, dropped_idx)."""
     tasks_v2 = [{"duration": d, "window_start": None, "window_end": None,
@@ -531,7 +547,8 @@ async def run_batch_schedule(
         } for e in day_existing]
         new_v2 = [{"duration": t["_duration"], "window_start": None, "window_end": None,
                    "locked": False, "scheduled_time": None} for t in day_tasks]
-        brk = tech_breaks(tech, config, dayoffs_partial.get(key, []))
+        brk = _clamp_blocks(tech_breaks(tech, config, dayoffs_partial.get(key, [])),
+                            start_t, end_t)
 
         r = solve_day_with_existing(
             matrix, existing_v2, new_v2, start_t, end_t, breaks=brk,
@@ -540,7 +557,7 @@ async def run_batch_schedule(
 
     # day_results holds the FINAL solve per day: (result, existing, new, start_min).
     day_results: dict[tuple, tuple] = {}
-    MAX_ROUNDS = 6
+    MAX_ROUNDS = max(6, (d_end - d_start).days + 1)  # >= covering days any task can try
     rounds = 0
     while pool and rounds < MAX_ROUNDS:
         rounds += 1
@@ -570,9 +587,11 @@ async def run_batch_schedule(
         unassigned.append({"id": task["id"], "city": task["city"], "reason": "day_over_capacity"})
 
     # 5. Emit results from the final day snapshots (dropped tasks are not in `ordered`).
-    win_mins = arrival_window_h * 60
+    win_mins = int(round(arrival_window_h * 60))
     for (tech_id, date_str), (r, day_existing, day_tasks, start_min) in sorted(day_results.items()):
         n_e = len(day_existing)
+        if not any(i >= n_e for i in r["ordered"]):
+            continue  # no new call survived on this day — leave its existing times alone
         for i, arr in zip(r["ordered"], r["arrivals"]):
             if i < n_e:
                 # Existing call: window/date/tech/status untouchable; only the internal

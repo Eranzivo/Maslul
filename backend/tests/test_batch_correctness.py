@@ -246,17 +246,6 @@ def test_skills_and_blocked_zones_filter(monkeypatch):
     assert r2["assigned"] == 0 and r2["unassigned"] == 1
 
 def test_window_hours_from_defaults_in_output(monkeypatch):
-    fake = FakeSB(pending=[_pending(0, "באר שבע")], zones=_ZONES,
-                  techs=[_tech("t1", "אלירן", _ROT_SOUTH)], cats=_CATS,
-                  config=_cfg(defaults={"arrival_window_hours": 2,
-                                        "work_days": [0, 1, 2, 3, 4]}))
-    fake.install(monkeypatch)
-    r = _await(bs.run_batch_schedule("tenant-1", SUN, THU, True, "svc-key"))
-    # 2-hour window: "07:00–09:00" style (width 120 min)
-    win = None
-    for tech_days in r["by_tech"].values():
-        pass
-    # windows aren't in by_tech; re-run non-dry to capture the patch body
     fake2 = FakeSB(pending=[_pending(0, "באר שבע")], zones=_ZONES,
                    techs=[_tech("t1", "אלירן", _ROT_SOUTH)], cats=_CATS,
                    config=_cfg(defaults={"arrival_window_hours": 2,
@@ -384,3 +373,15 @@ def test_dayoff_without_type_column_defaults_to_full(monkeypatch):
     r = _run(fake, monkeypatch)
     per_day = _new_per_day(r, "אלירן")
     assert SUN not in per_day and per_day.get(WED) == 1
+
+
+def test_clamp_blocks_drops_outside_and_clamps_overlap():
+    from batch_schedule import _clamp_blocks
+    blocks = [{"from": "12:00", "to": "13:00"},   # outside a 07:00-11:00 day → dropped
+              {"from": "10:30", "to": "11:30"},   # overlaps end → clamped to 11:00
+              {"from": "08:00", "to": "09:00"}]   # inside → kept
+    out = _clamp_blocks(blocks, "07:00", "11:00")
+    assert out == [{"from": "10:30", "to": "11:00"}, {"from": "08:00", "to": "09:00"}]
+
+def test_fractional_window_hours_rounds_not_truncates():
+    assert _arrival_window_hours({"defaults": {"arrival_window_hours": 1.5}}) == 1.5
