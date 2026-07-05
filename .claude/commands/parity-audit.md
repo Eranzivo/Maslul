@@ -13,7 +13,8 @@ Maslul has one brain implemented twice (live JS in `index.html`, batch Python in
 | `cityMatchKey` (+`canonicalCity`/`normalizePlaceKeyJS`) | `_match_key` (+`_norm`/`canonicalize.resolve_place_key`) |
 | `isTenantWorkDay` | `tenant_works_day` |
 | `resolveRouteStrategy` | `resolve_route_strategy` |
-| `resolveZone` (city_list branch) | `find_zone` |
+| `resolveZone` (both axes) | `find_zone_for` (city_list + polygon) |
+| `_pointInPolygon` | `point_in_polygon` (shared `polygon_cases` fixture) |
 | `techHasSkill` / `getCatLimitOk` / `isCityBlocked` / blockedZones | `tech_has_skill` / `cat_limit_ok` / `city_blocked` / `zone_blocked` |
 | `getTechPartialBlocks` | `tech_breaks` (+`_clamp_blocks`) |
 | duration chain in `calcOptimalTime`/`_postOptimize`/`_candidatesOpen`/`_candidatesRadius` | `_effective_duration` |

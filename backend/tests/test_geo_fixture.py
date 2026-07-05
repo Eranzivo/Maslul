@@ -29,3 +29,12 @@ def test_distinct_pairs_never_merge():
 
 def test_no_brain_still_deterministic():
     assert _match_key("תל-אביב", {}) == _match_key("תל אביב", {})
+
+
+def test_polygon_parity_golden_fixture():
+    from batch_schedule import point_in_polygon
+    pc = _FX["polygon_cases"]
+    for lat, lon in pc["inside"]:
+        assert point_in_polygon(lat, lon, pc["ring"]) is True, (lat, lon)
+    for lat, lon in pc["outside"]:
+        assert point_in_polygon(lat, lon, pc["ring"]) is False, (lat, lon)

@@ -13,7 +13,7 @@ Legend: ✅ enforced · ⚠ caveat (see note) · n/a not applicable to that laye
 | Knob | Meaning | Live JS reader | Batch reader | Solver | Test |
 |---|---|---|---|---|---|
 | `mode` (zone/open/radius) | assignment strategy | `buildCandidates` | zone-only today (⚠ open/radius batch unsupported) | n/a | zones.test.js |
-| `zone_match` (city_list/polygon) | zone boundary type | `resolveZone` | ⚠ city_list only — polygon batch = Geo Slice B follow-on | n/a | zones.test.js |
+| `zone_match` (city_list/polygon) | zone boundary type | `resolveZone` | `find_zone_for` — both axes ✅ 2026-07-05 (`point_in_polygon` mirror; reasons `not_geocoded`/`outside_all_polygons`) | n/a | zones.test.js + test_batch_correctness.py + shared polygon fixture |
 | `zone_strict` | hard cross-zone block | `_candidatesZone` + `zoneDropDecision` | implicit (rotation filter) | n/a | zones.test.js |
 | `route_strategy` (flexible/far_to_near/nearest_first) | day route direction | `resolveRouteStrategy` + guards | `resolve_route_strategy` | ✅ both non-flexible enforced (direction penalty) | sched.test.js + test_sequencing.py |
 | `fill_first` | pack active days before opening new | ⚠ partial — scoring unconditional, flag gates only min-underfull skip | ⚠ not read | n/a | — (Slice 3: fold into placement_policy) |
