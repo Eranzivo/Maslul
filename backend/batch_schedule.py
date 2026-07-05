@@ -395,28 +395,19 @@ async def run_batch_schedule(
     d_start = date.fromisoformat(date_from)
     d_end   = date.fromisoformat(date_to)
 
-    for task in tasks_raw:
-        zone_id = find_zone(task["city"])
-        if not zone_id:
-            unassigned.append({"id": task["id"], "city": task["city"], "reason": "city_not_in_zone"})
-            continue
+    # Per-task exclusion set of (tech, date) keys already tried and dropped —
+    # bounds the retry loop (each task tries each covering day at most once).
+    excluded: dict[str, set] = {}
 
-        # Location must be locatable for sane routing. If the task has no coords AND its
-        # city can't be resolved by either its raw or normalized spelling (unknown
-        # settlement / typo / new-client test data), DON'T guess — leave it pending and
-        # flag it so the coordinator completes the address. Routing uses the raw city, so
-        # the raw spelling resolving is sufficient (avoids false flags from alias rewrites).
-        if (not (task.get("lat") and task.get("lon"))
-                and geo_resolver.resolve(task["city"]) is None
-                and geo_resolver.resolve(_norm(task["city"])) is None):
-            unassigned.append({"id": task["id"], "city": task["city"], "reason": "needs_location"})
-            continue
-
-        best_key: Optional[tuple] = None
-        best_score = float("-inf")  # balance-on scores are negative — never seed at a finite floor
-
+    def place_task(task) -> Optional[tuple]:
+        """Greedy best (tech, day) for one task, honoring every eligibility gate the
+        live _candidatesZone path enforces. Books the placement and returns its key,
+        or None when no eligible slot remains."""
+        zone_id = task["_zone_id"]
         cat_id = task.get("category_id")
         nc = _norm(task["city"])
+        best_key: Optional[tuple] = None
+        best_score = float("-inf")  # balance-on scores are negative — never seed at a finite floor
         cur = d_start
         while cur <= d_end:
             for tech in techs_raw:
@@ -430,6 +421,8 @@ async def run_batch_schedule(
                 if not tech_has_skill(tech, cat_id):
                     continue
                 key = (tech["id"], cur.isoformat())
+                if key in excluded.get(task["id"], set()):
+                    continue
                 count = occupancy(key)  # existing + newly placed
                 if count >= tech_max_daily(tech):
                     continue
@@ -448,9 +441,7 @@ async def run_batch_schedule(
             cur += timedelta(days=1)
 
         if best_key is None:
-            unassigned.append({"id": task["id"], "city": task["city"], "reason": "no_slot_in_range"})
-            continue
-
+            return None
         tech_id_key = best_key[0]
         assigned_tech = next(t for t in techs_raw if t["id"] == tech_id_key)
         task["_duration"] = _effective_duration(cat_id, assigned_tech, cat_duration, config)
@@ -459,9 +450,44 @@ async def run_batch_schedule(
         if cat_id:
             ck = (tech_id_key, best_key[1], cat_id)
             cat_counts[ck] = cat_counts.get(ck, 0) + 1
+        return best_key
 
-    # 4. Optimize each tech+day (existing + new together) and write results.
-    # Only days that RECEIVE new calls are solved — days the batch doesn't touch stay as-is.
+    def unbook(key: tuple, task) -> None:
+        """Reverse a booking after the day solver dropped the task (time capacity)."""
+        day_slots[key].remove(task)
+        nc = _norm(task["city"])
+        city_counts[key[0]][nc] = max(0, city_counts[key[0]].get(nc, 0) - 1)
+        cat_id = task.get("category_id")
+        if cat_id:
+            ck = (key[0], key[1], cat_id)
+            cat_counts[ck] = max(0, cat_counts.get(ck, 0) - 1)
+
+    # Eligibility pass: zone membership + locatability. Failures here are terminal.
+    pool = []
+    for task in tasks_raw:
+        zone_id = find_zone(task["city"])
+        if not zone_id:
+            unassigned.append({"id": task["id"], "city": task["city"], "reason": "city_not_in_zone"})
+            continue
+
+        # Location must be locatable for sane routing. If the task has no coords AND its
+        # city can't be resolved by either its raw or normalized spelling (unknown
+        # settlement / typo / new-client test data), DON'T guess — leave it pending and
+        # flag it so the coordinator completes the address. Routing uses the raw city, so
+        # the raw spelling resolving is sufficient (avoids false flags from alias rewrites).
+        if (not (task.get("lat") and task.get("lon"))
+                and geo_resolver.resolve(task["city"]) is None
+                and geo_resolver.resolve(_norm(task["city"])) is None):
+            unassigned.append({"id": task["id"], "city": task["city"], "reason": "needs_location"})
+            continue
+
+        task["_zone_id"] = zone_id
+        pool.append(task)
+
+    # 4. Assign + optimize in bounded retry rounds. Only days that RECEIVE new calls
+    # are solved — days the batch doesn't touch stay exactly as they are. A new call
+    # the solver drops (time capacity) is un-booked, that day excluded for it, and it
+    # retries the next-best covering day in the following round.
     assignments = []
     retimed_existing = 0
 
@@ -472,15 +498,18 @@ async def run_batch_schedule(
             return f"{t['street']}, {t['city']}"
         return t["city"]
 
-    for (tech_id, date_str), day_tasks in sorted(day_slots.items(), key=lambda x: (x[0][1], x[0][0])):
+    def solve_day(key: tuple):
+        """Solve one tech-day (existing + new). Returns (result, existing snapshot,
+        new-tasks snapshot, start_min) — snapshots pin the index space of the result."""
+        tech_id, date_str = key
         tech = next(t for t in techs_raw if t["id"] == tech_id)
         start_t, end_t = tech_hours(tech, date.fromisoformat(date_str))
-        start_min = _time_to_min(start_t)
         base = tech.get("base_city") or "אשקלון"
         ret  = tech.get("return_city") or ""
         return_loc = ret if (ret and ret != base) else ""
 
-        day_existing = existing_slots.get((tech_id, date_str), [])
+        day_existing = list(existing_slots.get(key, []))
+        day_tasks = list(day_slots.get(key, []))
         locations = ([base] + [_loc(e) for e in day_existing] + [_loc(t) for t in day_tasks]
                      + ([return_loc] if return_loc else []))
 
@@ -498,21 +527,48 @@ async def run_batch_schedule(
         } for e in day_existing]
         new_v2 = [{"duration": t["_duration"], "window_start": None, "window_end": None,
                    "locked": False, "scheduled_time": None} for t in day_tasks]
-        brk = tech_breaks(tech, config, dayoffs_partial.get((tech_id, date_str), []))
+        brk = tech_breaks(tech, config, dayoffs_partial.get(key, []))
 
         r = solve_day_with_existing(
             matrix, existing_v2, new_v2, start_t, end_t, breaks=brk,
             return_node=bool(return_loc), route_strategy=route_strategy)
+        return r, day_existing, day_tasks, _time_to_min(start_t)
 
+    # day_results holds the FINAL solve per day: (result, existing, new, start_min).
+    day_results: dict[tuple, tuple] = {}
+    MAX_ROUNDS = 6
+    rounds = 0
+    while pool and rounds < MAX_ROUNDS:
+        rounds += 1
+        dirty: set = set()
+        for task in pool:
+            key = place_task(task)
+            if key is None:
+                # Dropped earlier ⇒ it HAD a covering day that ran out of time budget;
+                # never placeable at all ⇒ no slot in range.
+                reason = "day_over_capacity" if task.get("_dropped_once") else "no_slot_in_range"
+                unassigned.append({"id": task["id"], "city": task["city"], "reason": reason})
+            else:
+                dirty.add(key)
+        next_pool = []
+        for key in sorted(dirty):
+            r, day_existing, day_tasks, start_min = solve_day(key)
+            n_e = len(day_existing)
+            for di in r["dropped_new"]:
+                dt = day_tasks[di - n_e]
+                dt["_dropped_once"] = True
+                excluded.setdefault(dt["id"], set()).add(key)
+                unbook(key, dt)
+                next_pool.append(dt)
+            day_results[key] = (r, day_existing, day_tasks, start_min)
+        pool = next_pool
+    for task in pool:  # rounds exhausted — treat like any other capacity failure
+        unassigned.append({"id": task["id"], "city": task["city"], "reason": "day_over_capacity"})
+
+    # 5. Emit results from the final day snapshots (dropped tasks are not in `ordered`).
+    win_mins = arrival_window_h * 60
+    for (tech_id, date_str), (r, day_existing, day_tasks, start_min) in sorted(day_results.items()):
         n_e = len(day_existing)
-        # Over-full day: the solver dropped NEW calls rather than fail — leave them
-        # pending and surface them so the coordinator can re-place or extend hours.
-        # (Existing calls are never dropped/unassigned by the batch — see the solver policy.)
-        for di in r["dropped_new"]:
-            dt = day_tasks[di - n_e]
-            unassigned.append({"id": dt["id"], "city": dt["city"], "reason": "day_over_capacity"})
-
-        win_mins = arrival_window_h * 60
         for i, arr in zip(r["ordered"], r["arrivals"]):
             if i < n_e:
                 # Existing call: window/date/tech/status untouchable; only the internal

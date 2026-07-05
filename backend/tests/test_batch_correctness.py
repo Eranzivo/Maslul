@@ -322,3 +322,21 @@ def test_e2e_existing_patch_carries_time_only(monkeypatch):
             assert set(body.keys()) == {"scheduled_time"}, f"existing patch leaked fields: {body}"
     new_patches = [t for t, _ in fake.patches if t.startswith("p")]
     assert len(new_patches) == 3
+
+
+# ── Task 5: bounded retry of dropped new tasks ───────────────────────────────
+
+def test_dropped_task_retries_next_covering_day(monkeypatch):
+    # Tight day: 07:00-08:40 (100 min), 60-min jobs in the base city (3-min legs)
+    # ⇒ exactly 1 job fits per day. 3 pending ⇒ Sunday 1, Wednesday 1 (retry),
+    # 3rd genuinely nowhere ⇒ day_over_capacity.
+    tech = _tech("t1", "אלירן", _ROT_SOUTH, end_time="08:40",
+                 duration_overrides={"c-water": 60})
+    fake = FakeSB(pending=[_pending(i, "אשקלון") for i in range(3)],
+                  zones=_ZONES, techs=[tech], cats=_CATS)
+    r = _run(fake, monkeypatch)
+    per_day = _new_per_day(r, "אלירן")
+    assert per_day.get(SUN) == 1, f"expected 1 on Sunday, got {per_day}"
+    assert per_day.get(WED) == 1, f"dropped task must retry Wednesday, got {per_day}"
+    assert r["unassigned"] == 1
+    assert r["unassigned_tasks"][0]["reason"] == "day_over_capacity"
