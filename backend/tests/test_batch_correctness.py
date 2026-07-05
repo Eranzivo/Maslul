@@ -374,3 +374,13 @@ def test_absent_config_behaves_like_today(monkeypatch):
     ws = bs._time_to_min(body["scheduled_window_start"])
     we = bs._time_to_min(body["scheduled_window_end"])
     assert we - ws == 180, f"absent config must keep the 3h window, got {body}"
+
+def test_dayoff_without_type_column_defaults_to_full(monkeypatch):
+    # Live schema lacks type/from_time/to_time — a bare row must read as a FULL day off
+    # (same default as the JS load mapper).
+    fake = FakeSB(pending=[_pending(0, "באר שבע")],
+                  zones=_ZONES, techs=[_tech("t1", "אלירן", _ROT_SOUTH)], cats=_CATS,
+                  dayoffs=[{"technician_id": "t1", "date": SUN}])
+    r = _run(fake, monkeypatch)
+    per_day = _new_per_day(r, "אלירן")
+    assert SUN not in per_day and per_day.get(WED) == 1

@@ -277,10 +277,13 @@ async def run_batch_schedule(
                   "scheduled_time,scheduled_window_start,scheduled_window_end,locked",
     }, service_key)
 
+    # select * — the live table currently lacks the type/from_time/to_time columns the
+    # docs describe (migration not applied); the JS load path defaults a missing type to
+    # 'full'. Mirror that: tolerate either schema, absent type ⇒ full day off.
     dayoffs_raw = await _sb_get("day_offs", {
         "tenant_id": f"eq.{tenant_id}",
         "and": f"(date.gte.{date_from},date.lte.{date_to})",
-        "select": "technician_id,date,type,from_time,to_time",
+        "select": "*",
     }, service_key)
 
     zones_raw = await _sb_get("zones", {
@@ -330,9 +333,10 @@ async def run_batch_schedule(
         rotation = tech.get("rotation") or {}
         return rotation.get(str(_dow(d)))
 
-    # Day-off lookups (mirror of the live path's isTechAvailable / getTechPartialBlocks)
+    # Day-off lookups (mirror of the live path's isTechAvailable / getTechPartialBlocks).
+    # Missing type ⇒ 'full' (same default the JS load mapper applies).
     dayoffs_full = {(o["technician_id"], o["date"]) for o in dayoffs_raw
-                    if o.get("type") == "full"}
+                    if (o.get("type") or "full") == "full"}
     dayoffs_partial: dict[tuple, list] = {}
     for o in dayoffs_raw:
         if o.get("type") == "partial":
