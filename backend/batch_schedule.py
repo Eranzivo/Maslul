@@ -66,6 +66,17 @@ def _norm(city: str) -> str:
     return _CITY_ALIASES.get(c, c)
 
 
+def _match_key(name: str, alias_map: Optional[dict]) -> str:
+    """ONE canonical matching key for a city name — the seam every city comparison goes
+    through (zone matching). Chain (mirrors JS cityMatchKey exactly):
+    legacy alias (_norm) → קריית→קרית collapse → normalize noise (gershayim/hyphens) →
+    brain alias (place_aliases) → canonical key. With an empty alias_map this is still a
+    strict superset of the old bare-_norm comparison — fail-open, never worse."""
+    from canonicalize import resolve_place_key
+    c = _norm(name or "").replace("קריית", "קרית")
+    return resolve_place_key(c, alias_map or {})
+
+
 # ── Date helpers ──────────────────────────────────────────────────────────────
 
 def _dow(d: date) -> int:
@@ -332,16 +343,20 @@ async def run_batch_schedule(
     cat_duration = {c["id"]: c.get("duration_minutes", 30) for c in cats_raw}
     tech_name_map = {t["id"]: t["name"] for t in techs_raw}
 
-    # zone_map: {zone_id: {name, cities_normalized[]}}
+    # zone_map keyed by canonical match keys — BOTH sides (task city + zone cities) go
+    # through the same _match_key seam (brain aliases + normalize), mirroring the JS
+    # resolveZone chain. ק"ש / קרית שמונה / קריית שמונה all land in the same zone.
+    brain_aliases = geo_resolver.alias_map()  # {} when brain not loaded → fail-open
     zone_map = {
-        z["id"]: {"name": z["name"], "cities": [_norm(c) for c in (z.get("cities") or [])]}
+        z["id"]: {"name": z["name"],
+                  "keys": {_match_key(c, brain_aliases) for c in (z.get("cities") or [])}}
         for z in zones_raw
     }
 
     def find_zone(city: str) -> Optional[str]:
-        nc = _norm(city)
+        k = _match_key(city, brain_aliases)
         for zid, z in zone_map.items():
-            if nc in z["cities"]:
+            if k in z["keys"]:
                 return zid
         return None
 

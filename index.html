@@ -2685,6 +2685,10 @@ async function loadFromSupabase() {
       return false;
     }
 
+    // Geo brain (fire-and-forget, fail-open) — never delays login; consumers fall back
+    // to the static lists until it lands / if the read policy isn't applied yet.
+    loadGeoBrain();
+
     // Map Supabase format → app format
     technicians = (techRes.data || []).map(t => ({
       id: t.id, name: t.name, phone: t.phone, base: t.base_city, return_city: t.return_city || '',
@@ -4858,6 +4862,29 @@ function canonicalCity(input){
 }
 // </zone-logic>
 // <zone-logic>
+// Twin of backend canonicalize.normalize_place_key — strips gershayim/geresh/quotes
+// (ת"א→תא) and collapses whitespace/hyphen/maqaf runs to one space (קרית-גת→קרית גת).
+// Deterministic noise removal ONLY — never merges genuinely different spellings.
+function normalizePlaceKeyJS(name){
+  if(!name)return '';
+  let s=String(name).normalize('NFKC').trim();
+  s=s.replace(/["״“”‟'׳‘’′]/g,'');
+  s=s.replace(/[\s\-־‐-―]+/g,' ').trim();
+  return s;
+}
+// ONE canonical matching key for a city name — the seam every city comparison goes
+// through. Chain (mirrors Python _match_key in batch_schedule.py exactly):
+// legacy alias+קריית collapse (canonicalCity) → normalize noise → brain alias → key.
+// brain = {places:{key:[lat,lon]}, aliases:{variant:key}} (geo_places/place_aliases);
+// null/absent brain ⇒ normalize-only (fail-open, strict superset of the old behavior).
+function cityMatchKey(name, brain){
+  const c=canonicalCity(name).city||'';
+  const k=normalizePlaceKeyJS(c);
+  const aliases=(brain&&brain.aliases)||{};
+  return aliases[k]||k;
+}
+// </zone-logic>
+// <zone-logic>
 // Single seam: which zone does a task belong to, given a tenant's config.
 // zonesList passed explicitly for testability; app callers pass the global `zones`.
 function resolveZone(city, lat, lon, conf, zonesList){
@@ -4869,9 +4896,11 @@ function resolveZone(city, lat, lon, conf, zonesList){
     return z?{zoneId:z.id,matched:true,reason:null}
             :{zoneId:null,matched:false,reason:'outside_all_polygons'};
   }
-  // city_list (default) — canonicalize both sides so variant spellings still match
-  const c=canonicalCity(city).city;
-  const z=list.find(zz=>(zz.cities||[]).some(zc=>canonicalCity(zc).city===c));
+  // city_list (default) — BOTH sides go through the cityMatchKey seam (canonicalCity +
+  // normalize + geo-brain aliases), so ק"ש / קרית שמונה / קריית שמונה all match the zone.
+  const brain=(typeof GEO_BRAIN!=='undefined')?GEO_BRAIN:null;
+  const k=cityMatchKey(city,brain);
+  const z=list.find(zz=>(zz.cities||[]).some(zc=>cityMatchKey(zc,brain)===k));
   return z?{zoneId:z.id,matched:true,reason:null}
           :{zoneId:null,matched:false,reason:'city_not_in_zone'};
 }
@@ -5648,9 +5677,11 @@ const CITY_COORDS_JS={
 };
 // </zone-logic>
 function _cityDistKm(cityA,cityB){
-  // Normalize before lookup so aliases and zone spellings resolve correctly
-  const a=CITY_COORDS_JS[cityA]||CITY_COORDS_JS[normalizeCity(cityA)];
-  const b=CITY_COORDS_JS[cityB]||CITY_COORDS_JS[normalizeCity(cityB)];
+  // Brain-first lookup (423+ cities incl. all PureWater zone cities), static fallback.
+  // This drives getCityIndexInZone → far-to-near ordering, so brain coverage directly
+  // improves live route accuracy for cities the static list never had.
+  const a=geoCityCoords(cityA);
+  const b=geoCityCoords(cityB);
   if(!a||!b)return null;
   const R=6371,dLat=(b[0]-a[0])*Math.PI/180,dLon=(b[1]-a[1])*Math.PI/180;
   const h=Math.sin(dLat/2)**2+Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(dLon/2)**2;
@@ -5747,6 +5778,46 @@ async function runOptimize(techId, date){
   if(date) _seqTraces[`${techId}|${date}`]=result.trace||{};
   save();renderHomeTechCards();renderTasks();if(date)renderPlannerContent();
   showToast(`מסלול מיטבי ${result.mode==='gmaps'||result.mode==='gmaps-cached'?'(Google Maps)':'(הערכה)'}  ✓ — ${result.total_drive_minutes} דק׳ נסיעה`);
+}
+
+// ═══ GEO BRAIN (geo_places + place_aliases — the ONE source of geographic truth) ═══
+// Loaded once per session after login (read-only RLS SELECT for authenticated users;
+// the tables hold public geography only — no client/PII data ever). FAIL-OPEN: if the
+// fetch fails or the policy isn't applied yet, GEO_BRAIN stays null and every consumer
+// falls back to the static CITY_COORDS_JS/CITY_ALIASES — exactly the old behavior.
+let GEO_BRAIN = null;
+let _geoBrainLoading = null;
+async function loadGeoBrain() {
+  if (GEO_BRAIN || _geoBrainLoading) return _geoBrainLoading;
+  if (!currentTenantId || typeof sb === 'undefined' || !sb) return null; // demo/unauth
+  _geoBrainLoading = (async () => {
+    try {
+      const [p, a] = await Promise.all([
+        sb.from('geo_places').select('normalized_key,lat,lon'),
+        sb.from('place_aliases').select('normalized_variant,geo_places(normalized_key)'),
+      ]);
+      if (p.error || !p.data || !p.data.length) return null; // policy not applied → fallback
+      const places = {}, aliases = {};
+      p.data.forEach(r => { if (r.lat != null && r.lon != null) places[r.normalized_key] = [r.lat, r.lon]; });
+      (a.data || []).forEach(r => {
+        const gp = r.geo_places;
+        if (gp && gp.normalized_key) aliases[r.normalized_variant] = gp.normalized_key;
+      });
+      GEO_BRAIN = { places, aliases };
+      console.log(`[geo] brain loaded: ${Object.keys(places).length} places, ${Object.keys(aliases).length} aliases`);
+      return GEO_BRAIN;
+    } catch (e) { console.warn('[geo] brain load failed — static fallback', e); return null; }
+    finally { _geoBrainLoading = null; }
+  })();
+  return _geoBrainLoading;
+}
+// City-coordinate lookup honoring the fallback ladder: brain → static list.
+function geoCityCoords(city) {
+  if (GEO_BRAIN && GEO_BRAIN.places) {
+    const hit = GEO_BRAIN.places[cityMatchKey(city, GEO_BRAIN)];
+    if (hit) return hit;
+  }
+  return CITY_COORDS_JS[city] || CITY_COORDS_JS[normalizeCity(city)] || null;
 }
 
 // ═══ GEOCODING ═══
@@ -8296,6 +8367,7 @@ function openZoneDraw(zoneId) {
   }
   _zoneDrawId = zoneId;
   _drawnPolygon = null;
+  if (!GEO_BRAIN) loadGeoBrain(); // lazy retry — detection uses the brain once loaded
   document.getElementById('mo-zone-draw-title').textContent = `צייר אזור — ${z ? z.name : ''}`;
   document.getElementById('zone-draw-status').textContent = '';
   document.getElementById('mo-zone-draw').classList.remove('hidden');
@@ -8349,13 +8421,22 @@ function _initZoneDrawMap() {
   setTimeout(() => { if (_zoneDrawMap) _zoneDrawMap.invalidateSize(); }, 200);
   setTimeout(() => { if (_zoneDrawMap) _zoneDrawMap.invalidateSize(); }, 600);
 
-  // Show existing zone cities as reference dots
+  // Show existing zone cities as reference dots (brain-first coords — static fallback)
   const z = zones.find(x => x.id === _zoneDrawId);
   if (z) {
     z.cities.forEach(city => {
-      const coords = CITY_COORDS_JS[city];
+      const coords = geoCityCoords(city);
       if (coords) LF.circleMarker(coords, {radius:6,color:'#4f46e5',fillColor:'#4f46e5',fillOpacity:0.75,weight:2})
         .bindTooltip(city, {direction:'top',permanent:false}).addTo(_zoneDrawMap);
+    });
+    // Render the zone's EXISTING polygons (dashed) so a new ring is drawn in context —
+    // required for multi-polygon zones (one city divided into several areas).
+    (z.polygons || []).forEach(p => {
+      try {
+        LF.polygon(p.map(pt => [pt.lat, pt.lng]),
+          {color:'#64748b', fillColor:'#64748b', fillOpacity:0.08, weight:1.5, dashArray:'5,5'})
+          .addTo(_zoneDrawMap);
+      } catch(e) { /* malformed legacy ring — skip, never break the draw modal */ }
     });
   }
 
@@ -8396,8 +8477,9 @@ function _updateZoneDrawStatus() {
   if (!_drawnPolygon) return;
   const found = _detectCitiesInPolygon(_drawnPolygon);
   const z = zones.find(x => x.id === _zoneDrawId);
-  const existing = z ? z.cities : [];
-  const newCities = found.filter(c => !existing.includes(c));
+  const brain = (typeof GEO_BRAIN !== 'undefined') ? GEO_BRAIN : null;
+  const existingKeys = new Set((z ? z.cities : []).map(c => cityMatchKey(c, brain)));
+  const newCities = found.filter(c => !existingKeys.has(cityMatchKey(c, brain)));
   const statusEl = document.getElementById('zone-draw-status');
   if (!found.length) {
     statusEl.textContent = 'לא נמצאו ערים ידועות בתוך האזור — נסה לצייר אזור גדול יותר';
@@ -8426,7 +8508,13 @@ function _pointInPolygon(lat, lon, polygon) {
 // </zone-logic>
 
 function _detectCitiesInPolygon(latlngs) {
-  return Object.entries(CITY_COORDS_JS)
+  // Detect against the geo brain (423+ cities, growing with every client) — the static
+  // CITY_COORDS_JS is only the offline fallback. This was the root cause of "the polygon
+  // didn't capture all the cities beneath it": detection only saw the static 255.
+  const entries = (GEO_BRAIN && GEO_BRAIN.places && Object.keys(GEO_BRAIN.places).length)
+    ? Object.entries(GEO_BRAIN.places)
+    : Object.entries(CITY_COORDS_JS);
+  return entries
     .filter(([, coords]) => _pointInPolygon(coords[0], coords[1], latlngs))
     .map(([city]) => city);
 }
@@ -8437,15 +8525,29 @@ function confirmZoneDraw() {
   if (!found.length) { showToast('לא נמצאו ערים ידועות בתוך האזור', 'error'); return; }
   const z = zones.find(x => x.id === _zoneDrawId);
   if (!z) return;
+  // Canonical-compare so a variant spelling already in the zone isn't duplicated
+  const brain = (typeof GEO_BRAIN !== 'undefined') ? GEO_BRAIN : null;
+  const existingKeys = new Set(z.cities.map(c => cityMatchKey(c, brain)));
   let added = 0;
-  found.forEach(c => { if (!z.cities.includes(c)) { z.cities.push(c); added++; } });
+  found.forEach(c => {
+    const k = cityMatchKey(c, brain);
+    if (!existingKeys.has(k)) { z.cities.push(c); existingKeys.add(k); added++; }
+  });
   const ring = _drawnPolygon.map(p => ({ lat: p.lat, lng: p.lng }));
-  z.polygon = ring;
-  z.polygons = [ring];   // exclusive zones: one drawn area; multi-disjoint editing is a later enhancement
+  // Multi-polygon zones (timing.tech parity): a zone may hold several rings — e.g. one
+  // city divided into a few polygons. Drawing ADDS a ring by default; replacing is the
+  // explicit opt-out. resolveZone already matches ANY ring in polygons[].
+  if (z.polygons && z.polygons.length) {
+    const addMore = confirm(`לאזור "${z.name}" כבר יש ${z.polygons.length} פוליגונים.\n\nאישור = הוספת הציור כפוליגון נוסף\nביטול = החלפת כל הפוליגונים הקיימים בציור החדש`);
+    z.polygons = addMore ? [...z.polygons, ring] : [ring];
+  } else {
+    z.polygons = [ring];
+  }
+  z.polygon = z.polygons[0];   // legacy single-ring mirror
   save(); renderZones(); populateCitySelect(); saveZoneToSupabase(z);
   closeMo('mo-zone-draw');
   if (_zoneDrawMap) { _zoneDrawMap.remove(); _zoneDrawMap = null; }
-  showToast(added > 0 ? `נוספו ${added} ערים לאזור ✓` : 'כל הערים כבר קיימות באזור');
+  showToast(added > 0 ? `נוספו ${added} ערים לאזור ✓ (${z.polygons.length} פוליגונים)` : 'כל הערים כבר קיימות באזור');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

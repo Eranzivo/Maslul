@@ -103,5 +103,36 @@ suite('zoneDropDecision', () => {
   check('strict beats guard-off → block', ctx.zoneDropDecision({ zone_strict: true, zone_drop_guard: false }, true) === 'block');
 });
 
+suite('geo one-source: cityMatchKey golden fixture (parity with backend _match_key)', () => {
+  const fx = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'geo-cases.json'), 'utf8'));
+  const brain = fx.brain;
+  check('normalizePlaceKeyJS strips gershayim', ctx.normalizePlaceKeyJS('ת"א') === 'תא');
+  check('normalizePlaceKeyJS collapses hyphen/space', ctx.normalizePlaceKeyJS('קרית-גת') === 'קרית גת');
+  check('normalizePlaceKeyJS empty-safe', ctx.normalizePlaceKeyJS('') === '' && ctx.normalizePlaceKeyJS(null) === '');
+  for (const group of fx.equal_groups) {
+    const keys = group.map(n => ctx.cityMatchKey(n, brain));
+    check(`equal group [${group.join(' | ')}] → one key`, new Set(keys).size === 1);
+  }
+  for (const [a, b] of fx.distinct) {
+    check(`distinct ${a} ≠ ${b}`, ctx.cityMatchKey(a, brain) !== ctx.cityMatchKey(b, brain));
+  }
+  check('no brain → still deterministic (normalize-only)',
+    ctx.cityMatchKey('תל-אביב', null) === ctx.cityMatchKey('תל אביב', null));
+});
+
+suite('geo one-source: resolveZone matches through brain aliases', () => {
+  // Zone stores 'קריית שמונה'; a task typed 'ק"ש' must match via the brain alias chain.
+  const fx = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'geo-cases.json'), 'utf8'));
+  ctx.GEO_BRAIN = fx.brain;
+  const zonesL = [{ id: 'zN', cities: ['קריית שמונה', 'נהריה'] }];
+  const conf = { scheduling: { zone_match: 'city_list' } };
+  check('ק"ש resolves into the zone', ctx.resolveZone('ק"ש', null, null, conf, zonesL).zoneId === 'zN');
+  check('נהרייה resolves into the zone', ctx.resolveZone('נהרייה', null, null, conf, zonesL).zoneId === 'zN');
+  check('unknown city still unmatched', ctx.resolveZone('חרב', null, null, conf, zonesL).matched === false);
+  ctx.GEO_BRAIN = null;
+  check('without brain, exact spelling still matches (fallback)',
+    ctx.resolveZone('קריית שמונה', null, null, conf, zonesL).zoneId === 'zN');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
