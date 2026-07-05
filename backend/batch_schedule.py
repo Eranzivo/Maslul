@@ -106,6 +106,66 @@ def tenant_works_day(dow: int, config: Optional[dict]) -> bool:
     return dow in wd
 
 
+def _arrival_window_hours(config: Optional[dict]) -> int:
+    """Customer service-window length. Real location: `config.defaults.arrival_window_hours`
+    (the shape every other defaults knob uses). The old top-level read was a bug — kept only
+    as a fallback so a tenant that was ever set that way keeps working."""
+    cfg = config or {}
+    d = (cfg.get("defaults") or {}).get("arrival_window_hours")
+    if isinstance(d, (int, float)) and d > 0:
+        return int(d)
+    top = cfg.get("arrival_window_hours")
+    if isinstance(top, (int, float)) and top > 0:
+        return int(top)
+    return 3
+
+
+def _effective_duration(cat_id, tech: dict, cat_duration: dict, config: Optional[dict]) -> int:
+    """Job duration, mirroring the live JS chain: tech duration_overrides →
+    category default → tenant defaults.regular_job_minutes → 30."""
+    ov = (tech.get("duration_overrides") or {}) if tech else {}
+    if cat_id and ov.get(cat_id):
+        return int(ov[cat_id])
+    if cat_id and cat_duration.get(cat_id):
+        return int(cat_duration[cat_id])
+    reg = ((config or {}).get("defaults") or {}).get("regular_job_minutes")
+    if isinstance(reg, (int, float)) and reg > 0:
+        return int(reg)
+    return 30
+
+
+def tech_has_skill(tech: dict, cat_id) -> bool:
+    """Mirror of JS techHasSkill: no category ⇒ allowed; otherwise the category must be
+    in the tech's skills list (empty/absent skills ⇒ NOT allowed, same as JS)."""
+    if not cat_id:
+        return True
+    return cat_id in (tech.get("skills") or [])
+
+
+def cat_limit_ok(tech: dict, cat_id, current_count: int) -> bool:
+    """Mirror of JS getCatLimitOk: no category or no limit configured ⇒ ok;
+    otherwise the day's count for that category must stay below the limit."""
+    if not cat_id:
+        return True
+    limit = (tech.get("cat_limits") or {}).get(cat_id)
+    if not limit:
+        return True
+    try:
+        return current_count < int(limit)
+    except (TypeError, ValueError):
+        return True
+
+
+def city_blocked(tech: dict, city_norm: str) -> bool:
+    """Is this (normalized) city in the tech's blocked_cities list?"""
+    return city_norm in (tech.get("blocked_cities") or [])
+
+
+def zone_blocked(tech: dict, zone_id) -> bool:
+    """Is this zone in the tech's blocked_zones list?"""
+    return zone_id in (tech.get("blocked_zones") or [])
+
+
 def _assignment_score(count: int, city_load: int, balance_conf: Optional[dict]) -> float:
     """Score a candidate (tech, day) for one task — higher is better.
 
