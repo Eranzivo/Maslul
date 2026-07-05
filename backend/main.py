@@ -10,6 +10,8 @@ from optimizer import optimize_routes
 import optimizer as optimizer_module
 from batch_schedule import run_batch_schedule
 from batch_auth import resolve_effective_tenant, AuthzError
+import geo_resolver
+import geo_addresses
 
 load_dotenv()
 
@@ -180,28 +182,38 @@ def health():
 
 @app.post("/geocode")
 async def geocode(req: GeocodeRequest):
-    """Geocode a street address using Google Geocoding API. Returns {lat, lon}."""
+    """Geocode a street address. Returns {lat, lon, source}.
+
+    Cache-first via the shared address KB (`geo_addresses`, Geo Slice B): a repeat
+    address — from ANY tenant — costs zero Google spend and zero quota. Only a real
+    Google call is metered (10 elements). Trusted results (inside the IL bbox) are
+    stored so the KB grows with every client's calls."""
     api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+    service_key = os.getenv("SUPABASE_SERVICE_KEY", "")
+
+    # 0. Shared address KB first (fail-open — a KB outage degrades to plain Google)
+    if service_key:
+        await geo_resolver.ensure_loaded(service_key)  # city aliases for the key chain
+        hit = geo_addresses.lookup(req.street, req.city, service_key)
+        if hit:
+            lat, lon, tier = hit
+            return {"lat": lat, "lon": lon, "source": f"cache-{tier}"}
+
     if not api_key:
         raise HTTPException(status_code=503, detail="Maps key not configured")
     # Meter geocoding under the same daily counter (counts as 10 elements per call) so an
     # unauthenticated caller can't burn unbounded Google spend (CORS doesn't stop server-to-server).
     if not _gmaps_quota_ok(10):
         raise HTTPException(status_code=429, detail="Daily geocoding quota reached")
-    full_address = f"{req.street}, {req.city}, ישראל"
-    try:
-        async with httpx.AsyncClient(timeout=5) as client:
-            resp = await client.get(
-                "https://maps.googleapis.com/maps/api/geocode/json",
-                params={"address": full_address, "key": api_key, "region": "il", "language": "he"},
-            )
-        data = resp.json()
-    except Exception:
-        raise HTTPException(status_code=503, detail="Geocoding service unavailable")
-    if data.get("status") == "OK":
-        loc = data["results"][0]["geometry"]["location"]
-        return {"lat": loc["lat"], "lon": loc["lng"]}
-    raise HTTPException(status_code=404, detail=f"Address not found: {data.get('status')}")
+
+    coords = await geo_addresses.google_geocode(req.street, req.city, api_key)
+    if coords is None:
+        raise HTTPException(status_code=404, detail="Address not found")
+    lat, lon = coords
+    # Store only plausible-IL results — a bad geocode must never poison the shared KB.
+    if service_key and geo_addresses.plausible_il(lat, lon):
+        geo_addresses.store(req.street, req.city, lat, lon, service_key)
+    return {"lat": lat, "lon": lon, "source": "google"}
 
 
 @app.post("/optimize")
