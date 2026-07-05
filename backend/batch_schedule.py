@@ -166,6 +166,27 @@ def zone_blocked(tech: dict, zone_id) -> bool:
     return zone_id in (tech.get("blocked_zones") or [])
 
 
+def tech_breaks(tech: dict, config: Optional[dict], partial_dayoffs: list) -> list:
+    """Blocked intervals for a tech-day as [{"from": "HH:MM", "to": "HH:MM"}] — the solver's
+    `breaks` input. Mirror of JS getTechPartialBlocks: partial day_offs + the resolved break
+    (tech weekly_schedule._break: 'none' ⇒ no break, 'custom' ⇒ its own hours, else the
+    tenant defaults.break when enabled)."""
+    blocks = [{"from": p["from_time"], "to": p["to_time"]}
+              for p in (partial_dayoffs or []) if p.get("from_time") and p.get("to_time")]
+    tb = ((tech or {}).get("weekly_schedule") or {}).get("_break")
+    brk = None
+    if tb:
+        if tb.get("mode") == "none":
+            return blocks
+        if tb.get("mode") == "custom":
+            brk = {"enabled": True, "start": tb.get("start"), "end": tb.get("end")}
+    if brk is None:
+        brk = ((config or {}).get("defaults") or {}).get("break") or {}
+    if brk.get("enabled") and brk.get("start") and brk.get("end"):
+        blocks.append({"from": brk["start"], "to": brk["end"]})
+    return blocks
+
+
 def _assignment_score(count: int, city_load: int, balance_conf: Optional[dict]) -> float:
     """Score a candidate (tech, day) for one task — higher is better.
 

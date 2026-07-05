@@ -14,6 +14,7 @@ from batch_schedule import (  # noqa: E402
     cat_limit_ok,
     city_blocked,
     zone_blocked,
+    tech_breaks,
 )
 
 
@@ -77,3 +78,33 @@ def test_city_and_zone_blocked():
     assert zone_blocked({"blocked_zones": ["z1"]}, "z1") is True
     assert zone_blocked({}, "z1") is False
     assert zone_blocked({"blocked_zones": None}, "z1") is False
+
+
+# ── Task 2: breaks + partial day-offs (mirror of JS getTechPartialBlocks) ────
+
+_BRK_CONF = {"defaults": {"break": {"enabled": True, "start": "12:00", "end": "13:00"}}}
+
+def test_break_tenant_default():
+    assert tech_breaks({}, _BRK_CONF, []) == [{"from": "12:00", "to": "13:00"}]
+
+def test_break_disabled_tenant():
+    assert tech_breaks({}, {"defaults": {"break": {"enabled": False}}}, []) == []
+    assert tech_breaks({}, {}, []) == []
+
+def test_break_tech_mode_none_overrides_tenant():
+    tech = {"weekly_schedule": {"_break": {"mode": "none"}}}
+    assert tech_breaks(tech, _BRK_CONF, []) == []
+
+def test_break_tech_mode_custom():
+    tech = {"weekly_schedule": {"_break": {"mode": "custom", "start": "10:00", "end": "10:30"}}}
+    assert tech_breaks(tech, _BRK_CONF, []) == [{"from": "10:00", "to": "10:30"}]
+
+def test_partial_dayoffs_merge_with_break():
+    partials = [{"from_time": "08:00", "to_time": "09:00"}]
+    out = tech_breaks({}, _BRK_CONF, partials)
+    assert {"from": "08:00", "to": "09:00"} in out
+    assert {"from": "12:00", "to": "13:00"} in out
+    assert len(out) == 2
+
+def test_partial_dayoff_missing_times_skipped():
+    assert tech_breaks({}, {}, [{"from_time": None, "to_time": "09:00"}]) == []
