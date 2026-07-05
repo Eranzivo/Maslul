@@ -52,6 +52,9 @@ Security is a foundation requirement as we scale to more customers and data. Eve
 
 **Platform setup (recommended, mostly one-time):** GitHub secret scanning + push protection ON (free for public repos) + Dependabot alerts; branch protection on `main` (require PR once a 2nd contributor exists); Supabase Pro at go-live (backups + no-pause — already planned); document a key-rotation runbook (anon key is public by design; service key lives ONLY in Railway env — rotate if ever exposed); CDN pinning + no-integrity rules already enforced in CLAUDE.md.
 
+### 2026-07-05 (cont.) — Geo Slice B (address KB) shipped
+TDD (12 tests first), new global `geo_addresses` table via MCP (new-entity checklist walked — steps 2–7 N/A for a Layer-A backend-only table, documented in the migration + architecture.md), `/geocode` reworked cache-first (exact → nearest-house-on-street → Google; IL-bbox trust so a bad geocode never poisons the shared KB; quota charged only on real Google calls). Security-gate applied: deny-all RLS, PII boundary stated in schema comment, endpoint stays metered. **Design decision recorded:** browser never writes the KB — all writes go through the backend service key, so a compromised tenant login can't poison cross-tenant geo data. **Live E2E lesson:** Windows curl mangles Hebrew JSON bodies (send `--data-binary @utf8-file`); and Railway `/health` can't distinguish builds — verify a NEW field in the response (here: `source`) before trusting a deploy.
+
 ### Process skills (keep, already the culture)
 `brainstorming` before features → `writing-plans` for multi-step → `test-driven-development` with REAL tenant data for engine work → `systematic-debugging` for bugs → `code-review` on diffs → `verification-before-completion` before "done". Plus repo rules: branch for code, dry-run before live writes, SQL as chat blocks, living docs in the same commit, frozen PureWater config untouched without approval.
 
