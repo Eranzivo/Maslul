@@ -16,9 +16,10 @@ Legend: ✅ enforced · ⚠ caveat (see note) · n/a not applicable to that laye
 | `zone_match` (city_list/polygon) | zone boundary type | `resolveZone` | `find_zone_for` — both axes ✅ 2026-07-05 (`point_in_polygon` mirror; reasons `not_geocoded`/`outside_all_polygons`) | n/a | zones.test.js + test_batch_correctness.py + shared polygon fixture |
 | `zone_strict` | hard cross-zone block | `_candidatesZone` + `zoneDropDecision` | implicit (rotation filter) | n/a | zones.test.js |
 | `route_strategy` (flexible/far_to_near/nearest_first) | day route direction | `resolveRouteStrategy` + guards | `resolve_route_strategy` | ✅ both non-flexible enforced (direction penalty) | sched.test.js + test_sequencing.py |
-| `fill_first` | pack active days before opening new | ⚠ partial — scoring unconditional, flag gates only min-underfull skip | ⚠ not read | n/a | — (Slice 3: fold into placement_policy) |
-| `balance {enabled,weight}` | workload spread | ⚠ `balanceAdjust` consolidates | ⚠ `_assignment_score` spreads — OPPOSITE semantics | n/a | test_batch_schedule.py (Slice 3 unifies) |
-| `equal_city_distribution` | split same-city across techs | ⚠ tie-breaker only | ⚠ flag ignored (penalty always on) | n/a | — (Slice 3) |
+| **`placement_policy`** (consolidate/spread) | THE placement philosophy (Israel handover 07-06: consolidate) | `resolvePlacementPolicy`+`placementScore` (zone+open) | `resolve_placement_policy`+`_assignment_score` | n/a | policy-cases.json fixture BOTH suites + e2e ✅ 2026-07-06 |
+| `balance {enabled,weight}` | LEGACY → maps to `spread` (weight kept as tunable) | via resolver | via resolver | n/a | fixture |
+| `equal_city_distribution` | LEGACY tie-breaker — honored under consolidate only; spread has same-city built in | `_candidatesZone` | folded into spread scoring | n/a | — |
+| `fill_first` | LEGACY — consolidate IS fill-first; flag now gates only the min-underfull skip | `_candidates*` | n/a | n/a | — |
 | `slot_release {enabled,72/48/24}` | hold early slots for far cities | `_candidatesZone` (far_to_near only) | n/a by design (assigns whole days) | n/a | manual |
 | `zone_drop_guard` | soft warn on manual cross-zone drop | `zoneDropDecision` | n/a (no manual path) | n/a | zones.test.js |
 | `gap_fill {enabled,auto}` | suggest fills on cancel | `rankGapFill` | n/a | n/a | sched.test.js |
