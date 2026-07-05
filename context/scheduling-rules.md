@@ -161,7 +161,7 @@ Resolved via `resolveRouteStrategy(sc)` — **absent config ⇒ `flexible`** (th
 |---|---|
 | `flexible` (default) | No geographic ordering constraint — fill by load score. Sanity guards (`isRouteLogical`/`wouldBacktrack`) are no-ops. |
 | `far_to_near` | Farthest cities first within the zone. `getCityIndexInZone()` (idx 0 = farthest) orders candidates; **slot-release reservation runs only under this strategy.** **Backend solver (`solve_route_v2`) ENFORCES direction** — see the 2026-06-15 note below. |
-| `nearest_first` | Closest cities first — **now fully implemented** (mirror of far_to_near via `isPairOrdered`), not a silent flexible. Useful for dense urban zones / delivery. |
+| `nearest_first` | Closest cities first — enforced END-TO-END: JS guards (`isPairOrdered`) AND the solver (`solve_route_v2` inward-arc penalty, mirror of far_to_near — added 2026-07-05; before that the solver treated it as flexible and min-drive could start far on two-branch geometry). Useful for dense urban zones / delivery. |
 
 `isRouteLogical` / `wouldBacktrack` are **strategy-aware sanity guards** (via `isPairOrdered(strategy, earlierIdx, laterIdx)`); for `far_to_near` they behave exactly as before. `_candidatesZone` enables geographic gating for any non-`flexible` strategy.
 
@@ -174,7 +174,7 @@ _2026-06-15 — **`far_to_near` direction is now ENFORCED in the backend solver*
 
 ### Per-Tech Job Duration Overrides
 - Stored in `technicians.duration_overrides` JSONB: `{ "category_uuid": minutes }`
-- Engine priority: **tech override → category default → `settings.regularTime`**
+- Engine priority: **tech override → category default → `settings.regularTime`** — honored by ALL three candidate modes (`_candidatesZone` via `calcOptimalTime`; `_candidatesOpen`/`_candidatesRadius` fixed 2026-07-05 — they previously hardcoded `settings.regularTime`) and by the batch (`_effective_duration`)
 - Enabled per-tenant via `features.tech_duration_overrides: true`
 - Set in tech edit drawer under "משך לפי קטגוריה"
 - Migration: `outputs/migration-duration-overrides_2026-06-01.sql`

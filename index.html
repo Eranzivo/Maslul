@@ -5548,7 +5548,9 @@ function _candidatesOpen(city,catId,dates,sc){
       const sched=getTechDaySchedule(tech,date.str);
       const sh=timeToMins(sched.start);
       const eh=timeToMins(sched.end);
-      const dur=settings.regularTime||30;
+      // Same duration chain as the zone path: tech override → category → tenant default
+      const _cat=catId?categories.find(c=>c.id===catId):null;
+      const dur=(catId&&(tech.durationOverrides||{})[catId])||(_cat&&_cat.time)||settings.regularTime||30;
       const buf=10;
       const dayTasks=getTechDayTasks(tech,date.str).sort((a,b)=>timeToMins(a.time)-timeToMins(b.time));
       let slot=sh;
@@ -5715,7 +5717,9 @@ function _candidatesRadius(city,catId,dates,sc){
       }
       const sched=getTechDaySchedule(tech,date.str);
       const sh=timeToMins(sched.start),eh=timeToMins(sched.end);
-      const dur=settings.regularTime||30,buf=10;
+      // Same duration chain as the zone path: tech override → category → tenant default
+      const _cat=catId?categories.find(c=>c.id===catId):null;
+      const dur=(catId&&(tech.durationOverrides||{})[catId])||(_cat&&_cat.time)||settings.regularTime||30,buf=10;
       const dayTasks=getTechDayTasks(tech,date.str).sort((a,b)=>timeToMins(a.time)-timeToMins(b.time));
       let slot=sh;
       if(dayTasks.length){const last=dayTasks[dayTasks.length-1];slot=timeToMins(last.time)+dur+buf;}

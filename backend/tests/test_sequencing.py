@@ -157,3 +157,51 @@ def test_break_blocks_time():
     for i, arr in zip(r["ordered"], r["arrivals"]):
         dur = tasks[i]["duration"]
         assert not (arr < time_to_min("13:00") and arr + dur > time_to_min("12:00"))
+
+
+# ── nearest_first enforcement (Slice 4 — mirror of far_to_near, 2026-07-05) ──
+# Before this slice the solver treated nearest_first as flexible: the knob was honest
+# at JS-assignment level but cosmetic at the authoritative sequencing layer.
+
+def test_nearest_first_visits_nearest_city_first():
+    m, tasks, cities = _purewater_north_day()
+    r = solve_route_v2(m, tasks, "07:00", "18:00", breaks=[], route_strategy="nearest_first")
+    d = [m[0][i + 1] for i in r["ordered"]]
+    assert d[0] == min(d), f"nearest_first must start closest to base, got order {[cities[i] for i in r['ordered']]}"
+
+def test_nearest_first_never_moves_back_inward():
+    m, tasks, cities = _purewater_north_day()
+    r = solve_route_v2(m, tasks, "07:00", "18:00", breaks=[], route_strategy="nearest_first")
+    d = [m[0][i + 1] for i in r["ordered"]]
+    TOL = 20
+    for k in range(len(d) - 1):
+        assert d[k] <= d[k + 1] + TOL, (
+            f"inward backtrack: '{cities[r['ordered'][k]]}' (d={d[k]}) → "
+            f"'{cities[r['ordered'][k+1]]}' (d={d[k+1]})")
+
+def test_nearest_first_keeps_same_city_jobs_adjacent():
+    m, tasks, cities = _purewater_north_day()
+    r = solve_route_v2(m, tasks, "07:00", "18:00", breaks=[], route_strategy="nearest_first")
+    pos = {i: k for k, i in enumerate(r["ordered"])}
+    assert abs(pos[1] - pos[3]) == 1, "the two קרית ים jobs must stay adjacent"
+
+def test_nearest_first_never_drops_for_direction():
+    # Fail-open: direction penalty must stay below the drop penalty.
+    m, tasks, cities = _purewater_north_day()
+    r = solve_route_v2(m, tasks, "07:00", "18:00", breaks=[], route_strategy="nearest_first")
+    assert r["dropped"] == [], "direction must never force a drop"
+
+def test_nearest_first_direction_beats_drive_savings():
+    # Two-branch geometry: A near (10), B far on branch 1 (100), C far on branch 2 (110),
+    # branches connected only via the base area (d(B,C)=210). Pure min-drive prefers
+    # B→A→C (300 min) which starts FAR; nearest_first must force A→B→C (315 min) —
+    # direction over fuel, mirroring the far_to_near enforcement.
+    pairs = {(0,1):10,(0,2):100,(0,3):110,(1,2):95,(1,3):105,(2,3):210}
+    n = 4; m = [[0]*n for _ in range(n)]
+    for (i,j),v in pairs.items(): m[i][j] = v; m[j][i] = v
+    tasks = [{"duration": 30, "window_start": None, "window_end": None,
+              "locked": False, "scheduled_time": None} for _ in range(3)]
+    r = solve_route_v2(m, tasks, "07:00", "23:00", breaks=[], route_strategy="nearest_first")
+    d = [m[0][i + 1] for i in r["ordered"]]
+    assert d == sorted(d), f"nearest_first must move strictly outward, got distances {d}"
+    assert r["dropped"] == [], "direction must never force a drop"
