@@ -106,6 +106,102 @@ def tenant_works_day(dow: int, config: Optional[dict]) -> bool:
     return dow in wd
 
 
+def _arrival_window_hours(config: Optional[dict]) -> float:
+    """Customer service-window length. Real location: `config.defaults.arrival_window_hours`
+    (the shape every other defaults knob uses). The old top-level read was a bug — kept only
+    as a fallback so a tenant that was ever set that way keeps working. Fractional hours
+    (Israel's real cards show 1.5h windows) are preserved — minutes math rounds, never
+    truncates."""
+    cfg = config or {}
+    d = (cfg.get("defaults") or {}).get("arrival_window_hours")
+    if isinstance(d, (int, float)) and not isinstance(d, bool) and d > 0:
+        return float(d)
+    top = cfg.get("arrival_window_hours")
+    if isinstance(top, (int, float)) and not isinstance(top, bool) and top > 0:
+        return float(top)
+    return 3.0
+
+
+def _clamp_blocks(blocks: list, start_t: str, end_t: str) -> list:
+    """Clamp break/partial blocks to the tech's work hours. A block entirely outside
+    the day is dropped — sending it to the solver as a mandatory pinned node would make
+    the whole model infeasible and cascade-drop every flexible call."""
+    s, e = _time_to_min(start_t), _time_to_min(end_t)
+    out = []
+    for b in blocks:
+        lo, hi = max(_time_to_min(b["from"]), s), min(_time_to_min(b["to"]), e)
+        if lo < hi:
+            out.append({"from": _min_to_time(lo), "to": _min_to_time(hi)})
+    return out
+
+
+def _effective_duration(cat_id, tech: dict, cat_duration: dict, config: Optional[dict]) -> int:
+    """Job duration, mirroring the live JS chain: tech duration_overrides →
+    category default → tenant defaults.regular_job_minutes → 30."""
+    ov = (tech.get("duration_overrides") or {}) if tech else {}
+    if cat_id and ov.get(cat_id):
+        return int(ov[cat_id])
+    if cat_id and cat_duration.get(cat_id):
+        return int(cat_duration[cat_id])
+    reg = ((config or {}).get("defaults") or {}).get("regular_job_minutes")
+    if isinstance(reg, (int, float)) and reg > 0:
+        return int(reg)
+    return 30
+
+
+def tech_has_skill(tech: dict, cat_id) -> bool:
+    """Mirror of JS techHasSkill: no category ⇒ allowed; otherwise the category must be
+    in the tech's skills list (empty/absent skills ⇒ NOT allowed, same as JS)."""
+    if not cat_id:
+        return True
+    return cat_id in (tech.get("skills") or [])
+
+
+def cat_limit_ok(tech: dict, cat_id, current_count: int) -> bool:
+    """Mirror of JS getCatLimitOk: no category or no limit configured ⇒ ok;
+    otherwise the day's count for that category must stay below the limit."""
+    if not cat_id:
+        return True
+    limit = (tech.get("cat_limits") or {}).get(cat_id)
+    if not limit:
+        return True
+    try:
+        return current_count < int(limit)
+    except (TypeError, ValueError):
+        return True
+
+
+def city_blocked(tech: dict, city_norm: str) -> bool:
+    """Is this (normalized) city in the tech's blocked_cities list?"""
+    return city_norm in (tech.get("blocked_cities") or [])
+
+
+def zone_blocked(tech: dict, zone_id) -> bool:
+    """Is this zone in the tech's blocked_zones list?"""
+    return zone_id in (tech.get("blocked_zones") or [])
+
+
+def tech_breaks(tech: dict, config: Optional[dict], partial_dayoffs: list) -> list:
+    """Blocked intervals for a tech-day as [{"from": "HH:MM", "to": "HH:MM"}] — the solver's
+    `breaks` input. Mirror of JS getTechPartialBlocks: partial day_offs + the resolved break
+    (tech weekly_schedule._break: 'none' ⇒ no break, 'custom' ⇒ its own hours, else the
+    tenant defaults.break when enabled)."""
+    blocks = [{"from": p["from_time"], "to": p["to_time"]}
+              for p in (partial_dayoffs or []) if p.get("from_time") and p.get("to_time")]
+    tb = ((tech or {}).get("weekly_schedule") or {}).get("_break")
+    brk = None
+    if tb:
+        if tb.get("mode") == "none":
+            return blocks
+        if tb.get("mode") == "custom":
+            brk = {"enabled": True, "start": tb.get("start"), "end": tb.get("end")}
+    if brk is None:
+        brk = ((config or {}).get("defaults") or {}).get("break") or {}
+    if brk.get("enabled") and brk.get("start") and brk.get("end"):
+        blocks.append({"from": brk["start"], "to": brk["end"]})
+    return blocks
+
+
 def _assignment_score(count: int, city_load: int, balance_conf: Optional[dict]) -> float:
     """Score a candidate (tech, day) for one task — higher is better.
 
@@ -124,8 +220,41 @@ def _assignment_score(count: int, city_load: int, balance_conf: Optional[dict]) 
     return count * 100 - city_load * 50
 
 
+def solve_day_with_existing(matrix, existing_v2, new_v2, start_t, end_t, breaks,
+                            return_node, route_strategy):
+    """Order one tech-day containing EXISTING calls (already promised) + NEW calls.
+
+    Policy (approved 2026-07-05): existing calls keep their customer window as a hard
+    constraint — their internal time may re-flow within it; locked calls are pinned at
+    their exact time; an existing call is NEVER dropped in favor of a new one. If the
+    first solve drops any existing call, re-solve with ALL existing pinned at their
+    current times so only new calls can drop (attempt 2).
+
+    Node order: 0 = depot, 1..n_e = existing, n_e+1.. = new (matrix must match).
+    Returns {"ordered": [combined_idx...], "arrivals": [abs-minute...],
+             "dropped_new": [combined_idx...], "pinned_fallback": bool}.
+    """
+    n_e = len(existing_v2)
+    tasks = list(existing_v2) + list(new_v2)
+    res = solve_route_v2(matrix, tasks, start_t, end_t, breaks=breaks,
+                         return_node=return_node, route_strategy=route_strategy)
+    pinned_fallback = False
+    if any(i < n_e for i in res["dropped"]):
+        # Existing commitments outrank new placements: pin them all, retry.
+        pinned = [dict(t, locked=True) for t in existing_v2]
+        res = solve_route_v2(matrix, pinned + list(new_v2), start_t, end_t, breaks=breaks,
+                             return_node=return_node, route_strategy=route_strategy)
+        pinned_fallback = True
+    dropped_new = [i for i in res["dropped"] if i >= n_e]
+    # An existing call still dropped here (e.g. locked-vs-locked conflict) is left
+    # untouched in the DB — the caller must not unassign it.
+    return {"ordered": res["ordered"], "arrivals": res["arrivals"],
+            "dropped_new": dropped_new, "pinned_fallback": pinned_fallback}
+
+
 def optimize_day(matrix, durations, start_t, end_t, return_node, route_strategy):
-    """Order one tech-day with the authoritative v2 solver (the same engine the
+    """(Test/back-compat wrapper — the production path is solve_day_with_existing.)
+    Order one tech-day with the authoritative v2 solver (the same engine the
     live path uses) so the batch reflects route_strategy physics (far→near),
     hard work-hours, and drop-if-overfull. Returns (ordered_idx, arrivals, dropped_idx)."""
     tasks_v2 = [{"duration": d, "window_start": None, "window_end": None,
@@ -147,11 +276,30 @@ async def run_batch_schedule(
 
     await geo_resolver.ensure_loaded(service_key)  # load the shared geo brain (fail-open)
 
-    # 1. Fetch all required data
+    # 1. Fetch all required data — including the LIVE calendar state. All fetches happen
+    # before any write and raise on failure (fail-closed: no partial batch).
     tasks_raw = await _sb_get("tasks", {
         "tenant_id": f"eq.{tenant_id}",
         "status": "eq.pending",
         "select": "id,city,street,lat,lon,category_id",
+    }, service_key)
+
+    # Existing calls in range: they occupy capacity and shape every day's route.
+    existing_raw = await _sb_get("tasks", {
+        "tenant_id": f"eq.{tenant_id}",
+        "status": "in.(assigned,en_route,arrived)",
+        "and": f"(scheduled_date.gte.{date_from},scheduled_date.lte.{date_to})",
+        "select": "id,city,street,lat,lon,category_id,technician_id,scheduled_date,"
+                  "scheduled_time,scheduled_window_start,scheduled_window_end,locked",
+    }, service_key)
+
+    # select * — the live table currently lacks the type/from_time/to_time columns the
+    # docs describe (migration not applied); the JS load path defaults a missing type to
+    # 'full'. Mirror that: tolerate either schema, absent type ⇒ full day off.
+    dayoffs_raw = await _sb_get("day_offs", {
+        "tenant_id": f"eq.{tenant_id}",
+        "and": f"(date.gte.{date_from},date.lte.{date_to})",
+        "select": "*",
     }, service_key)
 
     zones_raw = await _sb_get("zones", {
@@ -161,7 +309,8 @@ async def run_batch_schedule(
 
     techs_raw = await _sb_get("technicians", {
         "tenant_id": f"eq.{tenant_id}",
-        "select": "id,name,base_city,return_city,rotation,weekly_schedule,start_time,end_time,max_daily",
+        "select": "id,name,base_city,return_city,rotation,weekly_schedule,start_time,end_time,"
+                  "max_daily,skills,cat_limits,blocked_zones,blocked_cities,duration_overrides",
     }, service_key)
 
     cats_raw = await _sb_get("categories", {
@@ -175,7 +324,7 @@ async def run_batch_schedule(
     }, service_key)
 
     config = tenant_rows[0]["config"] if tenant_rows else {}
-    arrival_window_h = config.get("arrival_window_hours", 3)
+    arrival_window_h = _arrival_window_hours(config)
     route_strategy = resolve_route_strategy(config)
     balance_conf = (config.get("scheduling") or {}).get("balance")  # None ⇒ today's fill-first packing
 
@@ -200,8 +349,19 @@ async def run_batch_schedule(
         rotation = tech.get("rotation") or {}
         return rotation.get(str(_dow(d)))
 
+    # Day-off lookups (mirror of the live path's isTechAvailable / getTechPartialBlocks).
+    # Missing type ⇒ 'full' (same default the JS load mapper applies).
+    dayoffs_full = {(o["technician_id"], o["date"]) for o in dayoffs_raw
+                    if (o.get("type") or "full") == "full"}
+    dayoffs_partial: dict[tuple, list] = {}
+    for o in dayoffs_raw:
+        if o.get("type") == "partial":
+            dayoffs_partial.setdefault((o["technician_id"], o["date"]), []).append(o)
+
     def tech_is_working(tech: dict, d: date) -> bool:
         if not tenant_works_day(_dow(d), config):  # tenant-level off-day (Sat off by default)
+            return False
+        if (tech["id"], d.isoformat()) in dayoffs_full:  # vacation / full day off
             return False
         ws = tech.get("weekly_schedule") or {}
         day_cfg = ws.get(str(_dow(d)), {})
@@ -224,16 +384,106 @@ async def run_batch_schedule(
             return v
         return config.get("defaults", {}).get("max_daily_jobs", 9)
 
-    # 3. Greedy task → tech+day assignment
-    # day_slots: {(tech_id, date_str): [task_dict, ...]}
+    # 3. Greedy task → tech+day assignment — seeded with the LIVE calendar so every
+    # count (capacity, same-city, per-category) reflects reality, not an empty week.
+    # day_slots: {(tech_id, date_str): [task_dict, ...]} — NEW placements only
     day_slots: dict[tuple, list] = {}
+    # existing_slots: {(tech_id, date_str): [existing_task, ...]} — read-only occupancy
+    existing_slots: dict[tuple, list] = {}
     # city_counts per tech (for equal city distribution penalty)
     city_counts: dict[str, dict[str, int]] = {t["id"]: {} for t in techs_raw}
+    # cat_counts: {(tech_id, date_str, category_id): n} — for cat_limits
+    cat_counts: dict[tuple, int] = {}
+
+    for e in existing_raw:
+        tid = e.get("technician_id")
+        if tid is None or e.get("scheduled_date") is None:
+            continue
+        key = (tid, e["scheduled_date"])
+        existing_slots.setdefault(key, []).append(e)
+        nc = _norm(e.get("city") or "")
+        if tid in city_counts:
+            city_counts[tid][nc] = city_counts[tid].get(nc, 0) + 1
+        if e.get("category_id"):
+            ck = (tid, e["scheduled_date"], e["category_id"])
+            cat_counts[ck] = cat_counts.get(ck, 0) + 1
+
+    def occupancy(key: tuple) -> int:
+        return len(day_slots.get(key, [])) + len(existing_slots.get(key, []))
 
     unassigned = []
     d_start = date.fromisoformat(date_from)
     d_end   = date.fromisoformat(date_to)
 
+    # Per-task exclusion set of (tech, date) keys already tried and dropped —
+    # bounds the retry loop (each task tries each covering day at most once).
+    excluded: dict[str, set] = {}
+
+    def place_task(task) -> Optional[tuple]:
+        """Greedy best (tech, day) for one task, honoring every eligibility gate the
+        live _candidatesZone path enforces. Books the placement and returns its key,
+        or None when no eligible slot remains."""
+        zone_id = task["_zone_id"]
+        cat_id = task.get("category_id")
+        nc = _norm(task["city"])
+        best_key: Optional[tuple] = None
+        best_score = float("-inf")  # balance-on scores are negative — never seed at a finite floor
+        cur = d_start
+        while cur <= d_end:
+            for tech in techs_raw:
+                if not tech_is_working(tech, cur):
+                    continue
+                if tech_zone_for_day(tech, cur) != zone_id:
+                    continue
+                # Same eligibility gates as the live _candidatesZone path:
+                if zone_blocked(tech, zone_id) or city_blocked(tech, nc):
+                    continue
+                if not tech_has_skill(tech, cat_id):
+                    continue
+                key = (tech["id"], cur.isoformat())
+                if key in excluded.get(task["id"], set()):
+                    continue
+                count = occupancy(key)  # existing + newly placed
+                if count >= tech_max_daily(tech):
+                    continue
+                if not cat_limit_ok(tech, cat_id,
+                                    cat_counts.get((tech["id"], cur.isoformat(), cat_id), 0)):
+                    continue
+
+                city_load = city_counts[tech["id"]].get(nc, 0)
+                # Balance off ⇒ fill-first packing (today's behavior); balance on ⇒ fluid
+                # even spread across covering tech-days (8→4-4, 7→4-3). See _assignment_score.
+                score = _assignment_score(count, city_load, balance_conf)
+
+                if score > best_score:
+                    best_score = score
+                    best_key = key
+            cur += timedelta(days=1)
+
+        if best_key is None:
+            return None
+        tech_id_key = best_key[0]
+        assigned_tech = next(t for t in techs_raw if t["id"] == tech_id_key)
+        task["_duration"] = _effective_duration(cat_id, assigned_tech, cat_duration, config)
+        day_slots.setdefault(best_key, []).append(task)
+        city_counts[tech_id_key][nc] = city_counts[tech_id_key].get(nc, 0) + 1
+        if cat_id:
+            ck = (tech_id_key, best_key[1], cat_id)
+            cat_counts[ck] = cat_counts.get(ck, 0) + 1
+        return best_key
+
+    def unbook(key: tuple, task) -> None:
+        """Reverse a booking after the day solver dropped the task (time capacity)."""
+        day_slots[key].remove(task)
+        nc = _norm(task["city"])
+        city_counts[key[0]][nc] = max(0, city_counts[key[0]].get(nc, 0) - 1)
+        cat_id = task.get("category_id")
+        if cat_id:
+            ck = (key[0], key[1], cat_id)
+            cat_counts[ck] = max(0, cat_counts.get(ck, 0) - 1)
+
+    # Eligibility pass: zone membership + locatability. Failures here are terminal.
+    pool = []
     for task in tasks_raw:
         zone_id = find_zone(task["city"])
         if not zone_id:
@@ -251,84 +501,109 @@ async def run_batch_schedule(
             unassigned.append({"id": task["id"], "city": task["city"], "reason": "needs_location"})
             continue
 
-        best_key: Optional[tuple] = None
-        best_score = float("-inf")  # balance-on scores are negative — never seed at a finite floor
+        task["_zone_id"] = zone_id
+        pool.append(task)
 
-        cur = d_start
-        while cur <= d_end:
-            for tech in techs_raw:
-                if not tech_is_working(tech, cur):
-                    continue
-                if tech_zone_for_day(tech, cur) != zone_id:
-                    continue
-                key = (tech["id"], cur.isoformat())
-                count = len(day_slots.get(key, []))
-                if count >= tech_max_daily(tech):
-                    continue
-
-                nc = _norm(task["city"])
-                city_load = city_counts[tech["id"]].get(nc, 0)
-                # Balance off ⇒ fill-first packing (today's behavior); balance on ⇒ fluid
-                # even spread across covering tech-days (8→4-4, 7→4-3). See _assignment_score.
-                score = _assignment_score(count, city_load, balance_conf)
-
-                if score > best_score:
-                    best_score = score
-                    best_key = key
-            cur += timedelta(days=1)
-
-        if best_key is None:
-            unassigned.append({"id": task["id"], "city": task["city"], "reason": "no_slot_in_range"})
-            continue
-
-        task["_duration"] = cat_duration.get(task.get("category_id"), 30)
-        day_slots.setdefault(best_key, []).append(task)
-        nc = _norm(task["city"])
-        tech_id_key = best_key[0]
-        city_counts[tech_id_key][nc] = city_counts[tech_id_key].get(nc, 0) + 1
-
-    # 4. Optimize each tech+day and write results
+    # 4. Assign + optimize in bounded retry rounds. Only days that RECEIVE new calls
+    # are solved — days the batch doesn't touch stay exactly as they are. A new call
+    # the solver drops (time capacity) is un-booked, that day excluded for it, and it
+    # retries the next-best covering day in the following round.
     assignments = []
+    retimed_existing = 0
 
-    for (tech_id, date_str), day_tasks in sorted(day_slots.items(), key=lambda x: (x[0][1], x[0][0])):
+    def _loc(t: dict) -> str:
+        if t.get("lat") and t.get("lon"):
+            return f"{t['lat']},{t['lon']}"
+        if t.get("street"):
+            return f"{t['street']}, {t['city']}"
+        return t["city"]
+
+    def solve_day(key: tuple):
+        """Solve one tech-day (existing + new). Returns (result, existing snapshot,
+        new-tasks snapshot, start_min) — snapshots pin the index space of the result."""
+        tech_id, date_str = key
         tech = next(t for t in techs_raw if t["id"] == tech_id)
         start_t, end_t = tech_hours(tech, date.fromisoformat(date_str))
-        start_min = _time_to_min(start_t)
         base = tech.get("base_city") or "אשקלון"
         ret  = tech.get("return_city") or ""
         return_loc = ret if (ret and ret != base) else ""
 
-        task_locs = [
-            f"{t['lat']},{t['lon']}" if t.get("lat") and t.get("lon")
-            else (f"{t['street']}, {t['city']}" if t.get("street") else t["city"])
-            for t in day_tasks
-        ]
-        locations = [base] + task_locs + ([return_loc] if return_loc else [])
-        durations = [t["_duration"] for t in day_tasks]
+        day_existing = list(existing_slots.get(key, []))
+        day_tasks = list(day_slots.get(key, []))
+        locations = ([base] + [_loc(e) for e in day_existing] + [_loc(t) for t in day_tasks]
+                     + ([return_loc] if return_loc else []))
 
         # Tasks at city-level only (no street/coords) — haversine is equivalent
         # to Google Maps for city-center→city-center and avoids burning API quota.
         # Real drive-time refinement happens later via the live cache-backed sequencer.
         matrix = build_matrix_local(locations)
 
-        ordered_idx, arrivals, dropped_idx = optimize_day(
-            matrix=matrix,
-            durations=durations,
-            start_t=start_t,
-            end_t=end_t,
-            return_node=bool(return_loc),
-            route_strategy=route_strategy,
-        )
+        existing_v2 = [{
+            "duration": _effective_duration(e.get("category_id"), tech, cat_duration, config),
+            "window_start": e.get("scheduled_window_start"),
+            "window_end": e.get("scheduled_window_end"),
+            "locked": bool(e.get("locked")),
+            "scheduled_time": (e.get("scheduled_time") or "")[:5] or None,
+        } for e in day_existing]
+        new_v2 = [{"duration": t["_duration"], "window_start": None, "window_end": None,
+                   "locked": False, "scheduled_time": None} for t in day_tasks]
+        brk = _clamp_blocks(tech_breaks(tech, config, dayoffs_partial.get(key, [])),
+                            start_t, end_t)
 
-        # Over-full day: the solver dropped these rather than fail — leave them
-        # pending and surface them so the coordinator can re-place or extend hours.
-        for di in dropped_idx:
-            dt = day_tasks[di]
-            unassigned.append({"id": dt["id"], "city": dt["city"], "reason": "day_over_capacity"})
+        r = solve_day_with_existing(
+            matrix, existing_v2, new_v2, start_t, end_t, breaks=brk,
+            return_node=bool(return_loc), route_strategy=route_strategy)
+        return r, day_existing, day_tasks, _time_to_min(start_t)
 
-        win_mins = arrival_window_h * 60
-        for i, arr in zip(ordered_idx, arrivals):
-            task = day_tasks[i]
+    # day_results holds the FINAL solve per day: (result, existing, new, start_min).
+    day_results: dict[tuple, tuple] = {}
+    MAX_ROUNDS = max(6, (d_end - d_start).days + 1)  # >= covering days any task can try
+    rounds = 0
+    while pool and rounds < MAX_ROUNDS:
+        rounds += 1
+        dirty: set = set()
+        for task in pool:
+            key = place_task(task)
+            if key is None:
+                # Dropped earlier ⇒ it HAD a covering day that ran out of time budget;
+                # never placeable at all ⇒ no slot in range.
+                reason = "day_over_capacity" if task.get("_dropped_once") else "no_slot_in_range"
+                unassigned.append({"id": task["id"], "city": task["city"], "reason": reason})
+            else:
+                dirty.add(key)
+        next_pool = []
+        for key in sorted(dirty):
+            r, day_existing, day_tasks, start_min = solve_day(key)
+            n_e = len(day_existing)
+            for di in r["dropped_new"]:
+                dt = day_tasks[di - n_e]
+                dt["_dropped_once"] = True
+                excluded.setdefault(dt["id"], set()).add(key)
+                unbook(key, dt)
+                next_pool.append(dt)
+            day_results[key] = (r, day_existing, day_tasks, start_min)
+        pool = next_pool
+    for task in pool:  # rounds exhausted — treat like any other capacity failure
+        unassigned.append({"id": task["id"], "city": task["city"], "reason": "day_over_capacity"})
+
+    # 5. Emit results from the final day snapshots (dropped tasks are not in `ordered`).
+    win_mins = int(round(arrival_window_h * 60))
+    for (tech_id, date_str), (r, day_existing, day_tasks, start_min) in sorted(day_results.items()):
+        n_e = len(day_existing)
+        if not any(i >= n_e for i in r["ordered"]):
+            continue  # no new call survived on this day — leave its existing times alone
+        for i, arr in zip(r["ordered"], r["arrivals"]):
+            if i < n_e:
+                # Existing call: window/date/tech/status untouchable; only the internal
+                # time may re-flow (within its window — enforced by the solver).
+                e = day_existing[i]
+                new_time = _min_to_time(arr)
+                if new_time != (e.get("scheduled_time") or "")[:5] and not e.get("locked"):
+                    retimed_existing += 1
+                    if not dry_run:
+                        await _sb_patch(e["id"], {"scheduled_time": new_time}, service_key)
+                continue
+            task = day_tasks[i - n_e]
             slot_num   = max(0, (arr - start_min) // win_mins)
             slot_start = start_min + slot_num * win_mins
             payload = {
@@ -358,6 +633,7 @@ async def run_batch_schedule(
         "assigned":        len(assignments),
         "unassigned":      len(unassigned),
         "unassigned_tasks": unassigned,
+        "retimed_existing": retimed_existing,
         "dry_run":         dry_run,
         "by_tech":         summary,
     }
