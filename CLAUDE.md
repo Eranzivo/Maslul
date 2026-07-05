@@ -1,14 +1,15 @@
 # Maslul — Claude Code Context
 
 ## Before Every Task — Read Context First
-Read ALL files in `context/` before touching any code:
+Read ALL files in `context/` before touching any code — **start with `context/README.md` (the top-down map: product → engine → knobs → clients)**:
 - `context/business.md` — product vision, target clients, goals
 - `context/architecture.md` — stack, schema, hard rules, auth, safety, GPS, labels, features
 - `context/scheduling-rules.md` — scheduling engine, zones, break time, configurable modes
 - `context/style.md` — CSS tokens, component classes, spacing rules, RTL conventions
 - `context/clients/` — per-client profiles (`README.md` = global vs per-tenant model + source-of-truth rule; `_template.md`; `purewater.md` pilot)
 - `context/auth-users.md` — roles, user management, technician↔user linkage, impersonation, RLS
-- `context/zones-polygons.md` — zone system, city-list matching, polygon draw flow
+- `context/zones-polygons.md` — zone system, city-list + polygon axes, geo one-source seam
+- `context/knobs.md` — THE per-tenant rule registry (key → both engine readers → test)
 
 **Adding a client:** Create `context/clients/[name].md` + SQL onboarding script. Each client's business rules live in `tenants.config` — never in shared code.
 
