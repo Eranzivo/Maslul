@@ -88,8 +88,8 @@ How it was built (the replayable process):
 - Found 6 (all fixed same-branch, re-verified, dry-run re-run): fractional window-hours truncation; out-of-hours break ⇒ infeasible-day cascade (clamp added); retry bound not scaled to range length; gratuitous existing-call retimes on days that gained nothing; dead production wrapper (marked test-only); dead test code.
 - Full suites after fixes: 107 pytest + 96 JS green; offline dry-run reproduced identical results with 0 write patches.
 
-### Pending fold-into-context (once Eran approves)
-- `context/knobs.md` (registry) — new file.
-- `_template.md` refresh (C2) + wizard/knob contract note in `context/clients/README.md`.
-- Skills: `.claude/skills/` for onboard-client, parity-audit, rebatch-dryrun, demand-coverage, test-all.
-- CLAUDE.md: one line pointing to the knob registry + parity rule (keep lean).
+### ✅ Folded into context (2026-07-05, "go on with other items")
+- `context/knobs.md` shipped — the full knob registry (key → JS reader → batch reader → solver → test), seeded from the audit matrix; CLAUDE.md got a 3-line knob rule (file stays 61 lines).
+- `_template.md` refreshed — full knob walk + mandatory per-tech block.
+- Skills shipped as `.claude/commands/`: **/onboard-client** (rules-catcher), **/parity-audit**, **/rebatch-dryrun**, **/test-all**. `/demand-coverage` deferred (the dashboard prototype covers it until the next client export).
+- **Slice 4 shipped:** `nearest_first` enforced in `solve_route_v2` (inward-arc penalty mirror). TDD lesson worth keeping: the first real-data tests PASSED without the fix — single-cluster geometry can't discriminate near-first from min-drive; the failing fixture needed **two-branch geometry** (min-drive prefers starting far). Always ask "what geometry makes the wrong behavior cheaper?" before trusting a green optimizer test. Plus open/radius candidate modes now honor the real duration chain.
