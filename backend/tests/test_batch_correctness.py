@@ -116,6 +116,15 @@ def test_partial_dayoff_missing_times_skipped():
 import asyncio
 import batch_schedule as bs
 
+# One persistent loop for the whole module — asyncio.run() would close/unset the
+# thread's event loop and break older suites that still use asyncio.get_event_loop()
+# (test_matrix_cached). Keep the current loop set and open.
+_LOOP = asyncio.new_event_loop()
+asyncio.set_event_loop(_LOOP)
+
+def _await(coro):
+    return _LOOP.run_until_complete(coro)
+
 SUN, MON, TUE, WED, THU = "2026-07-05", "2026-07-06", "2026-07-07", "2026-07-08", "2026-07-09"
 
 def _cfg(**over):
@@ -180,7 +189,7 @@ _ROT_SOUTH = {"0": "z-south", "3": "z-south"}
 
 def _run(fake, monkeypatch, dry_run=True, date_from=SUN, date_to=THU):
     fake.install(monkeypatch)
-    return asyncio.run(bs.run_batch_schedule("tenant-1", date_from, date_to,
+    return _await(bs.run_batch_schedule("tenant-1", date_from, date_to,
                                              dry_run, "svc-key"))
 
 def _new_per_day(result, tech_name):
@@ -242,7 +251,7 @@ def test_window_hours_from_defaults_in_output(monkeypatch):
                   config=_cfg(defaults={"arrival_window_hours": 2,
                                         "work_days": [0, 1, 2, 3, 4]}))
     fake.install(monkeypatch)
-    r = asyncio.run(bs.run_batch_schedule("tenant-1", SUN, THU, True, "svc-key"))
+    r = _await(bs.run_batch_schedule("tenant-1", SUN, THU, True, "svc-key"))
     # 2-hour window: "07:00–09:00" style (width 120 min)
     win = None
     for tech_days in r["by_tech"].values():
@@ -253,7 +262,7 @@ def test_window_hours_from_defaults_in_output(monkeypatch):
                    config=_cfg(defaults={"arrival_window_hours": 2,
                                          "work_days": [0, 1, 2, 3, 4]}))
     fake2.install(monkeypatch)
-    asyncio.run(bs.run_batch_schedule("tenant-1", SUN, THU, False, "svc-key"))
+    _await(bs.run_batch_schedule("tenant-1", SUN, THU, False, "svc-key"))
     body = dict(fake2.patches)[list(dict(fake2.patches))[0]]
     ws = bs._time_to_min(body["scheduled_window_start"])
     we = bs._time_to_min(body["scheduled_window_end"])
@@ -340,3 +349,28 @@ def test_dropped_task_retries_next_covering_day(monkeypatch):
     assert per_day.get(WED) == 1, f"dropped task must retry Wednesday, got {per_day}"
     assert r["unassigned"] == 1
     assert r["unassigned_tasks"][0]["reason"] == "day_over_capacity"
+
+
+# ── Task 6: regression — all-pending run, absent config ─────────────────────
+
+def test_all_pending_regression_fills_and_assigns_everything(monkeypatch):
+    # The classic first-run scenario (nothing assigned yet): everything places,
+    # fill-first packs the first covering day, no retimes, no drops.
+    fake = FakeSB(pending=[_pending(i, "באר שבע") for i in range(6)],
+                  zones=_ZONES, techs=[_tech("t1", "אלירן", _ROT_SOUTH)], cats=_CATS)
+    r = _run(fake, monkeypatch)
+    assert r["assigned"] == 6 and r["unassigned"] == 0
+    assert r["retimed_existing"] == 0
+    per_day = _new_per_day(r, "אלירן")
+    assert per_day.get(SUN) == 6, f"fill-first should pack Sunday, got {per_day}"
+
+def test_absent_config_behaves_like_today(monkeypatch):
+    # Tenant with empty config: Sat-off default, window 3h, duration 30, no breaks.
+    fake = FakeSB(pending=[_pending(0, "באר שבע")], zones=_ZONES,
+                  techs=[_tech("t1", "אלירן", _ROT_SOUTH)], cats=_CATS, config={})
+    fake.install(monkeypatch)
+    _await(bs.run_batch_schedule("tenant-1", SUN, THU, False, "svc-key"))
+    body = dict(fake.patches)["p0"]
+    ws = bs._time_to_min(body["scheduled_window_start"])
+    we = bs._time_to_min(body["scheduled_window_end"])
+    assert we - ws == 180, f"absent config must keep the 3h window, got {body}"
