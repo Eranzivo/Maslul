@@ -228,11 +228,27 @@ async def run_batch_schedule(
 
     await geo_resolver.ensure_loaded(service_key)  # load the shared geo brain (fail-open)
 
-    # 1. Fetch all required data
+    # 1. Fetch all required data — including the LIVE calendar state. All fetches happen
+    # before any write and raise on failure (fail-closed: no partial batch).
     tasks_raw = await _sb_get("tasks", {
         "tenant_id": f"eq.{tenant_id}",
         "status": "eq.pending",
         "select": "id,city,street,lat,lon,category_id",
+    }, service_key)
+
+    # Existing calls in range: they occupy capacity and shape every day's route.
+    existing_raw = await _sb_get("tasks", {
+        "tenant_id": f"eq.{tenant_id}",
+        "status": "in.(assigned,en_route,arrived)",
+        "and": f"(scheduled_date.gte.{date_from},scheduled_date.lte.{date_to})",
+        "select": "id,city,street,lat,lon,category_id,technician_id,scheduled_date,"
+                  "scheduled_time,scheduled_window_start,scheduled_window_end,locked",
+    }, service_key)
+
+    dayoffs_raw = await _sb_get("day_offs", {
+        "tenant_id": f"eq.{tenant_id}",
+        "and": f"(date.gte.{date_from},date.lte.{date_to})",
+        "select": "technician_id,date,type,from_time,to_time",
     }, service_key)
 
     zones_raw = await _sb_get("zones", {
@@ -242,7 +258,8 @@ async def run_batch_schedule(
 
     techs_raw = await _sb_get("technicians", {
         "tenant_id": f"eq.{tenant_id}",
-        "select": "id,name,base_city,return_city,rotation,weekly_schedule,start_time,end_time,max_daily",
+        "select": "id,name,base_city,return_city,rotation,weekly_schedule,start_time,end_time,"
+                  "max_daily,skills,cat_limits,blocked_zones,blocked_cities,duration_overrides",
     }, service_key)
 
     cats_raw = await _sb_get("categories", {
@@ -256,7 +273,7 @@ async def run_batch_schedule(
     }, service_key)
 
     config = tenant_rows[0]["config"] if tenant_rows else {}
-    arrival_window_h = config.get("arrival_window_hours", 3)
+    arrival_window_h = _arrival_window_hours(config)
     route_strategy = resolve_route_strategy(config)
     balance_conf = (config.get("scheduling") or {}).get("balance")  # None ⇒ today's fill-first packing
 
@@ -281,8 +298,18 @@ async def run_batch_schedule(
         rotation = tech.get("rotation") or {}
         return rotation.get(str(_dow(d)))
 
+    # Day-off lookups (mirror of the live path's isTechAvailable / getTechPartialBlocks)
+    dayoffs_full = {(o["technician_id"], o["date"]) for o in dayoffs_raw
+                    if o.get("type") == "full"}
+    dayoffs_partial: dict[tuple, list] = {}
+    for o in dayoffs_raw:
+        if o.get("type") == "partial":
+            dayoffs_partial.setdefault((o["technician_id"], o["date"]), []).append(o)
+
     def tech_is_working(tech: dict, d: date) -> bool:
         if not tenant_works_day(_dow(d), config):  # tenant-level off-day (Sat off by default)
+            return False
+        if (tech["id"], d.isoformat()) in dayoffs_full:  # vacation / full day off
             return False
         ws = tech.get("weekly_schedule") or {}
         day_cfg = ws.get(str(_dow(d)), {})
@@ -305,11 +332,32 @@ async def run_batch_schedule(
             return v
         return config.get("defaults", {}).get("max_daily_jobs", 9)
 
-    # 3. Greedy task → tech+day assignment
-    # day_slots: {(tech_id, date_str): [task_dict, ...]}
+    # 3. Greedy task → tech+day assignment — seeded with the LIVE calendar so every
+    # count (capacity, same-city, per-category) reflects reality, not an empty week.
+    # day_slots: {(tech_id, date_str): [task_dict, ...]} — NEW placements only
     day_slots: dict[tuple, list] = {}
+    # existing_slots: {(tech_id, date_str): [existing_task, ...]} — read-only occupancy
+    existing_slots: dict[tuple, list] = {}
     # city_counts per tech (for equal city distribution penalty)
     city_counts: dict[str, dict[str, int]] = {t["id"]: {} for t in techs_raw}
+    # cat_counts: {(tech_id, date_str, category_id): n} — for cat_limits
+    cat_counts: dict[tuple, int] = {}
+
+    for e in existing_raw:
+        tid = e.get("technician_id")
+        if tid is None or e.get("scheduled_date") is None:
+            continue
+        key = (tid, e["scheduled_date"])
+        existing_slots.setdefault(key, []).append(e)
+        nc = _norm(e.get("city") or "")
+        if tid in city_counts:
+            city_counts[tid][nc] = city_counts[tid].get(nc, 0) + 1
+        if e.get("category_id"):
+            ck = (tid, e["scheduled_date"], e["category_id"])
+            cat_counts[ck] = cat_counts.get(ck, 0) + 1
+
+    def occupancy(key: tuple) -> int:
+        return len(day_slots.get(key, [])) + len(existing_slots.get(key, []))
 
     unassigned = []
     d_start = date.fromisoformat(date_from)
@@ -335,6 +383,8 @@ async def run_batch_schedule(
         best_key: Optional[tuple] = None
         best_score = float("-inf")  # balance-on scores are negative — never seed at a finite floor
 
+        cat_id = task.get("category_id")
+        nc = _norm(task["city"])
         cur = d_start
         while cur <= d_end:
             for tech in techs_raw:
@@ -342,12 +392,19 @@ async def run_batch_schedule(
                     continue
                 if tech_zone_for_day(tech, cur) != zone_id:
                     continue
+                # Same eligibility gates as the live _candidatesZone path:
+                if zone_blocked(tech, zone_id) or city_blocked(tech, nc):
+                    continue
+                if not tech_has_skill(tech, cat_id):
+                    continue
                 key = (tech["id"], cur.isoformat())
-                count = len(day_slots.get(key, []))
+                count = occupancy(key)  # existing + newly placed
                 if count >= tech_max_daily(tech):
                     continue
+                if not cat_limit_ok(tech, cat_id,
+                                    cat_counts.get((tech["id"], cur.isoformat(), cat_id), 0)):
+                    continue
 
-                nc = _norm(task["city"])
                 city_load = city_counts[tech["id"]].get(nc, 0)
                 # Balance off ⇒ fill-first packing (today's behavior); balance on ⇒ fluid
                 # even spread across covering tech-days (8→4-4, 7→4-3). See _assignment_score.
@@ -362,11 +419,14 @@ async def run_batch_schedule(
             unassigned.append({"id": task["id"], "city": task["city"], "reason": "no_slot_in_range"})
             continue
 
-        task["_duration"] = cat_duration.get(task.get("category_id"), 30)
-        day_slots.setdefault(best_key, []).append(task)
-        nc = _norm(task["city"])
         tech_id_key = best_key[0]
+        assigned_tech = next(t for t in techs_raw if t["id"] == tech_id_key)
+        task["_duration"] = _effective_duration(cat_id, assigned_tech, cat_duration, config)
+        day_slots.setdefault(best_key, []).append(task)
         city_counts[tech_id_key][nc] = city_counts[tech_id_key].get(nc, 0) + 1
+        if cat_id:
+            ck = (tech_id_key, best_key[1], cat_id)
+            cat_counts[ck] = cat_counts.get(ck, 0) + 1
 
     # 4. Optimize each tech+day and write results
     assignments = []
