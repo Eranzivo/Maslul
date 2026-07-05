@@ -319,19 +319,25 @@ def solve_route_v2(matrix, tasks, start_time_str, end_time_str, breaks,
                 cost_m[r][0] = 0
 
     # ── Direction enforcement (scheduling-rules.md priority #1 > fuel #4) ──────────
-    # far_to_near must NEVER drive outward (farther from base) from one task to another —
-    # that is a backtrack/zigzag ("better to start later than to far-near-far"). A dominant
-    # per-arc penalty makes a clean far→near order beat any drive-time saving, so direction
-    # is genuinely enforced (not the old ≤3-min nudge that real geometry swamped). It stays
-    # well below the 100000 disjunction drop penalty, so direction never forces a task to be
-    # dropped — fail-open. Equal-distance stops (same city) are unpenalized → they stay
-    # clustered. flexible/nearest_first are unaffected (each tenant picks its own strategy).
-    if route_strategy == "far_to_near":
+    # far_to_near must NEVER drive outward (farther from base) task→task; nearest_first
+    # is the exact mirror — never drive back INWARD (closer to base) task→task. Either
+    # violation is the backtrack/zigzag the rules forbid ("better to start later than to
+    # far-near-far"). A dominant per-arc penalty makes a clean monotone order beat any
+    # drive-time saving, so the knob is genuinely enforced for BOTH strategies (2026-07-05:
+    # nearest_first was previously solver-cosmetic — min-drive could start far on
+    # two-branch geometry). The penalty stays well below the 100000 disjunction drop
+    # penalty, so direction never forces a task to be dropped — fail-open. Equal-distance
+    # stops (same city) are unpenalized → they stay clustered. flexible is unaffected.
+    if route_strategy in ("far_to_near", "nearest_first"):
         DIRECTION_PENALTY = 10000
         d_base = [full[0][k] for k in range(base_n)]  # node 0 = base depot
         for i in range(1, n_tasks + 1):
             for j in range(1, n_tasks + 1):
-                if i != j and d_base[j] > d_base[i]:
+                if i == j:
+                    continue
+                violates = (d_base[j] > d_base[i]) if route_strategy == "far_to_near" \
+                    else (d_base[j] < d_base[i])
+                if violates:
                     cost_m[i][j] += DIRECTION_PENALTY
 
     if return_node:

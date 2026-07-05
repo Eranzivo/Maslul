@@ -16,6 +16,8 @@ Read ALL files in `context/` before touching any code:
 
 **New entity / table rule:** Run all steps in `context/new-entity-checklist.md` before adding any Supabase table.
 
+**Knob rule:** Every per-tenant rule lives in `context/knobs.md` (key → JS reader → batch reader → test). New knob = new row + BOTH readers + test, same commit. After any schema/policy change: run Supabase security advisors.
+
 **Proactive upgrade rule:** Suggest significant product improvements proactively: what it does, steps, cost estimate.
 
 **Outputs rule:** Every artifact (reports, plans, migrations) → `outputs/[task-name]_[YYYY-MM-DD].[ext]`.
