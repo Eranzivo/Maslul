@@ -11,16 +11,28 @@
 | Stage | [pilot / paying / trial] |
 | Onboarding SQL | `outputs/[name]-onboarding_[date].sql` |
 
-## Runtime config (mirrors `tenants.config`)
+## Runtime config (mirrors `tenants.config` — walk `context/knobs.md`, decide EVERY row)
 | Key | Value | Notes |
 |---|---|---|
 | `scheduling.mode` | `zone` / `open` / `radius` | assignment strategy |
 | `scheduling.zone_match` | `city_list` / `polygon` | how a zone is matched (only when mode=zone) |
-| `scheduling.route_strategy` | `far_to_near` / `nearest_first` / `flexible` | day-route ordering |
-| `defaults.arrival_window_hours` | [hours] | customer service window |
-| `defaults.max_daily_jobs` | [n] | per tech per day |
+| `scheduling.zone_strict` | true / false | hard cross-zone block (default true) |
+| `scheduling.route_strategy` | `flexible` / `far_to_near` / `nearest_first` | day-route ordering — ask HOW they arrange a driving day |
+| `scheduling.fill_first` | true / false | pack active days before opening new |
+| `scheduling.balance` | `{enabled, weight}` | workload spread (see placement-policy note in knobs.md) |
+| `scheduling.equal_city_distribution` | true / false | split same-city calls across techs |
+| `scheduling.slot_release` | `{enabled, 72/48/24}` | hold early slots for far cities (far_to_near only) |
+| `defaults.work_days` | e.g. `[0,1,2,3,4]` | operating weekdays (0=Sun) |
 | `defaults.work_start` / `work_end` | [hh:mm] / [hh:mm] | default day hours |
-| Features enabled | [whatsapp / google_maps / geocoding / odoo / …] | `tenants.config.features` |
+| `defaults.arrival_window_hours` | [hours, fractional ok] | customer window; future: none = call-by-call |
+| `defaults.regular_job_minutes` / `package_job_minutes` | [min] | default durations |
+| `defaults.max_daily_jobs` | [n] | per tech per day |
+| `defaults.break` | `{enabled, start, end}` | tenant default break |
+| `depot` | `{lat, lon, address}` | routing origin |
+| Features enabled | [whatsapp / geocoding / auto_sequence / crm / reports / …] | `tenants.config.features` |
+
+## Per-tech setup (MANDATORY before first dispatch — backlog #2.10)
+Per tech: `base_city`/`return_city` · `rotation` (zone per weekday) · `weekly_schedule` (hours + off-days) · `min/max_daily` · `skills[]` (empty = can take NO categorized call!) · `cat_limits` · `blocked_cities/zones` · `duration_overrides`.
 
 ## Zones & rotation
 [How zones are defined for this client — city-list or polygon — and the weekday rotation per worker.]
