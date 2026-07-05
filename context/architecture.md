@@ -86,8 +86,8 @@
 - 5-second solver time limit
 - "🔀 מסלול מיטבי" button on home when tech has 2+ tasks today
 
-## Geocoding (Google Geocoding API)
-- POST `/geocode` — accepts `{street, city}`, returns `{lat, lon}` via Google Geocoding API (same key as Distance Matrix)
+## Geocoding (Google Geocoding API + shared address KB)
+- POST `/geocode` — accepts `{street, city}`, returns `{lat, lon, source}`. **Cache-first (Geo Slice B, 2026-07-05):** checks the global `geo_addresses` KB before Google — a repeat address from ANY tenant costs zero spend/quota; only real Google calls are metered. Trusted results (IL bbox) are stored back, so the KB grows with every client's calls. Lookup tiers: `exact` (city+street+number) → `street` (same street, NEAREST known house number — same-block reuse, never a cross-street guess) → Google. `backend/geo_addresses.py`; tests `tests/test_geo_addresses.py`
 - Frontend calls this inside `confirmAssign()` (button press, not blur) when `features.geocoding_enabled = true`
 - Result cached in `tasks.lat / tasks.lon / tasks.geocoded_at` — geocode once, reuse forever
 - `_pendingGeocode` JS var holds result until `confirmAssign()` writes it to the task
@@ -151,6 +151,7 @@ async function saveXToSupabase(x) {
 | `clients` | `id`, `tenant_id`, `name`, `phone`, `email`, `city`, `address`, `notes`, `archived` |
 | `recurring_templates` | `id`, `tenant_id`, `client_name`, `client_phone`, `city`, `street`, `category_id`, `category_name`, `notes`, `day_of_week`, `scheduled_time`, `interval_weeks` (1/2/4), `preferred_technician_id`, `lookahead_weeks`, `active`, `last_generated_date`, `created_at` |
 | `audit_log` | `id`, `created_at`, `tenant_id`, `table_name`, `operation`, `record_id`, `old_data` (JSONB), `new_data` (JSONB) |
+| `geo_addresses` | **GLOBAL Layer-A** (no tenant_id by design — public geography, PII-free: street+city+coords ONLY; deny-all RLS, backend-only): `city_key`, `street_key`, `street_name_key`, `house_number`, `lat`, `lon`, `source`, `confidence`; UNIQUE(city_key, street_key). New-entity checklist steps 2–7 N/A (no frontend load/save; Layer-A boundary) |
 
 ### DB Migrations (run in order on fresh Supabase)
 ```

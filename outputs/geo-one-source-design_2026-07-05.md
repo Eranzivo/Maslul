@@ -25,7 +25,7 @@ Resolution chain, identical in JS and Python: **normalize noise** (gershayim/quo
 5. **Superset audit:** one-time SQL inserting any static-only entries (JS or Python) into `geo_places` so the brain strictly contains the fallbacks.
 6. **Golden parity fixtures:** `tests/fixtures/geo-cases.json` (ק"ש variants, קריית collapse, נהריה/נהרייה, hyphen/quote noise, unknown city) asserted by BOTH the Node harness and pytest. Drift = failing test.
 
-## Slice B (designed, separate approval — the "City cords" address KB)
+## Slice B — ✅ SHIPPED 2026-07-05 (the "City cords" address KB)
 
 - New global table `geo_addresses` (`city_key`, `street_key` normalized, `lat`, `lon`, `source`, `confidence`, timestamps; unique on (city_key, street_key)); PII boundary: street+city only, never client names/phones.
 - **Geocode-on-save:** when a task with a street geocodes (existing `/geocode` flow), write coords to the task AND upsert `geo_addresses` — every client's calls grow the shared KB; repeat addresses cost nothing.
