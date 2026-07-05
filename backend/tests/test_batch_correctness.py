@@ -437,3 +437,46 @@ def test_point_in_polygon_mirrors_js():
     assert point_in_polygon(32.79, 34.99, _B7_RING) is False
     # vertex-count degenerate ring
     assert point_in_polygon(31.25, 34.79, []) is False
+
+
+# ── Slice 3: ONE placement policy, both doors (decided by Israel's handover 07-06) ──
+
+import json as _json
+_POLICY_FX = _json.load(io_open := open(os.path.join(os.path.dirname(__file__), "..", "..",
+                        "tests", "fixtures", "policy-cases.json"), encoding="utf-8"))
+io_open.close()
+
+def test_resolve_placement_policy_golden_fixture():
+    from batch_schedule import resolve_placement_policy
+    for case in _POLICY_FX["cases"]:
+        cfg = {"scheduling": case["sc"]} if case["sc"] is not None else {}
+        assert resolve_placement_policy(cfg) == case["expect"], case
+
+def test_placement_score_consolidate_packs_spread_splits():
+    from batch_schedule import _assignment_score
+    # consolidate: an active day (3 calls) beats an empty one
+    assert _assignment_score(3, 0, "consolidate") > _assignment_score(0, 0, "consolidate")
+    # spread: the least-loaded day wins
+    assert _assignment_score(0, 0, "spread") > _assignment_score(3, 0, "spread")
+    # same-city penalty applies under both (tie-breaker in consolidate)
+    assert _assignment_score(2, 0, "consolidate") > _assignment_score(2, 3, "consolidate")
+
+def test_e2e_consolidate_fills_one_day(monkeypatch):
+    cfg = _cfg()
+    cfg["scheduling"]["placement_policy"] = "consolidate"
+    fake = FakeSB(pending=[_pending(i, "באר שבע") for i in range(6)],
+                  zones=_ZONES, techs=[_tech("t1", "אלירן", _ROT_SOUTH)], cats=_CATS,
+                  config=cfg)
+    r = _run(fake, monkeypatch)
+    per_day = _new_per_day(r, "אלירן")
+    assert per_day.get(SUN) == 6, f"consolidate must pack Sunday, got {per_day}"
+
+def test_e2e_spread_splits_between_covering_days(monkeypatch):
+    cfg = _cfg()
+    cfg["scheduling"]["placement_policy"] = "spread"
+    fake = FakeSB(pending=[_pending(i, "באר שבע") for i in range(6)],
+                  zones=_ZONES, techs=[_tech("t1", "אלירן", _ROT_SOUTH)], cats=_CATS,
+                  config=cfg)
+    r = _run(fake, monkeypatch)
+    per_day = _new_per_day(r, "אלירן")
+    assert per_day.get(SUN) == 3 and per_day.get(WED) == 3, f"spread must split 3-3, got {per_day}"

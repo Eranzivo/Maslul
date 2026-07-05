@@ -1,0 +1,13 @@
+{
+  "_comment": "Placement-policy resolution parity — JS resolvePlacementPolicy ↔ Py resolve_placement_policy must agree on every case. Decided by Israel's handover 2026-07-06: consolidate is the philosophy (fill the best nearby route first, avoid half-empty days); spread exists as a per-tenant alternative. Legacy balance.enabled maps to spread (that was the flag's batch semantics).",
+  "cases": [
+    { "sc": null, "expect": "consolidate" },
+    { "sc": {}, "expect": "consolidate" },
+    { "sc": { "placement_policy": "consolidate" }, "expect": "consolidate" },
+    { "sc": { "placement_policy": "spread" }, "expect": "spread" },
+    { "sc": { "balance": { "enabled": true, "weight": 50 } }, "expect": "spread" },
+    { "sc": { "balance": { "enabled": false } }, "expect": "consolidate" },
+    { "sc": { "placement_policy": "consolidate", "balance": { "enabled": true } }, "expect": "consolidate" },
+    { "sc": { "placement_policy": "nonsense" }, "expect": "consolidate" }
+  ]
+}

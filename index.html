@@ -5084,6 +5084,25 @@ function buildSequencePayload(dayTasks, durationOf){
     locked:!!t.locked,
   }));
 }
+// ONE placement philosophy per tenant — 'consolidate' | 'spread' — mirror of the Python
+// resolve_placement_policy (golden fixture: tests/fixtures/policy-cases.json). Decided by
+// Israel's handover 2026-07-06: consolidate = fill the best nearby route first, avoid
+// half-empty days (his Scenario D). Legacy balance.enabled maps to spread; absent ⇒ consolidate.
+function resolvePlacementPolicy(sc){
+  const pp=sc&&sc.placement_policy;
+  if(pp==='consolidate'||pp==='spread')return pp;
+  if(sc&&sc.balance&&sc.balance.enabled)return 'spread';
+  return 'consolidate';
+}
+// Unified candidate score used by BOTH candidate modes (zone/open) — same semantics as
+// the batch _assignment_score, so a call dispatched live lands where a re-batch would put it.
+// consolidate: active-day bonus (fill-first); spread: least-loaded day wins, same-city nudged apart.
+function placementScore(policy, activeCount, load, cityLoad, weight){
+  const w=weight||50;
+  if(policy==='spread')return -(load*w)-cityLoad*Math.floor(w/2);
+  return activeCount*100+load;
+}
+// LEGACY (superseded by placementScore; kept for back-compat readers/tests):
 // Cross-tech fill-before-open ("the Michael-Sunday rule"): reward candidates landing on
 // already-active days, penalize opening empty days further in the future. Config-gated by
 // scheduling.balance {enabled, weight} — absent/disabled ⇒ 0 ⇒ today's behavior exactly.
@@ -5507,14 +5526,14 @@ function _candidatesZone(city,catId,dates,sc){
       // ── Backtrack detection: reject slots that create far→near→far zigzag ──
       if(routeLogic&&wouldBacktrack(tech,date.str,city))continue;
       const existingInZone=tasks.filter(t=>t.techId===tech.id&&t.date===date.str&&getCityZone(t.city)?.id===getTechZoneId(tech,date.str)&&t.status!=='cancelled').length;
-      let fillScore=existingInZone*100+load;
-      fillScore+=balanceAdjust(sc.balance,{dayLoad:load,dateOffset:dates.indexOf(date)});
-      // ── Equal city distribution: penalise techs already holding more tasks from same city ──
-      // Enabled via scheduling.equal_city_distribution = true (any tenant, defaults false).
-      if(sc.equal_city_distribution){
-        const cityTasks=tasks.filter(t=>String(t.techId)===String(tech.id)&&normalizeCity(t.city)===normalizeCity(city)&&t.status!=='cancelled').length;
-        fillScore-=cityTasks*50;
-      }
+      // ONE placement policy for both doors (mirror of batch _assignment_score).
+      const _policy=resolvePlacementPolicy(sc);
+      const _w=(sc.balance&&sc.balance.weight)||50;
+      const _needCity=_policy==='spread'||sc.equal_city_distribution;
+      const cityTasks=_needCity?tasks.filter(t=>String(t.techId)===String(tech.id)&&normalizeCity(t.city)===normalizeCity(city)&&t.status!=='cancelled').length:0;
+      let fillScore=placementScore(_policy,existingInZone,load,cityTasks,_w);
+      // Legacy equal_city_distribution stays honored under consolidate as a mild tie-breaker.
+      if(_policy==='consolidate'&&sc.equal_city_distribution)fillScore-=cityTasks*50;
       candidates.push({tech,date,load,existingInZone,fillScore,dateScore:dates.indexOf(date),optTime});
     }
   }
@@ -5561,8 +5580,7 @@ function _candidatesOpen(city,catId,dates,sc){
       slot=nudged;
       if(slot+dur>eh)continue;
       const optTime=minsToTime(slot);
-      let fillScore=load*100+dates.indexOf(date);
-      fillScore+=balanceAdjust(sc.balance,{dayLoad:load,dateOffset:dates.indexOf(date)});
+      let fillScore=placementScore(resolvePlacementPolicy(sc),load,load,0,(sc.balance&&sc.balance.weight)||50)+dates.indexOf(date);
       candidates.push({tech,date,load,existingInZone:0,fillScore,dateScore:dates.indexOf(date),optTime});
     }
   }
