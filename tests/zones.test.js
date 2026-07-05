@@ -134,5 +134,12 @@ suite('geo one-source: resolveZone matches through brain aliases', () => {
     ctx.resolveZone('קריית שמונה', null, null, conf, zonesL).zoneId === 'zN');
 });
 
+suite('polygon parity: _pointInPolygon golden fixture (mirror of Py point_in_polygon)', () => {
+  const fx = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'geo-cases.json'), 'utf8'));
+  const pc = fx.polygon_cases;
+  for (const [lat, lon] of pc.inside) check(`inside (${lat},${lon})`, ctx._pointInPolygon(lat, lon, pc.ring) === true);
+  for (const [lat, lon] of pc.outside) check(`outside (${lat},${lon})`, ctx._pointInPolygon(lat, lon, pc.ring) === false);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

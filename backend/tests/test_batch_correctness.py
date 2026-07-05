@@ -385,3 +385,55 @@ def test_clamp_blocks_drops_outside_and_clamps_overlap():
 
 def test_fractional_window_hours_rounds_not_truncates():
     assert _arrival_window_hours({"defaults": {"arrival_window_hours": 1.5}}) == 1.5
+
+
+# ── Batch polygon parity: zone_match='polygon' mirrors resolveZone (2026-07-05) ──
+# Before this, find_zone was city-list-only — a polygon-mode tenant couldn't batch.
+
+# Square ring around Beer Sheva (31.25, 34.79)
+_B7_RING = [{"lat": 31.15, "lng": 34.69}, {"lat": 31.35, "lng": 34.69},
+            {"lat": 31.35, "lng": 34.89}, {"lat": 31.15, "lng": 34.89}]
+_POLY_ZONES = [{"id": "z-poly", "name": "דרום-פוליגון", "cities": [],
+                "polygons": [_B7_RING]}]
+_ROT_POLY = {"0": "z-poly", "3": "z-poly"}
+
+def _poly_cfg():
+    c = _cfg()
+    c["scheduling"] = {"mode": "zone", "zone_match": "polygon", "route_strategy": "flexible"}
+    return c
+
+def _poly_pending(i, lat, lon, city="באר שבע"):
+    return {"id": f"pp{i}", "city": city, "street": "הרצל 1", "lat": lat, "lon": lon,
+            "category_id": "c-water"}
+
+def test_polygon_tenant_assigns_task_inside_ring(monkeypatch):
+    fake = FakeSB(pending=[_poly_pending(0, 31.25, 34.79)],
+                  zones=_POLY_ZONES, techs=[_tech("t1", "אלירן", _ROT_POLY)],
+                  cats=_CATS, config=_poly_cfg())
+    r = _run(fake, monkeypatch)
+    assert r["assigned"] == 1 and r["unassigned"] == 0
+
+def test_polygon_tenant_outside_all_polygons(monkeypatch):
+    # coords near Haifa — inside no ring
+    fake = FakeSB(pending=[_poly_pending(0, 32.79, 34.99, city="חיפה")],
+                  zones=_POLY_ZONES, techs=[_tech("t1", "אלירן", _ROT_POLY)],
+                  cats=_CATS, config=_poly_cfg())
+    r = _run(fake, monkeypatch)
+    assert r["unassigned"] == 1
+    assert r["unassigned_tasks"][0]["reason"] == "outside_all_polygons"
+
+def test_polygon_tenant_ungeocode_task_flagged(monkeypatch):
+    fake = FakeSB(pending=[{"id": "pp0", "city": "באר שבע", "street": None,
+                            "lat": None, "lon": None, "category_id": "c-water"}],
+                  zones=_POLY_ZONES, techs=[_tech("t1", "אלירן", _ROT_POLY)],
+                  cats=_CATS, config=_poly_cfg())
+    r = _run(fake, monkeypatch)
+    assert r["unassigned"] == 1
+    assert r["unassigned_tasks"][0]["reason"] == "not_geocoded"
+
+def test_point_in_polygon_mirrors_js():
+    from batch_schedule import point_in_polygon
+    assert point_in_polygon(31.25, 34.79, _B7_RING) is True
+    assert point_in_polygon(32.79, 34.99, _B7_RING) is False
+    # vertex-count degenerate ring
+    assert point_in_polygon(31.25, 34.79, []) is False

@@ -66,6 +66,22 @@ def _norm(city: str) -> str:
     return _CITY_ALIASES.get(c, c)
 
 
+def point_in_polygon(lat, lon, ring) -> bool:
+    """Ray-casting point-in-polygon over [{lat, lng}] vertices — EXACT mirror of the JS
+    _pointInPolygon (index.html <zone-logic>). Parity pair; shared fixture-tested."""
+    if not ring or len(ring) < 3:
+        return False
+    inside = False
+    j = len(ring) - 1
+    for i in range(len(ring)):
+        xi, yi = ring[i]["lat"], ring[i]["lng"]
+        xj, yj = ring[j]["lat"], ring[j]["lng"]
+        if ((yi > lon) != (yj > lon)) and (lat < (xj - xi) * (lon - yi) / (yj - yi) + xi):
+            inside = not inside
+        j = i
+    return inside
+
+
 def _match_key(name: str, alias_map: Optional[dict]) -> str:
     """ONE canonical matching key for a city name — the seam every city comparison goes
     through (zone matching). Chain (mirrors JS cityMatchKey exactly):
@@ -315,7 +331,7 @@ async def run_batch_schedule(
 
     zones_raw = await _sb_get("zones", {
         "tenant_id": f"eq.{tenant_id}",
-        "select": "id,name,cities",
+        "select": "id,name,cities,polygons",
     }, service_key)
 
     techs_raw = await _sb_get("technicians", {
@@ -359,6 +375,24 @@ async def run_batch_schedule(
             if k in z["keys"]:
                 return zid
         return None
+
+    # Two-axis zone matching — mirror of the JS resolveZone seam. city_list (default)
+    # matches canonical city keys; polygon matches the task's geocoded point against any
+    # ring in zones.polygons (same reasons: not_geocoded / outside_all_polygons).
+    zone_match = ((config.get("scheduling") or {}).get("zone_match")) or "city_list"
+
+    def find_zone_for(task) -> tuple:
+        """(zone_id, fail_reason). fail_reason set only when zone_id is None."""
+        if zone_match == "polygon":
+            lat, lon = task.get("lat"), task.get("lon")
+            if not (lat and lon):
+                return None, "not_geocoded"
+            for z in zones_raw:
+                if any(point_in_polygon(lat, lon, ring) for ring in (z.get("polygons") or [])):
+                    return z["id"], None
+            return None, "outside_all_polygons"
+        zid = find_zone(task["city"])
+        return zid, (None if zid else "city_not_in_zone")
 
     def tech_zone_for_day(tech: dict, d: date) -> Optional[str]:
         rotation = tech.get("rotation") or {}
@@ -500,9 +534,9 @@ async def run_batch_schedule(
     # Eligibility pass: zone membership + locatability. Failures here are terminal.
     pool = []
     for task in tasks_raw:
-        zone_id = find_zone(task["city"])
+        zone_id, zone_fail = find_zone_for(task)
         if not zone_id:
-            unassigned.append({"id": task["id"], "city": task["city"], "reason": "city_not_in_zone"})
+            unassigned.append({"id": task["id"], "city": task["city"], "reason": zone_fail})
             continue
 
         # Location must be locatable for sane routing. If the task has no coords AND its

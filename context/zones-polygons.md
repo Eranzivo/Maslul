@@ -51,6 +51,8 @@ The live helpers `getCityZone(city)` and `isCityInTechZone(tech, city, dateStr)`
 
 `resolveZone` is pure and lives inside the `// <zone-logic>` markers, covered by `tests/zones.test.js` (including tenant-separation cases proving two tenants with different `zone_match` resolve independently).
 
+**Batch parity (2026-07-05):** the Python batch mirrors both axes via `find_zone_for` in `batch_schedule.py` — `city_list` through the canonical `_match_key` chain, `polygon` through `point_in_polygon` (exact PNPOLY mirror of `_pointInPolygon`, shared `polygon_cases` fixture in `tests/fixtures/geo-cases.json` asserted by both suites). Same failure reasons (`not_geocoded` / `outside_all_polygons`), so a polygon-mode tenant batches identically to how they dispatch live.
+
 **Mode-aware UI:** the entire zone surface (settings **אזורים** tab, tech rotation grid, city-in-zone gate, zone error copy, batch "תקן אזורים" CTA) is gated by `appUsesZones()` / `body[data-zone-mode]` — hidden for `open`/`radius` tenants. See `context/architecture.md` → Mode-Aware UI.
 
 ---
