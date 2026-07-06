@@ -1,0 +1,15 @@
+{
+  "_comment": "Golden parity fixture: JS dateConstraintAllows (index.html <sched-logic>) and Py date_constraint_allows (batch_schedule) must agree. cons = {fixed_date, earliest_date, latest_date} ISO strings or null. fixed_date overrides the bounds.",
+  "cases": [
+    {"cons": {}, "date": "2026-07-12", "allow": true, "why": "no constraints = any date"},
+    {"cons": {"fixed_date": "2026-07-14"}, "date": "2026-07-14", "allow": true, "why": "fixed date matches"},
+    {"cons": {"fixed_date": "2026-07-14"}, "date": "2026-07-15", "allow": false, "why": "fixed date mismatch"},
+    {"cons": {"earliest_date": "2026-07-14"}, "date": "2026-07-13", "allow": false, "why": "before earliest"},
+    {"cons": {"earliest_date": "2026-07-14"}, "date": "2026-07-14", "allow": true, "why": "earliest is inclusive"},
+    {"cons": {"latest_date": "2026-07-14"}, "date": "2026-07-15", "allow": false, "why": "after latest"},
+    {"cons": {"latest_date": "2026-07-14"}, "date": "2026-07-14", "allow": true, "why": "latest is inclusive"},
+    {"cons": {"earliest_date": "2026-07-12", "latest_date": "2026-07-16"}, "date": "2026-07-14", "allow": true, "why": "inside both bounds"},
+    {"cons": {"fixed_date": "2026-07-20", "earliest_date": "2026-07-12", "latest_date": "2026-07-16"}, "date": "2026-07-20", "allow": true, "why": "fixed overrides bounds entirely"},
+    {"cons": {"fixed_date": "", "earliest_date": null, "latest_date": "2026-07-16"}, "date": "2026-07-16", "allow": true, "why": "empty/null constraint fields are ignored"}
+  ]
+}

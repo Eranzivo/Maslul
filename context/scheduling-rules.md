@@ -257,6 +257,25 @@ requirement: windows need a DAY option, not just hours). Design: `outputs/prefwi
 - **Parity:** `prefWindowAllowsDay/Range` ↔ `pref_allows_day/range` asserted by golden
   fixture `tests/fixtures/prefwindow-cases.json` in BOTH suites + 3 batch e2e tests.
 
+## Structured Date Constraints (fixed/earliest/latest) ✅ 2026-07-06
+
+Per-task hard date bounds (handover §10/§13), stored as `tasks.earliest_date` /
+`latest_date` / `fixed_date` (date columns, additive migration 2026-07-06 — SQL in the
+commit). `fixed_date` pins the call to exactly ONE date and **overrides the bounds**;
+earliest/latest are inclusive; absent/empty ⇒ unconstrained.
+
+- **Both doors, same gate:** live `dateConstraintAllows` filters candidate dates in
+  `buildCandidates` (every mode); batch `date_constraint_allows` gates `place_task` days.
+  Unassigned reasons: **`fixed_date_unavailable`** (pinned day has no coverage/capacity) and
+  **`no_slot_within_date_constraints`** (bounds exclude every covering day).
+- **Intake:** "אילוצי תאריך" row (לא לפני / לא אחרי / תאריך קבוע date inputs), draft-persisted.
+- **Parity:** golden fixture `tests/fixtures/datecons-cases.json` in BOTH suites + 4 batch
+  e2e tests (fixed lands exactly; uncovered fixed reports its reason; earliest pushes past
+  the first covering day; impossible bounds report theirs).
+- These are per-TASK fields, not tenant knobs — no `knobs.md` row (registry covers tenant
+  rules). **Still open from the constraints queue:** forbidden windows, `priority`
+  (semantics need Israel's definition: what does priority DO — earlier day? bump?).
+
 ## Authoritative Auto-Sequencing (`features.auto_sequence`) ✅ implemented 2026-06-12
 
 The OR-Tools optimizer is the **single source of truth** for a tech-day's order and times when the flag is on (default OFF — absent flag = zero behavior change).

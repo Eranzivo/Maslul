@@ -191,5 +191,15 @@ suite('preferred windows: golden fixture (parity with backend pref_allows_day/ra
 });
 
 
+suite('date constraints: golden fixture (parity with backend date_constraint_allows)', () => {
+  const fsD = require('fs'), pathD = require('path');
+  const fx = JSON.parse(fsD.readFileSync(pathD.join(__dirname, 'fixtures', 'datecons-cases.json'), 'utf8'));
+  for (const c of fx.cases) {
+    check(`datecons: ${c.why}`, ctx.dateConstraintAllows(c.cons, c.date) === c.allow);
+  }
+  check('datecons: null cons allows', ctx.dateConstraintAllows(null, '2026-07-12') === true);
+});
+
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

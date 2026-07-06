@@ -185,6 +185,23 @@ def pref_allows_range(windows, dow: int, from_min: int, to_min: int) -> bool:
     return ok
 
 
+def date_constraint_allows(task: Optional[dict], date_iso: str) -> bool:
+    """Structured per-task date constraints (handover §10/§13): `fixed_date` pins the call
+    to exactly one date (overriding the bounds); `earliest_date`/`latest_date` are inclusive
+    bounds. Absent/empty fields are ignored. ISO strings compare lexicographically.
+    Mirrors JS `dateConstraintAllows`; golden fixture tests/fixtures/datecons-cases.json."""
+    t = task or {}
+    fixed = t.get("fixed_date")
+    if fixed:
+        return date_iso == fixed
+    earliest, latest = t.get("earliest_date"), t.get("latest_date")
+    if earliest and date_iso < earliest:
+        return False
+    if latest and date_iso > latest:
+        return False
+    return True
+
+
 def resolve_pref_windows_mode(config: Optional[dict]) -> str:
     """`scheduling.preferred_windows_mode`: 'hard' (default — availability is a hard
     constraint per Israel's handover §8) | 'soft' (highlight-only, the pre-2026-07-06
@@ -390,7 +407,8 @@ async def run_batch_schedule(
     tasks_raw = await _sb_get("tasks", {
         "tenant_id": f"eq.{tenant_id}",
         "status": "eq.pending",
-        "select": "id,city,street,lat,lon,category_id,preferred_windows",
+        "select": "id,city,street,lat,lon,category_id,preferred_windows,"
+                  "earliest_date,latest_date,fixed_date",
     }, service_key)
 
     # Existing calls in range: they occupy capacity and shape every day's route.
@@ -564,6 +582,12 @@ async def run_batch_schedule(
         best_score = float("-inf")  # balance-on scores are negative — never seed at a finite floor
         cur = d_start
         while cur <= d_end:
+            # Structured date constraints (fixed/earliest/latest) are HARD — same gate
+            # as the live buildCandidates date filter.
+            if not date_constraint_allows(task, cur.isoformat()):
+                task["_datecons_blocked"] = True
+                cur += timedelta(days=1)
+                continue
             # Customer availability is HARD (handover §8): a window with days:[0,2]
             # keeps the call off every other weekday — same gate as the live door.
             if pref_mode == "hard" and not pref_allows_day(
@@ -739,6 +763,10 @@ async def run_batch_schedule(
                 # the dispatcher then knows to renegotiate days, not capacity).
                 if task.get("_dropped_once"):
                     reason = "day_over_capacity"
+                elif task.get("fixed_date") and task.get("_datecons_blocked"):
+                    reason = "fixed_date_unavailable"
+                elif task.get("_datecons_blocked") and not task.get("_pref_day_blocked"):
+                    reason = "no_slot_within_date_constraints"
                 elif task.get("_pref_day_blocked"):
                     reason = "no_preferred_window_day"
                 else:

@@ -973,6 +973,17 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div id="pref-windows-list"></div>
       <button type="button" onclick="addPrefWindow()" style="margin-top:4px;font-size:0.8125rem;color:var(--blue);background:none;border:none;cursor:pointer;padding:0;font-weight:700;">+ הוסף חלון זמן</button>
     </div>
+    <div class="fg">
+      <label class="fl">אילוצי תאריך <span style="font-size:0.75rem;color:var(--ink-4);font-weight:400;">(אופציונלי — תאריך קבוע גובר על הטווח)</span></label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <span style="font-size:0.8125rem;color:var(--ink-3);">לא לפני</span>
+        <input type="date" class="fc" id="s-earliest" style="width:150px;padding:6px 8px;" onchange="dateCons.earliest_date=this.value;saveDispatchDraft()">
+        <span style="font-size:0.8125rem;color:var(--ink-3);">לא אחרי</span>
+        <input type="date" class="fc" id="s-latest" style="width:150px;padding:6px 8px;" onchange="dateCons.latest_date=this.value;saveDispatchDraft()">
+        <span style="font-size:0.8125rem;color:var(--ink-3);">תאריך קבוע</span>
+        <input type="date" class="fc" id="s-fixed" style="width:150px;padding:6px 8px;" onchange="dateCons.fixed_date=this.value;saveDispatchDraft()">
+      </div>
+    </div>
     <div style="display:flex;align-items:center;gap:10px;margin-top:4px;margin-bottom:-4px;">
       <label id="recurring-toggle-lbl" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.875rem;font-weight:700;color:var(--ink-2);user-select:none;">
         <input type="checkbox" id="recurring-toggle" onchange="toggleRecurringMode()" style="width:16px;height:16px;cursor:pointer;accent-color:var(--blue);">
@@ -2715,6 +2726,7 @@ async function loadFromSupabase() {
       windowStart: t.scheduled_window_start || '', windowEnd: t.scheduled_window_end || '', locked: !!t.locked, updatedAt: t.updated_at || null,
       notes: t.notes || '', assignId: t.assign_id || '',
       preferredWindows: t.preferred_windows || [],
+      earliestDate: t.earliest_date || '', latestDate: t.latest_date || '', fixedDate: t.fixed_date || '',
       checklistDone: t.checklist_done || {},
       photoUrl: t.photo_url || null,
       signatureUrl: t.signature_url || null,
@@ -3122,6 +3134,8 @@ async function saveTaskToSupabase(task) {
     scheduled_window_start: task.windowStart || null, scheduled_window_end: task.windowEnd || null, locked: !!task.locked,
     notes: task.notes || '', cancelled_at: task.cancelledAt || null,
     preferred_windows: task.preferredWindows || [],
+    earliest_date: task.earliestDate || null, latest_date: task.latestDate || null,
+    fixed_date: task.fixedDate || null,
     checklist_done: task.checklistDone || {},
     photo_url: task.photoUrl || null,
     signature_url: task.signatureUrl || null,
@@ -3277,6 +3291,7 @@ let reportPeriod='month';
 let adminTenants=[],adminUsers=[],_adminCache={techs:[],zones:[],cats:[]};
 let nextTaskId=1,nextTechId=1,editingTechId=null;
 let selectedCat=null,currentFilter='all',statusTaskId=null,cancelTaskId=null,prefWindows=[];
+let dateCons={fixed_date:'',earliest_date:'',latest_date:''}; // per-call date constraints (intake)
 let currentRole='admin',currentTechView=null;
 let kpiFilter=null;
 let currentWeekOffset=0,selectedTechForCal=null;
@@ -5133,6 +5148,16 @@ function resolvePrefWindowsMode(sc){
   const m=sc&&sc.preferred_windows_mode;
   return(m==='hard'||m==='soft')?m:'hard';
 }
+// Structured per-task date constraints (handover §10/§13): fixed_date pins to exactly one
+// date (overrides bounds); earliest/latest are inclusive ISO bounds. Absent/empty ignored.
+// Mirrors Python date_constraint_allows; golden fixture tests/fixtures/datecons-cases.json.
+function dateConstraintAllows(cons,dateStr){
+  const c=cons||{};
+  if(c.fixed_date)return dateStr===c.fixed_date;
+  if(c.earliest_date&&dateStr<c.earliest_date)return false;
+  if(c.latest_date&&dateStr>c.latest_date)return false;
+  return true;
+}
 // Unified candidate score used by BOTH candidate modes (zone/open) — same semantics as
 // the batch _assignment_score, so a call dispatched live lands where a re-batch would put it.
 // consolidate: active-day bonus (fill-first); spread: least-loaded day wins, same-city nudged apart.
@@ -5484,11 +5509,14 @@ function isRouteLogical(tech,dateStr,newCity,catId){
 function buildCandidates(city,catId){
   const sc=tenantConfig.scheduling||{};
   const mode=sc.mode||'zone';
-  // HARD day gate on customer availability (same gate as batch place_task): a window
-  // with days:[0,2] removes every other weekday from candidacy, in EVERY mode.
+  // HARD gates shared with batch place_task: (1) structured date constraints
+  // (fixed/earliest/latest); (2) customer availability days — both remove dates from
+  // candidacy in EVERY mode.
   const _pw=(typeof prefWindows!=='undefined'&&prefWindows)||[];
+  const _dc=(typeof dateCons!=='undefined'&&dateCons)||{};
   const dates=getNextDates().filter(dt=>
-    resolvePrefWindowsMode(sc)!=='hard'||prefWindowAllowsDay(_pw,dt.d.getDay()));
+    dateConstraintAllows(_dc,dt.str)
+    &&(resolvePrefWindowsMode(sc)!=='hard'||prefWindowAllowsDay(_pw,dt.d.getDay())));
   if(mode==='open')   return _candidatesOpen(city,catId,dates,sc);
   if(mode==='radius') return _candidatesRadius(city,catId,dates,sc);
   return _candidatesZone(city,catId,dates,sc); // default — 'zone'
@@ -6196,7 +6224,7 @@ async function confirmAssign(idx,assignId){
   if(qt){
     // Snapshot original state so we can roll back if the save fails
     const _orig={client:qt.client,phone:qt.phone,city:qt.city,street:qt.street,floor:qt.floor,apartment:qt.apartment,entranceNotes:qt.entranceNotes,cat:qt.cat,catId:qt.catId,techId:qt.techId,status:qt.status,time:qt.time,date:qt.date,notes:qt.notes,assignId:qt.assignId,preferredWindows:qt.preferredWindows,lat:qt.lat,lon:qt.lon,geocodedAt:qt.geocodedAt};
-    Object.assign(qt,{client,phone,city,street,floor,apartment,entranceNotes,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,windowStart:slot.start,windowEnd:slot.end,notes,assignId,preferredWindows:[...prefWindows],lat:_gc?.lat||qt.lat||null,lon:_gc?.lon||qt.lon||null,geocodedAt:_gc?_gcAt:qt.geocodedAt||null});
+    Object.assign(qt,{client,phone,city,street,floor,apartment,entranceNotes,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,windowStart:slot.start,windowEnd:slot.end,notes,assignId,preferredWindows:[...prefWindows],earliestDate:dateCons.earliest_date||'',latestDate:dateCons.latest_date||'',fixedDate:dateCons.fixed_date||'',lat:_gc?.lat||qt.lat||null,lon:_gc?.lon||qt.lon||null,geocodedAt:_gc?_gcAt:qt.geocodedAt||null});
     newTask=qt;save();
     saved=await saveTaskToSupabase(qt);
     if(!saved)Object.assign(qt,_orig); // roll back in-memory state on failure
@@ -6205,7 +6233,7 @@ async function confirmAssign(idx,assignId){
       markDayDirty(_orig.techId,_orig.date);
     window._queueTask=null;
   } else {
-    newTask={id:nextTaskId++,client,phone,city,street,floor,apartment,entranceNotes,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,windowStart:slot.start,windowEnd:slot.end,notes,assignId,preferredWindows:[...prefWindows],lat:_gc?.lat||null,lon:_gc?.lon||null,geocodedAt:_gcAt};
+    newTask={id:nextTaskId++,client,phone,city,street,floor,apartment,entranceNotes,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,windowStart:slot.start,windowEnd:slot.end,notes,assignId,preferredWindows:[...prefWindows],earliestDate:dateCons.earliest_date||'',latestDate:dateCons.latest_date||'',fixedDate:dateCons.fixed_date||'',lat:_gc?.lat||null,lon:_gc?.lon||null,geocodedAt:_gcAt};
     tasks.push(newTask);save();
     saved=await saveTaskToSupabase(newTask);
   }
@@ -6408,6 +6436,8 @@ function renderPrefWindows(){
 function resetDispatch(){
   clearDispatch();selectedCat=null;renderCatChips();
   prefWindows=[];renderPrefWindows();
+  dateCons={fixed_date:'',earliest_date:'',latest_date:''};
+  ['s-earliest','s-latest','s-fixed'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('pkg-section').classList.add('hidden');
   document.getElementById('dispatch-success').classList.add('hidden');
   window._queueTask=null;
@@ -6422,6 +6452,7 @@ function saveDispatchDraft(){
   _DDFIELDS.forEach(id=>{const el=document.getElementById(id);if(el)d[id]=el.value;});
   d._cat=selectedCat||'';
   d._windows=prefWindows.length?JSON.stringify(prefWindows):'';
+  d._datecons=(dateCons.fixed_date||dateCons.earliest_date||dateCons.latest_date)?JSON.stringify(dateCons):'';
   localStorage.setItem(_DDKEY,JSON.stringify(d));
 }
 function restoreDispatchDraft(){
@@ -6434,6 +6465,10 @@ function restoreDispatchDraft(){
     _DDFIELDS.forEach(id=>{const el=document.getElementById(id);if(el&&d[id]){el.value=d[id];hasData=true;}});
     if(d._cat){selectedCat=d._cat;renderCatChips();renderPkgSection();hasData=true;}
     if(d._windows){try{prefWindows=JSON.parse(d._windows);renderPrefWindows();hasData=true;}catch(e){}}
+    if(d._datecons){try{dateCons=JSON.parse(d._datecons);
+      const _m={'s-earliest':'earliest_date','s-latest':'latest_date','s-fixed':'fixed_date'};
+      Object.entries(_m).forEach(([id,k])=>{const e=document.getElementById(id);if(e)e.value=dateCons[k]||'';});
+      hasData=true;}catch(e){}}
     if(hasData&&card){card.style.borderColor='var(--amber)';card.style.borderWidth='2px';
       const badge=document.createElement('div');
       badge.id='draft-badge';badge.style.cssText='font-size:0.7rem;color:var(--amber);font-weight:800;margin-bottom:6px;';
