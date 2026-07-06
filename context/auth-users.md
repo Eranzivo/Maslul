@@ -108,3 +108,26 @@ Coordinators can only see pages listed in their `permissions.views` array:
 Available pages: `home`, `dispatch`, `tasks`, `planner`, `reports`, `clients`
 
 The `applyRoleVisibility()` function hides nav items not in the coordinator's `views` array.
+
+## RLS policy matrix — consolidated 2026-07-06 (single generation, advisor-clean)
+
+Migration `rls_consolidation_role_scoped` (dry-run role-simulated first; outcome log:
+`outputs/rls-consolidation-plan_2026-07-06.md`). Legacy `*_all` policies (any tenant member
+= full write) are GONE. One permissive policy per action; helpers `current_tenant_id()` /
+`current_user_role()` / `is_super_admin()` only (`get_tenant_id()` is now unreferenced).
+
+| Table | SELECT | INSERT | UPDATE | DELETE |
+|---|---|---|---|---|
+| tasks | admin+coord (tenant) / tech **own rows** / SA | admin+coord / SA | admin+coord / tech **own** / SA | admin+coord / SA |
+| day_offs | tenant / SA | admin+coord / tech **own** / SA | same as insert | same |
+| clients, recurring_templates | tenant / SA | admin+coord / SA | same | same |
+| technicians, users, zones, categories, packages | tenant / SA | **admin only** / SA | same | same |
+| tenants | own tenant / SA | **SA only** (fixed: was impossible) | admin (own) / SA | SA only |
+| audit_log | tenant / SA (unchanged) | — | — | — |
+
+Rules of thumb: coordinator = day-to-day operations, never settings/tech/zone/category
+management (Eran 2026-07-06); technicians see & update ONLY their own tasks and manage
+their own vacations (policies ready — no tech logins exist yet); `is_super_admin()` clause
+present on every policy (Eran's cross-tenant impersonation). Backend uses the service key
+(bypasses RLS) — unaffected. Any policy change ⇒ re-run BOTH advisors + the DO-block role
+simulation (technique documented in the plan outcome).

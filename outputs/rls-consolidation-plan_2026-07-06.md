@@ -64,3 +64,29 @@ Unused indexes (young DB — re-check after a month of pilot traffic before drop
 idx_audit_tenant_table, idx_dayoffs_tech_date, idx_tasks_recurring_template,
 idx_users_tenant, idx_packages_tenant, idx_rectemplates_pref_tech, idx_tasks_category.
 No `auth_rls_initplan` warnings — auth.uid() wrapping is already clean everywhere.
+
+## ✅ OUTCOME — EXECUTED 2026-07-06 (same day, Eran approved the role matrix in-session)
+Eran confirmed the authorization matrix (admin = everything; coordinator = operations but
+NOT settings/techs; technicians = own view + own-row writes) → executed immediately since
+only 2 live users exist (Eran's admin + super_admin; no coordinator/tech logins yet —
+zero real flows at risk, ideal timing).
+
+1. **Dry-run**: full DDL + role sims in ONE rolled-back DO block (synthetic technician
+   user created inside the txn incl. auth.users parent row). Report:
+   `admin tasks_read=109 | admin tenant_update=1 | admin tech_update=1 | admin zones_update=8 |
+   super crosstenant_tasks=109 | super tenant_update=1 | tech tasks_visible=39 (own=39) |
+   tech own_update=39 | tech other_update=0 | tech zone_update=0 | tech tenant_update=0 |
+   tech own_vacation_insert=1 | tech users_visible=2` — every gate exactly per the matrix.
+2. **Applied** as migration `rls_consolidation_role_scoped`: all legacy `*_all` +
+   two-generation policies dropped; one policy per action per table; helpers unified on
+   `current_tenant_id()/current_user_role()` + `is_super_admin()`; NEW technician own-row
+   policies (tasks UPDATE, day_offs INSERT/UPDATE/DELETE) so future tech logins work;
+   tenants INSERT/DELETE = super_admin only (fixes the previously-broken tenant-creation
+   RLS path). `audit_log` untouched (read-only, already single policy).
+3. **Advisors after**: performance — 135 multiple_permissive_policies → **0**; unindexed
+   FK → fixed. Security — only known intentional items (deny-all Layer-A tables INFO,
+   4 helper-function WARNs required by RLS, leaked-password = Pro plan).
+4. **Eran smoke test (pending, next login):** incognito login (admin) — home loads,
+   dispatch works, zone edit saves, settings save; then 🔀 PureWater impersonation chip.
+Dry-run technique worth reusing: DO block + SET LOCAL ROLE + set_config(jwt.claims) +
+GET DIAGNOSTICS counts + RAISE EXCEPTION report = atomic RLS rehearsal with zero risk.
