@@ -175,5 +175,21 @@ suite('placement policy: golden fixture (parity with backend resolve_placement_p
 });
 
 
+suite('preferred windows: golden fixture (parity with backend pref_allows_day/range)', () => {
+  const fsW = require('fs'), pathW = require('path');
+  const fx = JSON.parse(fsW.readFileSync(pathW.join(__dirname, 'fixtures', 'prefwindow-cases.json'), 'utf8'));
+  for (const c of fx.day_cases) {
+    check(`day: ${c.why}`, ctx.prefWindowAllowsDay(c.windows, c.dow) === c.allow);
+  }
+  for (const c of fx.range_cases) {
+    check(`range: ${c.why}`, ctx.prefWindowAllowsRange(c.windows, c.dow, c.from_min, c.to_min) === c.allow);
+  }
+  check('mode: absent -> hard (availability is hard per handover s8)', ctx.resolvePrefWindowsMode({}) === 'hard');
+  check('mode: soft honored', ctx.resolvePrefWindowsMode({preferred_windows_mode:'soft'}) === 'soft');
+  check('mode: unknown -> hard', ctx.resolvePrefWindowsMode({preferred_windows_mode:'x'}) === 'hard');
+  check('mode: null sc -> hard', ctx.resolvePrefWindowsMode(null) === 'hard');
+});
+
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

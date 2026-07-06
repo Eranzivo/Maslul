@@ -1,0 +1,21 @@
+{
+  "_comment": "Golden parity fixture: JS prefWindowAllowsDay/prefWindowAllowsRange (index.html <sched-logic>) and Py pref_allows_day/pref_allows_range (batch_schedule) must agree on every case. days: Sun=0..Sat=6. Ranges are minutes-from-midnight, [from,to) overlap semantics.",
+  "day_cases": [
+    {"windows": [], "dow": 0, "allow": true, "why": "no windows = unconstrained"},
+    {"windows": [{"from": "09:00", "to": "13:00"}], "dow": 5, "allow": true, "why": "hour-only window applies every day"},
+    {"windows": [{"from": "09:00", "to": "13:00", "days": []}], "dow": 3, "allow": true, "why": "empty days = every day"},
+    {"windows": [{"from": "10:00", "to": "13:00", "days": [0, 2]}], "dow": 0, "allow": true, "why": "sunday allowed"},
+    {"windows": [{"from": "10:00", "to": "13:00", "days": [0, 2]}], "dow": 1, "allow": false, "why": "monday not in days"},
+    {"windows": [{"from": "10:00", "to": "13:00", "days": [0]}, {"from": "16:00", "to": "19:00", "days": [4]}], "dow": 4, "allow": true, "why": "union across windows"},
+    {"windows": [{"from": "10:00", "to": "13:00", "days": [0]}, {"from": "16:00", "to": "19:00", "days": [4]}], "dow": 6, "allow": false, "why": "no window covers saturday"}
+  ],
+  "range_cases": [
+    {"windows": [], "dow": 2, "from_min": 540, "to_min": 720, "allow": true, "why": "no windows = any slot"},
+    {"windows": [{"from": "09:00", "to": "13:00"}], "dow": 2, "from_min": 600, "to_min": 780, "allow": true, "why": "10:00-13:00 slot overlaps 09:00-13:00"},
+    {"windows": [{"from": "09:00", "to": "13:00"}], "dow": 2, "from_min": 780, "to_min": 960, "allow": false, "why": "13:00-16:00 touches but does not overlap (to is exclusive)"},
+    {"windows": [{"from": "10:00", "to": "13:00", "days": [0, 2]}], "dow": 1, "from_min": 600, "to_min": 780, "allow": false, "why": "time fits but day excluded"},
+    {"windows": [{"from": "10:00", "to": "13:00", "days": [0]}, {"from": "16:00", "to": "19:00", "days": [0]}], "dow": 0, "from_min": 960, "to_min": 1140, "allow": true, "why": "second window matches 16:00-19:00"},
+    {"windows": [{"from": "10:00", "to": "13:00", "days": [0]}, {"from": "16:00", "to": "19:00", "days": [0]}], "dow": 0, "from_min": 780, "to_min": 960, "allow": false, "why": "13:00-16:00 falls in the gap between windows"},
+    {"windows": [{"from": "bogus", "to": "13:00"}], "dow": 0, "from_min": 540, "to_min": 720, "allow": true, "why": "malformed window fails open (never blocks scheduling)"}
+  ]
+}

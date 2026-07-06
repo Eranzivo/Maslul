@@ -5094,6 +5094,45 @@ function resolvePlacementPolicy(sc){
   if(sc&&sc.balance&&sc.balance.enabled)return 'spread';
   return 'consolidate';
 }
+// Customer availability (preferred windows) — HARD by default (Israel's handover §8).
+// Mirrors Python pref_allows_day/pref_allows_range/resolve_pref_windows_mode; golden
+// fixture tests/fixtures/prefwindow-cases.json asserts both sides. Window shape:
+// {from:'10:00', to:'13:00', days:[0,2]} — days Sun=0..Sat=6; absent/empty = every day.
+function _pwMinutes(w){
+  try{
+    const[fh,fm]=String(w.from).split(':').map(Number);
+    const[th,tm]=String(w.to).split(':').map(Number);
+    if([fh,fm,th,tm].some(isNaN))return null;
+    return[fh*60+fm,th*60+tm];
+  }catch(e){return null;}
+}
+function _pwDays(w){const d=w&&w.days;return(Array.isArray(d)&&d.length)?d:null;}
+function prefWindowAllowsDay(windows,dow){
+  if(!windows||!windows.length)return true;
+  let ok=false;
+  for(const w of windows){
+    if(_pwMinutes(w)===null)return true; // malformed ⇒ fail open, never blocks scheduling
+    const days=_pwDays(w);
+    if(days===null||days.includes(dow))ok=true;
+  }
+  return ok;
+}
+function prefWindowAllowsRange(windows,dow,fromMin,toMin){
+  if(!windows||!windows.length)return true;
+  let ok=false;
+  for(const w of windows){
+    const mins=_pwMinutes(w);
+    if(mins===null)return true; // malformed ⇒ fail open
+    const days=_pwDays(w);
+    if(days!==null&&!days.includes(dow))continue;
+    if(fromMin<mins[1]&&toMin>mins[0])ok=true; // [from,to) overlap — touching ≠ overlap
+  }
+  return ok;
+}
+function resolvePrefWindowsMode(sc){
+  const m=sc&&sc.preferred_windows_mode;
+  return(m==='hard'||m==='soft')?m:'hard';
+}
 // Unified candidate score used by BOTH candidate modes (zone/open) — same semantics as
 // the batch _assignment_score, so a call dispatched live lands where a re-batch would put it.
 // consolidate: active-day bonus (fill-first); spread: least-loaded day wins, same-city nudged apart.
@@ -5445,7 +5484,11 @@ function isRouteLogical(tech,dateStr,newCity,catId){
 function buildCandidates(city,catId){
   const sc=tenantConfig.scheduling||{};
   const mode=sc.mode||'zone';
-  const dates=getNextDates();
+  // HARD day gate on customer availability (same gate as batch place_task): a window
+  // with days:[0,2] removes every other weekday from candidacy, in EVERY mode.
+  const _pw=(typeof prefWindows!=='undefined'&&prefWindows)||[];
+  const dates=getNextDates().filter(dt=>
+    resolvePrefWindowsMode(sc)!=='hard'||prefWindowAllowsDay(_pw,dt.d.getDay()));
   if(mode==='open')   return _candidatesOpen(city,catId,dates,sc);
   if(mode==='radius') return _candidatesRadius(city,catId,dates,sc);
   return _candidatesZone(city,catId,dates,sc); // default — 'zone'
@@ -6062,11 +6105,15 @@ function showCandidate(idx){
     const slotCount=tasksInSlot.length;const full=slotCount>=slotCapacity;
     const isSuggested=optH>=h&&optH<h+slotH;
     const slotFromMins=h*60,slotToMins=(h+slotH)*60;
-    const preferred=!full&&prefWindows.length>0&&prefWindows.some(w=>{
-      const[fh,fm]=w.from.split(':').map(Number);const[th,tm]=w.to.split(':').map(Number);
-      return slotFromMins<th*60+tm&&slotToMins>fh*60+fm;
-    });
-    slots.push({start:sStart,end:sEnd,full,slotCount,slotCapacity,isSuggested,preferred});
+    // Day-aware window match (mirror of batch pref_allows_range). Under 'hard' mode a
+    // non-matching slot is DISABLED — availability is a hard constraint (handover §8);
+    // under 'soft' it keeps the old highlight-only behavior.
+    const _dow=c.date.d.getDay();
+    const inPref=prefWindows.length>0&&prefWindowAllowsRange(prefWindows,_dow,slotFromMins,slotToMins);
+    const preferred=!full&&inPref;
+    const offPref=prefWindows.length>0&&!inPref
+      &&resolvePrefWindowsMode(tenantConfig.scheduling||{})==='hard';
+    slots.push({start:sStart,end:sEnd,full,slotCount,slotCapacity,isSuggested,preferred,offPref});
   }
   const assignId=genId();
   window._currentSlots=slots;window._currentIdx=idx;
@@ -6092,7 +6139,7 @@ function showCandidate(idx){
       </div>
       ${routeHtml}
       <div style="font-size:0.8rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 6px;">בחר חלון זמן</div>
-      <div class="time-slots">${slots.map((s,si)=>`<div class="time-slot ${s.full?'busy':s.isSuggested?'suggested':s.preferred?'preferred':''}" onclick="${s.full?'':'selectTimeSlot('+si+')'}" id="ts-${si}"><span class="time-slot-range">${s.start} — ${s.end}</span><span style="font-size:0.7rem;">${s.full?'מלא ('+s.slotCount+'/'+s.slotCapacity+')':s.slotCount>0?''+s.slotCount+'/'+s.slotCapacity+(s.isSuggested?' ⭐':''):s.preferred?'⭐ מועדף':'פנוי'}</span></div>`).join('')}</div>
+      <div class="time-slots">${slots.map((s,si)=>`<div class="time-slot ${s.full||s.offPref?'busy':s.isSuggested?'suggested':s.preferred?'preferred':''}" onclick="${s.full||s.offPref?'':'selectTimeSlot('+si+')'}" id="ts-${si}"><span class="time-slot-range">${s.start} — ${s.end}</span><span style="font-size:0.7rem;">${s.full?'מלא ('+s.slotCount+'/'+s.slotCapacity+')':s.offPref?'מחוץ לזמינות הלקוח':s.slotCount>0?''+s.slotCount+'/'+s.slotCapacity+(s.isSuggested?' ⭐':''):s.preferred?'⭐ מועדף':'פנוי'}</span></div>`).join('')}</div>
       <div class="customer-form" id="cform-${idx}" style="display:none;">
         <div style="display:flex;gap:8px;margin-top:4px;">
           <button class="btn btn-outline" onclick="clearDispatch()">← חזרה</button>
@@ -6333,15 +6380,30 @@ function removePrefWindow(i){
   prefWindows.splice(i,1);
   renderPrefWindows();saveDispatchDraft();
 }
+function togglePrefWindowDay(i,d){
+  const w=prefWindows[i];if(!w)return;
+  const days=Array.isArray(w.days)?w.days:[];
+  w.days=days.includes(d)?days.filter(x=>x!==d):[...days,d].sort();
+  renderPrefWindows();saveDispatchDraft();
+}
 function renderPrefWindows(){
   const el=document.getElementById('pref-windows-list');if(!el)return;
-  el.innerHTML=prefWindows.map((w,i)=>`
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+  const DAY_CHIPS=['א','ב','ג','ד','ה','ו','ש']; // Sun=0..Sat=6 — same convention both engines
+  el.innerHTML=prefWindows.map((w,i)=>{
+    const days=Array.isArray(w.days)?w.days:[];
+    const chips=DAY_CHIPS.map((lbl,d)=>{
+      const on=days.includes(d);
+      return`<button type="button" onclick="togglePrefWindowDay(${i},${d})" title="יום ${lbl}'" style="width:26px;height:26px;border-radius:50%;border:1.5px solid ${on?'var(--blue)':'var(--line)'};background:${on?'var(--blue)':'none'};color:${on?'#fff':'var(--ink-3)'};font-size:0.75rem;font-weight:700;cursor:pointer;padding:0;line-height:1;">${lbl}</button>`;
+    }).join('');
+    return`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
       <input type="time" class="fc" value="${w.from}" style="width:90px;padding:6px 8px;" onchange="prefWindows[${i}].from=this.value;saveDispatchDraft()">
       <span style="color:var(--ink-3);">עד</span>
       <input type="time" class="fc" value="${w.to}" style="width:90px;padding:6px 8px;" onchange="prefWindows[${i}].to=this.value;saveDispatchDraft()">
+      <span style="display:inline-flex;gap:4px;align-items:center;">${chips}</span>
+      <span style="font-size:0.7rem;color:var(--ink-4);">${days.length?'':'כל יום'}</span>
       <button type="button" onclick="removePrefWindow(${i})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:1.1rem;padding:0;line-height:1;">✕</button>
-    </div>`).join('');
+    </div>`;}).join('');
 }
 function resetDispatch(){
   clearDispatch();selectedCat=null;renderCatChips();

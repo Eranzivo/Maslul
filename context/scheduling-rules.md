@@ -235,6 +235,28 @@ Customers receive a **3-hour arrival window** (e.g., 07:00–10:00), not an exac
     - Out-of-zone calls show a ⚠ in both planner views (`taskOutOfZone` = policy ≠ 'allow', render-time, no persisted flag, auto-clears when moved back in-zone). Unknown-zone cities (e.g. חרב) are left to needs_location, not flagged here. Pure helper tested in `tests/zones.test.js` (`zoneDropDecision` suite, 8 checks).
   - Both edit paths keep (or, for grid-drag, set) the customer window, clear exact time so the receiving day re-sequences. **Persistence:** all paths `await saveTaskToSupabase` → the edit reaches Supabase (shared DB, visible to Israel via tenant RLS) before any refresh can drop it. Plan: `outputs/editable-calendar-plan_2026-06-13.md`. **Drag/tap interactions need browser QA.**
 
+## Preferred Time Windows — day-aware + HARD both doors ✅ 2026-07-06
+
+Customer availability is a **hard constraint** (Israel's handover §8; Eran's intake-form
+requirement: windows need a DAY option, not just hours). Design: `outputs/prefwindows-days-design_2026-07-06.md`.
+
+- **Shape** (`tasks.preferred_windows` jsonb, no migration): `{from:"10:00", to:"13:00", days:[0,2]}`.
+  `days` = Sun=0…Sat=6 (JS `getDay`; Python converts via `_dow`). Absent/empty `days` ⇒ every
+  day (all pre-existing rows keep meaning); no windows ⇒ unconstrained. Malformed window ⇒
+  **fail-open** (never blocks scheduling).
+- **Knob `scheduling.preferred_windows_mode`**: `hard` (default) | `soft` (pre-07-06
+  highlight-only). Registry row in `context/knobs.md`.
+- **Live door (hard):** `buildCandidates` filters out disallowed weekdays for EVERY mode
+  (zone/open/radius); in the slot picker, non-matching slots are disabled with
+  "מחוץ לזמינות הלקוח" (matching ones keep the ⭐). Intake: 7 day-chips per window row
+  (none selected = "כל יום").
+- **Batch door (hard):** `place_task` skips disallowed days (same gate); the day solve gives
+  the new call the day's earliest tech-hours-overlapping preferred window as its HARD solver
+  window (v1: one window per task — earliest overlapping wins). Un-placeable day sets →
+  unassigned reason **`no_preferred_window_day`** (dispatcher renegotiates days, not capacity).
+- **Parity:** `prefWindowAllowsDay/Range` ↔ `pref_allows_day/range` asserted by golden
+  fixture `tests/fixtures/prefwindow-cases.json` in BOTH suites + 3 batch e2e tests.
+
 ## Authoritative Auto-Sequencing (`features.auto_sequence`) ✅ implemented 2026-06-12
 
 The OR-Tools optimizer is the **single source of truth** for a tech-day's order and times when the flag is on (default OFF — absent flag = zero behavior change).

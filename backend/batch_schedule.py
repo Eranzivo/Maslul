@@ -133,6 +133,66 @@ def tenant_works_day(dow: int, config: Optional[dict]) -> bool:
     return dow in wd
 
 
+def _pref_window_minutes(w) -> Optional[tuple]:
+    """Parse one preferred-window dict to (from_min, to_min); None on malformed input —
+    a broken window must FAIL OPEN (never block scheduling), mirroring the JS side."""
+    try:
+        fh, fm = map(int, str(w["from"]).split(":"))
+        th, tm = map(int, str(w["to"]).split(":"))
+        return fh * 60 + fm, th * 60 + tm
+    except Exception:
+        return None
+
+
+def _pref_window_days(w) -> Optional[list]:
+    """Window's day list (Sun=0…Sat=6, JS getDay convention). Absent/empty ⇒ None = every day."""
+    days = w.get("days") if isinstance(w, dict) else None
+    return days if isinstance(days, list) and days else None
+
+
+def pref_allows_day(windows, dow: int) -> bool:
+    """HARD day gate for customer availability (handover §8): with windows present, weekday
+    `dow` is eligible only if some window covers it (hour-only window = every day).
+    No/empty windows ⇒ unconstrained. Mirrors JS `prefWindowAllowsDay`; golden fixture
+    tests/fixtures/prefwindow-cases.json asserts both sides."""
+    if not windows:
+        return True
+    ok = False
+    for w in windows:
+        if _pref_window_minutes(w) is None:
+            return True  # malformed ⇒ fail open
+        days = _pref_window_days(w)
+        if days is None or dow in days:
+            ok = True
+    return ok
+
+
+def pref_allows_range(windows, dow: int, from_min: int, to_min: int) -> bool:
+    """HARD time gate: does any window allowed on `dow` OVERLAP [from_min, to_min)?
+    (Touching boundaries don't overlap.) Mirrors JS `prefWindowAllowsRange`."""
+    if not windows:
+        return True
+    ok = False
+    for w in windows:
+        mins = _pref_window_minutes(w)
+        if mins is None:
+            return True  # malformed ⇒ fail open
+        days = _pref_window_days(w)
+        if days is not None and dow not in days:
+            continue
+        if from_min < mins[1] and to_min > mins[0]:
+            ok = True
+    return ok
+
+
+def resolve_pref_windows_mode(config: Optional[dict]) -> str:
+    """`scheduling.preferred_windows_mode`: 'hard' (default — availability is a hard
+    constraint per Israel's handover §8) | 'soft' (highlight-only, the pre-2026-07-06
+    behavior). Unknown values ⇒ 'hard'. Mirrors JS `resolvePrefWindowsMode`."""
+    mode = (((config or {}).get("scheduling") or {}).get("preferred_windows_mode"))
+    return mode if mode in ("hard", "soft") else "hard"
+
+
 def _arrival_window_hours(config: Optional[dict]) -> float:
     """Customer service-window length. Real location: `config.defaults.arrival_window_hours`
     (the shape every other defaults knob uses). The old top-level read was a bug — kept only
@@ -330,7 +390,7 @@ async def run_batch_schedule(
     tasks_raw = await _sb_get("tasks", {
         "tenant_id": f"eq.{tenant_id}",
         "status": "eq.pending",
-        "select": "id,city,street,lat,lon,category_id",
+        "select": "id,city,street,lat,lon,category_id,preferred_windows",
     }, service_key)
 
     # Existing calls in range: they occupy capacity and shape every day's route.
@@ -378,6 +438,7 @@ async def run_batch_schedule(
     sched_conf = config.get("scheduling") or {}
     placement_policy = resolve_placement_policy(config)
     placement_weight = (sched_conf.get("balance") or {}).get("weight", 50)
+    pref_mode = resolve_pref_windows_mode(config)
 
     # 2. Build lookup tables
     cat_duration = {c["id"]: c.get("duration_minutes", 30) for c in cats_raw}
@@ -503,6 +564,13 @@ async def run_batch_schedule(
         best_score = float("-inf")  # balance-on scores are negative — never seed at a finite floor
         cur = d_start
         while cur <= d_end:
+            # Customer availability is HARD (handover §8): a window with days:[0,2]
+            # keeps the call off every other weekday — same gate as the live door.
+            if pref_mode == "hard" and not pref_allows_day(
+                    task.get("preferred_windows"), _dow(cur)):
+                task["_pref_day_blocked"] = True
+                cur += timedelta(days=1)
+                continue
             for tech in techs_raw:
                 if not tech_is_working(tech, cur):
                     continue
@@ -617,8 +685,36 @@ async def run_batch_schedule(
             "locked": bool(e.get("locked")),
             "scheduled_time": (e.get("scheduled_time") or "")[:5] or None,
         } for e in day_existing]
-        new_v2 = [{"duration": t["_duration"], "window_start": None, "window_end": None,
-                   "locked": False, "scheduled_time": None} for t in day_tasks]
+        # HARD time gate: a new call with preferred windows gets the day's earliest
+        # tech-hours-overlapping window as its solver window (window_start/end are hard
+        # in solve_route_v2). v1: one window per task — earliest overlapping wins.
+        day_dow = _dow(date.fromisoformat(key[1]))
+        day_start_min, day_end_min = _time_to_min(start_t), _time_to_min(end_t)
+
+        def _pref_solver_window(t):
+            if pref_mode != "hard":
+                return None, None
+            wins = t.get("preferred_windows") or []
+            best = None
+            for w in wins:
+                mins = _pref_window_minutes(w)
+                if mins is None:
+                    return None, None  # malformed ⇒ fail open, no narrowing
+                days = _pref_window_days(w)
+                if days is not None and day_dow not in days:
+                    continue
+                if mins[0] < day_end_min and mins[1] > day_start_min:
+                    if best is None or mins[0] < best[0]:
+                        best = mins
+            if best is None:
+                return None, None  # day already passed pref_allows_day; only hours clash ⇒ open
+            return _min_to_time(max(best[0], day_start_min)), _min_to_time(min(best[1], day_end_min))
+
+        new_v2 = []
+        for t in day_tasks:
+            ws, we = _pref_solver_window(t)
+            new_v2.append({"duration": t["_duration"], "window_start": ws, "window_end": we,
+                           "locked": False, "scheduled_time": None})
         brk = _clamp_blocks(tech_breaks(tech, config, dayoffs_partial.get(key, [])),
                             start_t, end_t)
 
@@ -638,8 +734,15 @@ async def run_batch_schedule(
             key = place_task(task)
             if key is None:
                 # Dropped earlier ⇒ it HAD a covering day that ran out of time budget;
-                # never placeable at all ⇒ no slot in range.
-                reason = "day_over_capacity" if task.get("_dropped_once") else "no_slot_in_range"
+                # never placeable at all ⇒ no slot in range (distinguish the case where
+                # the customer's preferred-window DAYS are what eliminated the range —
+                # the dispatcher then knows to renegotiate days, not capacity).
+                if task.get("_dropped_once"):
+                    reason = "day_over_capacity"
+                elif task.get("_pref_day_blocked"):
+                    reason = "no_preferred_window_day"
+                else:
+                    reason = "no_slot_in_range"
                 unassigned.append({"id": task["id"], "city": task["city"], "reason": reason})
             else:
                 dirty.add(key)
