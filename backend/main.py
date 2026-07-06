@@ -168,7 +168,11 @@ def health():
     return {
         "status": "ok",
         "service": "maslul-optimizer",
-        "version": "1.2.0",
+        "version": "1.3.0",
+        # In-memory brain size: 0 until the first optimize/geocode warms it; once warm it
+        # must match geo_places row count (1,310 after the 2026-07-06 national import) —
+        # a lower number means the paged loader regressed.
+        "geo_brain_places": len(geo_resolver._brain["places"]),
         "gmaps": "configured" if gmaps_key else "missing — using haversine fallback",
         "route_cache": "configured" if os.getenv("SUPABASE_SERVICE_KEY") else "missing SUPABASE_SERVICE_KEY — optimizer works but never caches",
         "daily_elements_used": used,
