@@ -25,9 +25,16 @@
    ⇒ inline create: geocode via /geocode (never guess coords), REQUIRED zone pick
    (dual-membership allowed with confirm), writes zone.cities via canonical dedup
    (cityMatchKey), optional place_aliases variant. Instantly schedulable after create.
-4. **Override reason required + audited** (handover §15F): `manually_overridden` +
-   `override_reason` on tasks (additive migration), required prompt on the 3 manual
-   placement paths + lock action; audit_log entry. Small.
+4. ✅ **DONE 2026-07-07** — Override reason required + audited (handover §15F). Additive
+   migration `tasks_manual_override_audit` (`manually_overridden` bool + `override_reason`
+   text). KEY FINDING: an `_audit_tasks` trigger already writes every task UPDATE to
+   audit_log, so stamping these columns gives the audit trail for FREE — no new RLS, no
+   browser audit writes. `guardManualPlacement` (all 3 manual paths) prompts a REQUIRED
+   reason (`promptOverrideReason`) when the coordinator overrides a soft guard; pure
+   `overrideStamp` sets the fields (recommended dispatch clears them); task-detail shows
+   «⚠ שיבוץ חריג» + reason. Lock action is already trigger-audited (no reason forced —
+   too frequent). Advisors clean (no new). sched.test.js (155 passed). Migration record:
+   outputs/override-audit_2026-07-07.md.
 5. ✅ **DONE 2026-07-07** — Three-city + stacking golden anchors in
    `backend/tests/test_israel_scenarios.py`. NB: the depot-distance physics made a literal
    "Dimona 07:00 from an Ashkelon depot" fabricated day infeasible (correct engine behavior),

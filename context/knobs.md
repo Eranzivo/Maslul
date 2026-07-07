@@ -61,7 +61,9 @@ Legend: ✅ enforced · ⚠ caveat (see note) · n/a not applicable to that laye
 | `locked` + `scheduled_time` | coordinator pin | `splitLockedFlexible`/payload | existing-call policy | ✅ pinned, never dropped | test_sequencing.py |
 | `scheduled_window_start/end` | customer promise | payload | existing-call policy (hard) | ✅ may wait | test_sequencing.py + test_batch_correctness.py |
 | `lat`/`lon` | exact coords beat city centroid | `buildSequencePayload` | `_loc` | ✅ matrix | test_optimizer.py |
-| structured constraints (earliest/latest/fixed_date/approval/contact) | Israel's real cards | ❌ future — free-text notes today | ❌ | ❌ | backlog |
+| `earliest_date`/`latest_date`/`fixed_date` | structured date constraints (Israel's cards) | `dateConstraintAllows` (buildCandidates gate) | `date_constraint_allows` (place_task gate) | ✅ removes disallowed dates | datecons-cases.json BOTH suites |
+| `preferred_windows {from,to,days[]}` | customer availability (day-aware) | `prefWindowAllowsDay/Range` | `pref_allows_day/range` | ✅ hard window | prefwindow-cases.json BOTH suites |
+| `manually_overridden` + `override_reason` | coordinator override of a soft placement guard (out-of-zone / over-capacity / no route-fit) — required reason, **audited via `_audit_tasks` trigger → audit_log** | `overrideStamp` + `guardManualPlacement` (3 manual paths) + `promptOverrideReason` | n/a (batch never overrides — solver-hard) | n/a | sched.test.js `overrideStamp` |
 
 ## Day-offs & shared geo
 - `day_offs` (full/partial) — live `isTechAvailable`/`getTechPartialBlocks`; batch `tech_is_working`/`tech_breaks` (schema-tolerant: missing `type` ⇒ full). ✅ both since 2026-07-05.

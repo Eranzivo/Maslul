@@ -2734,6 +2734,7 @@ async function loadFromSupabase() {
       notes: t.notes || '', assignId: t.assign_id || '',
       preferredWindows: t.preferred_windows || [],
       earliestDate: t.earliest_date || '', latestDate: t.latest_date || '', fixedDate: t.fixed_date || '',
+      manuallyOverridden: !!t.manually_overridden, overrideReason: t.override_reason || '',
       checklistDone: t.checklist_done || {},
       photoUrl: t.photo_url || null,
       signatureUrl: t.signature_url || null,
@@ -3143,6 +3144,7 @@ async function saveTaskToSupabase(task) {
     preferred_windows: task.preferredWindows || [],
     earliest_date: task.earliestDate || null, latest_date: task.latestDate || null,
     fixed_date: task.fixedDate || null,
+    manually_overridden: !!task.manuallyOverridden, override_reason: task.overrideReason || null,
     checklist_done: task.checklistDone || {},
     photo_url: task.photoUrl || null,
     signature_url: task.signatureUrl || null,
@@ -5043,20 +5045,24 @@ function zoneDropMismatch(tech,city,dateStr){
   return { cityZone:(zones.find(z=>z.id===r.zoneId)||{}).name||'', dayZone:(zones.find(z=>z.id===dayZid)||{}).name||'' };
 }
 // Returns true to proceed with the drop/place, false to abort (hard block, or coordinator declined the warning).
+// Manual-placement guards return {ok, override}: ok=false aborts the placement;
+// override=true means the coordinator proceeded PAST a soft warning (needs an
+// audited reason). A clean allow is {ok:true, override:false}.
 function confirmZoneDrop(techId,city,dateStr){
   const m=zoneDropMismatch(technicians.find(x=>String(x.id)===String(techId)),city,dateStr);
   const decision=zoneDropDecision((tenantConfig||{}).scheduling, !!m);
-  if(decision==='allow') return true;
+  if(decision==='allow') return {ok:true,override:false};
   if(decision==='block'){
     showToast(`"${city}" שייכת לאזור "${m.cityZone}" — הטכנאי מבצע ביום זה את אזור "${m.dayZone}". שיבוץ מחוץ לאזור חסום.`, 'error');
-    return false;
+    return {ok:false,override:false};
   }
-  return confirm(`⚠️ "${city}" שייכת לאזור "${m.cityZone}", אך הטכנאי מבצע ביום זה את אזור "${m.dayZone}".\n\nשיבוץ רחוק מהאזור עלול להאריך מאוד את המסלול ולפגוע בשאר הקריאות של היום.\n\nלשבץ בכל זאת?`);
+  const proceed=confirm(`⚠️ "${city}" שייכת לאזור "${m.cityZone}", אך הטכנאי מבצע ביום זה את אזור "${m.dayZone}".\n\nשיבוץ רחוק מהאזור עלול להאריך מאוד את המסלול ולפגוע בשאר הקריאות של היום.\n\nלשבץ בכל זאת?`);
+  return {ok:proceed,override:proceed};
 }
-// Capacity check on a manual drop/tap-place. Returns false to abort. A task moving WITHIN
-// its own tech+day (re-windowing) never adds load, so it's exempt.
+// Capacity + route-fit check on a manual drop/tap-place. A task moving WITHIN its
+// own tech+day (re-windowing) never adds load, so it's exempt.
 function confirmCapacityDrop(techId,task,ds){
-  const tech=technicians.find(x=>String(x.id)===String(techId)); if(!tech) return true;
+  const tech=technicians.find(x=>String(x.id)===String(techId)); if(!tech) return {ok:true,override:false};
   const already=task&&String(task.techId)===String(techId)&&task.date===ds;
   const load=getTechLoad(tech,ds);
   const over=!already && load>=(tech.max||99);
@@ -5067,12 +5073,37 @@ function confirmCapacityDrop(techId,task,ds){
     try{ noRoute = calcOptimalTime(tech, ds, task.city, task.catId) === null; }catch(e){ noRoute=false; }
   }
   const decision=capacityDropDecision((tenantConfig||{}).scheduling, over, noRoute);
-  if(decision==='allow') return true;
+  if(decision==='allow') return {ok:true,override:false};
   const msg = over
     ? `${tech.name} כבר משובץ ל-${load} קריאות ביום זה (מקסימום ${tech.max}).`
     : `אין חלון מסלול תקין ל"${task.city}" ביום זה — ההוספה עלולה לשבור את סדר המסלול (רחוק→קרוב).`;
-  if(decision==='block'){ showToast(msg+' לא ניתן להוסיף.', 'error'); return false; }
-  return confirm(`⚠️ ${msg}\n\nלשבץ בכל זאת?`);
+  if(decision==='block'){ showToast(msg+' לא ניתן להוסיף.', 'error'); return {ok:false,override:false}; }
+  const proceed=confirm(`⚠️ ${msg}\n\nלשבץ בכל זאת?`);
+  return {ok:proceed,override:proceed};
+}
+// Runs both manual-placement guards; when the coordinator overrides a soft warning
+// a reason is REQUIRED and audited (stamped on the task → captured by _audit_tasks).
+// Returns false to abort the placement, or the reason string ('' when no override).
+function guardManualPlacement(techId, task, ds){
+  const zr=confirmZoneDrop(techId, task.city, ds); if(!zr.ok) return false;
+  const cr=confirmCapacityDrop(techId, task, ds);  if(!cr.ok) return false;
+  if(zr.override || cr.override){
+    const reason=promptOverrideReason();
+    if(reason===null) return false; // cancelled at the reason step → abort
+    return reason;
+  }
+  return '';
+}
+// Required, audited reason for overriding a soft placement guard. Loops until a
+// non-empty reason is given; returns null if cancelled (abort the placement).
+function promptOverrideReason(){
+  while(true){
+    const r=prompt('חריגה מהמלצת השיבוץ — נא לציין סיבה (חובה, תירשם ביומן הביקורת):','');
+    if(r===null) return null;
+    const v=(r||'').trim();
+    if(v) return v.slice(0,300);
+    alert('חובה לציין סיבה לחריגה.');
+  }
 }
 // Render-time flag (no persisted state — always accurate, auto-clears when moved back in-zone).
 // Flags whenever the policy is not 'allow' (hard block under strict, or soft warn when relaxed).
@@ -5370,6 +5401,14 @@ function techCompleteness(f, usesZones){
   if(!(Number(f.max)>=1)) missing.push('max');
   if(usesZones&&!f.hasRotation) missing.push('rotation');
   return {complete:missing.length===0, missing};
+}
+// ── Manual-override stamp (#4) ──────────────────────────────────────────────
+// Pure: turn a guard-override reason into the two persisted task fields. Empty
+// reason ⇒ a clean placement (flag cleared); non-empty ⇒ overridden + reason.
+// The _audit_tasks DB trigger captures the change into audit_log automatically.
+function overrideStamp(reason){
+  const r=(reason==null?'':String(reason)).trim();
+  return { manuallyOverridden: !!r, overrideReason: r||null };
 }
 // </sched-logic>
 function appUsesZones(){ return usesZones(tenantConfig && tenantConfig.scheduling); }
@@ -6381,7 +6420,7 @@ async function confirmAssign(idx,assignId){
   if(qt){
     // Snapshot original state so we can roll back if the save fails
     const _orig={client:qt.client,phone:qt.phone,city:qt.city,street:qt.street,floor:qt.floor,apartment:qt.apartment,entranceNotes:qt.entranceNotes,cat:qt.cat,catId:qt.catId,techId:qt.techId,status:qt.status,time:qt.time,date:qt.date,notes:qt.notes,assignId:qt.assignId,preferredWindows:qt.preferredWindows,lat:qt.lat,lon:qt.lon,geocodedAt:qt.geocodedAt};
-    Object.assign(qt,{client,phone,city,street,floor,apartment,entranceNotes,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,windowStart:slot.start,windowEnd:slot.end,notes,assignId,preferredWindows:[...prefWindows],earliestDate:dateCons.earliest_date||'',latestDate:dateCons.latest_date||'',fixedDate:dateCons.fixed_date||'',lat:_gc?.lat||qt.lat||null,lon:_gc?.lon||qt.lon||null,geocodedAt:_gc?_gcAt:qt.geocodedAt||null});
+    Object.assign(qt,{client,phone,city,street,floor,apartment,entranceNotes,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,windowStart:slot.start,windowEnd:slot.end,notes,assignId,preferredWindows:[...prefWindows],earliestDate:dateCons.earliest_date||'',latestDate:dateCons.latest_date||'',fixedDate:dateCons.fixed_date||'',manuallyOverridden:false,overrideReason:null,lat:_gc?.lat||qt.lat||null,lon:_gc?.lon||qt.lon||null,geocodedAt:_gc?_gcAt:qt.geocodedAt||null});
     newTask=qt;save();
     saved=await saveTaskToSupabase(qt);
     if(!saved)Object.assign(qt,_orig); // roll back in-memory state on failure
@@ -7846,10 +7885,11 @@ async function _onCellDrop(ev,techId,ds){
   const id=_dragTaskId||(ev.dataTransfer&&ev.dataTransfer.getData('text/plain')); _dragTaskId=null;
   const t=tasks.find(x=>String(x.id)===String(id)); if(!t) return;
   if(String(t.techId)===String(techId)&&t.date===ds) return; // dropped on its own cell — no-op
-  if(!confirmZoneDrop(techId,t.city,ds)) return; // out-of-zone safeguard
-  if(!confirmCapacityDrop(techId,t,ds)) return;  // over-capacity safeguard (B2/E5)
+  const _ovr=guardManualPlacement(techId,t,ds); // zone + capacity + route-fit guards (B2/E5) + audited override reason (#4)
+  if(_ovr===false) return;
   const oldTech=t.techId, oldDate=t.date;
   Object.assign(t, reassignTask(t, techId, ds));
+  Object.assign(t, overrideStamp(_ovr)); // stamp manuallyOverridden/overrideReason → audited
   save();
   await saveTaskToSupabase(t); // await — a move must reach Supabase (visible to Israel) before a refresh can drop it
   if(oldTech&&oldDate) markDayDirty(oldTech,oldDate);
@@ -7884,11 +7924,12 @@ async function _onGridDrop(ev,techId,ds){
   const t=tasks.find(x=>String(x.id)===String(id)); if(!t) return;
   const w=_gridWindowAtY(ev.clientY-grid.getBoundingClientRect().top);
   if(String(t.techId)===String(techId)&&t.date===ds&&t.windowStart===w.ws&&t.windowEnd===w.we) return; // no-op
-  if(!confirmZoneDrop(techId,t.city,ds)) return; // out-of-zone safeguard
-  if(!confirmCapacityDrop(techId,t,ds)) return;  // over-capacity safeguard (B2/E5)
+  const _ovr=guardManualPlacement(techId,t,ds); // zone + capacity + route-fit guards (B2/E5) + audited override reason (#4)
+  if(_ovr===false) return;
   const oldTech=t.techId, oldDate=t.date;
   t.techId=String(techId); t.date=ds; t.windowStart=w.ws; t.windowEnd=w.we; t.time='';
   if(t.status==='pending') t.status='assigned';
+  Object.assign(t, overrideStamp(_ovr)); // stamp manuallyOverridden/overrideReason → audited
   save();
   await saveTaskToSupabase(t); // await — the move must reach Supabase before any refresh can drop it
   if(oldTech&&oldDate&&(String(oldTech)!==String(techId)||oldDate!==ds)) markDayDirty(oldTech,oldDate);
@@ -8211,6 +8252,7 @@ function openTaskDetail(id){
     t.phone?['טלפון',h(t.phone)]:'',
     _cons.windows?['חלון זמינות לקוח',h(_cons.windows)]:'',
     _cons.dates?['אילוצי תאריך',h(_cons.dates)]:'',
+    t.manuallyOverridden?['⚠ שיבוץ חריג (מחוץ להמלצה)',h(t.overrideReason||'ללא סיבה מתועדת')]:'',
   ].filter(Boolean).map(([k,v])=>`<div class="td-field"><span class="td-key">${k}</span><span class="td-val">${v}</span></div>`).join('');
   document.getElementById('td-notes').value=t.notes||'';
   // Placement editor (tap-to-place — the mobile-safe path; mirrors weekly drag)
@@ -8294,12 +8336,13 @@ async function placeTaskDetail(){
   const date=document.getElementById('td-date').value;
   const win=document.getElementById('td-window').value;
   if(!techId||!date){ showToast('בחר טכנאי ותאריך','error'); return; }
-  if(!confirmZoneDrop(techId,t.city,date)) return; // out-of-zone safeguard
-  if(!confirmCapacityDrop(techId,t,date)) return;  // over-capacity safeguard (B2/E5)
+  const _ovr=guardManualPlacement(techId,t,date); // zone + capacity + route-fit guards (B2/E5) + audited override reason (#4)
+  if(_ovr===false) return;
   const oldTech=t.techId, oldDate=t.date;
   const [ws,we]=win?win.split('|'):['',''];
   t.techId=String(techId); t.date=date;
   t.windowStart=ws; t.windowEnd=we; t.time='';
+  Object.assign(t, overrideStamp(_ovr)); // stamp manuallyOverridden/overrideReason → audited
   if(t.status==='pending') t.status='assigned';
   await saveTaskToSupabase(t);
   save();

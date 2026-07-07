@@ -286,5 +286,14 @@ suite('techCompleteness (mandatory tech gate #7)', () => {
   check('undefined arg → not complete, no throw', ctx.techCompleteness().complete===false);
 });
 
+suite('overrideStamp (#4 manual-override audit fields)', () => {
+  check('reason → overridden + reason set', (()=>{const s=ctx.overrideStamp('אין טכנאי אחר זמין');return s.manuallyOverridden===true && s.overrideReason==='אין טכנאי אחר זמין';})());
+  check('reason trimmed', ctx.overrideStamp('  דחוף  ').overrideReason==='דחוף');
+  check('empty reason → clean (flag cleared, null reason)', (()=>{const s=ctx.overrideStamp('');return s.manuallyOverridden===false && s.overrideReason===null;})());
+  check('whitespace-only → clean', (()=>{const s=ctx.overrideStamp('   ');return s.manuallyOverridden===false && s.overrideReason===null;})());
+  check('null → clean', (()=>{const s=ctx.overrideStamp(null);return s.manuallyOverridden===false && s.overrideReason===null;})());
+  check('undefined → clean (no throw)', (()=>{const s=ctx.overrideStamp();return s.manuallyOverridden===false && s.overrideReason===null;})());
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
