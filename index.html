@@ -7630,8 +7630,8 @@ function renderZones(){
     <div class="zone-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
         <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0;">
-          <span title="${isPoly?'אזור פוליגון':'אזור רשימת ערים'}" style="display:inline-block;width:11px;height:11px;border-radius:50%;flex-shrink:0;background:${isPoly?'var(--blue)':'#10b981'};"></span>
-          <span style="font-size:0.68rem;font-weight:700;flex-shrink:0;color:${isPoly?'var(--blue-d)':'#059669'};">${isPoly?'פוליגון':'רשימה'}</span>
+          <span title="${isPoly?'אזור המוגדר על מפה (פוליגון)':'אזור המוגדר לפי ערים'}" style="display:inline-block;width:11px;height:11px;border-radius:50%;flex-shrink:0;background:${isPoly?'var(--blue)':'#10b981'};"></span>
+          <span style="font-size:0.68rem;font-weight:700;flex-shrink:0;color:${isPoly?'var(--blue-d)':'#059669'};">${isPoly?'פוליגון':'אזור'}</span>
           <input class="fc" value="${h(z.name)}" onchange="(function(v,id){const z=zones.find(x=>x.id===id);if(z){z.name=v;saveZoneToSupabase(z);save();}})(this.value,'${z.id}')" style="font-weight:800;font-size:0.9375rem;border:none;padding:0;background:transparent;flex:1;min-width:0;">
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;">
@@ -7639,14 +7639,11 @@ function renderZones(){
           <button class="btn btn-ghost btn-sm" onclick="deleteZone('${z.id}')" style="color:var(--red);">הסר</button>
         </div>
       </div>
-      <div class="zone-cities">${z.cities.map((c,ci)=>`<span class="city-tag">${h(c)}<button onclick="removeCity('${z.id}',${ci})">×</button></span>`).join('')}</div>
-      <div style="font-size:0.72rem;color:var(--ink-3);margin-bottom:6px;">הדבק ערים — <strong>סדר חשוב:</strong> הרחוקה מבסיס הטכנאי ראשונה, הקרובה ביותר אחרונה (קובע את מסלול השיבוץ)</div>
-      <div style="display:flex;gap:8px;align-items:flex-end;">
-        <textarea class="fc" id="new-city-${z.id}" placeholder="תל אביב&#10;חולון&#10;בת ים" style="flex:1;height:60px;resize:vertical;font-size:0.875rem;"></textarea>
-        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
-          <button class="btn btn-outline btn-sm" onclick="addCities('${z.id}')">+ הוסף</button>
-          <span id="zone-status-${z.id}" style="font-size:0.7rem;color:var(--ink-3);min-height:1em;"></span>
-        </div>
+      <div class="zone-cities">${z.cities.map((c,ci)=>`<span class="city-tag">${h(c)}<button onclick="removeCity('${z.id}',${ci})">×</button></span>`).join('')||'<span style="font-size:0.8rem;color:var(--ink-4);">אין ערים באזור — הוסף עיר ראשונה</span>'}</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+        <input class="fc" id="new-city-${z.id}" list="il-cities-list" autocomplete="off" placeholder="הקלד שם עיר…" onkeydown="if(event.key==='Enter'){event.preventDefault();addCities('${z.id}');}" style="flex:1;font-size:0.875rem;">
+        <button class="btn btn-outline btn-sm" onclick="addCities('${z.id}')" style="flex-shrink:0;">+ הוסף</button>
+        <span id="zone-status-${z.id}" style="font-size:0.7rem;color:var(--ink-3);min-height:1em;"></span>
       </div>
     </div>`;}).join('')||'<div class="empty"><div class="empty-icon">🗺️</div><div>הוסף אזור ראשון</div></div>';
 }
@@ -7677,6 +7674,9 @@ function addCities(zoneId){
     if(!z.cities.includes(toAdd))z.cities.push(toAdd);
   });
   inp.value='';save();renderZones();populateCitySelect();saveZoneToSupabase(z);
+  // Re-render rebuilds the card — refocus this zone's input so the coordinator can
+  // keep adding cities without re-clicking.
+  const _ni=document.getElementById('new-city-'+zoneId);if(_ni)_ni.focus();
 }
 function removeCity(zoneId,ci){const z=zones.find(x=>x.id===zoneId);if(z){z.cities.splice(ci,1);saveZoneToSupabase(z);}save();renderZones();populateCitySelect();}
 

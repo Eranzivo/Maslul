@@ -143,11 +143,13 @@ When needed: modify `isCityInTechZone` to accept lat/lon, check polygon containm
 
 ## Zone Management UI
 
-- `page-zones` — lists all zones with city tags
-- Each zone card has: rename input, city tags (with × remove), "⊕ הוסף עיר" button, "🗺️ צייר" button
-- Adding a city: `openAddCityModal(zoneId)` → free-text input with Israeli cities datalist → `saveZoneToSupabase(zone)`
+- `page-zones` — lists all zones with city tags (`renderZones`)
+- Each zone card has: a **type badge** (green `אזור` = city-list zone / blue `פוליגון` = map-drawn zone; renamed from `רשימה`→`אזור` 2026-07-07), rename input, city tags (with × remove), a **typeahead city input**, "+ הוסף" button, "🗺️ צייר" button
+- Adding a city (2026-07-07): the card's inline `<input list="il-cities-list">` typeahead (the SAME shared Israeli-cities datalist used by dispatch `s-city` + add-task `at-city`) → `addCities(zoneId)` canonicalizes (`canonicalCity`, dedup) → `saveZoneToSupabase`. Enter or "+ הוסף" adds; input refocuses for rapid multi-add. **Replaced** the old paste-textarea + far→near "סדר חשוב" helper text (removed — sequence is engine-computed, not manual). One shared list everywhere = fewer typo/variant anomalies.
 - Deleting a city: `removeCity(zoneId, cityIndex)` → splice + save
+- Empty zone shows an "אין ערים באזור — הוסף עיר ראשונה" hint instead of a blank row
 - Zone save is **per-zone queued** (`_zoneSaveQueues`) — rapid edits serialize, no race conditions
+- **UI decision (2026-07-07):** city-list vs polygon zones stay in ONE tab, distinguished by the per-zone badge — NOT split into separate side-panel tabs (a tenant uses one `zone_match` mode; splitting fragments the mental model)
 
 ---
 
