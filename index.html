@@ -5322,6 +5322,34 @@ function explainCandidate(sig){
   else if(sig.routeStrategy==='nearest_first') chips.push({icon:'🧭',text:'משתלב בסדר המסלול (קרוב→רחוק)'});
   return {headline,chips};
 }
+// ── Human-readable summary of a call's per-call constraints (read-only display) ──
+// Pure. Mirrors the intake components: preferred windows {from,to,days[]} (days
+// Sun=0..Sat=6) + structured date constraints (fixed/earliest/latest). Returns
+// {windows, dates} Hebrew strings ('' when none). _fmtDMY is TZ-safe (string split,
+// never a Date object) so 'YYYY-MM-DD' → 'DD/MM/YYYY' without an off-by-one day shift.
+function _fmtDMY(iso){
+  if(!iso||!/^\d{4}-\d{2}-\d{2}$/.test(iso))return iso||'';
+  const [y,m,d]=iso.split('-');return `${d}/${m}/${y}`;
+}
+function describeConstraintsHe(t){
+  t=t||{};
+  const DAY=['א','ב','ג','ד','ה','ו','ש'];
+  const wins=Array.isArray(t.preferredWindows)?t.preferredWindows:[];
+  const windows=wins.filter(w=>w&&w.from&&w.to).map(w=>{
+    const days=Array.isArray(w.days)?w.days:[];
+    const dtxt=days.length?` (${days.slice().sort((a,b)=>a-b).map(d=>DAY[d]||'?').join(',')})`:' (כל יום)';
+    return `${w.from}–${w.to}${dtxt}`;
+  }).join(' · ');
+  let dates='';
+  if(t.fixedDate) dates=`בתאריך ${_fmtDMY(t.fixedDate)} בלבד`;
+  else{
+    const parts=[];
+    if(t.earliestDate)parts.push(`לא לפני ${_fmtDMY(t.earliestDate)}`);
+    if(t.latestDate)parts.push(`לא אחרי ${_fmtDMY(t.latestDate)}`);
+    dates=parts.join(' · ');
+  }
+  return {windows,dates};
+}
 // </sched-logic>
 function appUsesZones(){ return usesZones(tenantConfig && tenantConfig.scheduling); }
 // ═══ AUTO-SEQUENCING SEAM (features.auto_sequence) ═══════════════════════════
@@ -6420,6 +6448,16 @@ function queueAssign(id){
   if(phoneEl&&t.phone)phoneEl.value=t.phone;
   if(notesEl&&t.notes&&t.notes!=='שובץ אוטומטית')notesEl.value=t.notes;
   if(t.catId){selectedCat='cat_'+t.catId;renderCatChips();renderPkgSection();}
+  // Load the call's OWN saved constraints into the intake components so they're visible +
+  // editable when re-dispatching an existing call (was intake-only) AND applied to the
+  // candidate search. Setting them explicitly (even to empty) also clears any stale
+  // prefWindows/dateCons left over from a previous dispatch — otherwise an edited call
+  // could silently inherit the last call's windows. Must run BEFORE the auto findBestSlot.
+  prefWindows = Array.isArray(t.preferredWindows) ? t.preferredWindows.map(w=>({...w})) : [];
+  renderPrefWindows();
+  dateCons = { fixed_date: t.fixedDate||'', earliest_date: t.earliestDate||'', latest_date: t.latestDate||'' };
+  [['s-earliest','earliest_date'],['s-latest','latest_date'],['s-fixed','fixed_date']]
+    .forEach(([id,k])=>{const e=document.getElementById(id);if(e)e.value=dateCons[k]||'';});
   document.getElementById('dispatch-search-card').scrollIntoView({behavior:'smooth',block:'start'});
   window._queueTask=t;
   if(t.city&&t.catId){const expectedCat='cat_'+t.catId;setTimeout(()=>{if(selectedCat===expectedCat)findBestSlot();},100);}
@@ -8119,6 +8157,7 @@ function openTaskDetail(id){
   const s=STATUS_MAP[t.status]||STATUS_MAP.pending;
   const sb=document.getElementById('td-status-badge');
   sb.textContent=s.label;sb.className='badge '+s.badge;
+  const _cons=describeConstraintsHe(t);
   document.getElementById('td-details').innerHTML=[
     t.date?['תאריך',new Date(t.date).toLocaleDateString('he-IL')]:'',
     (t.windowStart&&t.windowEnd)?['חלון הגעה',`${t.windowStart} – ${t.windowEnd}`]:'',
@@ -8128,6 +8167,8 @@ function openTaskDetail(id){
     t.entranceNotes?['כניסה',h(t.entranceNotes)]:'',
     t.cat?['קטגוריה',h(t.cat)]:'',
     t.phone?['טלפון',h(t.phone)]:'',
+    _cons.windows?['חלון זמינות לקוח',h(_cons.windows)]:'',
+    _cons.dates?['אילוצי תאריך',h(_cons.dates)]:'',
   ].filter(Boolean).map(([k,v])=>`<div class="td-field"><span class="td-key">${k}</span><span class="td-val">${v}</span></div>`).join('');
   document.getElementById('td-notes').value=t.notes||'';
   // Placement editor (tap-to-place — the mobile-safe path; mirrors weekly drag)

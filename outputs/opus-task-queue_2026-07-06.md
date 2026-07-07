@@ -38,8 +38,12 @@
    route-late) — e.g. reuse `calcOptimalTime`===null as the signal in the manual paths.
 7. **Mandatory tech completeness** (handover §6, backlog #2.10): block tech creation
    without skills/hours/base/return/max_daily; wizard-style completeness meter.
-8. **Constraints in the EDIT modal**: preferred windows day-chips + date constraints on
-   existing calls (intake-only today). Reuse renderPrefWindows + dateCons pattern.
+8. ✅ **DONE 2026-07-07** — Constraints no longer intake-only. `queueAssign(id)` (the
+   re-dispatch/edit path) now loads a call's saved `preferredWindows` + date constraints
+   into the intake components (prefWindows/dateCons) so they're visible + editable AND
+   applied to the candidate search — also fixes a latent stale-globals bug (an edited call
+   could inherit the previous dispatch's windows). Read-only summary in the task-detail
+   modal via pure `describeConstraintsHe(t)`. sched.test.js (133 passed). Scenarios E8/E9.
 9. **Workspace cleanup** (memory: workspace-cleanup-for-opus — safety rules there).
 10. **Job-level duration override** (handover §5): per-task minutes field folded into the
     duration chain (task > tech > category > tenant > 30) — both doors + knobs row note.

@@ -237,5 +237,31 @@ suite('explainCandidate (dispatch "why this recommendation" copy)', () => {
   check('undefined sig → headroom chip with 0/0', empty.chips.some(c=>/עומס 0\/0/.test(c.text)));
 });
 
+suite('describeConstraintsHe (per-call constraints read-out)', () => {
+  // No constraints → both empty.
+  const none = ctx.describeConstraintsHe({});
+  check('empty task → no windows, no dates', none.windows === '' && none.dates === '');
+  check('undefined task → safe empty', ctx.describeConstraintsHe().windows === '' && ctx.describeConstraintsHe().dates === '');
+
+  // Windows: day-scoped and all-day.
+  const w1 = ctx.describeConstraintsHe({preferredWindows:[{from:'09:00',to:'13:00',days:[0,2]}]});
+  check('window with days → Hebrew day letters', w1.windows === '09:00–13:00 (א,ג)');
+  const w2 = ctx.describeConstraintsHe({preferredWindows:[{from:'08:00',to:'11:00'}]});
+  check('window without days → "כל יום"', w2.windows === '08:00–11:00 (כל יום)');
+  const w3 = ctx.describeConstraintsHe({preferredWindows:[{from:'07:00',to:'10:00',days:[1]},{from:'15:00',to:'18:00',days:[4]}]});
+  check('multiple windows joined with ·', w3.windows === '07:00–10:00 (ב) · 15:00–18:00 (ה)');
+  check('window missing from/to is skipped', ctx.describeConstraintsHe({preferredWindows:[{days:[1]},{from:'09:00',to:'12:00'}]}).windows === '09:00–12:00 (כל יום)');
+  check('days sorted before render', ctx.describeConstraintsHe({preferredWindows:[{from:'09:00',to:'13:00',days:[6,0,3]}]}).windows === '09:00–13:00 (א,ד,ש)');
+
+  // Dates: fixed dominates; earliest/latest combine; TZ-safe formatting.
+  check('fixed date → "בתאריך .. בלבד"', ctx.describeConstraintsHe({fixedDate:'2026-07-12'}).dates === 'בתאריך 12/07/2026 בלבד');
+  check('fixed date ignores earliest/latest', ctx.describeConstraintsHe({fixedDate:'2026-07-12',earliestDate:'2026-07-01'}).dates === 'בתאריך 12/07/2026 בלבד');
+  check('earliest only', ctx.describeConstraintsHe({earliestDate:'2026-07-05'}).dates === 'לא לפני 05/07/2026');
+  check('latest only', ctx.describeConstraintsHe({latestDate:'2026-07-20'}).dates === 'לא אחרי 20/07/2026');
+  check('earliest + latest joined', ctx.describeConstraintsHe({earliestDate:'2026-07-05',latestDate:'2026-07-20'}).dates === 'לא לפני 05/07/2026 · לא אחרי 20/07/2026');
+  check('DMY formatting is TZ-safe (no Date parse, no day shift)', ctx._fmtDMY('2026-01-01') === '01/01/2026');
+  check('malformed date passes through untouched', ctx._fmtDMY('soon') === 'soon');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

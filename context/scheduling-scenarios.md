@@ -39,8 +39,8 @@
 | E5 | Manual drag onto a day that can't absorb more work | ✅ zone-checked + **capacity-checked + route-fit-checked** (`confirmCapacityDrop` on all 3 manual paths, 2026-07-07): warns when the day is at the tech's max daily load OR has no route-valid insertion slot (`calcOptimalTime`===null), hard-blocks under `route_strict`. Task moving within its own tech+day is exempt | knob `route_strict` |
 | E6 | Same city, opposite ends (city-center coords can't order 2 stops) | geo_addresses KB gives door-level coords when street entered | encourage street entry; already cache-first |
 | E7 | Dual-zone city (אשקלון in דרום+שפלה by design) | resolveZone picks first match; rotation covers both | keep deliberate; flag NEW dual-memberships at onboarding (/onboard-client asks) |
-| E8 | Customer available only specific days+hours | ✅ shipped 2026-07-06 (day-aware windows, hard both doors) | prefwindow fixtures |
-| E9 | fixed_date on an uncovered day | ✅ reason `fixed_date_unavailable` | datecons fixtures |
+| E8 | Customer available only specific days+hours | ✅ shipped 2026-07-06 (day-aware windows, hard both doors); **2026-07-07: no longer intake-only** — a call's windows are shown read-only in the task-detail modal (`describeConstraintsHe`) and loaded into the re-dispatch form (`queueAssign`) so they're visible + editable on EXISTING calls | prefwindow fixtures + sched.test.js |
+| E9 | fixed_date on an uncovered day | ✅ reason `fixed_date_unavailable`; **2026-07-07: date constraints also visible (detail modal) + editable on re-dispatch** (was intake-only) | datecons fixtures + sched.test.js |
 | E10 | Recurring weekly call vs zone rotation drift | recurring_templates exist; rotation is frozen | when rotation changes, re-validate recurring templates' day×zone fit (add to rotation-change checklist) |
 | E11 | Tech sick morning-of | manual today (drag calls) | FUTURE "evacuate day" action: batch re-place one tech-day's calls (engine ready — place_task with tech excluded) |
 | E12 | Two techs share a zone-day (busy zones, future 3rd covering day) | consolidate policy splits by score | fine; assert with a fixture when it first happens live |
