@@ -1,0 +1,19 @@
+# Worklog — parked ideas & their trigger
+
+> Short + precise. Each item = idea · why · WHEN to resurface. Eran asked to keep
+> deferred ideas here so they surface at the right time, not before.
+> Numbered engine/UI tasks live in `outputs/opus-task-queue_2026-07-06.md`.
+
+## Geo / Google-Maps cost (geocoding is currently ON for PureWater)
+- **In-app usage meter** — `geo_usage(month,count)` incremented on real (cache-miss) Google calls, admin banner "גאוקוד החודש: N". *Why:* see the trend before the 700/day cap blocks a dispatch. *Trigger:* first paying client whose usage we watch / client #2. (~1–2h)
+- **Opt-in address-level knob** — door-level geocoding per-tenant, **city-centroid default**. *Why:* city-zone tenants (PureWater) drop geocode spend to ~0; precision only where density needs it. *Trigger:* client #2 / scale. (~2–3h)
+- **/geocode soft-cap + circuit-breaker** — app-level daily limit mirroring DM `GMAPS_DAILY_ELEMENT_LIMIT=680` + abnormal-rate cutoff. *Why:* day cap bounds COST (~$3.50) but a loop can still exhaust it and DOS our own geocoding. *Trigger:* before scaling geocoding. (~1–2h)  · Cost guarantee already in place: 700/day caps + $210 budget alert (50/90/100%).
+- **GCP console walkthrough** — confirm caps/budget match the post-2025 per-SKU free tier. *Trigger:* Eran asked to be reminded at geocoding-enable.
+
+## Call entry / data integrity
+- **Unify pending-call entry into שיבוץ קריאה** — "שמור ללא שיבוץ" on the full dispatch form → pending call WITH all fields (street/floor/apt/entrance/windows/dates); deprecate the thin "רישום קריאה ממתינה" modal so nothing falls between the cracks at assign time. *Status:* proposed 2026-07-07, awaiting Eran's nod on approach.
+
+## Bigger deferred (from opus-task-queue)
+- **#2 design-system UI port** — on hold until the product fully functions (Eran).
+- **#3 city-create-from-search** — needs geocode greenlight + zone pick; scenarios B1.
+- **#10 job-level duration override** — do as ONE DRY refactor (pure `effectiveDuration` + fixture), never piecemeal.

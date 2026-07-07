@@ -28,7 +28,7 @@
 | `defaults.work_days` | **`[0,1,2,3,4]`** (Sun–Thu) | **set 2026-06-29.** Was absent → Friday-off relied only on per-tech `weekly_schedule[5].work=false`. Now explicit; honored live (`isTenantWorkDay`) + batch (`tenant_works_day`). |
 | `defaults.break` | **`{enabled:false}`** | set 2026-06-29 to match current behavior (no break). **Confirm with Israel** whether techs take a fixed daily break. |
 | `defaults.work_start` / `work_end` | 07:00 / 18:00 (tenant fallback) | **inert** — all 3 techs have explicit `weekly_schedule`: אלירן & בני **07:00–17:00**, מיכאל **08:00–16:00** (these take precedence). |
-| Features | **whatsapp ✓, geocoding ✓, auto_sequence ✓, crm ✓, reports ✓, files ✓, checklists ✓** ; google_maps **off**, odoo **off** | `tenants.config.features` — verified live 2026-06-29. CRM/Reports/Files/Checklists are ON (were undocumented). |
+| Features | **whatsapp ✓, geocoding ✓, auto_sequence ✓, reports ✓, files ✓, checklists ✓** ; crm **off** (disabled 2026-07-07 — PureWater uses Odoo CRM; code/infra kept, reversible flag), google_maps **off**, odoo **off** (flag exists, no sync built) | `tenants.config.features` — verified live 2026-06-29; crm_enabled→false 2026-07-07. |
 | `features.auto_sequence` | **ON** (verified live 2026-06-13) | Authoritative auto-sequencing — drop or edit a call and the day re-sequences via OR-Tools. Turned on after the B3 shadow-compare gate; the extra optimizer calls are cheap (drive-time cache, `route_cache:configured`) |
 
 ## Zones & rotation

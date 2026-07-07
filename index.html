@@ -1708,7 +1708,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     </div>
     <div class="fg-2">
       <div class="fg"><label class="fl"><span class="req">*</span> עיר</label><input class="fc" id="at-city" list="il-cities-list" placeholder="הקלד שם עיר..." autocomplete="off"></div>
-      <div class="fg"><label class="fl">רחוב</label><input class="fc" id="at-street" placeholder="לדוגמה: הרצל 15"></div>
+      <div class="fg"><label class="fl"><span class="req">*</span> רחוב ומספר</label><input class="fc" id="at-street" placeholder="לדוגמה: הרצל 15"></div>
     </div>
     <div class="fg"><label class="fl">הערות</label><input class="fc" id="at-notes" placeholder="הערות, בקשות מיוחדות..."></div>
     <div id="at-error" style="color:var(--red);font-size:0.8125rem;min-height:1.2rem;"></div>
@@ -2673,6 +2673,7 @@ function smartLogout() {
 async function doLogout() {
   if(typeof Sentry !== 'undefined' && typeof Sentry.setUser === 'function') Sentry.setUser(null);
   sessionStorage.removeItem('ma_session');
+  try{ clearDispatchDraft(); }catch(e){} // don't carry a half-filled call across a logout
   currentUser = null;
   currentTenantId = null;
   showLogin(); // show immediately — don't wait for the network call
@@ -6671,14 +6672,20 @@ function saveDispatchDraft(){
   d._cat=selectedCat||'';
   d._windows=prefWindows.length?JSON.stringify(prefWindows):'';
   d._datecons=(dateCons.fixed_date||dateCons.earliest_date||dateCons.latest_date)?JSON.stringify(dateCons):'';
+  d._savedAt=Date.now(); // stamp so a stale draft from a previous session is discarded on restore
   localStorage.setItem(_DDKEY,JSON.stringify(d));
 }
+// Drafts older than this are treated as stale and cleared — a half-filled call from a
+// previous session must NOT resurface (data-quality: force a fresh, complete entry).
+const _DRAFT_TTL_MS=8*60*60*1000; // 8h — survives same-session refresh, clears overnight
 function restoreDispatchDraft(){
   _DDFIELDS.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const card=document.getElementById('dispatch-search-card');
   try{
     const raw=localStorage.getItem(_DDKEY);if(!raw)return;
     const d=JSON.parse(raw);
+    // Discard a stale draft (previous session / days-old) so it never resurfaces.
+    if(d._savedAt && (Date.now()-d._savedAt)>_DRAFT_TTL_MS){ clearDispatchDraft(); return; }
     let hasData=false;
     _DDFIELDS.forEach(id=>{const el=document.getElementById(id);if(el&&d[id]){el.value=d[id];hasData=true;}});
     if(d._cat){selectedCat=d._cat;renderCatChips();renderPkgSection();hasData=true;}
@@ -6800,6 +6807,7 @@ function confirmAddTask(){
   if(!name){errEl.textContent='נא להזין שם לקוח';return;}
   if(!phone){errEl.textContent='נא להזין מספר טלפון';return;}
   if(!city){errEl.textContent='נא לבחור עיר';return;}
+  if(!street){errEl.textContent='נא להזין רחוב ומספר — כתובת מלאה נדרשת לשיבוץ מדויק';return;}
   const catObj=categories.find(c=>c.id===catEl.value);
   const newTask={id:nextTaskId++,client:name,phone,city,street,cat:catObj?.name||'',catId:catEl.value,techId:null,status:'pending',time:'',date:'',notes,assignId:'',preferredWindows:[]};
   tasks.push(newTask);
