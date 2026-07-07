@@ -23,6 +23,7 @@ Legend: ✅ enforced · ⚠ caveat (see note) · n/a not applicable to that laye
 | `fill_first` | LEGACY — consolidate IS fill-first; flag now gates only the min-underfull skip | `_candidates*` | n/a | n/a | — |
 | `slot_release {enabled,72/48/24}` | hold early slots for far cities | `_candidatesZone` (far_to_near only) | n/a by design (assigns whole days) | n/a | manual |
 | `zone_drop_guard` | soft warn on manual cross-zone drop | `zoneDropDecision` | n/a (no manual path) | n/a | zones.test.js |
+| `route_strict` (default false) | manual over-capacity drop: false ⇒ soft warn (coordinator may override), true ⇒ hard block | `capacityDropDecision` (3 manual paths) | n/a by design — batch solver is capacity-hard (drops overflow) | n/a | zones.test.js |
 | `gap_fill {enabled,auto}` | suggest fills on cancel | `rankGapFill` | n/a | n/a | sched.test.js |
 
 ## tenants.config.defaults

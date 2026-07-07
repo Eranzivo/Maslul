@@ -5009,6 +5009,16 @@ function zoneDropDecision(sc, hasMismatch){
   if(sc && sc.zone_drop_guard === false) return 'allow'; // relaxed + opted out of the soft guard
   return 'warn';                                         // relaxed → soft confirm
 }
+// Manual-placement capacity guard (scenarios B2/E5): a manual drop/tap-place must not
+// silently overload a technician's day past their max — the "already late at scheduling
+// time must be impossible" principle. Pure + tested. `over` = adding this call would exceed
+// the tech's daily max. Policy: `route_strict` (default false) → hard block; otherwise a
+// soft warn the coordinator may override (mirrors zone_drop_guard). The batch engine never
+// needs this — its solver is capacity-hard and drops overflow.
+function capacityDropDecision(sc, over){
+  if(!over) return 'allow';
+  return (sc && sc.route_strict) ? 'block' : 'warn';
+}
 // </zone-logic>
 // ── Out-of-zone safeguard. `zoneDropMismatch` is pure geometric detection (the call's zone is
 // known AND differs from the tech's assigned zone that day); the *policy* (block/warn/allow) is
@@ -5033,6 +5043,19 @@ function confirmZoneDrop(techId,city,dateStr){
     return false;
   }
   return confirm(`⚠️ "${city}" שייכת לאזור "${m.cityZone}", אך הטכנאי מבצע ביום זה את אזור "${m.dayZone}".\n\nשיבוץ רחוק מהאזור עלול להאריך מאוד את המסלול ולפגוע בשאר הקריאות של היום.\n\nלשבץ בכל זאת?`);
+}
+// Capacity check on a manual drop/tap-place. Returns false to abort. A task moving WITHIN
+// its own tech+day (re-windowing) never adds load, so it's exempt.
+function confirmCapacityDrop(techId,task,ds){
+  const tech=technicians.find(x=>String(x.id)===String(techId)); if(!tech) return true;
+  const already=task&&String(task.techId)===String(techId)&&task.date===ds;
+  const load=getTechLoad(tech,ds);
+  const over=!already && load>=(tech.max||99);
+  const decision=capacityDropDecision((tenantConfig||{}).scheduling, over);
+  if(decision==='allow') return true;
+  const msg=`${tech.name} כבר משובץ ל-${load} קריאות ביום זה (מקסימום ${tech.max}).`;
+  if(decision==='block'){ showToast(msg+' לא ניתן להוסיף עוד.', 'error'); return false; }
+  return confirm(`⚠️ ${msg}\n\nהוספת קריאה נוספת תעמיס על היום ועלולה לגרום לאיחורים בשאר הקריאות.\n\nלשבץ בכל זאת?`);
 }
 // Render-time flag (no persisted state — always accurate, auto-clears when moved back in-zone).
 // Flags whenever the policy is not 'allow' (hard block under strict, or soft warn when relaxed).
@@ -7666,6 +7689,7 @@ async function _onCellDrop(ev,techId,ds){
   const t=tasks.find(x=>String(x.id)===String(id)); if(!t) return;
   if(String(t.techId)===String(techId)&&t.date===ds) return; // dropped on its own cell — no-op
   if(!confirmZoneDrop(techId,t.city,ds)) return; // out-of-zone safeguard
+  if(!confirmCapacityDrop(techId,t,ds)) return;  // over-capacity safeguard (B2/E5)
   const oldTech=t.techId, oldDate=t.date;
   Object.assign(t, reassignTask(t, techId, ds));
   save();
@@ -7703,6 +7727,7 @@ async function _onGridDrop(ev,techId,ds){
   const w=_gridWindowAtY(ev.clientY-grid.getBoundingClientRect().top);
   if(String(t.techId)===String(techId)&&t.date===ds&&t.windowStart===w.ws&&t.windowEnd===w.we) return; // no-op
   if(!confirmZoneDrop(techId,t.city,ds)) return; // out-of-zone safeguard
+  if(!confirmCapacityDrop(techId,t,ds)) return;  // over-capacity safeguard (B2/E5)
   const oldTech=t.techId, oldDate=t.date;
   t.techId=String(techId); t.date=ds; t.windowStart=w.ws; t.windowEnd=w.we; t.time='';
   if(t.status==='pending') t.status='assigned';
@@ -8109,6 +8134,7 @@ async function placeTaskDetail(){
   const win=document.getElementById('td-window').value;
   if(!techId||!date){ showToast('בחר טכנאי ותאריך','error'); return; }
   if(!confirmZoneDrop(techId,t.city,date)) return; // out-of-zone safeguard
+  if(!confirmCapacityDrop(techId,t,date)) return;  // over-capacity safeguard (B2/E5)
   const oldTech=t.techId, oldDate=t.date;
   const [ws,we]=win?win.split('|'):['',''];
   t.techId=String(techId); t.date=date;

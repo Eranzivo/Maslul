@@ -103,6 +103,17 @@ suite('zoneDropDecision', () => {
   check('strict beats guard-off → block', ctx.zoneDropDecision({ zone_strict: true, zone_drop_guard: false }, true) === 'block');
 });
 
+suite('capacityDropDecision (manual over-capacity guard, B2/E5)', () => {
+  // under capacity ⇒ always allow, regardless of strictness
+  check('not over → allow (default)', ctx.capacityDropDecision({}, false) === 'allow');
+  check('not over → allow (route_strict)', ctx.capacityDropDecision({ route_strict: true }, false) === 'allow');
+  check('not over → allow (null sc)', ctx.capacityDropDecision(null, false) === 'allow');
+  // over capacity: default = soft warn (coordinator may override); route_strict = hard block
+  check('over + default → warn', ctx.capacityDropDecision({}, true) === 'warn');
+  check('over + null sc → warn', ctx.capacityDropDecision(null, true) === 'warn');
+  check('over + route_strict → block', ctx.capacityDropDecision({ route_strict: true }, true) === 'block');
+});
+
 suite('geo one-source: cityMatchKey golden fixture (parity with backend _match_key)', () => {
   const fx = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'geo-cases.json'), 'utf8'));
   const brain = fx.brain;
