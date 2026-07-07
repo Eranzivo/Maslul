@@ -4,6 +4,12 @@
 > These are tasks Opus is well-suited for: UI ports, mechanical multi-file work, forms,
 > test-writing against existing specs. Each has its spec source — don't re-derive.
 > Scenario catalog: `context/scheduling-scenarios.md` (check every task against it).
+>
+> **Progress (Opus session 2026-07-07):** #5 DONE (`backend/tests/test_israel_scenarios.py`
+> — far→near ordering + window stacking anchors). #6 CAPACITY PORTION DONE
+> (`confirmCapacityDrop` + `route_strict` knob on all 3 manual paths; deeper travel-time
+> infeasibility still open). Also NEW (Eran live request, not originally queued): dispatch
+> slot-picker now shows the tech's full existing day (scenarios A11) — shipped.
 
 1. **Explainability + ONE primary recommendation** (handover §9; gap-map #3/#4)
    Lead with one best candidate card + human-readable Hebrew reason built from signals the
@@ -20,14 +26,14 @@
 4. **Override reason required + audited** (handover §15F): `manually_overridden` +
    `override_reason` on tasks (additive migration), required prompt on the 3 manual
    placement paths + lock action; audit_log entry. Small.
-5. **Three-city golden fixture** (scenarios B3): far/mid/close (e.g. דימונה/קרית גת/אשקלון
-   geometry, synthetic matrix) asserting mid-distance calls get mid-morning slots and both
-   direction+release invariants hold. Test-only, both suites if the logic seam allows;
-   FakeSB e2e otherwise. Also encode Israel's worked example (Dimona 07:00 + BS 08:00 +
-   new BS call ⇒ all three inside 07-10) as a batch e2e.
-6. **`routeFeasibleAt` guard on manual placement** (scenarios B2/E5): drag/tap-place onto a
-   day must reject (or warn per tenant strictness) when travel+durations make the receiving
-   route late. Mirror whatever check lands into batch notes (batch is already solver-hard).
+5. ✅ **DONE 2026-07-07** — Three-city + stacking golden anchors in
+   `backend/tests/test_israel_scenarios.py`. NB: the depot-distance physics made a literal
+   "Dimona 07:00 from an Ashkelon depot" fabricated day infeasible (correct engine behavior),
+   so the stacking test uses a Be'er-Sheva-based tech + same-city cluster. If you want the
+   literal worked example, model the tech starting AT the far point.
+6. **Partially done 2026-07-07** — capacity guard shipped (`confirmCapacityDrop`,
+   `route_strict`). STILL OPEN: travel-time infeasibility (a low count can still be
+   route-late) — e.g. reuse `calcOptimalTime`===null as the signal in the manual paths.
 7. **Mandatory tech completeness** (handover §6, backlog #2.10): block tech creation
    without skills/hours/base/return/max_daily; wizard-style completeness meter.
 8. **Constraints in the EDIT modal**: preferred windows day-chips + date constraints on
