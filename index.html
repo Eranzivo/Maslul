@@ -1595,15 +1595,16 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
     </div>
     <div class="fg-2">
       <div class="fg"><label class="fl"><span class="req">*</span> עיר יציאה (נקודת מוצא)</label><input class="fc" id="ti-base" placeholder="תל אביב"><div class="field-error hidden" id="e-ti-base">שדה חובה</div></div>
-      <div class="fg"><label class="fl">עיר חזרה (סוף יום)</label><input class="fc" id="ti-return" placeholder="כמו עיר יציאה אם זהה"></div>
+      <div class="fg"><label class="fl"><span class="req">*</span> עיר חזרה (סוף יום)</label><input class="fc" id="ti-return" placeholder="כמו עיר יציאה אם זהה"><div class="field-error hidden" id="e-ti-return">שדה חובה — קבע עיר סיום יום (זהה לעיר היציאה אם חוזר לאותה נקודה)</div></div>
     </div>
     <div class="fg"><label class="fl">רחוב יציאה</label><input class="fc" id="ti-base-addr" placeholder="רחוב + מספר (לניתוב מדויק, לא חובה)"></div>
     <div class="fg-2">
       <div class="fg"><label class="fl"><span class="req">*</span> מינימום קריאות/יום</label><input class="fc" id="ti-min" type="number" value="2"></div>
-      <div class="fg"><label class="fl"><span class="req">*</span> מקסימום קריאות/יום</label><input class="fc" id="ti-max" type="number" value="9"></div>
+      <div class="fg"><label class="fl"><span class="req">*</span> מקסימום קריאות/יום</label><input class="fc" id="ti-max" type="number" min="1" value="9"><div class="field-error hidden" id="e-ti-max">חייב להיות 1 או יותר</div></div>
     </div>
     <div class="fg">
-      <label class="fl">שעות עבודה שבועיות</label>
+      <label class="fl"><span class="req">*</span> שעות עבודה שבועיות</label>
+      <div class="field-error hidden" id="e-ti-hours">יש להגדיר לפחות יום עבודה אחד (סמן «עובד» ליום אחד לפחות)</div>
       <div class="week-sched" id="ti-weekly-sched">
         <div class="week-sched-hdr">יום</div><div class="week-sched-hdr">עובד</div><div class="week-sched-hdr">התחלה</div><div class="week-sched-hdr">סיום</div>
       </div>
@@ -5350,6 +5351,26 @@ function describeConstraintsHe(t){
   }
   return {windows,dates};
 }
+// ── Technician completeness gate (mandatory before save) ────────────────────
+// Pure. The engine needs ALL of these or the tech is broken: no base/return ⇒
+// wrong route depots; no skills ⇒ never eligible for any call; no work day ⇒
+// never schedulable; max<1 ⇒ can't receive work; zone tenants also need a
+// weekday→zone rotation. Returns {complete, missing[]} with stable field keys
+// the UI maps to error spans. usesZones gates the rotation requirement.
+function techCompleteness(f, usesZones){
+  f=f||{};
+  const missing=[];
+  const str=v=>v&&String(v).trim();
+  if(!str(f.name)) missing.push('name');
+  if(!str(f.phone)) missing.push('phone');
+  if(!str(f.base)) missing.push('base');
+  if(!str(f.return_city)) missing.push('return');
+  if(!(Array.isArray(f.skills)&&f.skills.length)) missing.push('skills');
+  if(!f.hasWorkDay) missing.push('hours');
+  if(!(Number(f.max)>=1)) missing.push('max');
+  if(usesZones&&!f.hasRotation) missing.push('rotation');
+  return {complete:missing.length===0, missing};
+}
 // </sched-logic>
 function appUsesZones(){ return usesZones(tenantConfig && tenantConfig.scheduling); }
 // ═══ AUTO-SEQUENCING SEAM (features.auto_sequence) ═══════════════════════════
@@ -7385,6 +7406,7 @@ function openAddTechModal(){
   if(bs)bs.value='12:00';if(be)be.value='13:00';
   document.getElementById('ti-save-btn').textContent='הוסף';
   document.querySelectorAll('.field-error').forEach(e=>e.classList.add('hidden'));
+  document.querySelectorAll('#mo-tech .fc.error').forEach(e=>e.classList.remove('error'));
   document.getElementById('mo-tech').classList.remove('hidden');
 }
 function editTech(id){
@@ -7415,30 +7437,50 @@ function editTech(id){
   if(brkE)brkE.value=brkMode==='custom'?(techBrk.end||'13:00'):'13:00';
   Object.entries(tech.rotation||{}).forEach(([day,zid])=>{const sel=document.getElementById('rot-'+day);if(sel)sel.value=zid||'';});
   document.getElementById('ti-save-btn').textContent='שמור';
+  // Clear any stale completeness errors from a previous open/failed save
+  document.querySelectorAll('#mo-tech .field-error').forEach(e=>e.classList.add('hidden'));
+  document.querySelectorAll('#mo-tech .fc.error').forEach(e=>e.classList.remove('error'));
   document.getElementById('mo-tech').classList.remove('hidden');
 }
 function saveTech(){
-  let valid=true;
-  [['ti-name','e-ti-name'],['ti-phone','e-ti-phone'],['ti-base','e-ti-base']].forEach(([f,e])=>{
-    const el=document.getElementById(f),err=document.getElementById(e);
-    if(!el.value.trim()){el.classList.add('error');err.classList.remove('hidden');valid=false;}
-    else{el.classList.remove('error');err.classList.add('hidden');}
-  });
+  // ── Mandatory completeness gate (#7) — the engine needs ALL of these or the
+  // tech is broken (bad depots / never eligible / never schedulable). Gather the
+  // derived inputs, then let the pure techCompleteness() decide what's missing.
+  const _name=document.getElementById('ti-name').value.trim();
+  const _phone=document.getElementById('ti-phone').value.trim();
+  const _base=document.getElementById('ti-base').value.trim();
+  const _return=document.getElementById('ti-return').value.trim();
   const skills=categories.filter(c=>document.getElementById('skill-'+c.id)?.checked).map(c=>c.id);
-  if(!skills.length){document.getElementById('e-ti-skills').classList.remove('hidden');valid=false;}
-  else document.getElementById('e-ti-skills').classList.add('hidden');
   const rotation={};let hasRot=false;
   for(let i=0;i<6;i++){rotation[i]=document.getElementById('rot-'+i)?.value||'';if(rotation[i])hasRot=true;}
-  if(appUsesZones() && !hasRot){document.getElementById('e-ti-rotation').classList.remove('hidden');valid=false;}
-  else document.getElementById('e-ti-rotation').classList.add('hidden');
-  if(!valid)return;
+  const weekly_schedule=readWeekSched();
+  const hasWorkDay=[0,1,2,3,4,5].some(i=>weekly_schedule[String(i)]&&weekly_schedule[String(i)].work===true);
+  const _max=parseInt(document.getElementById('ti-max').value);
+  const _usesZones=appUsesZones();
+  const {complete,missing}=techCompleteness(
+    {name:_name,phone:_phone,base:_base,return_city:_return,skills,hasWorkDay,max:_max,hasRotation:hasRot},_usesZones);
+  // Map each field key → [input id (for .error styling), error-span id]. Toggle all.
+  const _fmap={name:['ti-name','e-ti-name'],phone:['ti-phone','e-ti-phone'],base:['ti-base','e-ti-base'],
+    return:['ti-return','e-ti-return'],skills:[null,'e-ti-skills'],hours:[null,'e-ti-hours'],
+    max:['ti-max','e-ti-max'],rotation:[null,'e-ti-rotation']};
+  Object.entries(_fmap).forEach(([k,[inp,err]])=>{
+    const on=missing.includes(k);
+    const errEl=err&&document.getElementById(err);if(errEl)errEl.classList.toggle('hidden',!on);
+    const inpEl=inp&&document.getElementById(inp);if(inpEl)inpEl.classList.toggle('error',on);
+  });
+  if(!complete){
+    const first=missing[0],pair=_fmap[first]||[];
+    const fEl=pair[0]&&document.getElementById(pair[0]);if(fEl)fEl.focus();
+    const eEl=pair[1]&&document.getElementById(pair[1]);if(eEl)eEl.scrollIntoView({behavior:'smooth',block:'center'});
+    showToast('חסרים פרטים חיוניים לשיבוץ — השלם את השדות המסומנים','error');
+    return;
+  }
   const catLimits={};
   categories.forEach(c=>{const v=parseInt(document.getElementById('catlim-'+c.id)?.value);if(v>0)catLimits[c.id]=v;});
   const durationOverrides={};
   if((tenantConfig.features||{}).tech_duration_overrides){
     categories.forEach(c=>{const v=parseInt(document.getElementById('durov-'+c.id)?.value);if(v>0)durationOverrides[c.id]=v;});
   }
-  const weekly_schedule=readWeekSched();
   const brkMode=document.querySelector('input[name="ti-break-mode"]:checked')?.value||'default';
   if(brkMode==='default'){delete weekly_schedule._break;}
   else if(brkMode==='none'){weekly_schedule._break={mode:'none'};}

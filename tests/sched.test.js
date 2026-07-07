@@ -263,5 +263,28 @@ suite('describeConstraintsHe (per-call constraints read-out)', () => {
   check('malformed date passes through untouched', ctx._fmtDMY('soon') === 'soon');
 });
 
+suite('techCompleteness (mandatory tech gate #7)', () => {
+  const full = {name:'אלירן',phone:'050',base:'אשקלון',return_city:'אשקלון',skills:['c1'],hasWorkDay:true,max:9,hasRotation:true};
+  check('complete zone tech → ok, nothing missing', (()=>{const r=ctx.techCompleteness(full,true);return r.complete===true && r.missing.length===0;})());
+  check('complete non-zone tech (rotation not required)', ctx.techCompleteness({...full,hasRotation:false},false).complete===true);
+  // Each engine-critical field, individually missing, blocks:
+  check('missing name blocks', ctx.techCompleteness({...full,name:''},true).missing.includes('name'));
+  check('missing phone blocks', ctx.techCompleteness({...full,phone:'  '},true).missing.includes('phone'));
+  check('missing base blocks', ctx.techCompleteness({...full,base:''},true).missing.includes('base'));
+  check('missing return blocks', ctx.techCompleteness({...full,return_city:''},true).missing.includes('return'));
+  check('no skills blocks', ctx.techCompleteness({...full,skills:[]},true).missing.includes('skills'));
+  check('no work day blocks', ctx.techCompleteness({...full,hasWorkDay:false},true).missing.includes('hours'));
+  check('max<1 blocks', ctx.techCompleteness({...full,max:0},true).missing.includes('max'));
+  check('max NaN blocks', ctx.techCompleteness({...full,max:NaN},true).missing.includes('max'));
+  check('max=1 is allowed', !ctx.techCompleteness({...full,max:1},true).missing.includes('max'));
+  // Rotation is required ONLY for zone tenants:
+  check('zone tenant missing rotation blocks', ctx.techCompleteness({...full,hasRotation:false},true).missing.includes('rotation'));
+  check('non-zone tenant ignores rotation', !ctx.techCompleteness({...full,hasRotation:false},false).missing.includes('rotation'));
+  // Robustness + ordering (missing[0] is the field the UI focuses first):
+  check('empty bag → many missing, safe', ctx.techCompleteness({},true).complete===false);
+  check('missing preserves field order (name first)', ctx.techCompleteness({},true).missing[0]==='name');
+  check('undefined arg → not complete, no throw', ctx.techCompleteness().complete===false);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

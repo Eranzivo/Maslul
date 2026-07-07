@@ -38,6 +38,11 @@ Legend: ✅ enforced · ⚠ caveat (see note) · n/a not applicable to that laye
 | `lookahead_days` | candidate search horizon | `getNextDates` | n/a (explicit range) | n/a | — |
 
 ## technicians.* (per-tech knobs)
+> **Mandatory at creation (2026-07-07):** `name`, `phone`, `base_city`, `return_city`, `skills[]`,
+> ≥1 working day, `max_daily≥1` (+`rotation` for zone tenants) are enforced by pure
+> `techCompleteness(f,usesZones)` — `saveTech` blocks + flags any missing engine-critical field.
+> Test: sched.test.js `techCompleteness`.
+
 | Knob | Meaning | Live JS | Batch | Solver | Test |
 |---|---|---|---|---|---|
 | `rotation {dow: zone_id}` | weekday→zone | `getTechZoneId` | `tech_zone_for_day` | n/a | test_batch_correctness.py |

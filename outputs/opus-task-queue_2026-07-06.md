@@ -36,8 +36,12 @@
 6. **Partially done 2026-07-07** — capacity guard shipped (`confirmCapacityDrop`,
    `route_strict`). STILL OPEN: travel-time infeasibility (a low count can still be
    route-late) — e.g. reuse `calcOptimalTime`===null as the signal in the manual paths.
-7. **Mandatory tech completeness** (handover §6, backlog #2.10): block tech creation
-   without skills/hours/base/return/max_daily; wizard-style completeness meter.
+7. ✅ **DONE 2026-07-07** — Mandatory tech completeness. Pure `techCompleteness(f,usesZones)`
+   in `<sched-logic>` blocks save unless name/phone/base/**return**/skills/**hours**/**max≥1**
+   (+rotation for zone tenants) are all present — the engine-critical inputs (missing ⇒ bad
+   depots / never eligible / never schedulable). `saveTech` maps missing keys → per-field
+   error spans + focuses the first gap; `ti-return`/hours/max now marked required in the form;
+   editTech/openAddTechModal clear stale errors. sched.test.js (149 passed).
 8. ✅ **DONE 2026-07-07** — Constraints no longer intake-only. `queueAssign(id)` (the
    re-dispatch/edit path) now loads a call's saved `preferredWindows` + date constraints
    into the intake components (prefWindows/dateCons) so they're visible + editable AND
