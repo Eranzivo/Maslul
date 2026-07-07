@@ -2290,12 +2290,24 @@ async function initAuth() {
     if (_event === 'INITIAL_SESSION') { return; }
     if (session) {
       currentUser = session.user;
-      try {
-        await loadTenantFromUser();
-        showApp();
-      } catch(e) {
-        // loadTenantFromUser() already handled the failure — do not call showApp()
-      }
+      // CRITICAL — defer the tenant load OUT of this callback. supabase-js awaits
+      // onAuthStateChange callbacks INSIDE signInWithPassword's auth-lock section
+      // (lockAcquired=true). loadTenantFromUser → sb.from('users') → getSession()
+      // re-enters _acquireLock; its pendingInLock chain then waits on the very
+      // sign-in that is waiting on this callback → circular deadlock → login hangs
+      // on "מתחבר..." with NO error. (The no-op lock does NOT break this chain — the
+      // re-entrancy is in pendingInLock, not the lock impl.) It only bites on a FRESH
+      // sign-in; the persisted-session path (initAuth getSession → loadTenantFromUser)
+      // already runs outside the lock and is unaffected. setTimeout(0) lets sign-in
+      // release the lock first, so the deferred getSession runs non-re-entrant.
+      setTimeout(async () => {
+        try {
+          await loadTenantFromUser();
+          showApp();
+        } catch(e) {
+          // loadTenantFromUser() already handled the failure — do not call showApp()
+        }
+      }, 0);
     } else {
       // _suppressSignedOut: set by doLogout() so a fire-and-forget signOut completing
       // later doesn't kick the user out if they already re-logged in.
