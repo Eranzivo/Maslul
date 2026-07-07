@@ -20,6 +20,7 @@
 | A9 | Priority order: route direction > utilization > delay prevention > fuel > right tech | scoring order in candidates + solver objective | scheduling-rules.md |
 | A10 | Better to START LATER than zigzag | solver has no early-start reward — geometry wins over clock (documented invariant; keep it that way) | — |
 | A11 | Coordinator sees the tech's FULL existing day before assigning (transparency) | `showCandidate` day-preview panel: every already-assigned call on that tech/day (status dot, window, city, category · client) + the new call in its far→near insertion slot; empty days say so explicitly | index.html `routeHtml` (2026-07-07) |
+| A12 | Coordinator sees WHY a candidate is the recommendation (explainability, one primary rec) | `explainCandidate` builds a Hebrew {headline, chips[]} from signals the engine ALREADY scored on (consolidation→zone rotation→day headroom→earliest→customer-window fit→route direction), most-decisive first; UI-only, never changes ranking. Best card leads with the headline; detail card shows headline + supporting chips | index.html `explainCandidate`+`candidateSignals` (2026-07-07); sched.test.js |
 
 ## B. NEW from this batch (2026-07-06) — actionable
 | # | Item | Status |

@@ -201,5 +201,41 @@ suite('date constraints: golden fixture (parity with backend date_constraint_all
 });
 
 
+suite('explainCandidate (dispatch "why this recommendation" copy)', () => {
+  // Consolidation is the dominant score driver → it must lead the headline.
+  const merge = ctx.explainCandidate({existingInZone:2, load:2, max:6, zoneName:'דרום', techName:'אלירן', mode:'zone', isEarliest:true, routeStrategy:'far_to_near'});
+  check('existing calls → merge headline (⚡)', merge.headline.icon === '⚡' && /מצטרף ל-2/.test(merge.headline.text));
+  check('merge headline names the zone', /דרום/.test(merge.headline.text));
+  check('merge → consolidation benefit chip present', merge.chips.some(c=>/ניצול מיטבי/.test(c.text)));
+
+  const fresh = ctx.explainCandidate({existingInZone:0, load:0, max:5, zoneName:'שפלה', techName:'בני', mode:'zone'});
+  check('empty day → new-day headline (📅)', fresh.headline.icon === '📅' && /פותח יום/.test(fresh.headline.text));
+  check('new day → NO consolidation benefit chip', !fresh.chips.some(c=>/ניצול מיטבי/.test(c.text)));
+
+  // Zone-rotation chip explains WHY this tech is eligible — zone mode only.
+  check('zone mode → rotation chip names tech', merge.chips.some(c=>/אלירן/.test(c.text) && /דרום/.test(c.text)));
+  const open = ctx.explainCandidate({existingInZone:1, load:1, max:4, zoneName:'', techName:'X', mode:'open'});
+  check('open mode → no zone rotation chip', !open.chips.some(c=>/משובץ/.test(c.text)));
+
+  // Day headroom reflects load vs cap.
+  check('room left → headroom chip counts remaining', merge.chips.some(c=>/עומס 2\/6/.test(c.text) && /נותר מקום ל-4/.test(c.text)));
+  const full = ctx.explainCandidate({existingInZone:5, load:6, max:6, zoneName:'ז', techName:'ט', mode:'zone'});
+  check('day full → "מתמלא" not a negative count', full.chips.some(c=>/עומס 6\/6/.test(c.text) && /מתמלא/.test(c.text)) && !full.chips.some(c=>/נותר מקום/.test(c.text)));
+
+  // Optional signals appear only when true.
+  check('isEarliest → earliest chip', merge.chips.some(c=>/המוקדם ביותר/.test(c.text)));
+  check('not earliest → no earliest chip', !fresh.chips.some(c=>/המוקדם ביותר/.test(c.text)));
+  check('windowFit true → customer-window chip', ctx.explainCandidate({existingInZone:1,load:1,max:3,windowFit:true,mode:'zone',zoneName:'ז',techName:'ט'}).chips.some(c=>/חלון הזמינות/.test(c.text)));
+  check('windowFit null → no customer-window chip', !merge.chips.some(c=>/חלון הזמינות/.test(c.text)));
+  check('far_to_near → route-order chip (רחוק→קרוב)', merge.chips.some(c=>/רחוק→קרוב/.test(c.text)));
+  check('nearest_first → route-order chip (קרוב→רחוק)', ctx.explainCandidate({existingInZone:1,load:1,max:3,routeStrategy:'nearest_first',mode:'zone',zoneName:'ז',techName:'ט'}).chips.some(c=>/קרוב→רחוק/.test(c.text)));
+  check('flexible → no route-order chip', !ctx.explainCandidate({existingInZone:1,load:1,max:3,routeStrategy:'flexible',mode:'zone',zoneName:'ז',techName:'ט'}).chips.some(c=>/רחוק→קרוב|קרוב→רחוק/.test(c.text)));
+
+  // Robustness — never throws on an empty/degenerate bag.
+  const empty = ctx.explainCandidate();
+  check('undefined sig → still returns a headline', !!empty.headline && typeof empty.headline.text === 'string');
+  check('undefined sig → headroom chip with 0/0', empty.chips.some(c=>/עומס 0\/0/.test(c.text)));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

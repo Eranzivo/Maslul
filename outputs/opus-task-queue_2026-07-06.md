@@ -11,10 +11,12 @@
 > infeasibility still open). Also NEW (Eran live request, not originally queued): dispatch
 > slot-picker now shows the tech's full existing day (scenarios A11) — shipped.
 
-1. **Explainability + ONE primary recommendation** (handover §9; gap-map #3/#4)
-   Lead with one best candidate card + human-readable Hebrew reason built from signals the
-   engine ALREADY computes (existingInZone, load, drive context, window fit, zone). Cards
-   on request ("מצא מועד אחר" exists). UI-only; no solver change. Pairs with task 2.
+1. ✅ **DONE 2026-07-07** — Explainability + ONE primary recommendation (handover §9; gap-map #3/#4)
+   Pure `explainCandidate(sig)` in `<sched-logic>` → Hebrew {headline, chips[]} from signals the
+   engine already scored on (consolidation → zone rotation → headroom → earliest → window fit →
+   route direction). `candidateSignals(c)` reshapes a built candidate. Best card leads with the
+   headline (`.md-rc-why`); detail card shows headline + `.sr-why-chip`s. UI-only, no solver
+   change. sched.test.js suite (119 passed). Scenario A12. See git log.
 2. **Design-system port, then screens** (memory: ui-redesign-port; mockups/claude-design/
    + DESIGN-LOG + port plan). Slice 1 = tokens/components only (md-* namespace), then one
    screen per session in plan order. NEVER regenerate a design — port the approved mockups.

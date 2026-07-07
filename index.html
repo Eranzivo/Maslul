@@ -159,6 +159,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .sr-date-label{font-size:0.7rem;font-weight:800;color:var(--blue-d);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;}
 .sr-date-value{font-size:1.25rem;font-weight:900;color:var(--ink);letter-spacing:-0.5px;}
 .sr-reason{font-size:0.8125rem;color:var(--green);font-weight:600;margin-top:4px;}
+/* "Why this recommendation" supporting chips (detail view) */
+.sr-why{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 1rem;}
+.sr-why-chip{font-size:0.75rem;font-weight:600;color:var(--ink-2);background:var(--line-2);border:1px solid var(--border);border-radius:999px;padding:4px 10px;line-height:1.3;}
 /* ROUTE PREVIEW */
 .route-preview{background:var(--line-2);border-radius:var(--r);padding:10px 14px;margin:10px 0;}
 .route-title{font-size:0.7rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;}
@@ -549,6 +552,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .md-rc-win svg{width:15px;height:15px;color:var(--ink-4);flex-shrink:0;}
 .md-rc.best .md-rc-win{background:var(--accent-light);border-color:var(--accent-border);color:var(--accent-hover);}
 .md-rc.best .md-rc-win svg{color:var(--accent);}
+/* One-line "why this day" reason under the window chip */
+.md-rc-why{font-size:12px;line-height:1.4;color:var(--ink-3);font-weight:600;margin-top:-6px;}
+.md-rc.best .md-rc-why{color:var(--accent-hover);}
 /* Select button inside card */
 .md-rc-btn{width:100%;height:40px;border-radius:var(--r);font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .15s,border-color .15s,transform .05s ease;}
 .md-rc-btn:active{transform:translateY(1px);}
@@ -5283,6 +5289,39 @@ function windowAtOffset(y, startH, endH, slotH){
   const p=n=>String(n).padStart(2,'0')+':00';
   return {ws:p(wsH), we:p(weH), topMins:(wsH-startH)*60, heightMins:(weH-wsH)*60};
 }
+// ── Explainability: WHY this candidate is the recommendation ────────────────
+// Pure — takes a signals bag the dispatch layer already computed (no scoring here,
+// no globals) and returns {headline, chips[]} of human-readable Hebrew reasons,
+// most-decisive first. Mirrors the score priority so the copy never contradicts
+// the ranking: consolidation (the dominant _candidatesZone score driver) leads;
+// zone rotation, day headroom, earliest-date, customer-window fit, and route
+// direction support it. UI-only — this NEVER changes placement.
+// sig: {existingInZone, load, max, zoneName, techName, isEarliest, windowFit,
+//       routeStrategy, mode}
+function explainCandidate(sig){
+  sig=sig||{};
+  const zn=sig.zoneName?` ${sig.zoneName}`:'';
+  const headline=(sig.existingInZone>0)
+    ? {icon:'⚡',text:`מצטרף ל-${sig.existingInZone} קריאות קיימות${zn?' באזור'+zn:''}`}
+    : {icon:'📅',text:`פותח יום עבודה חדש${zn?' באזור'+zn:''}`};
+  const chips=[];
+  // Consolidation benefit — the reason the score favors this day (route efficiency).
+  if(sig.existingInZone>0)
+    chips.push({icon:'✅',text:'ניצול מיטבי של יום עבודה קיים — בלי לפתוח יום/מסלול נוסף'});
+  // Why THIS tech is eligible: their rotation zone for that weekday.
+  if(sig.mode==='zone'&&sig.zoneName&&sig.techName)
+    chips.push({icon:'🗺️',text:`${sig.techName} משובץ/ת לאזור${zn} ביום זה`});
+  // Day headroom (load vs the tech's daily cap).
+  const max=sig.max||0, load=sig.load||0, room=max-load;
+  chips.push(room>0
+    ? {icon:'📊',text:`עומס ${load}/${max} — נותר מקום ל-${room} קריאות נוספות ביום`}
+    : {icon:'📊',text:`עומס ${load}/${max} — היום מתמלא`});
+  if(sig.isEarliest) chips.push({icon:'⏱️',text:'המועד הזמין המוקדם ביותר'});
+  if(sig.windowFit===true) chips.push({icon:'🕒',text:'תואם את חלון הזמינות של הלקוח'});
+  if(sig.routeStrategy==='far_to_near') chips.push({icon:'🧭',text:'משתלב בסדר המסלול (רחוק→קרוב)'});
+  else if(sig.routeStrategy==='nearest_first') chips.push({icon:'🧭',text:'משתלב בסדר המסלול (קרוב→רחוק)'});
+  return {headline,chips};
+}
 // </sched-logic>
 function appUsesZones(){ return usesZones(tenantConfig && tenantConfig.scheduling); }
 // ═══ AUTO-SEQUENCING SEAM (features.auto_sequence) ═══════════════════════════
@@ -6006,6 +6045,28 @@ function findBestSlot(){
   // coordinator sees the recommendations without hunting/scrolling (QA 2026-06-16).
   document.getElementById('dispatch-result').scrollIntoView({behavior:'smooth',block:'start'});
 }
+// Gather the signals explainCandidate needs from a built candidate. Impure (reads
+// zones/prefWindows/settings/tenantConfig) — all values are ALREADY computed by the
+// engine; this only reshapes them. Keeps explainCandidate pure + unit-testable.
+function candidateSignals(c){
+  const sc=(tenantConfig&&tenantConfig.scheduling)||{};
+  const zone=zones.find(z=>z.id===getTechZoneId(c.tech,c.date.str));
+  let windowFit=null;
+  if(typeof prefWindows!=='undefined'&&prefWindows&&prefWindows.length&&c.optTime){
+    const m=timeToMins(c.optTime),slotH=settings.window||3;
+    windowFit=prefWindowAllowsRange(prefWindows,c.date.d.getDay(),m,m+slotH*60);
+  }
+  return {
+    existingInZone:c.existingInZone||0,
+    load:c.load, max:c.tech.max,
+    zoneName:zone?zone.name:'',
+    techName:c.tech.name,
+    isEarliest:c.dateScore===0,
+    windowFit,
+    routeStrategy:resolveRouteStrategy(sc),
+    mode:sc.mode||'zone'
+  };
+}
 // ─── Slice 5: 3-card recommendation chooser ─────────────────────────────────
 function showCandidateCards(offset){
   offset=offset||0;
@@ -6035,6 +6096,7 @@ function showCandidateCards(offset){
     const winEnd=minsToTime(oh*60+om+slotH*60);
     const isBest=(i===0&&offset===0);
     const btnClass=isBest?'filled':'outline';
+    const why=explainCandidate(candidateSignals(c)).headline;
     cards.push(`
       <div class="md-rc${isBest?' best':''}" onclick="showCandidateFromCards(${gi})">
         ${isBest?`<span class="md-rc-badge">${starSvg}מומלץ</span>`:''}
@@ -6043,6 +6105,7 @@ function showCandidateCards(offset){
           <div class="md-rc-date">${dateHe}</div>
         </div>
         <div class="md-rc-win md-win">${clockSvg}<span class="md-num">${winStart} — ${winEnd}</span></div>
+        <div class="md-rc-why">${why.icon} ${h(why.text)}</div>
         <button class="md-rc-btn ${btnClass}" onclick="event.stopPropagation();showCandidateFromCards(${gi})">
           בחירה${isBest?' '+arrowSvg:''}
         </button>
@@ -6134,8 +6197,13 @@ function showCandidate(idx){
   const tech=c.tech;const d=c.date.d;
   const dateLabel=`יום ${DAYS_HE[d.getDay()]}, ${d.getDate()} ב${MONTHS_HE[d.getMonth()]} ${d.getFullYear()}`;
   const zone=zones.find(z=>z.id===getTechZoneId(tech,c.date.str));
-  const isMerge=c.existingInZone>0;
-  const reasonText=isMerge?`⚡ ממלא יום קיים — ${c.existingInZone} קריאות באזור`:`📅 פותח יום חדש`;
+  // Explainability: WHY this candidate — headline + supporting chips, from the
+  // same signals the engine scored on (see explainCandidate).
+  const explain=explainCandidate(candidateSignals(c));
+  const reasonText=`${explain.headline.icon} ${h(explain.headline.text)}`;
+  const whyHtml=explain.chips.length
+    ?`<div class="sr-why">${explain.chips.map(ch=>`<span class="sr-why-chip">${ch.icon} ${h(ch.text)}</span>`).join('')}</div>`
+    :'';
   const dayTasks=getTechDayTasks(tech,c.date.str);
   // Existing-day preview — the coordinator must see the tech's full day before assigning:
   // every call already on this tech/day (window, city, category, client, status), with the
@@ -6203,8 +6271,8 @@ function showCandidate(idx){
         <div class="sr-date-label">תאריך מוצע</div>
         <div class="sr-date-value">${dateLabel}</div>
         <div class="sr-reason">${reasonText}</div>
-        <div style="font-size:0.8125rem;color:var(--ink-3);margin-top:3px;">${c.load}/${tech.max} קריאות</div>
       </div>
+      ${whyHtml}
       ${routeHtml}
       <div style="font-size:0.8rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 6px;">בחר חלון זמן</div>
       <div class="time-slots">${slots.map((s,si)=>`<div class="time-slot ${s.full||s.offPref?'busy':s.isSuggested?'suggested':s.preferred?'preferred':''}" onclick="${s.full||s.offPref?'':'selectTimeSlot('+si+')'}" id="ts-${si}"><span class="time-slot-range">${s.start} — ${s.end}</span><span style="font-size:0.7rem;">${s.full?'מלא ('+s.slotCount+'/'+s.slotCapacity+')':s.offPref?'מחוץ לזמינות הלקוח':s.slotCount>0?''+s.slotCount+'/'+s.slotCapacity+(s.isSuggested?' ⭐':''):s.preferred?'⭐ מועדף':'פנוי'}</span></div>`).join('')}</div>
