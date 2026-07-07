@@ -19,6 +19,7 @@
 | A8 | Coordinator can't hand-pick any hour ignoring route logic | slot picker (computed slots only) + `zoneDropDecision` hard block + pref-window slot gating | zones.test.js |
 | A9 | Priority order: route direction > utilization > delay prevention > fuel > right tech | scoring order in candidates + solver objective | scheduling-rules.md |
 | A10 | Better to START LATER than zigzag | solver has no early-start reward — geometry wins over clock (documented invariant; keep it that way) | — |
+| A11 | Coordinator sees the tech's FULL existing day before assigning (transparency) | `showCandidate` day-preview panel: every already-assigned call on that tech/day (status dot, window, city, category · client) + the new call in its far→near insertion slot; empty days say so explicitly | index.html `routeHtml` (2026-07-07) |
 
 ## B. NEW from this batch (2026-07-06) — actionable
 | # | Item | Status |

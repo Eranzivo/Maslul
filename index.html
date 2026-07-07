@@ -6104,16 +6104,23 @@ function showCandidate(idx){
   const isMerge=c.existingInZone>0;
   const reasonText=isMerge?`⚡ ממלא יום קיים — ${c.existingInZone} קריאות באזור`:`📅 פותח יום חדש`;
   const dayTasks=getTechDayTasks(tech,c.date.str);
-  // Route preview
+  // Existing-day preview — the coordinator must see the tech's full day before assigning:
+  // every call already on this tech/day (window, city, category, client, status), with the
+  // new call shown in its far→near insertion position.
   const city=document.getElementById('s-city').value;
-  // Merge existing tasks + new task, sort by time → shows correct insertion position
-  const allForRoute=[...dayTasks.map(t=>({time:t.time,city:t.city,isNew:false})),{time:c.optTime,city,isNew:true}]
+  const _statusDot={assigned:'var(--blue)',en_route:'var(--blue)',arrived:'var(--green)'};
+  const _slot=t=>(t.windowStart&&t.windowEnd)?`${t.windowStart}–${t.windowEnd}`:(t.time||'—');
+  const allForRoute=[...dayTasks.map(t=>({t,time:t.time||t.windowStart||'',isNew:false})),
+                     {time:c.optTime,city,isNew:true}]
     .sort((a,b)=>timeToMins(a.time)-timeToMins(b.time));
-  const routeRows=dayTasks.length?allForRoute.map(r=>r.isNew
-    ?`<div class="route-row"><span class="route-time">${r.time}</span><span class="route-arrow">→</span><span class="route-city route-new">✦ ${h(r.city)} (חדש)</span></div>`
-    :`<div class="route-row"><span class="route-time">${r.time}</span><span class="route-arrow">→</span><span class="route-city">${h(r.city)}</span></div>`
-  ).join(''):'';
-  const routeHtml=routeRows?`<div class="route-preview"><div class="route-title">מסלול יום מתוכנן (רחוק לקרוב)</div>${routeRows}</div>`:'';
+  const routeRows=dayTasks.length?allForRoute.map(r=>{
+    if(r.isNew)return`<div class="route-row" style="background:var(--accent-light);border-radius:6px;padding:5px 6px;"><span class="route-time" style="color:var(--blue);">${r.time}</span><span class="route-arrow">→</span><span class="route-city route-new">✦ ${h(r.city)} — קריאה חדשה</span></div>`;
+    const t=r.t,det=[t.cat,t.client].filter(Boolean).map(h).join(' · ');
+    return`<div class="route-row"><span style="width:8px;height:8px;border-radius:50%;background:${_statusDot[t.status]||'var(--ink-4)'};flex:none;"></span><span class="route-time">${_slot(t)}</span><span class="route-city"><b style="color:var(--ink-2);">${h(t.city)}</b>${det?`<span style="color:var(--ink-4);font-size:0.75rem;"> · ${det}</span>`:''}</span></div>`;
+  }).join(''):'';
+  const routeHtml=routeRows
+    ?`<div class="route-preview"><div class="route-title">קריאות קיימות ביום זה (${dayTasks.length}) · מסלול רחוק→קרוב</div>${routeRows}</div>`
+    :`<div class="route-preview" style="text-align:center;color:var(--ink-4);font-size:0.8rem;">אין קריאות משובצות ל${h(tech.name)} ביום זה — יום חדש</div>`;
   // Time slots
   const _sched=getTechDaySchedule(tech,c.date.str);
   const[sh]=_sched.start.split(':').map(Number);
