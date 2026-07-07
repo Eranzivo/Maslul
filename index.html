@@ -7641,7 +7641,7 @@ function renderZones(){
       </div>
       <div class="zone-cities">${z.cities.map((c,ci)=>`<span class="city-tag">${h(c)}<button onclick="removeCity('${z.id}',${ci})">×</button></span>`).join('')||'<span style="font-size:0.8rem;color:var(--ink-4);">אין ערים באזור — הוסף עיר ראשונה</span>'}</div>
       <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
-        <input class="fc" id="new-city-${z.id}" list="il-cities-list" autocomplete="off" placeholder="הקלד שם עיר…" onkeydown="if(event.key==='Enter'){event.preventDefault();addCities('${z.id}');}" style="flex:1;font-size:0.875rem;">
+        <input class="fc" id="new-city-${z.id}" list="il-cities-list" autocomplete="off" placeholder="הקלד שם עיר…" onkeydown="if(event.key==='Enter'){event.preventDefault();addCities('${z.id}');}" style="width:220px;max-width:100%;font-size:0.875rem;">
         <button class="btn btn-outline btn-sm" onclick="addCities('${z.id}')" style="flex-shrink:0;">+ הוסף</button>
         <span id="zone-status-${z.id}" style="font-size:0.7rem;color:var(--ink-3);min-height:1em;"></span>
       </div>
@@ -7662,13 +7662,30 @@ function deleteZone(id){
   if(z._dbId)deleteZoneFromSupabase(z._dbId);
   zones=zones.filter(x=>x.id!==id);save();renderZones();populateCitySelect();
 }
+// True if `name` is a recognized Israeli city — checks the shared typeahead datalist
+// (il-cities-list, the list the coordinator picks from), the geo brain (1,310 places),
+// and the offline coord fallback. Used to suppress the fuzzy "did you mean" prompt for
+// cities that are already valid — e.g. אחיהוד was wrongly suggested as יהוד because it
+// is absent from the small CITY_COORDS_JS, even though it's a real, listed city.
+function isKnownCity(name){
+  if(!name)return false;
+  const brain=(typeof GEO_BRAIN!=='undefined')?GEO_BRAIN:null;
+  const key=cityMatchKey(name,brain);
+  if(brain&&brain.places&&brain.places[key])return true;
+  const dl=document.getElementById('il-cities-list');
+  if(dl)for(const o of dl.options){if(cityMatchKey(o.value,brain)===key)return true;}
+  if(typeof CITY_COORDS_JS!=='undefined'&&CITY_COORDS_JS[normalizeCity(name)])return true;
+  return false;
+}
 function addCities(zoneId){
   const inp=document.getElementById('new-city-'+zoneId);const text=inp.value.trim();if(!text)return;
   const z=zones.find(x=>x.id===zoneId);if(!z)return;
   text.split(/[\n,]+/).map(c=>c.trim()).filter(Boolean).forEach(raw=>{
     const {city,suggestion}=canonicalCity(raw);
     let toAdd=city;
-    if(suggestion&&suggestion!==city){
+    // Only offer the fuzzy correction when the typed city is genuinely UNrecognized —
+    // a valid listed city (e.g. אחיהוד) must never be second-guessed.
+    if(suggestion&&suggestion!==city&&!isKnownCity(city)){
       toAdd=confirm(`"${raw}" אינה מזוהה. האם התכוונת ל"${suggestion}"?`)?suggestion:city;
     }
     if(!z.cities.includes(toAdd))z.cities.push(toAdd);
