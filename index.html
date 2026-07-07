@@ -5009,14 +5009,16 @@ function zoneDropDecision(sc, hasMismatch){
   if(sc && sc.zone_drop_guard === false) return 'allow'; // relaxed + opted out of the soft guard
   return 'warn';                                         // relaxed → soft confirm
 }
-// Manual-placement capacity guard (scenarios B2/E5): a manual drop/tap-place must not
-// silently overload a technician's day past their max — the "already late at scheduling
-// time must be impossible" principle. Pure + tested. `over` = adding this call would exceed
-// the tech's daily max. Policy: `route_strict` (default false) → hard block; otherwise a
-// soft warn the coordinator may override (mirrors zone_drop_guard). The batch engine never
-// needs this — its solver is capacity-hard and drops overflow.
-function capacityDropDecision(sc, over){
-  if(!over) return 'allow';
+// Manual-placement guard (scenarios B2/E5): a manual drop/tap-place must not silently
+// overload a technician's day past their max, nor insert a call the day's route can't fit
+// in a geographically-valid position — the "already late at scheduling time must be
+// impossible" principle. Pure + tested. `over` = adding this call would exceed the tech's
+// daily max; `noRoute` = no route-valid insertion slot exists (calcOptimalTime === null).
+// Policy: `route_strict` (default false) → hard block; otherwise a soft warn the coordinator
+// may override (mirrors zone_drop_guard). The batch engine never needs this — its solver is
+// capacity-hard and drops overflow.
+function capacityDropDecision(sc, over, noRoute){
+  if(!over && !noRoute) return 'allow';
   return (sc && sc.route_strict) ? 'block' : 'warn';
 }
 // </zone-logic>
@@ -5051,11 +5053,19 @@ function confirmCapacityDrop(techId,task,ds){
   const already=task&&String(task.techId)===String(techId)&&task.date===ds;
   const load=getTechLoad(tech,ds);
   const over=!already && load>=(tech.max||99);
-  const decision=capacityDropDecision((tenantConfig||{}).scheduling, over);
+  // Route feasibility: reuse the tested optimal-time finder — null = no geographically-valid
+  // slot in the day's far→near route. Only meaningful for zone tenants + a real cross-move.
+  let noRoute=false;
+  if(!already && !over && appUsesZones() && task && task.catId){
+    try{ noRoute = calcOptimalTime(tech, ds, task.city, task.catId) === null; }catch(e){ noRoute=false; }
+  }
+  const decision=capacityDropDecision((tenantConfig||{}).scheduling, over, noRoute);
   if(decision==='allow') return true;
-  const msg=`${tech.name} כבר משובץ ל-${load} קריאות ביום זה (מקסימום ${tech.max}).`;
-  if(decision==='block'){ showToast(msg+' לא ניתן להוסיף עוד.', 'error'); return false; }
-  return confirm(`⚠️ ${msg}\n\nהוספת קריאה נוספת תעמיס על היום ועלולה לגרום לאיחורים בשאר הקריאות.\n\nלשבץ בכל זאת?`);
+  const msg = over
+    ? `${tech.name} כבר משובץ ל-${load} קריאות ביום זה (מקסימום ${tech.max}).`
+    : `אין חלון מסלול תקין ל"${task.city}" ביום זה — ההוספה עלולה לשבור את סדר המסלול (רחוק→קרוב).`;
+  if(decision==='block'){ showToast(msg+' לא ניתן להוסיף.', 'error'); return false; }
+  return confirm(`⚠️ ${msg}\n\nלשבץ בכל זאת?`);
 }
 // Render-time flag (no persisted state — always accurate, auto-clears when moved back in-zone).
 // Flags whenever the policy is not 'allow' (hard block under strict, or soft warn when relaxed).
