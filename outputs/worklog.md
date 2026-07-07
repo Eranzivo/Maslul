@@ -11,7 +11,7 @@
 - **GCP console walkthrough** — confirm caps/budget match the post-2025 per-SKU free tier. *Trigger:* Eran asked to be reminded at geocoding-enable.
 
 ## Call entry / data integrity
-- **Unify pending-call entry into שיבוץ קריאה** — "שמור ללא שיבוץ" on the full dispatch form → pending call WITH all fields (street/floor/apt/entrance/windows/dates); deprecate the thin "רישום קריאה ממתינה" modal so nothing falls between the cracks at assign time. *Status:* proposed 2026-07-07, awaiting Eran's nod on approach.
+- ✅ **DONE 2026-07-07** — Unified call entry. "💾 שמור ללא שיבוץ" on the full dispatch form (`savePendingFromDispatch`) creates/updates a PENDING call with every field (street/floor/apt/entrance/windows/dates); "+ הוסף קריאה" → `startNewCall()` opens the same full form. Thin "רישום קריאה ממתינה" modal retired (code kept, no entry point). CSV + bulk import buttons hidden (code kept). One full-fidelity entry point; queueAssign reloads all fields at assign time.
 
 ## Bigger deferred (from opus-task-queue)
 - **#2 design-system UI port** — on hold until the product fully functions (Eran).

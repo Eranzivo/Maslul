@@ -964,7 +964,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
         </div>
       </div>
       <div class="fg">
-        <label class="fl">רחוב ומספר</label>
+        <label class="fl"><span class="req">*</span> רחוב ומספר</label>
         <input class="fc" id="s-street" placeholder="לדוגמה: הרצל 15">
       </div>
     </div>
@@ -1033,6 +1033,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div id="rec-preview" style="margin-top:10px;font-size:0.8125rem;color:var(--ink-3);"></div>
     </div>
     <button class="find-btn" id="find-btn-normal" onclick="findBestSlot()">מצא שיבוץ אופטימלי ←</button>
+    <button class="btn btn-outline" id="save-pending-btn" onclick="savePendingFromDispatch()" style="width:100%;margin-top:8px;">💾 שמור ללא שיבוץ — קריאה ממתינה</button>
     <button class="find-btn hidden" id="find-btn-recurring" onclick="createRecurringTask()" style="background:var(--blue);">🔁 צור קריאות חוזרות</button>
   </div>
   <div id="dispatch-result" class="hidden">
@@ -1098,9 +1099,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div class="ph-row ph">
     <div><div class="ph-title" data-label="tasks">קריאות</div></div>
     <div class="flex-gap">
-      <button class="btn btn-blue btn-sm" onclick="openAddTaskModal()">+ הוסף קריאה</button>
+      <button class="btn btn-blue btn-sm" onclick="startNewCall()">+ הוסף קריאה</button>
+      <!-- Import section hidden 2026-07-07 (Eran) — CSV + bulk code kept, no entry point for now.
+           Re-enable: restore the two buttons below (openCsvImportModal / mo-bulk-import).
       <button class="btn btn-outline btn-sm" onclick="openCsvImportModal()" title="ייבוא קריאות מקובץ CSV / Excel (כולל תבנית להורדה)">📥 ייבא CSV</button>
       <button class="btn btn-outline btn-sm" onclick="document.getElementById('mo-bulk-import').classList.remove('hidden')" title="הדבקת רשימת כתובות לשיבוץ אוטומטי">⇪ ייבוא מרובה</button>
+      -->
     </div>
   </div>
   <div class="task-filterbar" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:14px;">
@@ -6146,6 +6150,49 @@ function findBestSlot(){
   // coordinator sees the recommendations without hunting/scrolling (QA 2026-06-16).
   document.getElementById('dispatch-result').scrollIntoView({behavior:'smooth',block:'start'});
 }
+// New-call entry — ONE full-fidelity form for every call (replaces the thin
+// "רישום קריאה ממתינה" modal so a pending call carries the SAME fields as an
+// assigned one; nothing falls between the cracks at assign time).
+function startNewCall(){ goPage('dispatch'); resetDispatch(); }
+// "Save without assigning" — create/update a PENDING call from the full dispatch
+// form with every field (address, floor/apt/entrance, preferred windows, date
+// constraints). Same required fields as an assigned call. When later assigned,
+// queueAssign() reloads all of these. Mirrors confirmAssign's gather, minus slot/tech.
+async function savePendingFromDispatch(){
+  const catId=getCatId();
+  const client=document.getElementById('c-name').value.trim();
+  const city=normalizeCity(document.getElementById('s-city').value);
+  const street=document.getElementById('s-street').value.trim();
+  if(!catId||!selectedCat){ showToast('נא לבחור קטגוריה','error'); return; }
+  if(!client){ const n=document.getElementById('c-name'); n.classList.add('error'); n.focus(); showToast('שם לקוח הוא שדה חובה','error'); return; }
+  document.getElementById('c-name').classList.remove('error');
+  if(!city){ showToast('נא לבחור עיר','error'); return; }
+  if(!street){ showToast('נא למלא רחוב ומספר — כתובת מלאה נדרשת','error'); return; }
+  const phone=document.getElementById('c-phone').value||'';
+  const floor=document.getElementById('s-floor').value.trim()||null;
+  const apartment=document.getElementById('s-apartment').value.trim()||null;
+  const entranceNotes=document.getElementById('s-entrance').value.trim()||null;
+  const notes=document.getElementById('c-notes').value||'';
+  const catName=getCatName();
+  const btn=document.getElementById('save-pending-btn');
+  if(btn){ btn.disabled=true; btn.textContent='שומר…'; }
+  await _triggerGeocode();
+  const _gc=_pendingGeocode; const _gcAt=_gc?new Date().toISOString():null;
+  const fields={client,phone,city,street,floor,apartment,entranceNotes,cat:catName,catId,status:'pending',techId:null,time:'',date:'',windowStart:'',windowEnd:'',notes,preferredWindows:[...prefWindows],earliestDate:dateCons.earliest_date||'',latestDate:dateCons.latest_date||'',fixedDate:dateCons.fixed_date||'',manuallyOverridden:false,overrideReason:null,lat:_gc?.lat||null,lon:_gc?.lon||null,geocodedAt:_gcAt};
+  const qt=window._queueTask;
+  let task;
+  if(qt){ Object.assign(qt,fields); task=qt; window._queueTask=null; }
+  else { task={id:nextTaskId++,assignId:'',...fields}; tasks.push(task); }
+  save();
+  const saved=await saveTaskToSupabase(task);
+  if(btn){ btn.disabled=false; btn.textContent='💾 שמור ללא שיבוץ — קריאה ממתינה'; }
+  if(!saved) showToast('נשמר מקומית — בדוק חיבור לרשת','error');
+  _pendingGeocode=null;
+  clearDispatchDraft();
+  resetDispatch();
+  showToast('הקריאה נשמרה כקריאה ממתינה ✓');
+  goPage('tasks'); filterTasks('pending');
+}
 // Gather the signals explainCandidate needs from a built candidate. Impure (reads
 // zones/prefWindows/settings/tenantConfig) — all values are ALREADY computed by the
 // engine; this only reshapes them. Keeps explainCandidate pure + unit-testable.
@@ -6540,6 +6587,7 @@ function toggleRecurringMode(){
   const on=document.getElementById('recurring-toggle').checked;
   document.getElementById('recurring-config').classList.toggle('hidden',!on);
   document.getElementById('find-btn-normal').classList.toggle('hidden',on);
+  const _sp=document.getElementById('save-pending-btn'); if(_sp)_sp.classList.toggle('hidden',on); // recurring has its own flow
   document.getElementById('find-btn-recurring').classList.toggle('hidden',!on);
   if(on){
     // Populate tech dropdown
