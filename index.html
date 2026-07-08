@@ -978,7 +978,7 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
       <div class="fg"><label class="fl">מספר דירה</label><input class="fc" id="s-apartment" placeholder="לדוגמה: 12" oninput="saveDispatchDraft()"></div>
     </div>
     <div class="fg"><label class="fl">קוד / הערות כניסה</label><input class="fc" id="s-entrance" placeholder="לדוגמה: קוד 1234#, כניסה ב'" oninput="saveDispatchDraft()"></div>
-    <div class="fg"><label class="fl">הערות</label><input class="fc" id="c-notes" placeholder="הערות..." oninput="saveDispatchDraft()"></div>
+    <div class="fg"><label class="fl">הערות</label><textarea class="fc" id="c-notes" rows="1" placeholder="הערות..." style="resize:none;overflow-y:auto;line-height:1.5;" oninput="saveDispatchDraft();_growNotes(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();}"></textarea></div>
     <div class="fg">
       <label class="fl">חלונות זמן מועדפים <span style="font-size:0.75rem;color:var(--ink-4);font-weight:400;">(אופציונלי — לפי בקשת הלקוח)</span></label>
       <div id="pref-windows-list"></div>
@@ -1092,6 +1092,7 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
   </div><!-- /dispatch-col-main -->
   <div class="dispatch-col-queue">
     <div class="pq-title">קריאות ממתינות</div>
+    <div id="pq-tabs" style="display:flex;gap:6px;margin-bottom:8px;"></div>
     <div id="pending-queue">
       <div id="pending-queue-list"></div>
     </div>
@@ -2761,7 +2762,7 @@ async function loadFromSupabase() {
       cat: t.category_name, catId: t.category_id,
       techId: t.technician_id, status: t.status,
       time: t.scheduled_time || '', date: t.scheduled_date || '',
-      windowStart: t.scheduled_window_start || '', windowEnd: t.scheduled_window_end || '', locked: !!t.locked, updatedAt: t.updated_at || null,
+      windowStart: t.scheduled_window_start || '', windowEnd: t.scheduled_window_end || '', locked: !!t.locked, updatedAt: t.updated_at || null, createdAt: t.created_at || null,
       notes: t.notes || '', assignId: t.assign_id || '',
       preferredWindows: t.preferred_windows || [],
       earliestDate: t.earliest_date || '', latestDate: t.latest_date || '', fixedDate: t.fixed_date || '',
@@ -5452,6 +5453,17 @@ function overrideStamp(reason){
   const r=(reason==null?'':String(reason)).trim();
   return { manuallyOverridden: !!r, overrideReason: r||null };
 }
+// ── Pending-queue aging (Eran 2026-07-08) ───────────────────────────────────
+// Pure. A pending call older than 21 days moves from the active קריאות ממתינות
+// list to the ארכיון view (data untouched — display split only; Israel's imported
+// schedule is never deleted). Age = the call's scheduled date if set, else its
+// created_at date; neither ⇒ fresh (can't age-judge).
+function isPendingArchived(t, today){
+  const ref=(t&&(t.date||(t.createdAt||'').slice(0,10)))||'';
+  if(!ref||!today)return false;
+  const cut=new Date(today+'T12:00:00');cut.setDate(cut.getDate()-21);
+  return ref < cut.toISOString().slice(0,10);
+}
 // ── The ONE job-duration resolver ───────────────────────────────────────────
 // Pure. Chain (exact mirror of backend _effective_duration): per-tech category
 // override → category.time → tenant default (regularTime) → 30. EVERY live
@@ -6564,11 +6576,19 @@ function clearDispatch(){
   _pendingGeocode=null;
 }
 // ─── Pending queue panel ──────────────────────────────────────────────────
+let _pendingView='active'; // 'active' (≤3 weeks) | 'archive' (older — Israel's past schedule, never deleted)
+function setPendingView(v){_pendingView=v;renderPendingQueue();}
 function renderPendingQueue(){
   const el=document.getElementById('pending-queue-list');if(!el)return;
   const today=todayStr();
-  const pending=tasks
-    .filter(t=>t.status==='pending')
+  const all=tasks.filter(t=>t.status==='pending');
+  const arch=all.filter(t=>isPendingArchived(t,today));
+  const act=all.filter(t=>!isPendingArchived(t,today));
+  // Toggle header: active pending ⟷ archive (calls older than 3 weeks)
+  const tabEl=document.getElementById('pq-tabs');
+  if(tabEl)tabEl.innerHTML=[['active',`ממתינות (${act.length})`],['archive',`ארכיון קריאות (${arch.length})`]]
+    .map(([v,lbl])=>`<button onclick="setPendingView('${v}')" style="flex:1;padding:5px 8px;font-size:0.75rem;font-weight:700;font-family:inherit;cursor:pointer;border:1px solid ${_pendingView===v?'var(--blue)':'var(--line)'};border-radius:8px;background:${_pendingView===v?'var(--blue-l)':'var(--white)'};color:${_pendingView===v?'var(--blue-d)':'var(--ink-3)'};">${lbl}</button>`).join('');
+  const pending=(_pendingView==='archive'?arch:act)
     .sort((a,b)=>{
       // Tasks with a date: sort ascending from today; no-date tasks go to the bottom
       if(a.date&&b.date)return a.date.localeCompare(b.date);
@@ -6576,7 +6596,7 @@ function renderPendingQueue(){
     })
     .slice(0,15);
   if(!pending.length){
-    el.innerHTML='<div style="font-size:0.8125rem;color:var(--ink-4);padding:12px 0;text-align:center;">אין קריאות ממתינות לשיבוץ</div>';
+    el.innerHTML=`<div style="font-size:0.8125rem;color:var(--ink-4);padding:12px 0;text-align:center;">${_pendingView==='archive'?'אין קריאות בארכיון':'אין קריאות ממתינות לשיבוץ'}</div>`;
     return;
   }
   el.innerHTML=pending.map(t=>{
@@ -6605,7 +6625,7 @@ function queueAssign(id){
   const notesEl=document.getElementById('c-notes');
   if(nameEl&&t.client&&t.client!=='ממתין לפרטים')nameEl.value=t.client;
   if(phoneEl&&t.phone)phoneEl.value=t.phone;
-  if(notesEl&&t.notes&&t.notes!=='שובץ אוטומטית')notesEl.value=t.notes;
+  if(notesEl&&t.notes&&t.notes!=='שובץ אוטומטית'){notesEl.value=t.notes;_growNotes(notesEl);}
   if(t.catId){selectedCat='cat_'+t.catId;renderCatChips();renderPkgSection();}
   // Load the call's OWN saved constraints into the intake components so they're visible +
   // editable when re-dispatching an existing call (was intake-only) AND applied to the
@@ -6750,6 +6770,15 @@ function resetDispatch(){
   restoreDispatchDraft();
   renderPendingQueue();
 }
+// Notes auto-grow: starts one line; Shift+Enter adds a line (plain Enter blocked —
+// deliberate line breaks only); grows with content up to 3 lines, then scrolls.
+function _growNotes(el){
+  if(!el)return;
+  el.style.height='auto';
+  const lineH=parseFloat(getComputedStyle(el).lineHeight)||21;
+  const max=Math.ceil(lineH*3)+16; // 3 lines + padding
+  el.style.height=Math.min(el.scrollHeight,max)+'px';
+}
 const _DDKEY='dispatch_draft';
 const _DDFIELDS=['s-city','s-street','s-floor','s-apartment','s-entrance','c-name','c-phone','c-notes'];
 function saveDispatchDraft(){
@@ -6775,6 +6804,7 @@ function restoreDispatchDraft(){
     if(d._savedAt && (Date.now()-d._savedAt)>_DRAFT_TTL_MS){ clearDispatchDraft(); return; }
     let hasData=false;
     _DDFIELDS.forEach(id=>{const el=document.getElementById(id);if(el&&d[id]){el.value=d[id];hasData=true;}});
+    _growNotes(document.getElementById('c-notes'));
     if(d._cat){selectedCat=d._cat;renderCatChips();renderPkgSection();hasData=true;}
     if(d._windows){try{prefWindows=JSON.parse(d._windows);renderPrefWindows();hasData=true;}catch(e){}}
     if(d._datecons){try{dateCons=JSON.parse(d._datecons);

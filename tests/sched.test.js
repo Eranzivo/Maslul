@@ -309,5 +309,17 @@ suite('effectiveDuration: golden fixture (parity with backend _effective_duratio
   check('undefined categories → floor 30', ctx.effectiveDuration('c1', {}, undefined, {}) === 30);
 });
 
+suite('isPendingArchived (pending-queue 3-week split)', () => {
+  const today='2026-07-08'; // cutoff = 2026-06-17
+  check('date 30 days ago → archived', ctx.isPendingArchived({date:'2026-06-08'}, today) === true);
+  check('date 10 days ago → active', ctx.isPendingArchived({date:'2026-06-28'}, today) === false);
+  check('exactly at cutoff (21d) → active (strictly older only)', ctx.isPendingArchived({date:'2026-06-17'}, today) === false);
+  check('no date, old createdAt → archived', ctx.isPendingArchived({createdAt:'2026-06-08T10:00:00Z'}, today) === true);
+  check('no date, fresh createdAt → active', ctx.isPendingArchived({createdAt:'2026-07-01T10:00:00Z'}, today) === false);
+  check('date wins over createdAt', ctx.isPendingArchived({date:'2026-07-01',createdAt:'2026-01-01T00:00:00Z'}, today) === false);
+  check('neither date nor createdAt → active (fresh)', ctx.isPendingArchived({}, today) === false);
+  check('null task → safe false', ctx.isPendingArchived(null, today) === false);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
