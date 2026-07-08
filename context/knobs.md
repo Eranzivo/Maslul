@@ -32,10 +32,12 @@ Legend: ✅ enforced · ⚠ caveat (see note) · n/a not applicable to that laye
 | `work_days[]` | tenant operating weekdays | `isTenantWorkDay` | `tenant_works_day` | n/a | both suites (golden mirror) |
 | `work_start`/`work_end` | fallback day hours | `getTechDaySchedule` | `tech_hours` | ✅ horizon | test_batch_correctness.py |
 | `arrival_window_hours` | customer window length (fractional ok) | `settings.window` | `_arrival_window_hours` (defaults path — fixed 2026-07-05) | n/a | test_batch_correctness.py |
-| `regular_job_minutes` / `package_job_minutes` | default durations | duration chain | `_effective_duration` | ✅ service times | test_batch_correctness.py |
+| `regular_job_minutes` (category time is the real driver) | tenant fallback duration | `effectiveDuration` (THE one resolver — all live spots route through it 2026-07-08) | `_effective_duration` | ✅ service times | duration-cases.json fixture BOTH suites (sched.test.js + test_duration_parity.py) |
 | `max_daily_jobs` | fallback per-tech cap | `_candidates*` | `tech_max_daily` | n/a | test_batch_correctness.py |
 | `break {enabled,start,end}` | tenant default break | `getTechPartialBlocks` | `tech_breaks` (+clamped to hours) | ✅ pinned pseudo-node | both |
 | `lookahead_days` | candidate search horizon | `getNextDates` | n/a (explicit range) | n/a | — |
+
+> **Duration chain (unified 2026-07-08):** ONE resolver both doors — `effectiveDuration(catId,tech,categories,settings)` (JS) ⇄ `_effective_duration` (Py): per-tech override → **category time** → `regularTime` → 30. Every live spot (optimize payload, `calcOptimalTime`, candidate slot math, confirm-assign stacking, weekly/daily/monthly calendar block heights) routes through it — previously several ignored category time / tech override (live↔batch parity bug, fixed). **No per-call duration override by design** (Eran 2026-07-08 — durations are a per-tenant category-level setup decision; ad-hoc per-call values invite miscalculation). Parity locked by `tests/fixtures/duration-cases.json`.
 
 ## technicians.* (per-tech knobs)
 > **Mandatory at creation (2026-07-07):** `name`, `phone`, `base_city`, `return_city`, `skills[]`,
@@ -52,7 +54,7 @@ Legend: ✅ enforced · ⚠ caveat (see note) · n/a not applicable to that laye
 | `skills[]` | allowed categories (empty = none, JS semantics) | `techHasSkill` | `tech_has_skill` | n/a | test_batch_correctness.py |
 | `cat_limits {cat:n}` | per-category daily cap | `getCatLimitOk` | `cat_limit_ok` (existing+new) | n/a | test_batch_correctness.py |
 | `blocked_cities[]` / `blocked_zones[]` | exclusions | `isCityBlocked` / `_candidatesZone` | `city_blocked`/`zone_blocked` | n/a | test_batch_correctness.py |
-| `duration_overrides {cat:min}` | per-tech durations | duration chain (all 3 modes) | `_effective_duration` | ✅ | test_batch_correctness.py |
+| `duration_overrides {cat:min}` | per-tech per-category duration (top of the chain) | `effectiveDuration` | `_effective_duration` | ✅ | duration-cases.json BOTH suites |
 | `base_city` / `return_city` | depot / end depot | `_postOptimize` | day loop | ✅ two-depot | test_optimizer.py |
 
 ## tasks.* (per-call constraints)

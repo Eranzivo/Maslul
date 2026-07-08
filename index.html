@@ -4837,7 +4837,7 @@ function renderWeeklyCalendar(){
       .sort((a,b)=>a.time.localeCompare(b.time));
     const tasksHtml=dayTasks.map(t=>{
       const startMins=timeToMins(t.time);
-      const durMins=packages.some(p=>p.items.some(i=>i.catId===t.catId))?(settings.packageTime||45):(settings.regularTime||30);
+      const durMins=effectiveDuration(t.catId, tech, categories, settings);
       const topPx=((startMins-calStartH*60)/60)*60;
       const heightPx=Math.max((durMins/60)*60,20);
       const s=STATUS_MAP[t.status]||STATUS_MAP.assigned;
@@ -5455,6 +5455,21 @@ function overrideStamp(reason){
   const r=(reason==null?'':String(reason)).trim();
   return { manuallyOverridden: !!r, overrideReason: r||null };
 }
+// ── The ONE job-duration resolver ───────────────────────────────────────────
+// Pure. Chain (exact mirror of backend _effective_duration): per-tech category
+// override → category.time → tenant default (regularTime) → 30. EVERY live
+// duration computation must go through this so category durations are honored
+// consistently everywhere AND live can never drift from the batch optimizer.
+// Durations are a per-tenant setup decision (category level); there is NO per-call
+// override by design (Eran 2026-07-08 — avoids ad-hoc miscalculation).
+function effectiveDuration(catId, tech, categories, settings){
+  const ov=(tech&&tech.durationOverrides)||{};
+  if(catId&&Number(ov[catId])>0)return Number(ov[catId]);
+  const cat=catId&&(categories||[]).find(c=>c.id===catId);
+  if(cat&&Number(cat.time)>0)return Number(cat.time);
+  const reg=settings&&Number(settings.regularTime);
+  return reg>0?reg:30;
+}
 // </sched-logic>
 function appUsesZones(){ return usesZones(tenantConfig && tenantConfig.scheduling); }
 // ═══ AUTO-SEQUENCING SEAM (features.auto_sequence) ═══════════════════════════
@@ -5475,7 +5490,7 @@ function markDayDirty(techId,date){
 // (optimizeDay) go through here so they can never drift: same windows, locked pins,
 // breaks, route_strategy, and base/return resolution. Returns the single tech result.
 async function _postOptimize(tech,date,dayTasks){
-  const durationOf=(t)=>{const c=categories.find(c=>c.id===t.catId);return (tech.durationOverrides||{})[t.catId]||(c&&c.time)||settings.regularTime||30;};
+  const durationOf=(t)=>effectiveDuration(t.catId, tech, categories, settings);
   const sched=getTechDaySchedule(tech,date);
   const brk=getTechPartialBlocks(tech,date).map(b=>({from:minsToTime(b.from),to:minsToTime(b.to)}));
   const res=await fetch(`${CONFIG.OPTIMIZER_URL}/optimize`,{method:'POST',headers:{'Content-Type':'application/json'},
@@ -5546,7 +5561,7 @@ async function shadowCompare(techId,date){
   body.innerHTML='<div style="text-align:center;padding:2rem;color:var(--ink-3);">מחשב השוואה…</div>';
   document.getElementById('shadow-apply-btn').style.display='none';
   document.getElementById('mo-shadow').classList.remove('hidden');
-  const durationOf=(t)=>{const c=categories.find(c=>c.id===t.catId);return (tech.durationOverrides||{})[t.catId]||(c&&c.time)||settings.regularTime||30;};
+  const durationOf=(t)=>effectiveDuration(t.catId, tech, categories, settings);
   const sched=getTechDaySchedule(tech,date);
   const brk=getTechPartialBlocks(tech,date).map(b=>({from:minsToTime(b.from),to:minsToTime(b.to)}));
   const mkTech=(taskPayload)=>({id:String(tech.id),name:tech.name,
@@ -5633,9 +5648,7 @@ function calcOptimalTime(tech,dateStr,city,catId){
   const sched=getTechDaySchedule(tech,dateStr);
   const[sh]=sched.start.split(':').map(Number);
   const[eh]=sched.end.split(':').map(Number);
-  const catDur=catId?(categories.find(c=>c.id===catId)?.time||null):null;
-  const techOverride=catId?((tech.durationOverrides||{})[catId]||null):null;
-  const dur=techOverride||catDur||settings.regularTime||30;
+  const dur=effectiveDuration(catId, tech, categories, settings);
   const buf=10;
   const newIdx=getCityIndexInZone(city,zid,tech.base);
   const totalCities=zones.find(x=>x.id===zid)?.cities.length||1;
@@ -5843,9 +5856,7 @@ function _candidatesOpen(city,catId,dates,sc){
       const sched=getTechDaySchedule(tech,date.str);
       const sh=timeToMins(sched.start);
       const eh=timeToMins(sched.end);
-      // Same duration chain as the zone path: tech override → category → tenant default
-      const _cat=catId?categories.find(c=>c.id===catId):null;
-      const dur=(catId&&(tech.durationOverrides||{})[catId])||(_cat&&_cat.time)||settings.regularTime||30;
+      const dur=effectiveDuration(catId, tech, categories, settings);
       const buf=10;
       const dayTasks=getTechDayTasks(tech,date.str).sort((a,b)=>timeToMins(a.time)-timeToMins(b.time));
       let slot=sh;
@@ -6011,9 +6022,7 @@ function _candidatesRadius(city,catId,dates,sc){
       }
       const sched=getTechDaySchedule(tech,date.str);
       const sh=timeToMins(sched.start),eh=timeToMins(sched.end);
-      // Same duration chain as the zone path: tech override → category → tenant default
-      const _cat=catId?categories.find(c=>c.id===catId):null;
-      const dur=(catId&&(tech.durationOverrides||{})[catId])||(_cat&&_cat.time)||settings.regularTime||30,buf=10;
+      const dur=effectiveDuration(catId, tech, categories, settings),buf=10;
       const dayTasks=getTechDayTasks(tech,date.str).sort((a,b)=>timeToMins(a.time)-timeToMins(b.time));
       let slot=sh;
       if(dayTasks.length){const last=dayTasks[dayTasks.length-1];slot=timeToMins(last.time)+dur+buf;}
@@ -6403,8 +6412,7 @@ function showCandidate(idx){
   const[sh]=_sched.start.split(':').map(Number);
   const[eh]=_sched.end.split(':').map(Number);
   const slotH=settings.window;
-  const _catForSlot=getCatId()?categories.find(c=>c.id===getCatId()):null;
-  const dur=(_catForSlot?.time)||settings.regularTime||30;const buf=10;
+  const dur=effectiveDuration(getCatId(), tech, categories, settings);const buf=10;
   // A window is an arrival commitment to the customer, not a block on the technician.
   // Count how many jobs can START within the window (job k starts at k*(dur+buf)):
   // max k such that k*(dur+buf) < slotH*60  →  k < slotH*60/(dur+buf)
@@ -6493,8 +6501,7 @@ async function confirmAssign(idx,assignId){
   }else{
     const dayTasks2=getTechDayTasks(c.tech,c.date.str);
     const inSlot=dayTasks2.filter(t=>{const th=parseInt(t.time.split(':')[0]);return th>=slotStartH&&th<slotStartH+(settings.window||3);});
-    const _assignCat=catId?categories.find(c=>c.id===catId):null;
-    const jobMins=((_assignCat?.time)||settings.regularTime||30)+10;
+    const jobMins=effectiveDuration(catId, c.tech, categories, settings)+10;
     taskTime=minsToTime(timeToMins(slot.start)+inSlot.length*jobMins);
   }
   // If dispatching a task from the pending queue — update in place, don't create new
@@ -8264,8 +8271,8 @@ function renderPlannerDaily(days){
       heightMins=slotH*60;
     }else{
       topMins=timeToMins(first.time)-startH*60;
-      const cat=categories.find(c=>c.id===first.catId);
-      heightMins=cat?.time||settings.regularTime||30;
+      const _ht=technicians.find(x=>String(x.id)===String(first.techId));
+      heightMins=effectiveDuration(first.catId, _ht, categories, settings);
     }
     topMins=Math.max(0,topMins);
     return {grp,first,hasWin,topMins,heightMins};

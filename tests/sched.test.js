@@ -295,5 +295,19 @@ suite('overrideStamp (#4 manual-override audit fields)', () => {
   check('undefined → clean (no throw)', (()=>{const s=ctx.overrideStamp();return s.manuallyOverridden===false && s.overrideReason===null;})());
 });
 
+suite('effectiveDuration: golden fixture (parity with backend _effective_duration)', () => {
+  const fx = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'duration-cases.json'), 'utf8'));
+  for (const c of fx.cases) {
+    const tech = { durationOverrides: c.techOverrides };
+    const cats = Object.entries(c.catTimes).map(([id, time]) => ({ id, time }));
+    const settings = { regularTime: c.regular };
+    check(`dur: ${c.why}`, ctx.effectiveDuration(c.catId, tech, cats, settings) === c.expect);
+  }
+  // Robustness — the resolver must never throw on degenerate inputs (it runs in hot render loops).
+  check('null tech → uses category', ctx.effectiveDuration('c1', null, [{ id: 'c1', time: 45 }], { regularTime: 30 }) === 45);
+  check('undefined settings → floor 30', ctx.effectiveDuration('c1', {}, [{ id: 'c1' }], undefined) === 30);
+  check('undefined categories → floor 30', ctx.effectiveDuration('c1', {}, undefined, {}) === 30);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

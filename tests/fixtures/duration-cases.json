@@ -1,0 +1,14 @@
+{
+  "_comment": "Shared golden fixture for the ONE job-duration chain. Asserted by BOTH tests/sched.test.js (effectiveDuration) and backend/tests/test_duration_parity.py (_effective_duration) so live and batch can never drift. Chain: tech override > category time > tenant regular > 30. Neutral shape adapted in each test.",
+  "cases": [
+    {"why": "tech override wins over category", "catId": "c1", "techOverrides": {"c1": 50}, "catTimes": {"c1": 30}, "regular": 30, "expect": 50},
+    {"why": "category time when no tech override", "catId": "c1", "techOverrides": {}, "catTimes": {"c1": 45}, "regular": 30, "expect": 45},
+    {"why": "regular default when category has no time", "catId": "c1", "techOverrides": {}, "catTimes": {}, "regular": 25, "expect": 25},
+    {"why": "unknown category falls to regular", "catId": "cX", "techOverrides": {}, "catTimes": {"c1": 45}, "regular": 40, "expect": 40},
+    {"why": "no catId falls to regular (ignores overrides/cats)", "catId": null, "techOverrides": {"c1": 50}, "catTimes": {"c1": 45}, "regular": 33, "expect": 33},
+    {"why": "absolute floor 30 when nothing set", "catId": "c1", "techOverrides": {}, "catTimes": {}, "regular": 0, "expect": 30},
+    {"why": "tech override 0 ignored, uses category", "catId": "c1", "techOverrides": {"c1": 0}, "catTimes": {"c1": 45}, "regular": 30, "expect": 45},
+    {"why": "category time 0 ignored, uses regular", "catId": "c1", "techOverrides": {}, "catTimes": {"c1": 0}, "regular": 35, "expect": 35},
+    {"why": "install example (60) honored via category everywhere", "catId": "install", "techOverrides": {}, "catTimes": {"service": 30, "fix": 45, "install": 60}, "regular": 30, "expect": 60}
+  ]
+}
