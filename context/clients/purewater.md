@@ -10,7 +10,7 @@
 | Workers | 3 technicians (טכנאי) — אלירן, בני, מיכאל |
 | Stage | Pilot (not yet paying, as of Jun 2026) |
 | Depot | אלי סיני 7, אשקלון — `31.697962, 34.579152` (in `tenants.config.depot`) |
-| Onboarding SQL | `outputs/migration-purewater-zone-cities_2026-06-06.sql` (+ zones-rotation) |
+| Onboarding SQL | `outputs/archive/migrations/migration-purewater-zone-cities_2026-06-06.sql` (+ zones-rotation) |
 
 ## Runtime config (mirrors `tenants.config`)
 | Key | Value | Notes |
@@ -49,7 +49,7 @@
 
 **Covering days/wk (final):** שרון **3** · דרום/שפלה/חיפה/גוש דן/ירושלים **2** · ראש העין/צפון **1** = 15 total. ⚠ **מרכז לוד-אשדוד (שפלה, ~1,885 calls after מודיעין left) gets 2 covering days but demand ≈ 2.6** → still mildly under-covered; candidate for a 3rd day (shift from over-covered חיפה/דרום). **Naming:** zones keep the CSV/file names; Israel's rotation labels (מרכז לוד-אשדוד = שפלה, ת״א והסביבה = גוש דן, נהריה חיפה = חיפה קריות נהריה, קרית שמונה-עפולה = צפון מזרח כנרת וגליל) are the same zones — optional rename pending his OK.
 
-Migration: `outputs/purewater-review_2026-06-29/migration-purewater-zones-rebuild_2026-06-30.sql`. Backup (old 9 zones + rotation): `outputs/purewater-review_2026-06-29/zones-rotation-backup_before_2026-06-30.json`. Clean source map: `zone-rebuild-source_2026-06-30.json`. **`geo_places` (157 coords) + `place_aliases` were NOT touched** — but ~250 of the 405 new cities lack coordinates and will flag `needs_location` until geocoded. **Follow-ons:** (1) ✅ rotation wired 2026-06-30 (Israel's grid); (2) geocode the ~250 new cities; (3) aliases יקנעם→יוקנעם, קיבוץ שובל→שובל; (4) order each zone far→near once geocoded; (5) 7 old-task settlements not in the list (בארותיים / בלפוריה / בני דקלים / כפר אחים / כפר בן נון / כפר מימון / כפר נטר) — add to a zone or ignore. **Re-link mechanism unchanged:** rotation stores zone IDs; if zones are re-created the IDs change and the grid orphans — re-link by name (cf. `outputs/migration-purewater-rotation_2026-06-11.sql`).
+Migration: `outputs/purewater-review_2026-06-29/migration-purewater-zones-rebuild_2026-06-30.sql`. Backup (old 9 zones + rotation): `outputs/purewater-review_2026-06-29/zones-rotation-backup_before_2026-06-30.json`. Clean source map: `zone-rebuild-source_2026-06-30.json`. **`geo_places` (157 coords) + `place_aliases` were NOT touched** — but ~250 of the 405 new cities lack coordinates and will flag `needs_location` until geocoded. **Follow-ons:** (1) ✅ rotation wired 2026-06-30 (Israel's grid); (2) geocode the ~250 new cities; (3) aliases יקנעם→יוקנעם, קיבוץ שובל→שובל; (4) order each zone far→near once geocoded; (5) 7 old-task settlements not in the list (בארותיים / בלפוריה / בני דקלים / כפר אחים / כפר בן נון / כפר מימון / כפר נטר) — add to a zone or ignore. **Re-link mechanism unchanged:** rotation stores zone IDs; if zones are re-created the IDs change and the grid orphans — re-link by name (cf. `outputs/archive/migrations/migration-purewater-rotation_2026-06-11.sql`).
 
 ## Restrictions & preferences
 Israel's full dispatcher spec is captured in `context/scheduling-rules.md` (north star + priority order + must-never-do + window purpose). PureWater's instantiation:

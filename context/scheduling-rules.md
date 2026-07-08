@@ -177,7 +177,7 @@ _2026-06-15 — **`far_to_near` direction is now ENFORCED in the backend solver*
 - Engine priority: **tech override → category default → `settings.regularTime`** — honored by ALL three candidate modes (`_candidatesZone` via `calcOptimalTime`; `_candidatesOpen`/`_candidatesRadius` fixed 2026-07-05 — they previously hardcoded `settings.regularTime`) and by the batch (`_effective_duration`)
 - Enabled per-tenant via `features.tech_duration_overrides: true`
 - Set in tech edit drawer under "משך לפי קטגוריה"
-- Migration: `outputs/migration-duration-overrides_2026-06-01.sql`
+- Migration: `outputs/archive/migrations/migration-duration-overrides_2026-06-01.sql`
 
 ---
 
@@ -305,7 +305,7 @@ Rollout: enable per tenant via `config.features.auto_sequence`. PureWater stays 
 - **Weekly balance** (`balanceAdjust`, `scheduling.balance {enabled,weight}`): partial days beat opening empty future days, across techs (the "Michael-Sunday rule"). Wired into `_candidatesZone` + `_candidatesOpen`; absent = today's behavior.
 - **Gap-fill suggestions** (`rankGapFill`): cancelling a future task surfaces the 5 nearest pending tasks (toast, non-blocking; auto-assign is a future `gap_fill.auto`).
 - **Shadow-compare** (super_admin, daily view "🔍 השוואת מסלול"): two read-only `/optimize` calls — all-pinned (current cost) vs free (proposal) — side-by-side with per-leg drives and a fuel delta; one-click apply only when the proposal saves time and drops nothing. **This is PureWater's go/no-go gate.**
-- **Optimistic versioning**: `sequenceDay` re-checks `tasks.updated_at` before persisting; concurrent edit ⇒ abort + re-sequence. Dormant until `outputs/migration-tasks-updated-at_2026-06-12.sql` runs.
+- **Optimistic versioning**: `sequenceDay` re-checks `tasks.updated_at` before persisting; concurrent edit ⇒ abort + re-sequence. Dormant until `outputs/archive/migrations/migration-tasks-updated-at_2026-06-12.sql` runs.
 
 ## Batch Scheduler (June 2026) ✅ implemented 2026-06-08
 

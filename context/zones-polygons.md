@@ -117,7 +117,7 @@ polygon detection, zone-draw dots.
 ## CITY_COORDS_JS (offline fallback only)
 
 `CITY_COORDS_JS` (~255 cities) remains in `index.html` strictly as the offline fallback when
-the brain isn't loaded. `outputs/migration-geo-superset_2026-07-05.sql` backfills the 83
+the brain isn't loaded. `outputs/archive/migrations/migration-geo-superset_2026-07-05.sql` backfills the 83
 static-only entries into `geo_places` so the brain is a strict superset. Same role for
 `cities.py` on the backend (via `geo_resolver`). **Never add a city to the static lists —
 add it to `geo_places`.**
@@ -137,7 +137,7 @@ When needed: modify `isCityInTechZone` to accept lat/lon, check polygon containm
 
 ## PureWater Zone Setup (Israel)
 
-9 zones covering Israel, 3 technicians, day-of-week rotation. **The authoritative rotation table lives in `context/clients/purewater.md`** (single source — keep one copy only). Re-link SQL if zones are ever re-created: `outputs/migration-purewater-rotation_2026-06-11.sql`. City lists: `outputs/migration-purewater-zone-cities_2026-06-06.sql`
+9 zones covering Israel, 3 technicians, day-of-week rotation. **The authoritative rotation table lives in `context/clients/purewater.md`** (single source — keep one copy only). Re-link SQL if zones are ever re-created: `outputs/archive/migrations/migration-purewater-rotation_2026-06-11.sql`. City lists: `outputs/archive/migrations/migration-purewater-zone-cities_2026-06-06.sql`
 
 ---
 

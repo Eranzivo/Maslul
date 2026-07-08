@@ -155,13 +155,13 @@ async function saveXToSupabase(x) {
 
 ### DB Migrations (run in order on fresh Supabase)
 ```
-outputs/migration-gps-columns_2026-05-27.sql          — last_lat/lon/seen on technicians
-outputs/migration-duration-overrides_2026-06-01.sql   — duration_overrides JSONB on technicians
-outputs/migration-recurring-jobs_2026-06-01.sql       — recurring_templates table + tasks FK
-outputs/migration-geocoding_2026-06-07.sql            — lat/lon/geocoded_at on tasks; polygon on zones
-outputs/migration-purewater-zone-cities_2026-06-06.sql — Israel's 9 zones + city lists seeded
+outputs/archive/migrations/migration-gps-columns_2026-05-27.sql          — last_lat/lon/seen on technicians
+outputs/archive/migrations/migration-duration-overrides_2026-06-01.sql   — duration_overrides JSONB on technicians
+outputs/archive/migrations/migration-recurring-jobs_2026-06-01.sql       — recurring_templates table + tasks FK
+outputs/archive/migrations/migration-geocoding_2026-06-07.sql            — lat/lon/geocoded_at on tasks; polygon on zones
+outputs/archive/migrations/migration-purewater-zone-cities_2026-06-06.sql — Israel's 9 zones + city lists seeded
 (applied via Supabase MCP 2026-06-08): floor/apartment/entrance_notes on tasks; drop redundant users_admin_all policy
-outputs/migration-zones-polygons_2026-06-09.sql       — polygons JSONB on zones; blocked_zones TEXT[] on technicians
+outputs/archive/migrations/migration-zones-polygons_2026-06-09.sql       — polygons JSONB on zones; blocked_zones TEXT[] on technicians
 ```
 
 ### `tenants.config` JSONB Shape
@@ -272,7 +272,7 @@ Set `CONFIG.DEMO_MODE = true` (or `?demo=1`, `?demo=cleaning`, `?demo=delivery` 
 - **GPS tracking**: `startGpsTracking()` / `stopGpsTracking()` — `navigator.geolocation.watchPosition`, throttled to 1 DB write per 30s
 - **Coordinator live map**: `toggleCoordinatorMap()` — all techs with last GPS + today's tasks
 - **Supabase Realtime**: channel `ml-tech-gps-{tenantId}` — coordinator map updates live as techs move
-- GPS columns: `last_lat`, `last_lon`, `last_seen` on `technicians` — migration: `outputs/migration-gps-columns_2026-05-27.sql`
+- GPS columns: `last_lat`, `last_lon`, `last_seen` on `technicians` — migration: `outputs/archive/migrations/migration-gps-columns_2026-05-27.sql`
 
 ---
 
@@ -284,7 +284,7 @@ Set `CONFIG.DEMO_MODE = true` (or `?demo=1`, `?demo=cleaning`, `?demo=delivery` 
 - **ID safety:** `nextTaskId++` only after confirmed `dbInsert` — never pre-consume on network failure
 - **Frontier safety:** `lastGenerated` only advances after confirmed insert — failures retry on next login
 - Tasks link to template via nullable `recurring_template_id` FK; deleting template sets FK to NULL (preserves history)
-- Migration: `outputs/migration-recurring-jobs_2026-06-01.sql`
+- Migration: `outputs/archive/migrations/migration-recurring-jobs_2026-06-01.sql`
 
 ### Pending Queue Panel
 - Dispatch page — 15 nearest upcoming `status==='pending'` tasks, sorted by date ASC
@@ -306,7 +306,7 @@ Set `CONFIG.DEMO_MODE = true` (or `?demo=1`, `?demo=cleaning`, `?demo=delivery` 
 - **`/geocode` is metered under the same counter** (10 elements/call, returns 429 when exhausted) — closed an unauthenticated-spend gap (CORS doesn't stop server-to-server calls)
 
 ### Drive-Time Cache (`route_cache`) — June 2026
-- **Global** table (drive times are tenant-independent), **backend-only** via service key — RLS enabled with no policies, so anon/authenticated are denied. Migration: `outputs/migration-route-cache_2026-06-11.sql`
+- **Global** table (drive times are tenant-independent), **backend-only** via service key — RLS enabled with no policies, so anon/authenticated are denied. Migration: `outputs/archive/migrations/migration-route-cache_2026-06-11.sql`
 - `backend/route_cache.py`: `norm_key` (coords → 4 dp, cities trimmed), `get_cached`/`put_cached` (best-effort, **fail-open** — cache errors never break optimization), `split_hits_misses`
 - `optimizer.build_matrix_cached`: cached legs reused first (**even when Google is quota-blocked** — mode `local-cached`), only misses fetched from Google, results **trust-checked** before storing
 - **Trust bound is physics-based**: floor = straight-line km at 110 km/h (NOT the 35 km/h city heuristic — that wrongly rejects real intercity highway legs); cap = 10× the 35 km/h estimate. Untrusted legs → haversine, not cached
