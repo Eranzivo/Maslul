@@ -105,9 +105,9 @@ Coordinators can only see pages listed in their `permissions.views` array:
 { "views": ["home", "dispatch", "tasks", "planner", "clients"] }
 ```
 
-Available pages: `home`, `dispatch`, `tasks`, `planner`, `reports`, `clients`
+Available pages (**extended 2026-07-07**, Phase 1 access control): operational `home`, `dispatch`, `tasks`, `planner`, `reports`, `clients` **+ settings areas** `zones`, `categories`, `technicians`, `settings`, `users`. The admin picks these per coordinator in the user modal (grouped תפעול / הגדרות). Constant `PERM_AREAS`.
 
-The `applyRoleVisibility()` function hides nav items not in the coordinator's `views` array.
+`applyFeatureVisibility()` gates every nav item by the coordinator's `views`. **Settings areas are VIEW-ONLY for coordinators** (Phase 1): granting `zones` lets a coordinator *see* the zones page, but edit controls are hidden (`body[data-ro-settings]` + `.settings-edit-only` class + `.settings-ro-banner`) and the **RLS floor blocks any write regardless** (every settings-table write policy requires `admin`/`super_admin` — verified). **Phase 2** (admin grants a coordinator *edit* on a specific area) needs per-user RLS grants — deferred to client #2 (see outputs/worklog.md). This is INTRA-tenant delegation; cross-tenant access is the separate super_admin impersonation.
 
 ## RLS policy matrix — consolidated 2026-07-06 (single generation, advisor-clean)
 

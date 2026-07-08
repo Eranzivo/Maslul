@@ -283,6 +283,11 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .city-tag{background:var(--blue-l);color:var(--blue-d);border-radius:20px;padding:3px 10px;font-size:0.8125rem;font-weight:600;display:inline-flex;align-items:center;gap:4px;margin:2px;}
 .city-tag button{background:none;border:none;cursor:pointer;color:var(--red);font-size:0.75rem;padding:0;}
 .zone-cities{display:flex;flex-wrap:wrap;margin-bottom:8px;}
+/* Coordinator read-only on granted settings pages (permissions Phase 1) */
+body[data-ro-settings="1"] .settings-edit-only{display:none!important;}
+body[data-ro-settings="1"] .settings-ro-input{pointer-events:none;background:transparent!important;}
+.settings-ro-banner{display:none;}
+body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;gap:8px;background:var(--blue-l);color:var(--blue-d);border:1px solid var(--blue-m);border-radius:8px;padding:8px 12px;font-size:0.8rem;font-weight:600;margin-bottom:12px;}
 /* SKILLS */
 .skill-checks{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}
 .skill-check{display:flex;align-items:center;gap:6px;background:var(--bg);border:1.5px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;transition:all 0.1s;font-size:0.875rem;font-weight:500;}
@@ -1160,11 +1165,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 
 <!-- TECHNICIANS -->
 <div id="page-technicians" class="page hidden">
+  <div class="settings-ro-banner">🔒 מצב צפייה בלבד — עריכה מותרת למנהל בלבד</div>
   <div class="ph-row ph">
     <div><div class="ph-title" data-label="workers">טכנאים</div><div class="ph-sub" id="tech-count-sub"></div></div>
     <div class="flex-gap">
-      <button class="btn btn-ghost btn-sm" onclick="openDayoffModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/></svg> חופשות</button>
-      <button class="btn btn-blue" onclick="openAddTechModal()">+ הוסף</button>
+      <button class="btn btn-ghost btn-sm settings-edit-only" onclick="openDayoffModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/></svg> חופשות</button>
+      <button class="btn btn-blue settings-edit-only" onclick="openAddTechModal()">+ הוסף</button>
     </div>
   </div>
   <!-- View-as-technician impersonation (relocated from sidebar, Phase-2 IA). Rendered by buildRoleSelect() on nav to this page. -->
@@ -1182,18 +1188,19 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       <div class="ph-title" data-label="zones_title">אזורי פעילות</div>
       <div id="zone-save-status" style="font-size:0.75rem;color:var(--ink-3);margin-top:2px;"></div>
     </div>
-    <button class="btn btn-blue" onclick="addZone()">+ אזור חדש</button>
+    <button class="btn btn-blue settings-edit-only" onclick="addZone()">+ אזור חדש</button>
   </div>
   <div id="zones-list"></div>
 </div>
 
 <!-- CATEGORIES -->
 <div id="page-categories" class="page hidden">
+  <div class="settings-ro-banner">🔒 מצב צפייה בלבד — עריכה מותרת למנהל בלבד</div>
   <div class="ph"><div class="ph-title">קטגוריות וחבילות</div></div>
   <div class="card" style="margin-bottom:1rem;">
     <div class="card-title">קטגוריות</div>
     <div class="tag-list" id="cats-list"></div>
-    <div class="tag-add-row">
+    <div class="tag-add-row settings-edit-only">
       <input class="fc" id="new-cat-name" placeholder="שם קטגוריה..." style="flex:1;">
       <input class="fc" id="new-cat-time" type="number" placeholder="דקות" style="width:90px;">
       <button class="btn btn-blue" onclick="addCategory()">+ הוסף</button>
@@ -1202,12 +1209,13 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
   <div class="card">
     <div class="card-title">חבילות</div>
     <div id="pkgs-list"></div>
-    <button class="btn btn-outline" style="margin-top:10px;" onclick="openAddPkgModal()">+ חבילה חדשה</button>
+    <button class="btn btn-outline settings-edit-only" style="margin-top:10px;" onclick="openAddPkgModal()">+ חבילה חדשה</button>
   </div>
 </div>
 
 <!-- SETTINGS -->
 <div id="page-settings" class="page hidden">
+  <div class="settings-ro-banner">🔒 מצב צפייה בלבד — עריכה מותרת למנהל בלבד</div>
   <div class="ph"><div class="ph-title">הגדרות חברה</div></div>
   <div class="card">
     <div class="set-sec">
@@ -1331,16 +1339,17 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
       </div>
       <button class="btn btn-outline" style="margin-top:14px;" onclick="saveSchedulingConfig()">שמור הגדרות שיבוץ</button>
     </div>
-    <button class="btn btn-blue btn-lg" onclick="saveSettings()">שמור הגדרות</button>
+    <button class="btn btn-blue btn-lg settings-edit-only" onclick="saveSettings()">שמור הגדרות</button>
   </div>
 </div>
 
 <!-- USERS -->
 <div id="page-users" class="page hidden">
+  <div class="settings-ro-banner">🔒 מצב צפייה בלבד — עריכה מותרת למנהל בלבד</div>
   <div class="ph">
     <div class="ph-row">
       <div><div class="ph-title">🔐 הרשאות גישה</div><div class="ph-sub" id="users-count-sub"></div></div>
-      <button class="btn btn-blue" onclick="openAddUserModal(null)">+ משתמש חדש</button>
+      <button class="btn btn-blue settings-edit-only" onclick="openAddUserModal(null)">+ משתמש חדש</button>
     </div>
   </div>
   <div class="card" style="padding:0;overflow:hidden;">
@@ -1382,14 +1391,22 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
         <div id="user-tech-warn" style="font-size:0.75rem;color:var(--ink-4);margin-top:4px;">הטכנאי יראה את לוח הזמנים שלו בכניסה</div>
       </div>
       <div id="user-perms-section" style="border:1px solid var(--border);border-radius:8px;padding:12px;">
-        <div style="font-size:0.75rem;font-weight:700;color:var(--ink-3);margin-bottom:10px;">עמודים נגישים</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <div style="font-size:0.75rem;font-weight:700;color:var(--ink-3);margin-bottom:8px;">תפעול</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;">
           <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-home" checked> דף הבית</label>
           <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-dispatch" checked> שיבוץ</label>
           <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-tasks" checked> קריאות</label>
           <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-planner" checked> יומן</label>
           <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-clients"> לקוחות (CRM)</label>
           <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-reports"> דוחות</label>
+        </div>
+        <div style="font-size:0.75rem;font-weight:700;color:var(--ink-3);margin-bottom:8px;">הגדרות <span style="font-weight:500;color:var(--ink-4);">— צפייה בלבד (עריכה למנהל)</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-zones"> אזורים</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-categories"> קטגוריות</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-technicians"> טכנאים</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-settings"> הגדרות</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;"><input type="checkbox" id="perm-users"> הרשאות גישה</label>
         </div>
       </div>
       <div id="user-modal-error" style="color:var(--red);font-size:0.8125rem;display:none;"></div>
@@ -3881,13 +3898,19 @@ function applyFeatureVisibility(){
     const zoneRows=['sched-row-zone-strict','sched-row-route-logic','sched-row-zone-match'];
     zoneRows.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=mode==='open'?'none':'';});
   }
-  // Settings section — admins only
+  // Settings section — admin sees all; a coordinator sees the settings areas the
+  // admin granted (VIEW only — RLS blocks their writes and the frontend hides edit
+  // controls via body[data-ro-settings]). Phase 1 of per-coordinator access control.
+  const settingsGranted=v=>isAdmin||allowedViews.includes(v);
+  const anySettings=PERM_SETTINGS_AREAS.some(settingsGranted);
   const secSettings=document.getElementById('nav-sec-settings');
-  if(secSettings)secSettings.classList.toggle('hidden',!isAdmin);
-  ['technicians','zones','categories','settings','users'].forEach(v=>{
+  if(secSettings)secSettings.classList.toggle('hidden',!anySettings);
+  PERM_SETTINGS_AREAS.forEach(v=>{
     const el=document.getElementById('nav-'+v);
-    if(el)el.classList.toggle('hidden',!isAdmin);
+    if(el)el.classList.toggle('hidden',!settingsGranted(v));
   });
+  // Read-only: a non-admin viewing a granted settings page sees edit controls hidden.
+  document.body.dataset.roSettings=isAdmin?'':'1';
 
   // Ops pages for coordinator
   ['home','dispatch','tasks','planner'].forEach(v=>{
@@ -3932,7 +3955,7 @@ async function renderUsersPage(){
       <td style="padding:10px 16px;color:var(--ink-3);">${h(u.email||'—')}</td>
       <td style="padding:10px 16px;"><span style="background:${u.role==='admin'?'var(--blue)':'var(--ink-4)'};color:#fff;border-radius:4px;padding:2px 8px;font-size:0.75rem;">${roleLabel[u.role]||u.role}</span></td>
       <td style="padding:10px 16px;font-size:0.8125rem;color:var(--ink-3);">${viewsText}</td>
-      <td style="padding:10px 16px;text-align:left;white-space:nowrap;">
+      <td class="settings-edit-only" style="padding:10px 16px;text-align:left;white-space:nowrap;">
         <button class="btn btn-outline btn-sm" onclick="openAddUserModal('${u.id}')">✏️ ערוך</button>
         ${u.email?`<button class="btn btn-outline btn-sm" style="margin-right:4px;" title="שלח איפוס סיסמה" onclick="resetUserPassword('${u.email}','${u.name}')">🔑</button>`:''}
         ${!isSelf?`<button class="btn btn-outline btn-sm" style="color:var(--red);margin-right:4px;" onclick="deleteUserRow('${u.id}','${u.name}')">🗑️</button>`:''}
@@ -3941,6 +3964,10 @@ async function renderUsersPage(){
   }).join('');
 }
 
+// All grantable areas — operational + settings (Phase 1: settings = view-only for
+// coordinators; edit stays admin/RLS). Order matches the user-modal checkboxes.
+const PERM_AREAS=['home','dispatch','tasks','planner','clients','reports','zones','categories','technicians','settings','users'];
+const PERM_SETTINGS_AREAS=['zones','categories','technicians','settings','users'];
 function onUserRoleChange(){
   const role=document.getElementById('user-role').value;
   document.getElementById('user-perms-section').style.display=role==='coordinator'?'block':'none';
@@ -3983,8 +4010,9 @@ function openAddUserModal(userId){
   document.getElementById('user-email-row').style.display=isNew?'flex':'none';
   document.getElementById('user-password-row').style.display=isNew?'flex':'none';
   document.getElementById('user-modal-error').style.display='none';
-  ['home','dispatch','tasks','planner'].forEach(v=>document.getElementById('perm-'+v).checked=true);
-  ['clients','reports'].forEach(v=>document.getElementById('perm-'+v).checked=false);
+  // Default new coordinator: operational pages on, CRM/reports/settings off.
+  ['home','dispatch','tasks','planner'].forEach(v=>{const e=document.getElementById('perm-'+v);if(e)e.checked=true;});
+  ['clients','reports','zones','categories','technicians','settings','users'].forEach(v=>{const e=document.getElementById('perm-'+v);if(e)e.checked=false;});
   onUserRoleChange();
   if(!isNew){
     sb.from('users').select('name,email,role,permissions').eq('id',userId).single().then(({data})=>{
@@ -3993,7 +4021,7 @@ function openAddUserModal(userId){
       document.getElementById('user-email').value=data.email||'';
       document.getElementById('user-role').value=data.role||'coordinator';
       const views=(data.permissions||{}).views||[];
-      ['home','dispatch','tasks','planner','clients','reports'].forEach(v=>{
+      PERM_AREAS.forEach(v=>{
         const el=document.getElementById('perm-'+v);
         if(el)el.checked=views.includes(v);
       });
@@ -4021,7 +4049,7 @@ async function saveUser(){
   if(!name){errEl.textContent='יש למלא שם';errEl.style.display='block';return;}
   if(isNew&&!email){errEl.textContent='יש למלא אימייל';errEl.style.display='block';return;}
   if(isNew&&password.length<6){errEl.textContent='סיסמה חייבת להכיל לפחות 6 תווים';errEl.style.display='block';return;}
-  const views=['home','dispatch','tasks','planner','clients','reports'].filter(v=>document.getElementById('perm-'+v)?.checked);
+  const views=PERM_AREAS.filter(v=>document.getElementById('perm-'+v)?.checked);
   const permissions=role==='coordinator'?{views}:{};
   const linkedTechId=role==='tech'?(document.getElementById('user-tech-link')?.value||''):null;
   const btn=document.getElementById('user-save-btn');
@@ -7425,7 +7453,7 @@ function renderTechs(){
       ${skills?`<div style="margin-top:6px;">${skills}</div>`:''}
       <div class="load-bar" style="margin:8px 0 3px;"><div class="load-fill" style="width:${lp}%;background:${fc};"></div></div>
       <div style="font-size:0.7rem;color:var(--ink-4);">${cnt}/${tech.max} היום</div>
-      <div style="display:flex;gap:6px;margin-top:10px;">
+      <div class="settings-edit-only" style="display:flex;gap:6px;margin-top:10px;">
         <button class="btn btn-outline btn-sm" onclick="editTech('${tech.id}')">עריכה</button>
         <button class="btn btn-ghost btn-sm" onclick="deleteTech('${tech.id}')" style="color:var(--red);">הסר</button>
       </div>
@@ -7680,7 +7708,8 @@ function getIsraelDefaultZones(){
 }
 
 function renderZones(){
-  document.getElementById('zones-list').innerHTML=zones.map((z,zi)=>{
+  const _roBanner=`<div class="settings-ro-banner">🔒 מצב צפייה בלבד — עריכת אזורים מותרת למנהל בלבד</div>`;
+  document.getElementById('zones-list').innerHTML=_roBanner+(zones.map((z,zi)=>{
     const isPoly=!!(z.polygons&&z.polygons.length);
     return `
     <div class="zone-card">
@@ -7688,20 +7717,20 @@ function renderZones(){
         <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0;">
           <span title="${isPoly?'אזור המוגדר על מפה (פוליגון)':'אזור המוגדר לפי ערים'}" style="display:inline-block;width:11px;height:11px;border-radius:50%;flex-shrink:0;background:${isPoly?'var(--blue)':'#10b981'};"></span>
           <span style="font-size:0.68rem;font-weight:700;flex-shrink:0;color:${isPoly?'var(--blue-d)':'#059669'};">${isPoly?'פוליגון':'אזור'}</span>
-          <input class="fc" value="${h(z.name)}" onchange="(function(v,id){const z=zones.find(x=>x.id===id);if(z){z.name=v;saveZoneToSupabase(z);save();}})(this.value,'${z.id}')" style="font-weight:800;font-size:0.9375rem;border:none;padding:0;background:transparent;flex:1;min-width:0;">
+          <input class="fc settings-ro-input" value="${h(z.name)}" onchange="(function(v,id){const z=zones.find(x=>x.id===id);if(z){z.name=v;saveZoneToSupabase(z);save();}})(this.value,'${z.id}')" style="font-weight:800;font-size:0.9375rem;border:none;padding:0;background:transparent;flex:1;min-width:0;">
         </div>
-        <div style="display:flex;gap:6px;flex-shrink:0;">
+        <div class="settings-edit-only" style="display:flex;gap:6px;flex-shrink:0;">
           <button class="btn btn-outline btn-sm" onclick="openZoneDraw('${z.id}')">🗺️ צייר</button>
           <button class="btn btn-ghost btn-sm" onclick="deleteZone('${z.id}')" style="color:var(--red);">הסר</button>
         </div>
       </div>
-      <div class="zone-cities">${z.cities.map((c,ci)=>`<span class="city-tag">${h(c)}<button onclick="removeCity('${z.id}',${ci})">×</button></span>`).join('')||'<span style="font-size:0.8rem;color:var(--ink-4);">אין ערים באזור — הוסף עיר ראשונה</span>'}</div>
-      <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+      <div class="zone-cities">${z.cities.map((c,ci)=>`<span class="city-tag">${h(c)}<button class="settings-edit-only" onclick="removeCity('${z.id}',${ci})">×</button></span>`).join('')||'<span style="font-size:0.8rem;color:var(--ink-4);">אין ערים באזור</span>'}</div>
+      <div class="settings-edit-only" style="display:flex;gap:8px;align-items:center;margin-top:8px;">
         <input class="fc" id="new-city-${z.id}" list="il-cities-list" autocomplete="off" placeholder="הקלד שם עיר…" onkeydown="if(event.key==='Enter'){event.preventDefault();addCities('${z.id}');}" style="width:220px;max-width:100%;font-size:0.875rem;">
         <button class="btn btn-outline btn-sm" onclick="addCities('${z.id}')" style="flex-shrink:0;">+ הוסף</button>
         <span id="zone-status-${z.id}" style="font-size:0.7rem;color:var(--ink-3);min-height:1em;"></span>
       </div>
-    </div>`;}).join('')||'<div class="empty"><div class="empty-icon">🗺️</div><div>הוסף אזור ראשון</div></div>';
+    </div>`;}).join('')||'<div class="empty"><div class="empty-icon">🗺️</div><div>הוסף אזור ראשון</div></div>');
 }
 async function addZone(){
   const z={id:genClientId(),name:'אזור חדש',cities:[]};
@@ -7756,13 +7785,13 @@ function removeCity(zoneId,ci){const z=zones.find(x=>x.id===zoneId);if(z){z.citi
 // ═══ CATEGORIES ═══
 function renderCategories(){
   document.getElementById('cats-list').innerHTML=categories.map((c,i)=>
-    `<div class="tag-item">${h(c.name)} <span style="font-size:0.75rem;color:var(--ink-3);">(${c.time} דק')</span><button class="tag-del" onclick="deleteCat(${i})">×</button></div>`
+    `<div class="tag-item">${h(c.name)} <span style="font-size:0.75rem;color:var(--ink-3);">(${c.time} דק')</span><button class="tag-del settings-edit-only" onclick="deleteCat(${i})">×</button></div>`
   ).join('');
   document.getElementById('pkgs-list').innerHTML=packages.map((p,i)=>{
     const items=p.items.map(item=>{const c=categories.find(x=>x.id===item.catId);return`${c?h(c.name):'?'} ×${item.qty}`;}).join(' + ');
     return`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-2);font-size:0.875rem;">
       <div><strong>${h(p.name)}</strong> <span style="color:var(--ink-3);">${items}</span></div>
-      <button class="btn btn-ghost btn-sm" onclick="deletePkg(${i})" style="color:var(--red);">הסר</button></div>`;
+      <button class="btn btn-ghost btn-sm settings-edit-only" onclick="deletePkg(${i})" style="color:var(--red);">הסר</button></div>`;
   }).join('')||'<div style="color:var(--ink-4);font-size:0.875rem;padding:1rem 0;">אין חבילות</div>';
   renderCatChips();
 }

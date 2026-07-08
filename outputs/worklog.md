@@ -13,6 +13,9 @@
 ## Call entry / data integrity
 - ✅ **DONE 2026-07-07** — Unified call entry. "💾 שמור ללא שיבוץ" on the full dispatch form (`savePendingFromDispatch`) creates/updates a PENDING call with every field (street/floor/apt/entrance/windows/dates); "+ הוסף קריאה" → `startNewCall()` opens the same full form. Thin "רישום קריאה ממתינה" modal retired (code kept, no entry point). CSV + bulk import buttons hidden (code kept). One full-fidelity entry point; queueAssign reloads all fields at assign time.
 
+## Permissions — Phase 2 (deferred to client #2 onboarding)
+- **Coordinator EDIT grants for settings areas** — let an admin grant a specific coordinator *edit* (not just view) rights to Zones/Categories/Technicians/Settings/Users. Needs RLS surgery: a `current_user_can_edit(area)` SECURITY DEFINER helper reading `permissions.edit[]`, rewrite the write policies on ~5 settings tables to `admin OR can_edit(area)`, dry-run role-sim + advisors, frontend edit-gating. *Trigger:* a client wants to shift settings responsibility to a coordinator (client #2). Phase 1 (view-access matrix + read-only settings) shipped 2026-07-07.
+
 ## Bigger deferred (from opus-task-queue)
 - **#2 design-system UI port** — on hold until the product fully functions (Eran).
 - **#3 city-create-from-search** — needs geocode greenlight + zone pick; scenarios B1.
