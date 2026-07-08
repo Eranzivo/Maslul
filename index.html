@@ -1820,14 +1820,11 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
     <div class="mo-title">⊕ הוסף עיר חדשה</div>
     <div class="fg">
       <label class="fl">שם העיר / יישוב <span class="req">*</span></label>
-      <input class="fc" id="ac-city-name" placeholder="לדוגמה: מצפה רמון">
+      <input class="fc" id="ac-city-name" list="il-cities-list" autocomplete="off" placeholder="לדוגמה: מצפה רמון">
     </div>
     <div class="fg">
       <label class="fl">אזור <span class="req">*</span></label>
       <select class="fc" id="ac-zone-sel"><option value="">בחר אזור...</option></select>
-    </div>
-    <div style="background:#EFF6FF;border-radius:8px;padding:10px 12px;font-size:0.8rem;color:var(--blue-d);margin-bottom:1rem;line-height:1.55;">
-      💡 הוסף את העיר לפי מרחקה מבסיס הטכנאי — <strong>הרחוקה ביותר תופיע ראשונה</strong> ברשימת הערים באזור.
     </div>
     <div id="ac-error" style="color:var(--red);font-size:0.8rem;margin-bottom:8px;"></div>
     <div class="mo-actions" style="margin-top:0;">
@@ -6370,7 +6367,14 @@ function showNoResult(city,reason){
     cta=`<button class="btn btn-blue btn-sm" onclick="goPage('zones')" style="margin-top:8px;">🗺️ ערוך אזור על המפה</button>`;
   } else { // city_not_in_zone (or undefined → treat as city-not-in-zone)
     msg=`העיר "${h(city||'')}" אינה משויכת לאף אזור עם ${LBL('worker')} זמין.`;
-    cta=`<button class="btn btn-blue btn-sm" onclick="goPage('zones')" style="margin-top:8px;">➕ שייך עיר לאזור</button>`;
+    // B1: fix it INLINE without losing the call context — admins get the assign-to-zone
+    // modal prefilled with the searched city (search auto re-runs after adding).
+    // Coordinators can't write zones (RLS) → clear message instead of a silent failure.
+    const _canEditZones=currentUserRole==='admin'||currentUserSuperAdmin;
+    window._noResultCity=city||''; // safe hand-off to the modal (no inline user text in JS)
+    cta=_canEditZones
+      ?`<button class="btn btn-blue btn-sm" onclick="openAddCityModal(window._noResultCity)" style="margin-top:8px;">⊕ שייך את "${h(city||'')}" לאזור והמשך</button>`
+      :`<span style="display:block;margin-top:6px;font-size:0.8rem;">שיוך עיר לאזור מתבצע ע"י מנהל — פנה למנהל המערכת.</span>`;
   }
   a.innerHTML=`⚠️ ${msg} ${cta}`;
   a.classList.remove('hidden');
@@ -7022,14 +7026,16 @@ async function commitBatchSchedule(){
 }
 
 // ═══ ADD CITY FROM DISPATCH ═══
-function openAddCityModal(){
-  const cityInput=document.getElementById('s-city');
-  document.getElementById('ac-city-name').value='';
+// City-create-from-search (scenarios B1/E17): assign a not-yet-zoned city to a zone
+// WITHOUT leaving the dispatch context. prefillCity comes from the failed search.
+// Zone writes are admin-only under RLS — callers gate on role (see showNoResult).
+function openAddCityModal(prefillCity){
+  document.getElementById('ac-city-name').value=(typeof prefillCity==='string'&&prefillCity)?prefillCity:'';
   document.getElementById('ac-error').textContent='';
   const zoneSel=document.getElementById('ac-zone-sel');
   zoneSel.innerHTML='<option value="">בחר אזור...</option>'+zones.map(z=>`<option value="${z.id}">${h(z.name)}</option>`).join('');
   document.getElementById('mo-add-city').classList.remove('hidden');
-  setTimeout(()=>document.getElementById('ac-city-name').focus(),100);
+  setTimeout(()=>document.getElementById(prefillCity?'ac-zone-sel':'ac-city-name').focus(),100);
 }
 function confirmAddCity(){
   const rawCity=document.getElementById('ac-city-name').value.trim();
@@ -7039,7 +7045,13 @@ function confirmAddCity(){
   if(!zoneId){errEl.textContent='נא לבחור אזור';return;}
   const z=zones.find(x=>x.id===zoneId);if(!z)return;
   const _cc=canonicalCity(rawCity);
-  const cityName=(_cc.suggestion&&_cc.suggestion!==_cc.city&&confirm(`"${rawCity}" אינה מזוהה. האם התכוונת ל"${_cc.suggestion}"?`))?_cc.suggestion:_cc.city;
+  // Fuzzy correction only for genuinely UNrecognized input (valid listed cities like
+  // אחיהוד must never be second-guessed) — same gate as the zones-page editor.
+  const cityName=(_cc.suggestion&&_cc.suggestion!==_cc.city&&!isKnownCity(_cc.city)
+    &&confirm(`"${rawCity}" אינה מזוהה. האם התכוונת ל"${_cc.suggestion}"?`))?_cc.suggestion:_cc.city;
+  // Never guess: a city absent from the national geo brain gets an explicit confirm —
+  // it will schedule by name, but has no coordinates until curated (flag, don't block).
+  if(!isKnownCity(cityName)&&!confirm(`"${cityName}" אינה מוכרת במאגר היישובים הארצי.\n\nניתן להוסיף ולשבץ לפי שם, אך ללא נקודת ציון מדויקת עד לאימות. להוסיף בכל זאת?`))return;
   if(z.cities.includes(cityName)){errEl.textContent='העיר כבר קיימת באזור זה';return;}
   z.cities.push(cityName);
   saveZoneToSupabase(z);save();populateCitySelect();
@@ -7048,6 +7060,10 @@ function confirmAddCity(){
   document.getElementById('s-city').value=cityName;
   saveDispatchDraft();
   showToast(`"${cityName}" נוספה לאזור "${z.name}" ✓`);
+  // Continue the interrupted flow: if the coordinator already picked a category,
+  // re-run the search so the call is immediately schedulable (B1: no dead-end).
+  const _resEl=document.getElementById('dispatch-result');
+  if(selectedCat&&_resEl&&!_resEl.classList.contains('hidden'))findBestSlot();
 }
 
 // ═══ CSV IMPORT ═══

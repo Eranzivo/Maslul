@@ -21,10 +21,13 @@
    + DESIGN-LOG + port plan). Slice 1 = tokens/components only (md-* namespace), then one
    screen per session in plan order. NEVER regenerate a design — port the approved mockups.
    Read context/design-system.md before ANY UI work; UI-testing rule after each screen.
-3. **City-create-from-search flow** (Israel, scenarios B1): unknown city in dispatch search
-   ⇒ inline create: geocode via /geocode (never guess coords), REQUIRED zone pick
-   (dual-membership allowed with confirm), writes zone.cities via canonical dedup
-   (cityMatchKey), optional place_aliases variant. Instantly schedulable after create.
+3. ✅ **DONE 2026-07-08** — City-create-from-search (scenarios B1/E17). The
+   city_not_in_zone dead-end now offers "⊕ שייך את X לאזור והמשך" → prefilled
+   add-city modal (typeahead il-cities-list, REQUIRED zone pick, isKnownCity gate on
+   the fuzzy suggestion, explicit confirm for brain-unknown cities) → auto re-runs
+   findBestSlot. Role-aware: coordinators (RLS-blocked from zone writes) get a
+   "פנה למנהל" message instead of a silent failure. place_aliases writes stay
+   super_admin curation (global brain, not per-tenant flow).
 4. ✅ **DONE 2026-07-07** — Override reason required + audited (handover §15F). Additive
    migration `tasks_manual_override_audit` (`manually_overridden` bool + `override_reason`
    text). KEY FINDING: an `_audit_tasks` trigger already writes every task UPDATE to

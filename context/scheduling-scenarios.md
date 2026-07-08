@@ -25,7 +25,7 @@
 ## B. NEW from this batch (2026-07-06) — actionable
 | # | Item | Status |
 |---|---|---|
-| B1 | **City-create-from-search flow:** coordinator searches an unknown city ⇒ inline "create city" with REQUIRED zone assignment; immediately schedulable | → Opus queue #3 (spec in outputs/opus-task-queue). Geo brain (1,310) makes true-unknowns rare; flow must geocode (never guess) + add to zone `cities` + place_aliases if variant |
+| B1 | **City-create-from-search flow:** coordinator searches an unknown city ⇒ inline "create city" with REQUIRED zone assignment; immediately schedulable | ✅ 2026-07-08: `showNoResult(city_not_in_zone)` → "⊕ שייך את X לאזור והמשך" opens `openAddCityModal(prefill)` (typeahead, required zone, `isKnownCity` gate on fuzzy suggestion, explicit confirm for brain-unknown cities — never guessed) → auto re-runs `findBestSlot` so the call schedules immediately. Zone writes are admin-only (RLS) → coordinators get a "פנה למנהל" message, not a silent failure. Alias curation stays super_admin (brain) |
 | B2 | **"Already late at scheduling time" must be impossible** | Batch: solver-hard ✓. Live dispatch: optTime is route-aware ✓. GAP: manual calendar drag/tap-place checks zone but not time-feasibility of the receiving route → edge E5, candidate for a `routeFeasibleAt` guard (Opus queue #6) |
 | B3 | **Mid-distance placement preserves room BOTH directions** (Dimona far / Ashkelon close / Kiryat Gat mid ⇒ mid gets mid-morning) | Emergent from A4+A6 today, but NOT asserted → add golden three-city fixture (Opus queue #5, test-only) |
 
@@ -48,4 +48,4 @@
 | E14 | Client #2 wants nearest-first / no windows / open mode / spread | all per-tenant knobs, both doors | /onboard-client walks knobs.md — never copy PureWater |
 | E15 | Priority/VIP customer | intake `priority` NOT built | BLOCKED on Israel: what does priority DO (earlier day? bump? overtime?) |
 | E16 | Zero-capacity day mid-range (holiday, all-tech training) | day_offs full-day per tech | tenant-level holiday = set day_offs for all; FUTURE: tenant holidays knob |
-| E17 | Call with no locatable city (typo, brand-new settlement) | `needs_location` flag, never guessed | B1 flow closes the loop |
+| E17 | Call with no locatable city (typo, brand-new settlement) | `needs_location` flag, never guessed | ✅ B1 flow shipped 2026-07-08 closes the loop (brain-unknown cities need an explicit confirm; schedulable by name, coords pending curation) |

@@ -16,6 +16,13 @@
 ## Permissions — Phase 2 (deferred to client #2 onboarding)
 - **Coordinator EDIT grants for settings areas** — let an admin grant a specific coordinator *edit* (not just view) rights to Zones/Categories/Technicians/Settings/Users. Needs RLS surgery: a `current_user_can_edit(area)` SECURITY DEFINER helper reading `permissions.edit[]`, rewrite the write policies on ~5 settings tables to `admin OR can_edit(area)`, dry-run role-sim + advisors, frontend edit-gating. *Trigger:* a client wants to shift settings responsibility to a coordinator (client #2). Phase 1 (view-access matrix + read-only settings) shipped 2026-07-07.
 
+## UI verifications pending (Eran, in-app — later today 2026-07-08)
+- **Monthly calendar block heights** now reflect true category durations (duration-chain fix) — visible change, confirm it reads right.
+- **Schedule/calendar UI pass** — go through the schedule screens together; part of the broader UI work.
+- **Permissions Phase 1** — grant a coordinator a settings area, confirm read-only banner + hidden edit controls.
+- **Zones editor** — typeahead add (אחיהוד silent now), badge אזור, narrow input.
+- **Unified call entry** — "שמור ללא שיבוץ" saves a complete pending call; assign later keeps all details.
+
 ## Bigger deferred (from opus-task-queue)
 - **#2 design-system UI port** — on hold until the product fully functions (Eran).
 - **#3 city-create-from-search** — needs geocode greenlight + zone pick; scenarios B1.
