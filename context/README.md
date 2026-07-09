@@ -9,6 +9,7 @@
 | File | What it holds |
 |---|---|
 | `CLAUDE.md` | Working rules, stack, tenants, deployment checklist. Lean (~60 lines) — details live below. |
+| `brain/maslul-brain.canvas` | 🧠 **The visual neuron map** of everything below (open the repo as an Obsidian vault — `brain/README.md` has the 2-minute setup). Living-docs rule: architecture-level changes update their brain node in the same commit. |
 
 ## Layer 1 — What the product is
 | File | What it holds |
