@@ -321,5 +321,33 @@ suite('isPendingArchived (pending-queue 3-week split)', () => {
   check('null task → safe false', ctx.isPendingArchived(null, today) === false);
 });
 
+suite('route-health display templates (P1 — render-only, Python computes)', () => {
+  check('band he: healthy', ctx.healthBandHe('healthy') === 'מסלול תקין');
+  check('band he: review', ctx.healthBandHe('review') === 'כדאי לבדוק');
+  check('band he: issues', ctx.healthBandHe('issues') === 'נמצאו בעיות');
+  check('band he: unknown/null → empty', ctx.healthBandHe(null) === '' && ctx.healthBandHe('x') === '');
+
+  check('finding: backtrack', ctx.describeHealthFindingHe({type:'backtrack'}).includes('זיגזג'));
+  check('finding: better_order carries saving', ctx.describeHealthFindingHe({type:'better_order_exists',data:{saving_min:34}}).includes('34'));
+  check('finding: lateness carries minutes', ctx.describeHealthFindingHe({type:'lateness_risk',data:{late_by_min:15}}).includes('15'));
+  check('finding: idle carries minutes', ctx.describeHealthFindingHe({type:'idle_gap',data:{idle_min:40}}).includes('40'));
+  check('finding: overtime carries minutes', ctx.describeHealthFindingHe({type:'overtime',data:{overtime_min:25}}).includes('25'));
+  check('finding: window violation', ctx.describeHealthFindingHe({type:'window_violation'}).includes('חלון'));
+  check('finding: unknown type → raw name, never throws', ctx.describeHealthFindingHe({type:'weird_new_type'}) === 'weird_new_type');
+  check('finding: null → safe', typeof ctx.describeHealthFindingHe(null) === 'string');
+  check('finding: missing data → 0 not NaN', ctx.describeHealthFindingHe({type:'idle_gap'}).includes('0'));
+
+  check('chip: null → hidden', ctx.healthChipHtml(null) === '');
+  check('chip: score null → hidden (no fake 100)', ctx.healthChipHtml({score:null,band:null}) === '');
+  const chip = ctx.healthChipHtml({score:62,band:'issues',partial:false,findings:[{type:'backtrack'},{type:'better_order_exists'}]});
+  check('chip: shows score', chip.includes('62'));
+  check('chip: issues palette (red bg)', chip.includes('#FEE2E2'));
+  check('chip: findings count', chip.includes('2 ממצאים'));
+  const partial = ctx.healthChipHtml({score:100,band:'healthy',partial:true,findings:[]});
+  check('chip: partial marker *', partial.includes('100*'));
+  check('chip: healthy palette (green bg)', partial.includes('#DCFCE7'));
+  check('chip: no findings → no count', !partial.includes('ממצאים'));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -1707,6 +1707,17 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
   </div>
 </div>
 
+<!-- MODAL: ROUTE HEALTH FINDINGS (route-intelligence P1, read-only) -->
+<div class="mo hidden" id="mo-health">
+  <div class="mo-box" style="max-width:min(94vw,520px);">
+    <div class="mo-title">🩺 בריאות מסלול</div>
+    <div id="health-body" style="max-height:60vh;overflow-y:auto;"></div>
+    <div class="mo-actions">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-health')">סגור</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: REPLACE SUGGESTION -->
 <div class="mo hidden" id="mo-replace">
   <div class="mo-box">
@@ -5486,6 +5497,33 @@ function effectiveDuration(catId, tech, categories, settings){
   const reg=settings&&Number(settings.regularTime);
   return reg>0?reg:30;
 }
+// ── Route Health display templates (route-intelligence P1) ──────────────────
+// Pure. Python (backend/route_health.py) is the ONLY health computation — these
+// only RENDER stored results. Finding types are the backend's contract; an
+// unknown type falls back to its raw name rather than breaking the panel.
+function healthBandHe(band){
+  return band==='healthy'?'מסלול תקין':band==='review'?'כדאי לבדוק':band==='issues'?'נמצאו בעיות':'';
+}
+function describeHealthFindingHe(f){
+  const d=(f&&f.data)||{};
+  switch(f&&f.type){
+    case 'backtrack':return 'זיגזג במסלול — סדר הנסיעה שובר את כיוון המסלול של היום';
+    case 'better_order_exists':return `קיים סדר עצירות חסכוני יותר — חיסכון של כ־${Number(d.saving_min)||0} דק׳ נסיעה`;
+    case 'lateness_risk':return `סיכון איחור — התחלה צפויה כ־${Number(d.late_by_min)||0} דק׳ אחרי חלון הלקוח`;
+    case 'idle_gap':return `המתנה של ${Number(d.idle_min)||0} דק׳ בין קריאות`;
+    case 'overtime':return `היום חורג משעות העבודה בכ־${Number(d.overtime_min)||0} דק׳`;
+    case 'window_violation':return 'קריאה משובצת מחוץ לחלון שהובטח ללקוח';
+    default:return String((f&&f.type)||'ממצא');
+  }
+}
+// Chip html for a stored health row ({score,band,partial,findings}); '' when the
+// day has no audit (score null / audits off) — the chip simply doesn't appear.
+function healthChipHtml(hh){
+  if(!hh||hh.score==null)return'';
+  const pal={healthy:['#DCFCE7','#166534'],review:['#FEF3C7','#92400E'],issues:['#FEE2E2','#991B1B']}[hh.band]||['#E5E7EB','#374151'];
+  const n=(hh.findings||[]).length;
+  return `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;background:${pal[0]};color:${pal[1]};font-size:0.68rem;font-weight:700;">מסלול ${Number(hh.score)}${hh.partial?'*':''}${n?` · ${n} ממצאים`:''}</span>`;
+}
 // </sched-logic>
 function appUsesZones(){ return usesZones(tenantConfig && tenantConfig.scheduling); }
 // ═══ AUTO-SEQUENCING SEAM (features.auto_sequence) ═══════════════════════════
@@ -5509,15 +5547,71 @@ async function _postOptimize(tech,date,dayTasks){
   const durationOf=(t)=>effectiveDuration(t.catId, tech, categories, settings);
   const sched=getTechDaySchedule(tech,date);
   const brk=getTechPartialBlocks(tech,date).map(b=>({from:minsToTime(b.from),to:minsToTime(b.to)}));
-  const res=await fetch(`${CONFIG.OPTIMIZER_URL}/optimize`,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({date,scheduling:{route_strategy:resolveRouteStrategy(tenantConfig.scheduling)},technicians:[{id:String(tech.id),name:tech.name,
+  // Bearer JWT + tenant_id let the backend attribute + persist the route audit
+  // (route-intelligence P1). Backend NEVER trusts tenant_id alone — it forces the
+  // JWT's own tenant (super_admin may impersonate). Missing session ⇒ optimize
+  // still works, audit just isn't stored. Safe here: not inside an auth callback
+  // (the gotrue re-entrancy deadlock only bites inside onAuthStateChange).
+  const hdrs={'Content-Type':'application/json'};
+  try{const{data:{session}}=await sb.auth.getSession();if(session&&session.access_token)hdrs['Authorization']=`Bearer ${session.access_token}`;}catch(e){}
+  const res=await fetch(`${CONFIG.OPTIMIZER_URL}/optimize`,{method:'POST',headers:hdrs,
+    body:JSON.stringify({date,tenant_id:currentTenantId||null,scheduling:{route_strategy:resolveRouteStrategy(tenantConfig.scheduling)},technicians:[{id:String(tech.id),name:tech.name,
       base_city:(tech.address&&tech.base)?`${tech.address}, ${tech.base}`:(tenantConfig.depot&&tenantConfig.depot.lat&&tenantConfig.depot.lon)?`${tenantConfig.depot.lat},${tenantConfig.depot.lon}`:(tech.base||''),
       return_city:tech.return_city||tech.base||'',
       start_time:sched.start||'07:00',end_time:sched.end||'18:00',breaks:brk,
       tasks:buildSequencePayload(dayTasks,durationOf)}]})});
   if(!res.ok) throw new Error('optimizer '+res.status);
   const data=await res.json();
-  return (data.optimized||[])[0]||null;
+  const r=(data.optimized||[])[0]||null;
+  if(r&&r.health)_setDayHealth(tech.id,date,r.health); // instant chip, no re-fetch
+  return r;
+}
+
+// ── Route Health cache + panel (route-intelligence P1, display-only) ─────────
+// Python computes and stores (route_audits, RLS tenant-read); this side only
+// caches and renders. 'none' sentinel = checked, nothing stored (audits off /
+// no schedule) — prevents a query per re-render.
+const _healthCache={};
+function _dayHealth(techId,ds){const v=_healthCache[`${techId}|${ds}`];return(v&&v!=='none')?v:null;}
+function _setDayHealth(techId,ds,hh){
+  _healthCache[`${techId}|${ds}`]=hh||'none';
+  const el=document.getElementById(`health-chip-${techId}-${ds}`);
+  if(el)el.innerHTML=healthChipHtml(hh);
+}
+async function _ensureDayHealth(techId,ds){
+  const k=`${techId}|${ds}`;
+  if(_healthCache[k]!==undefined)return;
+  _healthCache[k]='none'; // claim before the await — blocks parallel duplicate fetches
+  try{
+    const{data,error}=await sb.from('route_audits')
+      .select('score,band,partial,components,findings,created_at')
+      .eq('technician_id',techId).eq('date',ds)
+      .order('created_at',{ascending:false}).limit(1);
+    if(!error&&data&&data[0])_setDayHealth(techId,ds,data[0]);
+  }catch(e){/* display-only — chip stays hidden on failure */}
+}
+function openHealthPanel(techId,ds){
+  const hh=_dayHealth(techId,ds); if(!hh)return;
+  const tech=technicians.find(t=>String(t.id)===String(techId));
+  const items=(hh.findings||[]).map(f=>{
+    const t=f.task_id&&tasks.find(x=>String(x.id)===String(f.task_id)||String(x._dbId)===String(f.task_id));
+    const who=t?` — ${t.client||t.city||''}`:'';
+    return`<div style="display:flex;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line-2);font-size:0.84rem;color:var(--ink);"><span>•</span><span>${h(describeHealthFindingHe(f)+who)}</span></div>`;
+  }).join('')||`<div style="padding:14px;text-align:center;color:#166534;font-weight:600;">אין ממצאים — המסלול תקין ✓</div>`;
+  const c=hh.components||{};
+  const drive=(c.actual_drive_min!=null)?`<span>נסיעה בפועל: <b>${c.actual_drive_min} דק׳</b></span>`:'';
+  const best=(c.solver_drive_min!=null)?`<span>מסלול מיטבי: <b>${c.solver_drive_min} דק׳</b></span>`:'';
+  document.getElementById('health-body').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+      <div style="font-size:2rem;font-weight:800;color:var(--ink);">${Number(hh.score)}</div>
+      <div>
+        <div style="font-weight:700;">${h(healthBandHe(hh.band))}${hh.partial?' <span style="font-weight:500;color:var(--ink-3);">(בדיקה חלקית)</span>':''}</div>
+        <div style="font-size:0.78rem;color:var(--ink-3);">${h(tech?tech.name:'')} · ${h(ds)}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:14px;font-size:0.78rem;color:var(--ink-3);margin-bottom:8px;">${drive}${best}</div>
+    <div style="border:1px solid var(--line);border-radius:8px;overflow:hidden;">${items}</div>`;
+  document.getElementById('mo-health').classList.remove('hidden');
 }
 async function sequenceDay(techId,date){
   const k=`${techId}|${date}`, sentEpoch=_seqEpochs[k];
@@ -8382,7 +8476,8 @@ function renderPlannerDaily(days){
     ${techTabs?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${techTabs}</div>`:''}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
       <div style="font-size:0.8rem;color:var(--ink-3);">${scheduledForOpt.length} קריאות${unscheduled.length?' • <span style="color:var(--amber);">'+unscheduled.length+' ממתינות</span>':''}
-        <span id="seq-badge-${tech.id}-${ds}" style="display:none;margin-right:8px;padding:2px 8px;background:#FEF3C7;color:#92400E;border-radius:10px;font-size:0.68rem;font-weight:700;">טעון אופטימיזציה</span></div>
+        <span id="seq-badge-${tech.id}-${ds}" style="display:none;margin-right:8px;padding:2px 8px;background:#FEF3C7;color:#92400E;border-radius:10px;font-size:0.68rem;font-weight:700;">טעון אופטימיזציה</span>
+        <span id="health-chip-${tech.id}-${ds}" onclick="openHealthPanel('${tech.id}','${ds}')" style="margin-right:8px;cursor:pointer;">${healthChipHtml(_dayHealth(tech.id,ds))}</span></div>
       ${optBtn}
     </div>
     <div ondragover="_onGridDragOver(event)" ondragleave="_onGridDragLeave(event)" ondrop="_onGridDrop(event,'${tech.id}','${ds}')" style="position:relative;height:${gridH}px;background:var(--white);border-radius:8px;border:1px solid var(--line);overflow:hidden;">
@@ -8391,6 +8486,7 @@ function renderPlannerDaily(days){
       ${hourLines}${nowLine}${taskBlocks}${dayOffOverlay}
     </div>
     ${unschedHtml}`;
+  _ensureDayHealth(tech.id,ds); // async — fills the chip when a stored audit exists
 }
 
 function setPlannerDay(idx){
