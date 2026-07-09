@@ -43,23 +43,23 @@
     },
     {
       "name": "lateness_risk",
-      "why": "C sched 11:15 inside its 09:00-12:00 window, but physics (A 90min + B 60min services) puts service start at 11:45 > 11:30 latest -> 15 pts -> 85",
+      "why": "ARRIVAL-window semantics: C sched 11:15 inside its 09:00-11:30 window, but physics (A 90min + B 60min services) puts arrival/start at 11:45 > 11:30 window end -> 15 pts -> 85",
       "start": "08:00", "end": "17:00", "route_strategy": "far_to_near",
       "tasks": [
         { "duration": 90, "scheduled_time": "08:40" },
         { "duration": 60, "scheduled_time": "10:30" },
-        { "duration": 30, "scheduled_time": "11:15", "window_start": "09:00", "window_end": "12:00" }
+        { "duration": 30, "scheduled_time": "11:15", "window_start": "09:00", "window_end": "11:30" }
       ],
       "expect": { "score": 85, "partial": false, "finding_types": ["lateness_risk"], "components": { "lateness_stops": 1 } }
     },
     {
       "name": "window_violation",
-      "why": "C scheduled 10:15 but latest valid start for its 09:00-10:30 window is 10:00 -> plan itself breaks the promise (20 pts, lateness NOT double-counted) -> 80",
+      "why": "ARRIVAL-window semantics: C scheduled 10:15, AFTER its 09:00-10:00 arrival window ends -> the plan itself breaks the promise (20 pts, lateness NOT double-counted) -> 80. Starting late-but-inside the window (e.g. 09:34 in 07-10) is NOT a violation — Israel replay 2026-07-09.",
       "start": "08:00", "end": "17:00", "route_strategy": "far_to_near",
       "tasks": [
         { "duration": 30, "scheduled_time": "08:40" },
         { "duration": 30, "scheduled_time": "09:30" },
-        { "duration": 30, "scheduled_time": "10:15", "window_start": "09:00", "window_end": "10:30" }
+        { "duration": 30, "scheduled_time": "10:15", "window_start": "09:00", "window_end": "10:00" }
       ],
       "expect": { "score": 80, "partial": false, "finding_types": ["window_violation"], "components": { "window_violations": 1, "lateness_stops": 0 } }
     },
@@ -126,6 +126,18 @@
         { "duration": 30, "scheduled_time": "09:45" }
       ],
       "expect": { "score": 70, "partial": false, "finding_types": ["better_order_exists"], "components": { "backtrack_count": 0, "excess_drive_min": 20 } }
+    },
+    {
+      "name": "solver_endorsed_zigzag_not_flagged",
+      "why": "actual order C,A,B has an up-jump (10->40) BUT it equals the solver's own best order (windows forced it) -> backtrack suppressed, excess 0 -> 100",
+      "start": "08:00", "end": "17:00", "route_strategy": "far_to_near",
+      "solver": { "ordered": [2, 0, 1], "legs": [10, 35, 20], "dropped": [] },
+      "tasks": [
+        { "duration": 30, "scheduled_time": "09:15" },
+        { "duration": 30, "scheduled_time": "10:05" },
+        { "duration": 30, "scheduled_time": "08:10" }
+      ],
+      "expect": { "score": 100, "partial": false, "finding_types": [], "components": { "backtrack_count": 0, "actual_drive_min": 65, "solver_drive_min": 65 } }
     },
     {
       "name": "break_overlap_not_idle",

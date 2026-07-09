@@ -37,6 +37,20 @@ Legend: ✅ enforced · ⚠ caveat (see note) · n/a not applicable to that laye
 | `break {enabled,start,end}` | tenant default break | `getTechPartialBlocks` | `tech_breaks` (+clamped to hours) | ✅ pinned pseudo-node | both |
 | `lookahead_days` | candidate search horizon | `getNextDates` | n/a (explicit range) | n/a | — |
 
+## tenants.config.audit (Route Intelligence P1 — 2026-07-09)
+| Knob | Meaning | Live JS | Batch/Py | Solver | Test |
+|---|---|---|---|---|---|
+| `audit.enabled` (default false) | store route_audits rows: on `/optimize` (trigger=change, needs the JWT the app now sends), `/audit-day`, nightly 02:30-UTC sweep | display-only **by design** — JS renders stored rows (`healthChipHtml`, `openHealthPanel`), never computes | `main._resolve_audit_context` gate + `audit_sweep.run_audit_sweep` tenant filter | n/a | test_route_audit_flow.py |
+| `audit.health_weights {…}` | per-component score weights (excess-drive/backtrack/lateness/idle/overtime/window + `reorder_min_saving` noise floor). Violation DEFINITIONS are system invariants — only weights are tunable | display-only by design | `route_health.DEFAULT_WEIGHTS` merge in `compute_health` (unknown keys ignored) | n/a | health-cases.json fixture (weights-override case) |
+
+> **Health computation is Python-ONLY** (`backend/route_health.py`) — the deliberate exception
+> to both-doors: one implementation means no parity to maintain; JS is a reader of
+> `route_audits`. If a JS preview computation is ever added, `tests/fixtures/health-cases.json`
+> becomes its parity contract. **Window semantics: ARRIVAL** — a stop violates only when its
+> scheduled start falls outside [window_start, window_end]; service may end after the window
+> (Israel replay 2026-07-09: finish-inside semantics falsely flagged 10/89 real stops). Note
+> the solver is stricter when *placing* (finish-inside) — known asymmetry, deliberate.
+
 > **Duration chain (unified 2026-07-08):** ONE resolver both doors — `effectiveDuration(catId,tech,categories,settings)` (JS) ⇄ `_effective_duration` (Py): per-tech override → **category time** → `regularTime` → 30. Every live spot (optimize payload, `calcOptimalTime`, candidate slot math, confirm-assign stacking, weekly/daily/monthly calendar block heights) routes through it — previously several ignored category time / tech override (live↔batch parity bug, fixed). **No per-call duration override by design** (Eran 2026-07-08 — durations are a per-tenant category-level setup decision; ad-hoc per-call values invite miscalculation). Parity locked by `tests/fixtures/duration-cases.json`.
 
 ## technicians.* (per-tech knobs)

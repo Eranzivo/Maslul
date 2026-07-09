@@ -127,9 +127,14 @@ def compute_health(matrix, tasks, start_time, end_time, breaks=None,
                 findings.append({"type": "idle_gap", "stop": i,
                                  "data": {"idle_min": idle}})
 
-        # Customer-window checks.
+        # Customer-window checks — ARRIVAL semantics: the promise is "the tech
+        # arrives between window_start and window_end"; service may run past the
+        # end. (The solver is deliberately stricter when PLACING — it requires
+        # finishing inside the window — but the auditor must not flag real
+        # schedules that keep the arrival promise: Israel's replay showed 10/89
+        # legitimate stops flagged under finish-inside semantics, 2026-07-09.)
         ws, we = _to_min(tasks[i].get("window_start")), _to_min(tasks[i].get("window_end"))
-        latest_start = (we - dur) if we is not None else None
+        latest_start = we
         violated = ((ws is not None and sched_min < ws) or
                     (latest_start is not None and sched_min > latest_start))
         if violated:
@@ -177,6 +182,13 @@ def compute_health(matrix, tasks, start_time, end_time, breaks=None,
             findings.append({"type": "better_order_exists", "stop": None,
                              "data": {"saving_min": excess,
                                       "solver_order": list(solver["ordered"])}})
+        # Solver-endorsed order: when the actual order IS the solver's best, any
+        # zigzag in it was forced by windows/locks — no better direction-respecting
+        # order exists, so flagging it is noise (Israel replay 2026-07-09: the
+        # engine's own auto-sequenced days were flagging their unavoidable jumps).
+        if backtrack_count and list(solver.get("ordered") or []) == actual_order:
+            findings = [f for f in findings if f["type"] != "backtrack"]
+            backtrack_count = 0
     else:
         partial = True
 

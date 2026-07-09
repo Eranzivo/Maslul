@@ -1,7 +1,12 @@
 # Route Intelligence — Design (answers to the brief's open questions + P1 spec)
 
 > Runs against `outputs/route-intelligence-brief_2026-07-09.md` (requirement source-of-truth).
-> Status: PROPOSAL — Eran review pending. Nothing here is implemented yet.
+> Status: **P1 BUILT same day (Eran approved "go ahead and start")** — all 7 slices shipped;
+> replay validated (`outputs/route-health-replay_2026-07-09.md`). Two calibrations the replay
+> forced, now canon: **window semantics = ARRIVAL** (start-inside; solver stays stricter when
+> placing) and **solver-endorsed zigzags are not flagged**. Live behind `config.audit.enabled`
+> (default false — enable per tenant after smoke test). P2 (recommendation workflow) awaits
+> Eran's go.
 > Method: fable-mode — every claim below is anchored to code read 2026-07-09.
 
 ---
