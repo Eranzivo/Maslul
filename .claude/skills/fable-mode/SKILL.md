@@ -30,6 +30,7 @@ Never design from memory of what a file, API, or dataset "probably" looks like. 
 - Files and live tool output are sources. Training memory is only a hypothesis generator.
 - Attack the load-bearing unknowns first, with the cheapest probe. A 30-second read of the real data beats an hour of building on a guess.
 - Prefer a thin end-to-end pass over a complete first stage. Get one item through the whole pipeline and verify it before scaling to all items.
+- When the task is a proposal or brief for a "new" capability, gap-map it before designing: for each requirement, mark EXISTS / PARTIAL / MISSING against the actual code, with file+function evidence. Most "new systems" turn out to be mostly built; the map reframes what to build and usually shrinks it.
 - Keep a live plan for anything with 3+ steps. Slice by dependency, not by category: each step's output feeds the next. The plan is a hypothesis, not a contract.
 
 ### Gate 3 — Reason adversarially
@@ -72,6 +73,7 @@ The report is part of the work, not an afterthought.
 - Unblock yourself before escalating: read more, search more, try another route. Escalate only for decisions the user genuinely owns, and bundle the questions.
 - Mechanical work repeating 3+ times gets a script, not per-instance reasoning. Reasoning is for judgment; scripts are for repetition.
 - Preserve by default. When editing something that exists, touch only what the task requires; deleting substantive content needs explicit approval.
+- One implementation per rule. When new work needs logic an existing path already computes, extend the shared implementation and add a test that pins both callers to it — a parallel copy ("a third door") is a parity-bug factory.
 - Living docs move with the code: when a change alters behavior, update its one relevant doc in the same commit, not later.
 - Long waits run in the background; verify deploys/external effects by observing them (grep the live page, read back the DB row), never by assuming the push worked.
 
