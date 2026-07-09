@@ -1,0 +1,143 @@
+{
+  "_readme": "Golden fixture for Route Health (P1, route-intelligence-design_2026-07-09). Consumed by backend/tests/test_route_health.py. Python is the ONLY implementation (JS displays stored rows); if a JS preview computation is ever added, this fixture becomes its parity contract. matrix node 0 = depot, nodes 1..n = tasks in array order. Times are HH:MM. solver = the solve_route_v2 result for the same day ({ordered: task indices, legs: drive-min per ordered stop, dropped}). expect pins score/partial/finding types/selected components exactly.",
+  "matrix_default": [
+    [0, 40, 25, 10],
+    [40, 0, 20, 35],
+    [25, 20, 0, 15],
+    [10, 35, 20, 0]
+  ],
+  "solver_default": { "ordered": [0, 1, 2], "legs": [40, 20, 15], "dropped": [] },
+  "cases": [
+    {
+      "name": "perfect_day",
+      "why": "actual order == solver order, no waits/windows/overtime -> 100",
+      "start": "08:00", "end": "17:00", "route_strategy": "far_to_near",
+      "tasks": [
+        { "duration": 30, "scheduled_time": "08:40" },
+        { "duration": 30, "scheduled_time": "09:30" },
+        { "duration": 30, "scheduled_time": "10:15" }
+      ],
+      "expect": { "score": 100, "partial": false, "finding_types": [], "components": { "actual_drive_min": 75, "solver_drive_min": 75, "excess_drive_min": 0 } }
+    },
+    {
+      "name": "backtrack_and_excess",
+      "why": "actual A(40),C(10),B(25): one far_to_near up-jump (8 pts) + 20 excess drive min (30 pts) -> 62; reorder finding fires (saving 20 >= 10)",
+      "start": "08:00", "end": "17:00", "route_strategy": "far_to_near",
+      "tasks": [
+        { "duration": 30, "scheduled_time": "08:40" },
+        { "duration": 30, "scheduled_time": "10:35" },
+        { "duration": 30, "scheduled_time": "09:45" }
+      ],
+      "expect": { "score": 62, "partial": false, "finding_types": ["backtrack", "better_order_exists"], "components": { "actual_drive_min": 95, "excess_drive_min": 20, "backtrack_count": 1 } }
+    },
+    {
+      "name": "idle_gap",
+      "why": "B scheduled 40 min after reachable arrival (>15 free) -> 40 idle min = 8 pts -> 92",
+      "start": "08:00", "end": "17:00", "route_strategy": "far_to_near",
+      "tasks": [
+        { "duration": 30, "scheduled_time": "08:40" },
+        { "duration": 30, "scheduled_time": "10:10" },
+        { "duration": 30, "scheduled_time": "10:55" }
+      ],
+      "expect": { "score": 92, "partial": false, "finding_types": ["idle_gap"], "components": { "idle_min": 40 } }
+    },
+    {
+      "name": "lateness_risk",
+      "why": "C sched 11:15 inside its 09:00-12:00 window, but physics (A 90min + B 60min services) puts service start at 11:45 > 11:30 latest -> 15 pts -> 85",
+      "start": "08:00", "end": "17:00", "route_strategy": "far_to_near",
+      "tasks": [
+        { "duration": 90, "scheduled_time": "08:40" },
+        { "duration": 60, "scheduled_time": "10:30" },
+        { "duration": 30, "scheduled_time": "11:15", "window_start": "09:00", "window_end": "12:00" }
+      ],
+      "expect": { "score": 85, "partial": false, "finding_types": ["lateness_risk"], "components": { "lateness_stops": 1 } }
+    },
+    {
+      "name": "window_violation",
+      "why": "C scheduled 10:15 but latest valid start for its 09:00-10:30 window is 10:00 -> plan itself breaks the promise (20 pts, lateness NOT double-counted) -> 80",
+      "start": "08:00", "end": "17:00", "route_strategy": "far_to_near",
+      "tasks": [
+        { "duration": 30, "scheduled_time": "08:40" },
+        { "duration": 30, "scheduled_time": "09:30" },
+        { "duration": 30, "scheduled_time": "10:15", "window_start": "09:00", "window_end": "10:30" }
+      ],
+      "expect": { "score": 80, "partial": false, "finding_types": ["window_violation"], "components": { "window_violations": 1, "lateness_stops": 0 } }
+    },
+    {
+      "name": "overtime",
+      "why": "work end 10:30, last service ends 10:45 -> 15 min over = 10 base + 15 = 25 pts -> 75",
+      "start": "08:00", "end": "10:30", "route_strategy": "far_to_near",
+      "tasks": [
+        { "duration": 30, "scheduled_time": "08:40" },
+        { "duration": 30, "scheduled_time": "09:30" },
+        { "duration": 30, "scheduled_time": "10:15" }
+      ],
+      "expect": { "score": 75, "partial": false, "finding_types": ["overtime"], "components": { "overtime_min": 15 } }
+    },
+    {
+      "name": "empty_day",
+      "why": "nothing to audit -> score null (chip hidden), not a fake 100",
+      "start": "08:00", "end": "17:00", "route_strategy": "far_to_near",
+      "tasks": [],
+      "expect": { "score": null, "partial": false, "finding_types": [] }
+    },
+    {
+      "name": "partial_unscheduled",
+      "why": "C has no scheduled_time -> audit covers A,B only; solver total (3 stops) not comparable -> excess skipped, partial=true, clean subset scores 100",
+      "start": "08:00", "end": "17:00", "route_strategy": "far_to_near",
+      "tasks": [
+        { "duration": 30, "scheduled_time": "08:40" },
+        { "duration": 30, "scheduled_time": "09:30" },
+        { "duration": 30, "scheduled_time": null }
+      ],
+      "expect": { "score": 100, "partial": true, "finding_types": [], "components": { "excess_drive_min": 0 } }
+    },
+    {
+      "name": "solver_dropped_skips_excess",
+      "why": "solver dropped a stop -> route totals not comparable -> excess skipped + partial, other components still audited",
+      "start": "08:00", "end": "17:00", "route_strategy": "far_to_near",
+      "solver": { "ordered": [0, 1], "legs": [40, 20], "dropped": [2] },
+      "tasks": [
+        { "duration": 30, "scheduled_time": "08:40" },
+        { "duration": 30, "scheduled_time": "09:30" },
+        { "duration": 30, "scheduled_time": "10:15" }
+      ],
+      "expect": { "score": 100, "partial": true, "finding_types": [] }
+    },
+    {
+      "name": "backtrack_cap_via_weights",
+      "why": "weights override: cap 10 < 2 violations x 8; nearest-first-ish actual under far_to_near strategy; actual drive 50 < solver 75 -> excess clamps to 0 -> 90",
+      "start": "08:00", "end": "17:00", "route_strategy": "far_to_near",
+      "weights": { "backtrack_per_violation": 8, "backtrack_cap": 10 },
+      "tasks": [
+        { "duration": 30, "scheduled_time": "09:50" },
+        { "duration": 30, "scheduled_time": "09:00" },
+        { "duration": 30, "scheduled_time": "08:10" }
+      ],
+      "expect": { "score": 90, "partial": false, "finding_types": ["backtrack", "backtrack"], "components": { "backtrack_count": 2, "backtrack_pts": 10, "excess_drive_min": 0 } }
+    },
+    {
+      "name": "flexible_ignores_zigzag",
+      "why": "same actual order as backtrack_and_excess but strategy flexible -> no backtrack component; excess drive still costs 30 pts -> 70",
+      "start": "08:00", "end": "17:00", "route_strategy": "flexible",
+      "tasks": [
+        { "duration": 30, "scheduled_time": "08:40" },
+        { "duration": 30, "scheduled_time": "10:35" },
+        { "duration": 30, "scheduled_time": "09:45" }
+      ],
+      "expect": { "score": 70, "partial": false, "finding_types": ["better_order_exists"], "components": { "backtrack_count": 0, "excess_drive_min": 20 } }
+    },
+    {
+      "name": "break_overlap_not_idle",
+      "why": "B waits 30 min but 10 of them overlap the 09:10-09:40 break -> counted idle 20 (>15 free) = 4 pts -> 96",
+      "start": "08:00", "end": "17:00", "route_strategy": "far_to_near",
+      "breaks": [{ "from": "09:10", "to": "09:40" }],
+      "tasks": [
+        { "duration": 30, "scheduled_time": "08:40" },
+        { "duration": 30, "scheduled_time": "10:00" },
+        { "duration": 30, "scheduled_time": "10:45" }
+      ],
+      "expect": { "score": 96, "partial": false, "finding_types": ["idle_gap"], "components": { "idle_min": 20 } }
+    }
+  ]
+}

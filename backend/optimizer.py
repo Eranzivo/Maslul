@@ -5,6 +5,7 @@ from ortools.constraint_solver import routing_enums_pb2, pywrapcp
 from cities import get_coords
 import route_cache
 import geo_resolver
+import route_health
 
 
 # ── Distance helpers ──────────────────────────────────────────────────────────
@@ -428,8 +429,34 @@ def solve_route_v2(matrix, tasks, start_time_str, end_time_str, breaks,
 
 # ── Public entry point ────────────────────────────────────────────────────────
 
+def _health_for_tech(tech, v2_tasks, matrix, r, route_strategy, weights):
+    """Route Health from the solve we ALREADY did — pure arithmetic, no extra
+    API cost (route-intelligence P1). Index-based findings/orders are mapped to
+    task ids here (this is the only place that knows both). Fail-open: any error
+    returns None rather than breaking the optimize path."""
+    try:
+        h = route_health.compute_health(
+            matrix, v2_tasks, tech.start_time, tech.end_time,
+            breaks=getattr(tech, "breaks", []) or [],
+            route_strategy=route_strategy,
+            solver={"ordered": r["ordered"], "legs": r["legs"], "dropped": r["dropped"]},
+            weights=weights)
+        ids = [t.id for t in tech.tasks]
+        for f in h["findings"]:
+            if f.get("stop") is not None:
+                f["task_id"] = ids[f["stop"]]
+            so = (f.get("data") or {}).get("solver_order")
+            if so:
+                f["data"]["solver_order"] = [ids[i] for i in so]
+        h["actual_order_ids"] = [ids[i] for i in h["actual_order"]]
+        return h
+    except Exception as e:
+        print(f"[health] compute failed for tech {tech.id}: {e}")
+        return None
+
+
 async def optimize_routes(technicians: list, google_maps_api_key: Optional[str], service_key: str = "",
-                          route_strategy: str = "flexible") -> list[dict]:
+                          route_strategy: str = "flexible", health_weights: Optional[dict] = None) -> list[dict]:
     global LAST_GOOGLE_ELEMENTS
     LAST_GOOGLE_ELEMENTS = 0
     await geo_resolver.ensure_loaded(service_key)  # load the shared brain once (fail-open)
@@ -443,6 +470,7 @@ async def optimize_routes(technicians: list, google_maps_api_key: Optional[str],
                 'estimated_times': {},
                 'total_drive_minutes': 0,
                 'mode': 'none',
+                'health': None,
             })
             continue
 
@@ -494,6 +522,7 @@ async def optimize_routes(technicians: list, google_maps_api_key: Optional[str],
             'trace': trace,
             'total_drive_minutes': sum(r["legs"]),
             'mode': mode,
+            'health': _health_for_tech(tech, v2_tasks, matrix, r, route_strategy, health_weights),
         })
 
     return results

@@ -1,3 +1,4 @@
+import asyncio
 import os
 from datetime import date
 from fastapi import FastAPI, HTTPException, Request
@@ -12,6 +13,8 @@ from batch_schedule import run_batch_schedule
 from batch_auth import resolve_effective_tenant, AuthzError
 import geo_resolver
 import geo_addresses
+import route_health
+import audit_sweep
 
 load_dotenv()
 
@@ -155,6 +158,88 @@ class OptimizeRequest(BaseModel):
     date: str
     technicians: list[Technician]
     scheduling: Optional[SchedulingConfig] = None
+    # Only honoured for super_admin / service-key callers (impersonation / cron);
+    # everyone else is FORCED to their JWT's own tenant — see _resolve_audit_context.
+    tenant_id: Optional[str] = None
+
+
+class AuditDayRequest(OptimizeRequest):
+    trigger: str = "manual"   # manual | nightly (change = the /optimize path)
+
+
+# ── Route-audit persistence (route-intelligence P1) ──────────────────────────
+# Health itself is computed inside optimize_routes from the solve it already
+# performed; these helpers only decide WHO the audit belongs to and store it.
+# Everything is fail-open: a persistence failure never breaks the optimize path.
+
+async def _get_tenant_audit_cfg(tenant_id: str, service_key: str) -> dict:
+    """config.audit for a tenant ({} when absent/unreadable)."""
+    try:
+        async with httpx.AsyncClient(timeout=8) as c:
+            r = await c.get(
+                f"{SUPABASE_URL}/rest/v1/tenants",
+                headers={"apikey": service_key, "Authorization": f"Bearer {service_key}"},
+                params={"id": f"eq.{tenant_id}", "select": "config"},
+            )
+        if r.status_code != 200 or not r.json():
+            return {}
+        return (r.json()[0].get("config") or {}).get("audit") or {}
+    except Exception:
+        return {}
+
+
+async def _resolve_audit_context(request: Request, req_tenant_id: Optional[str],
+                                 service_key: str) -> tuple[Optional[str], dict]:
+    """(verified tenant_id, audit config) for an optionally-authenticated call.
+
+    Bearer user-JWT → introspected, tenant FORCED to the user's own (super_admin
+    may target req_tenant_id — impersonation). Bearer service-key → req_tenant_id
+    trusted (nightly cron). No/invalid auth → (None, {}): health still computed
+    and returned, nothing persisted. A tenant_id from the request body is NEVER
+    trusted on its own — that would let an anonymous caller write another
+    tenant's audit rows."""
+    if not service_key:
+        return None, {}
+    auth = request.headers.get("Authorization", "")
+    token = auth[7:] if auth.startswith("Bearer ") else ""
+    if not token:
+        return None, {}
+    if token == service_key:
+        tenant = req_tenant_id
+    else:
+        uid = await _introspect_user_token(token, service_key)
+        row = await _get_user_row(uid, service_key)
+        try:
+            tenant = resolve_effective_tenant(row, req_tenant_id or "")
+        except AuthzError:
+            return None, {}
+    if not tenant:
+        return None, {}
+    return tenant, await _get_tenant_audit_cfg(tenant, service_key)
+
+
+async def _persist_audits(tenant_id: str, date_str: str, techs, results,
+                          trigger: str, service_key: str) -> int:
+    rows = route_health.build_audit_rows(tenant_id, date_str, techs, results, trigger)
+    if not rows:
+        return 0
+    try:
+        async with httpx.AsyncClient(timeout=8) as c:
+            r = await c.post(
+                f"{SUPABASE_URL}/rest/v1/route_audits",
+                headers={"apikey": service_key,
+                         "Authorization": f"Bearer {service_key}",
+                         "Content-Type": "application/json",
+                         "Prefer": "return=minimal"},
+                json=rows,
+            )
+        if r.status_code not in (200, 201, 204):
+            print(f"[audit] persist failed {r.status_code}: {r.text[:200]}")
+            return 0
+        return len(rows)
+    except Exception as e:
+        print(f"[audit] persist error: {e}")
+        return 0
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -221,13 +306,17 @@ async def geocode(req: GeocodeRequest):
 
 
 @app.post("/optimize")
-async def optimize(req: OptimizeRequest):
+async def optimize(req: OptimizeRequest, request: Request):
     if not req.technicians:
         raise HTTPException(status_code=400, detail="No technicians provided")
     _track_optimize(req.technicians)
 
     google_maps_key = os.getenv("GOOGLE_MAPS_API_KEY") or None
     service_key = os.getenv("SUPABASE_SERVICE_KEY", "")
+
+    # Route-audit context (optional Bearer): who this audit belongs to + knobs.
+    # Anonymous callers still get routes + health in the response, never a DB write.
+    audit_tenant, audit_cfg = await _resolve_audit_context(request, req.tenant_id, service_key)
 
     # Only use Google Maps if key is set AND daily quota has headroom.
     # Cache path: PEEK here, charge actual fetches after (cache hits are free).
@@ -244,15 +333,78 @@ async def optimize(req: OptimizeRequest):
         google_maps_key if use_gmaps else None,
         service_key=service_key,
         route_strategy=(req.scheduling.route_strategy if req.scheduling else "flexible"),
+        health_weights=(audit_cfg.get("health_weights") or None),
     )
     if service_key and optimizer_module.LAST_GOOGLE_ELEMENTS:
         _gmaps_quota_ok(optimizer_module.LAST_GOOGLE_ELEMENTS)  # charge real spend
+
+    if audit_tenant and audit_cfg.get("enabled"):
+        await _persist_audits(audit_tenant, req.date, req.technicians, result,
+                              "change", service_key)
 
     return {
         "date": req.date,
         "mode": "gmaps" if use_gmaps else "local",
         "optimized": result,
     }
+
+
+@app.post("/audit-day")
+async def audit_day(req: AuditDayRequest, request: Request):
+    """Audit-only pass: same payload shape as /optimize, NEVER consumes Google
+    quota (cache-only matrix) and never proposes task writes to the caller —
+    the response is health blocks only. Requires an authorized session (user
+    JWT or service key); persists when the tenant's audit.enabled knob is on."""
+    if not req.technicians:
+        raise HTTPException(status_code=400, detail="No technicians provided")
+    service_key = os.getenv("SUPABASE_SERVICE_KEY", "")
+    audit_tenant, audit_cfg = await _resolve_audit_context(request, req.tenant_id, service_key)
+    if not audit_tenant:
+        raise HTTPException(status_code=401, detail="Audit requires an authorized session")
+
+    result = await optimize_routes(
+        req.technicians,
+        None,  # cache-only: zero Google spend by construction
+        service_key=service_key,
+        route_strategy=(req.scheduling.route_strategy if req.scheduling else "flexible"),
+        health_weights=(audit_cfg.get("health_weights") or None),
+    )
+    stored = 0
+    if audit_cfg.get("enabled"):
+        stored = await _persist_audits(audit_tenant, req.date, req.technicians, result,
+                                       req.trigger, service_key)
+    return {
+        "date": req.date,
+        "stored": stored,
+        "audits": [{"technician_id": r["technician_id"], "health": r.get("health")}
+                   for r in result],
+    }
+
+
+@app.post("/audit-sweep")
+async def audit_sweep_endpoint(request: Request):
+    """Manually run the nightly sweep (service-key or super_admin only —
+    it walks every audit-enabled tenant)."""
+    service_key = os.getenv("SUPABASE_SERVICE_KEY", "")
+    if not service_key:
+        raise HTTPException(status_code=503, detail="Service key not configured")
+    auth = request.headers.get("Authorization", "")
+    token = auth[7:] if auth.startswith("Bearer ") else ""
+    if token != service_key:
+        uid = await _introspect_user_token(token, service_key)
+        row = await _get_user_row(uid, service_key)
+        if not row or not row.get("super_admin"):
+            raise HTTPException(status_code=403, detail="Not allowed")
+    return await audit_sweep.run_audit_sweep(service_key, SUPABASE_URL)
+
+
+@app.on_event("startup")
+async def _arm_audit_sweep():
+    # In-process nightly audit (02:30 UTC). Only armed when the backend can
+    # actually persist (service key present); AUDIT_SWEEP_DISABLED=1 opts out.
+    service_key = os.getenv("SUPABASE_SERVICE_KEY", "")
+    if service_key and os.getenv("AUDIT_SWEEP_DISABLED") != "1":
+        asyncio.create_task(audit_sweep.nightly_loop(service_key, SUPABASE_URL))
 
 
 class BatchScheduleRequest(BaseModel):
