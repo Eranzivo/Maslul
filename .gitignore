@@ -15,3 +15,6 @@ outputs/purewater-review_2026-06-29/
 Maslul design.zip
 mockups/claude-design/.thumbnail
 mockups/claude-design/scraps/
+
+# Obsidian vault workspace state (per-machine UI config — never commit)
+.obsidian/
