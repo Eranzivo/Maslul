@@ -27,3 +27,11 @@
 - **#2 design-system UI port** — on hold until the product fully functions (Eran).
 - **#3 city-create-from-search** — needs geocode greenlight + zone pick; scenarios B1.
 - **#10 job-level duration override** — do as ONE DRY refactor (pure `effectiveDuration` + fixture), never piecemeal.
+
+## Route Intelligence P1 follow-ups (2026-07-09)
+- [ ] **Eran smoke test → enable audit for PureWater** (SQL in chat 07-09): move a call in the daily view → chip "מסלול NN" appears → click → Hebrew findings panel.
+- [ ] Partial audits on 9-call days: haversine speeds overfill the solver (drops → excess comparison skipped). Real cached Google times fix most; if partials persist live, add a relaxed comparison-only solve (no drop penalty).
+- [ ] Equal-cost backtrack flag (06-07 מיכאל 292=292): solver found an equally-cheap different order — flag reads "equally-cheap cleaner order exists". Watch dispatcher signal/noise.
+- [ ] Solver-vs-ops window asymmetry: solver places finish-inside-window, Israel operates arrive-by-window-end. Worth an Eran/Israel decision whether the SOLVER should also adopt arrival semantics (would open ~30 min of extra capacity per window) — engine change, separate slice, both doors + fixtures.
+- [ ] Health-cache staleness: session-open while nightly sweep writes → chip shows older score until re-render/reload. Acceptable P1; revisit with P2 panel.
+- [ ] P2 (awaiting Eran): recommendations table + accept/reject workflow + stability knob `audit.min_saving_per_disturbed_min` (default 15, calibrate from replay histogram).
