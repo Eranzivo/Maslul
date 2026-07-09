@@ -105,3 +105,6 @@ Israel's live task cards reveal structure currently buried in free-text `notes`:
 | 2026-06-09 | Standardized to client template; recorded `zone_match = city_list`; flagged far-to-near as PureWater-specific |
 | 2026-06-08 | 108 tasks batch-scheduled; service windows live |
 | 2026-06-06 | 9 zones + 3-tech rotation + city normalization |
+
+---
+> 🧠 [[maslul-brain.canvas|Brain map]] · Related: [[knobs]] · [[scheduling-rules]] · [[zones-polygons]] · [[business]]

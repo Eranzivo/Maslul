@@ -42,3 +42,6 @@ Timing.tech (timing.tech) is the end-goal vision for this product — AI-powered
 Each client gets a `context/client-[name].md` file with their business config.
 No git branches — same codebase serves all clients via tenant config + labels.
 When adding Client #2, provide: business type, team size, terminology, zones, categories, any special rules.
+
+---
+> 🧠 [[maslul-brain.canvas|Brain map]] · Related: [[purewater]] · [[design-system]] · [[scheduling-rules]]

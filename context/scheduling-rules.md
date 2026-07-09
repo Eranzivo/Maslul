@@ -372,3 +372,6 @@ When `tech.return_city != tech.base_city`, the OR-Tools model uses a two-depot s
 `RoutingIndexManager(n_nodes, 1, start=0, end=n_nodes-1)`
 The matrix includes the return city as the last row/col.
 `total_drive_minutes` includes the final leg back to return_city.
+
+---
+> 🧠 [[maslul-brain.canvas|Brain map]] · Related: [[scheduling-scenarios]] · [[knobs]] · [[purewater]]

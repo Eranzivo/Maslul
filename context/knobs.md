@@ -87,3 +87,6 @@ Legend: ✅ enforced · ⚠ caveat (see note) · n/a not applicable to that laye
 
 ## Wizard coverage gap (C1 — drives the onboarding work)
 Wizard configures today: name/plan/labels/mode/route/hours/one category/admin. **Everything else in this registry is SQL-set at onboarding** until the wizard catches up — which is exactly what `/onboard-client` exists to make safe.
+
+---
+> 🧠 [[maslul-brain.canvas|Brain map]] · Related: [[scheduling-rules]] · [[architecture]] · [[purewater]] · [[scheduling-scenarios]]

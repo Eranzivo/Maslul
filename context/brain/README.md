@@ -22,6 +22,22 @@ node removed. Detail stays in `context/` docs (the brain links to them); the can
 holds only the one-sentence truth per neuron. Any Claude session (Fable or Opus)
 edits the canvas via the vendored `json-canvas` skill (validation checklist included).
 
+## Viewing outside Obsidian (VS Code / GitHub)
+`maslul-brain.md` is a **generated Mermaid mirror** of the canvas:
+- **GitHub** renders it natively — [view it in the repo](https://github.com/Eranzivo/Maslul/blob/main/context/brain/maslul-brain.md).
+- **VS Code**: install the *Markdown Preview Mermaid Support* extension → open the
+  file → `Ctrl+Shift+V`.
+- Never edit the .md by hand. After any canvas change run
+  `python tools/brain_mermaid.py` — canvas + regenerated mirror land in the
+  **same commit** (part of the living-docs rule above).
+
+## Graph view vs the canvas (don't confuse them)
+- **The canvas** (`maslul-brain.canvas`) = the curated 35-node neuron map. This is
+  "the brain" — open it directly.
+- **Graph view** (Ctrl+G) = automatic map of `[[wikilinks]]` between notes. Context
+  docs now carry "🧠 Brain map · Related:" footers, so it shows the doc web too —
+  it grows richer as docs keep linking each other.
+
 ## Conventions
 - Canvas file nodes use **repo-root-relative paths** (`context/knobs.md`) — the
   vault root IS the repo root; moving the vault breaks nothing else.

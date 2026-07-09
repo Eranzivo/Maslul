@@ -131,3 +131,6 @@ their own vacations (policies ready — no tech logins exist yet); `is_super_adm
 present on every policy (Eran's cross-tenant impersonation). Backend uses the service key
 (bypasses RLS) — unaffected. Any policy change ⇒ re-run BOTH advisors + the DO-block role
 simulation (technique documented in the plan outcome).
+
+---
+> 🧠 [[maslul-brain.canvas|Brain map]] · Related: [[architecture]] · [[knobs]]

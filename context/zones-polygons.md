@@ -180,3 +180,6 @@ Each technician has a `blockedZones` field (array of zone IDs, stored in `techni
 - Set via the **"אזורים חסומים"** multi-select in the tech edit/add drawer (`ti-blocked-zones`).
 - The multi-select is populated with all zones when the drawer opens (both new-tech and edit-tech paths).
 - On save, `data.blockedZones` is built from selected options and merged into the tech object via `Object.assign` (edit) or spread (new), then persisted by `saveTechToSupabase`.
+
+---
+> 🧠 [[maslul-brain.canvas|Brain map]] · Related: [[knobs]] · [[purewater]] · [[architecture]]

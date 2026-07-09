@@ -92,3 +92,6 @@ From `mockups/DESIGN-LOG.md` "Phase 2": ~~move **חופשות → Technicians vi
 reference; **re-order/distribute pages by area** (תפעול / CRM / הגדרות); ~~re-surface technician-view
 impersonation inside the Technicians page~~ ✅ done 2026-06-16. The remaining items (compact top-nav,
 page re-order) to be designed as a proposal (brainstorming) before building.
+
+---
+> 🧠 [[maslul-brain.canvas|Brain map]] · Related: [[business]] · [[architecture]]

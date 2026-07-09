@@ -48,3 +48,6 @@ Primary requirement sources in `outputs/`: `israel-handover_2026-07-06.md` (Isra
 2-month feedback — the PureWater requirements document) + `israel-handover-gapmap_2026-07-06.md`
 (what of it is built vs open), `product-review-fable_2026-07-05.md` (engine audit),
 `ways-of-working_2026-07-02.md` (process, security gate, session methodology).
+
+---
+> 🧠 [[maslul-brain.canvas|Brain map]] · Related: [[knobs]] · [[architecture]] · [[scheduling-rules]] · [[business]]

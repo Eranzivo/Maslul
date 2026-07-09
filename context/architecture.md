@@ -321,3 +321,6 @@ Set `CONFIG.DEMO_MODE = true` (or `?demo=1`, `?demo=cleaning`, `?demo=delivery` 
 - Matched rows: task inserted via `dbInsert` (columns: `city`, `street`, `status:'pending'`, `client_name`, `client_phone`, `category_id`, `category_name`, `technician_id`, `notes`, `preferred_windows`, `checklist_done`, plus all nullable fields). In-memory task object mirrors the pending-task shape (`id`, `client`, `phone`, `city`, `street`, `cat`, `catId`, `techId:null`, `status:'pending'`, `time:''`, `date:''`, `notes:''`, `assignId:''`, `preferredWindows:[]`, `checklistDone:{}`, `photoUrl:null`, `signatureUrl:null`, `lat:null`, `lon:null`, `geocodedAt:null`, `_dbId`).
 - Unmatched rows: listed in-modal with reason (`city_not_in_zone` → "עיר לא משויכת לאזור"; `outside_all_polygons` / `not_geocoded` → "מחוץ לאזור") plus a "תקן אזורים" CTA button that navigates to the zones page.
 - Future: polygon-mode tenants need a geocode step before `resolveZone` can use polygon matching (lat/lon are passed as null today).
+
+---
+> 🧠 [[maslul-brain.canvas|Brain map]] · Related: [[knobs]] · [[auth-users]] · [[scheduling-rules]] · [[zones-polygons]]
