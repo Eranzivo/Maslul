@@ -12,12 +12,12 @@
 ## 0. One-paragraph summary
 
 Maslul already IS most of the "route intelligence agent" the raw prompt describes — the
-review found ~60% built and shipped (candidate scoring, OR-Tools sequencing, route
-strategy as a tenant knob, cached matrices, structured explanations, override audit).
-The genuinely new product is **observability and hindsight**: a Route Health score, a Day
-Route Auditor that re-examines schedules already built, a recommendation
-approve/reject workflow with route versioning, and later a Weekly Rebalancer and
-dynamic slot release. It is built as **deterministic engine extensions + background jobs
+review found ~60% built and shipped — and the code-verified gap map below raised that
+further (slot release with 72/48/24h thresholds and insert-time backtrack rejection are
+ALSO already live). The genuinely new product is **observability and hindsight**: a Route
+Health score, a Day Route Auditor that re-examines schedules already built, a
+recommendation approve/reject workflow with route versioning, and later a Weekly
+Rebalancer. It is built as **deterministic engine extensions + background jobs
 on the existing FastAPI service** — not an agent, not n8n, no LLM in the calculation path.
 
 ---
@@ -42,15 +42,17 @@ Every requirement from the raw prompt, mapped to what exists. File anchors verif
 | Manual-override audit trail | `tasks.manually_overridden` + `override_reason` → `_audit_tasks` trigger → `audit_log` (free — no new infra) |
 | Structured explanations without an LLM | `explainCandidate` + `describeConstraintsHe` prove the template approach; Hebrew, dispatcher-readable |
 | Fill-first within full optimization (priority semantics) | Shipped engine default — Eran's E15 definition in `context/scheduling-scenarios.md` |
+| **Dynamic slot release with 72/48/24h tenant thresholds** (raw prompt capability #4) | `slot_release {enabled, conservative/moderate/aggressive_hours}` knob (knobs.md:24) enforced in `_candidatesZone` index.html:5813–5830 + `getSlotReservationOffset` late-start reservation in `calcOptimalTime` index.html:5675–5681; batch n/a **by design** (assigns whole days). Missing only: dispatcher-facing "why is this slot protected" explanation + demand-history smartness (deferred) |
+| Insert-time backtrack rejection | `wouldBacktrack` index.html:5763 + `isRouteLogical` index.html:5719 reject far→near→far placements; OR-Tools `DIRECTION_PENALTY` (optimizer.py:331–341) enforces monotone direction in sequencing |
 | Tenant isolation for jobs/caches | RLS everywhere; global tables deny-all + service key; per-tenant config never in shared code |
 
 ### PARTIAL — exists at insert-time, missing as hindsight
 
 | Requirement | What exists | What's missing |
 |---|---|---|
-| Backtracking (far→near→far) | OR-Tools minimizes it when sequencing | No detector/quantifier that flags it on an **existing** schedule |
+| Backtracking (far→near→far) | Rejected at insert-time (`wouldBacktrack`) and penalized in sequencing (OR-Tools direction penalty) | No detector/quantifier that flags it on an **existing** schedule (hindsight) |
 | Within-city address order + best exit toward next city | Solver handles it at coordinate level when addresses are geocoded | Not audited, not explained to the dispatcher |
-| Protected capacity for distant demand | Candidate ordering biases far-first at booking time | No time-based release (72/48/24h), no explicit "this slot is protected" state |
+| Protected capacity visibility | Fully enforced (see slot_release row above) | Dispatcher can't see WHY a slot is held; no release observability |
 | Lateness / idle-gap awareness | Computed when placing a call | Not continuously scored on the standing schedule |
 | Concurrency (two coordinators booking at once) | Nothing — **named real gap** | Booking-time version check / optimistic lock |
 
@@ -61,7 +63,8 @@ Every requirement from the raw prompt, mapped to what exists. File anchors verif
 3. **Recommendation workflow** — propose → show before/after + expected saving → dispatcher approves/rejects; nothing auto-applies.
 4. **Persistence for the above** — `route_versions`, `audit_findings`, recommendations + accept/reject status, optimization-job status.
 5. **Weekly Rebalancer** — cross-tech / cross-day proposals, stability-thresholded, dry-run first.
-6. **Dynamic slot release** — tenant-configurable time thresholds; historical-demand smartness deferred until there is history.
+
+~~6. Dynamic slot release~~ — **already shipped** (see EXISTS table); only its dispatcher-facing explanation remains, which folds into the auditor's finding/explanation templates.
 
 ---
 
@@ -106,8 +109,9 @@ Every requirement from the raw prompt, mapped to what exists. File anchors verif
   rebalancer would have proposed Y, saving Z minutes."
 - **Concurrency is a real gap and is in scope** (optimistic version check on booking
   write), sized during design — it protects the existing product, not just the new layer.
-- **Fixed release thresholds first** (72/48/24h knobs); demand-history-driven release is
-  explicitly deferred — there is not yet enough multi-tenant history to learn from.
+- **Fixed release thresholds stand** — they're already shipped as the `slot_release` knob;
+  demand-history-driven release is explicitly deferred — there is not yet enough
+  multi-tenant history to learn from.
 
 ---
 
@@ -122,12 +126,12 @@ Every requirement from the raw prompt, mapped to what exists. File anchors verif
 - **P3 — Weekly Rebalancer, dry-run behind a flag.** Cross-tech/cross-day proposals
   validated against the 20-month replay before any live tenant sees them; stability knob
   enforced.
-- **P4 — Protected capacity + slot release.** Time-threshold knobs; explanation of why a
-  window is protected/released reuses the explanation templates.
-- **P5 (optional) — LLM prose + notifications/n8n peripherals.** Only if templates prove
+- **P4 (optional) — LLM prose + notifications/n8n peripherals.** Only if templates prove
   insufficient; engine must keep working without it.
 
-Dropped: the raw prompt's standalone "Booking Guard" phase (built) and its "Phase 1 route
+Dropped: the raw prompt's standalone "Booking Guard" phase (built), its "Slot Release
+Service" phase (built — `slot_release` knob live since before this brief; its
+"why protected" explanation lands as a P1 audit finding type), and its "Phase 1 route
 observability with scoring but no detection" split (health score and violation detection
 are the same computation — shipping them together is cheaper).
 
