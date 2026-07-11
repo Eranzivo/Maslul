@@ -48,3 +48,10 @@ Refines the shipped `window_semantics: arrive` knob:
   overrun zone (pure arrive) or avoid it (finish) for NEW placements? Ask Eran at build time;
   suggest: batch avoids (conservative), live asks (his spec).
 - Tests: JS decision-fn suite + scenarios row update when built.
+- **UI refinement (Eran 2026-07-11, design round):** a coordinator-APPROVED overrun IS shown in
+  the calendar — the call stays ONE block; the minutes past window-end render as a striped "tail"
+  inside the block + tag "גולש X דק׳ · אושר ע״י המתאם", with a dashed window-end line. The next
+  call's block must not move ("crossing calls well shown, not messy"). Display-layer only —
+  works for any tenant setup. This does NOT change B5: organic 10–15 min lateness (no booking
+  decision) stays unsurfaced; only the popup-approved overrun gets the tail.
+  Approved design: artifact 2bcb6ab4 board 3 (source: scratchpad maslul-dispatch-round2.html).
