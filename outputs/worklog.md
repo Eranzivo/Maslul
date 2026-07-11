@@ -35,3 +35,16 @@
 - [ ] Solver-vs-ops window asymmetry: solver places finish-inside-window, Israel operates arrive-by-window-end. Worth an Eran/Israel decision whether the SOLVER should also adopt arrival semantics (would open ~30 min of extra capacity per window) — engine change, separate slice, both doors + fixtures.
 - [ ] Health-cache staleness: session-open while nightly sweep writes → chip shows older score until re-render/reload. Acceptable P1; revisit with P2 panel.
 - [ ] P2 (awaiting Eran): recommendations table + accept/reject workflow + stability knob `audit.min_saving_per_disturbed_min` (default 15, calibrate from replay histogram).
+
+## Window-overrun confirmation (Eran spec 2026-07-11 — NEXT ENGINE SLICE)
+Refines the shipped `window_semantics: arrive` knob:
+- Remaining window ≥ job duration → book silently (today's shipped behavior).
+- Arrival fits inside window BUT job overruns past window end (e.g. 15 min left, 30-min job)
+  → NO silent booking: coordinator popup "הקריאה גולשת לחלון הבא" with THREE options:
+  (1) שבץ בכל זאת (book) · (2) בטל (don't) · (3) מצא חלון אחר (re-run findBestSlot excluding this slot).
+- Scope: LIVE dispatch door only (slot picker + findBestSlot recommendation + manual placement) —
+  extend the guardManualPlacement / confirmCapacityDrop pattern.
+- OPEN sub-question for the slice: batch/auto-sequence has no coordinator — does it book the
+  overrun zone (pure arrive) or avoid it (finish) for NEW placements? Ask Eran at build time;
+  suggest: batch avoids (conservative), live asks (his spec).
+- Tests: JS decision-fn suite + scenarios row update when built.
