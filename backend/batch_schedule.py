@@ -122,6 +122,16 @@ def resolve_route_strategy(config: Optional[dict]) -> str:
     return "flexible"
 
 
+def resolve_window_semantics(config: Optional[dict]) -> str:
+    """`scheduling.window_semantics` — what the customer window promises (Eran
+    2026-07-11). 'finish' (default, conservative): job must END inside the
+    window. 'arrive': the promise is ARRIVAL — start by window end, service may
+    overrun (Israel's real operation; PureWater = arrive). Mirror of the JS
+    resolveWindowSemantics; enforcement point is solve_route_v2."""
+    v = ((config or {}).get("scheduling") or {}).get("window_semantics")
+    return v if v in ("finish", "arrive") else "finish"
+
+
 def tenant_works_day(dow: int, config: Optional[dict]) -> bool:
     """Is `dow` (0=Sun … 6=Sat) a tenant working day? Reads
     `config.defaults.work_days` (array of weekday ints). Absent/empty ⇒ today's
@@ -347,7 +357,7 @@ def _assignment_score(count: int, city_load: int, policy, weight: int = 50) -> f
 
 
 def solve_day_with_existing(matrix, existing_v2, new_v2, start_t, end_t, breaks,
-                            return_node, route_strategy):
+                            return_node, route_strategy, window_semantics="finish"):
     """Order one tech-day containing EXISTING calls (already promised) + NEW calls.
 
     Policy (approved 2026-07-05): existing calls keep their customer window as a hard
@@ -363,13 +373,15 @@ def solve_day_with_existing(matrix, existing_v2, new_v2, start_t, end_t, breaks,
     n_e = len(existing_v2)
     tasks = list(existing_v2) + list(new_v2)
     res = solve_route_v2(matrix, tasks, start_t, end_t, breaks=breaks,
-                         return_node=return_node, route_strategy=route_strategy)
+                         return_node=return_node, route_strategy=route_strategy,
+                         window_semantics=window_semantics)
     pinned_fallback = False
     if any(i < n_e for i in res["dropped"]):
         # Existing commitments outrank new placements: pin them all, retry.
         pinned = [dict(t, locked=True) for t in existing_v2]
         res = solve_route_v2(matrix, pinned + list(new_v2), start_t, end_t, breaks=breaks,
-                             return_node=return_node, route_strategy=route_strategy)
+                             return_node=return_node, route_strategy=route_strategy,
+                             window_semantics=window_semantics)
         pinned_fallback = True
     dropped_new = [i for i in res["dropped"] if i >= n_e]
     # An existing call still dropped here (e.g. locked-vs-locked conflict) is left
@@ -453,6 +465,7 @@ async def run_batch_schedule(
     config = tenant_rows[0]["config"] if tenant_rows else {}
     arrival_window_h = _arrival_window_hours(config)
     route_strategy = resolve_route_strategy(config)
+    window_semantics = resolve_window_semantics(config)
     sched_conf = config.get("scheduling") or {}
     placement_policy = resolve_placement_policy(config)
     placement_weight = (sched_conf.get("balance") or {}).get("weight", 50)
@@ -744,7 +757,8 @@ async def run_batch_schedule(
 
         r = solve_day_with_existing(
             matrix, existing_v2, new_v2, start_t, end_t, breaks=brk,
-            return_node=bool(return_loc), route_strategy=route_strategy)
+            return_node=bool(return_loc), route_strategy=route_strategy,
+            window_semantics=window_semantics)
         return r, day_existing, day_tasks, _time_to_min(start_t)
 
     # day_results holds the FINAL solve per day: (result, existing, new, start_min).

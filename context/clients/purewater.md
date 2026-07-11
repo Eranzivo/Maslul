@@ -21,6 +21,7 @@
 | `scheduling.fill_first` | `true` | fill active zone-days before opening new ones |
 | `scheduling.placement_policy` | **`consolidate`** ✅ written 2026-07-06 (Eran: "go") | Per Israel's handover Scenario D (fill the best nearby route first, avoid half-empty days). Explicit knob takes precedence over the legacy `balance.enabled:true` still in config — both doors (live `resolvePlacementPolicy` + batch `resolve_placement_policy`) read it identically, readback-verified. |
 | `scheduling.slot_release` | enabled (72/48/24h) | hold early slots for farther cities |
+| `scheduling.window_semantics` | **`arrive`** ✅ written 2026-07-11 (Eran: "book those 30 min… Israel will change it if needed") | The 3h window promises ARRIVAL, not completion — tech may start until window end, service may overrun (Israel's real operation; his own June schedule books 09:34 into 07–10). Opens the last [duration] min of every window (~17% more arrival slots). Engine default for new tenants stays `finish` (conservative). 10–15 min overrun deliberately NOT reflected in UI. Readback-verified. |
 | ~~`scheduling.equal_city_distribution`~~ | **REMOVED 2026-07-08** (was `true`, inert) | Config cleanup executed; superseded by `placement_policy`. Rollback value recorded here if ever needed. |
 | ~~`scheduling.balance`~~ | **REMOVED 2026-07-08** (was `{enabled:true,weight:50}`, inert) | Config cleanup executed; `consolidate` is the one policy both doors read. Readback-verified post-removal. |
 | `defaults.arrival_window_hours` | 3 | customers get a 3-hour service window |

@@ -321,6 +321,14 @@ suite('isPendingArchived (pending-queue 3-week split)', () => {
   check('null task → safe false', ctx.isPendingArchived(null, today) === false);
 });
 
+suite('resolveWindowSemantics (what the customer window promises)', () => {
+  check('absent config → finish (conservative default)', ctx.resolveWindowSemantics(undefined) === 'finish');
+  check('empty scheduling → finish', ctx.resolveWindowSemantics({}) === 'finish');
+  check('arrive honored (PureWater / Israel operation)', ctx.resolveWindowSemantics({window_semantics:'arrive'}) === 'arrive');
+  check('finish honored explicitly', ctx.resolveWindowSemantics({window_semantics:'finish'}) === 'finish');
+  check('unknown value → finish, never crashes', ctx.resolveWindowSemantics({window_semantics:'banana'}) === 'finish');
+});
+
 suite('route-health display templates (P1 — render-only, Python computes)', () => {
   check('band he: healthy', ctx.healthBandHe('healthy') === 'מסלול תקין');
   check('band he: review', ctx.healthBandHe('review') === 'כדאי לבדוק');

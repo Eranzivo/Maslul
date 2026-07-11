@@ -22,7 +22,7 @@ from typing import Optional
 import httpx
 
 from batch_schedule import (_sb_get, _clamp_blocks, _dow, _effective_duration,
-                            resolve_route_strategy, tech_breaks)
+                            resolve_route_strategy, resolve_window_semantics, tech_breaks)
 from optimizer import optimize_routes
 import route_health
 
@@ -153,12 +153,14 @@ async def run_audit_sweep(service_key: str, supabase_url: str,
 
             payloads = build_day_payloads(tasks_raw, techs_raw, cats_raw, dayoffs_raw, config)
             strategy = resolve_route_strategy(config)
+            semantics = resolve_window_semantics(config)
             weights = audit_cfg.get("health_weights") or None
             stored = audited = 0
             for ds, techs in sorted(payloads.items()):
                 results = await optimize_routes(techs, None, service_key=service_key,
                                                 route_strategy=strategy,
-                                                health_weights=weights)
+                                                health_weights=weights,
+                                                window_semantics=semantics)
                 rows = route_health.build_audit_rows(tenant_id, ds, techs, results, "nightly")
                 stored += await persist_rows(rows, service_key, supabase_url)
                 audited += len(rows)

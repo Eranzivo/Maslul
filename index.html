@@ -5497,6 +5497,17 @@ function effectiveDuration(catId, tech, categories, settings){
   const reg=settings&&Number(settings.regularTime);
   return reg>0?reg:30;
 }
+// ── Window semantics (Eran 2026-07-11) ──────────────────────────────────────
+// Pure. What the customer window PROMISES: 'finish' (default, conservative) =
+// job must end inside the window; 'arrive' = tech must arrive by window end,
+// service may overrun (Israel's real operation — PureWater setting; opens the
+// window's last [duration] minutes for booking). Enforcement point is the
+// solver (mirror: batch resolve_window_semantics); this reader ships the knob
+// in every optimize payload so per-tenant semantics can never be hardcoded.
+function resolveWindowSemantics(sc){
+  const v=sc&&sc.window_semantics;
+  return v==='arrive'?'arrive':'finish';
+}
 // ── Route Health display templates (route-intelligence P1) ──────────────────
 // Pure. Python (backend/route_health.py) is the ONLY health computation — these
 // only RENDER stored results. Finding types are the backend's contract; an
@@ -5555,7 +5566,7 @@ async function _postOptimize(tech,date,dayTasks){
   const hdrs={'Content-Type':'application/json'};
   try{const{data:{session}}=await sb.auth.getSession();if(session&&session.access_token)hdrs['Authorization']=`Bearer ${session.access_token}`;}catch(e){}
   const res=await fetch(`${CONFIG.OPTIMIZER_URL}/optimize`,{method:'POST',headers:hdrs,
-    body:JSON.stringify({date,tenant_id:currentTenantId||null,scheduling:{route_strategy:resolveRouteStrategy(tenantConfig.scheduling)},technicians:[{id:String(tech.id),name:tech.name,
+    body:JSON.stringify({date,tenant_id:currentTenantId||null,scheduling:{route_strategy:resolveRouteStrategy(tenantConfig.scheduling),window_semantics:resolveWindowSemantics(tenantConfig.scheduling)},technicians:[{id:String(tech.id),name:tech.name,
       base_city:(tech.address&&tech.base)?`${tech.address}, ${tech.base}`:(tenantConfig.depot&&tenantConfig.depot.lat&&tenantConfig.depot.lon)?`${tenantConfig.depot.lat},${tenantConfig.depot.lon}`:(tech.base||''),
       return_city:tech.return_city||tech.base||'',
       start_time:sched.start||'07:00',end_time:sched.end||'18:00',breaks:brk,
@@ -5684,8 +5695,8 @@ async function shadowCompare(techId,date){
     const curPayload=buildSequencePayload(dayTasks,durationOf).map(p=>({...p,locked:true}));
     // Call 2: PROPOSED — tasks free (their real locked flags), optimizer decides.
     const [curRes,propRes]=await Promise.all([
-      fetch(`${CONFIG.OPTIMIZER_URL}/optimize`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,scheduling:{route_strategy:strategy},technicians:[mkTech(curPayload)]})}).then(r=>r.json()),
-      fetch(`${CONFIG.OPTIMIZER_URL}/optimize`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,scheduling:{route_strategy:strategy},technicians:[mkTech(buildSequencePayload(dayTasks,durationOf))]})}).then(r=>r.json()),
+      fetch(`${CONFIG.OPTIMIZER_URL}/optimize`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,scheduling:{route_strategy:strategy,window_semantics:resolveWindowSemantics(tenantConfig.scheduling)},technicians:[mkTech(curPayload)]})}).then(r=>r.json()),
+      fetch(`${CONFIG.OPTIMIZER_URL}/optimize`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,scheduling:{route_strategy:strategy,window_semantics:resolveWindowSemantics(tenantConfig.scheduling)},technicians:[mkTech(buildSequencePayload(dayTasks,durationOf))]})}).then(r=>r.json()),
     ]);
     const cur=(curRes.optimized||[])[0], prop=(propRes.optimized||[])[0];
     if(!cur||!prop) throw new Error('empty optimizer result');

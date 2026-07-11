@@ -262,7 +262,8 @@ def solve_route(
 
 
 def solve_route_v2(matrix, tasks, start_time_str, end_time_str, breaks,
-                   return_node: bool = False, route_strategy: str = "flexible"):
+                   return_node: bool = False, route_strategy: str = "flexible",
+                   window_semantics: str = "finish"):
     """Constraint-aware single-vehicle solver (Plan B2).
 
     matrix: (n_tasks+1[+1]) square travel-minutes matrix, node 0 = start depot,
@@ -377,8 +378,12 @@ def solve_route_v2(matrix, tasks, start_time_str, end_time_str, breaks,
         if t.get("window_start"):
             lo = max(lo, time_to_min(t["window_start"]) - start_min)
         if t.get("window_end"):
-            # must START early enough to finish inside the window
-            hi = min(hi, time_to_min(t["window_end"]) - start_min - t["duration"])
+            # window_semantics knob (Eran 2026-07-11): 'finish' = job must END
+            # inside the window (conservative default); 'arrive' = the promise is
+            # ARRIVAL — start by window end, service may overrun (Israel's real
+            # operation; opens the window's last [duration] minutes for booking).
+            we = time_to_min(t["window_end"]) - start_min
+            hi = min(hi, we if window_semantics == "arrive" else we - t["duration"])
         if t.get("locked") and t.get("scheduled_time"):
             pin = time_to_min(t["scheduled_time"]) - start_min
             lo = hi = max(0, pin)
@@ -456,7 +461,8 @@ def _health_for_tech(tech, v2_tasks, matrix, r, route_strategy, weights):
 
 
 async def optimize_routes(technicians: list, google_maps_api_key: Optional[str], service_key: str = "",
-                          route_strategy: str = "flexible", health_weights: Optional[dict] = None) -> list[dict]:
+                          route_strategy: str = "flexible", health_weights: Optional[dict] = None,
+                          window_semantics: str = "finish") -> list[dict]:
     global LAST_GOOGLE_ELEMENTS
     LAST_GOOGLE_ELEMENTS = 0
     await geo_resolver.ensure_loaded(service_key)  # load the shared brain once (fail-open)
@@ -501,7 +507,8 @@ async def optimize_routes(technicians: list, google_maps_api_key: Optional[str],
         r = solve_route_v2(matrix, v2_tasks, tech.start_time, tech.end_time,
                            breaks=getattr(tech, "breaks", []) or [],
                            return_node=bool(return_loc),
-                           route_strategy=route_strategy)
+                           route_strategy=route_strategy,
+                           window_semantics=window_semantics)
         ordered_idx, arrivals = r["ordered"], r["arrivals"]
 
         ordered_task_ids = [tech.tasks[i].id for i in ordered_idx]

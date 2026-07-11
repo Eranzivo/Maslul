@@ -153,6 +153,7 @@ class SchedulingConfig(BaseModel):
     fill_first: bool = True
     route_logic: bool = True
     route_strategy: str = "flexible"   # flexible | far_to_near | nearest_first
+    window_semantics: str = "finish"   # finish | arrive (what the customer window promises)
 
 class OptimizeRequest(BaseModel):
     date: str
@@ -334,6 +335,7 @@ async def optimize(req: OptimizeRequest, request: Request):
         service_key=service_key,
         route_strategy=(req.scheduling.route_strategy if req.scheduling else "flexible"),
         health_weights=(audit_cfg.get("health_weights") or None),
+        window_semantics=(req.scheduling.window_semantics if req.scheduling else "finish"),
     )
     if service_key and optimizer_module.LAST_GOOGLE_ELEMENTS:
         _gmaps_quota_ok(optimizer_module.LAST_GOOGLE_ELEMENTS)  # charge real spend
@@ -368,6 +370,7 @@ async def audit_day(req: AuditDayRequest, request: Request):
         service_key=service_key,
         route_strategy=(req.scheduling.route_strategy if req.scheduling else "flexible"),
         health_weights=(audit_cfg.get("health_weights") or None),
+        window_semantics=(req.scheduling.window_semantics if req.scheduling else "finish"),
     )
     stored = 0
     if audit_cfg.get("enabled"):
