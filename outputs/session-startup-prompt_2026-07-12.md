@@ -3,26 +3,30 @@
 Run `/prime`, then read `context/design-system.md` (change log = port state) and
 `outputs/round2-port-map_2026-07-12.md`. Memory `fable-review-session-state.md` has the queue.
 
-State: 8 port slices LIVE+verified through `7854a98` (tokens, Home, brand/dispatch,
-calendar sweep, קריאות revival, weekly wk2 rows, tech cards, zones coverage+demand).
-Suites 201 sched + 65 zones JS, 173 py. Deploy checklist per CLAUDE.md after every push.
+State: **11 port slices LIVE+verified through `2024771`** (tokens, Home, brand/dispatch,
+calendar sweep, קריאות revival, weekly wk2 rows, tech cards, zones coverage+demand,
+weekly TIME-AXIS w/ cascading lanes, דוחות rebuild + `reports.cards` knob, קריאות
+detail-panel + workweek pager). Logo at **iter 4** (Eran's annotated asset — clear gap
+below wordmark, stub at ל edge, two mid-line carets) — awaiting his visual OK.
+Suites 208 sched + 65 zones JS, 173 py. Deploy checklist per CLAUDE.md after every push.
 
-## Do FIRST (Eran feedback, in order)
-1. **Logo iter 3** — VIEW `landing/assets/brand/maslul-logo-hebrew-v2.png` (Read tool), then fix
-   the sidebar SVG (index.html ~line 898): arrow starts from the MIDDLE of the ל, add a second
-   zigzag in the opposite direction, flow/end exactly like the asset. Logo is centered; parked
-   after this fix.
-2. **Weekly calendar time axis** — Eran: wk2 chip rows ≠ what he asked. Wants the mockup's fuller
-   treatment + a TIME AXIS on weekly for orientation, sized for ≤5 techs in parallel. Re-read his
-   Google-Calendar-blocks message (in compact summary) + `_plannerWeekCell`/`renderPlannerWeekly`
-   (~line 8360) before building. Hard rule: daily-grid geometry untouched; both views QA'd.
-3. **דוחות page** — build per mockup 4164c874 + port map (period seg re-renders ALL sections,
-   per-card export honoring filters, per-tenant card visibility = future knob).
+## Next (in order)
+1. **Eran visual QA** — logo iter 4, weekly time-axis (both lenses, drag/drop, ≤5 techs),
+   דוחות (period toggle re-renders all sections, per-card ⬇/⤢), קריאות panel+pager.
+   Fix-forward per feedback before starting new slices.
+2. **Settings new-knob rows** — per mockup 75c61312: insights.* + reports.cards rows in
+   #page-settings (knob rule: registry row + BOTH readers + test, same commit;
+   reports.cards reader already exists — needs only the settings row + save wiring).
+3. **Overrun popup engine slice** — spec in outputs/worklog.md incl. UI-tail addendum
+   (extend guardManualPlacement; מצא חלון אחר = re-run findBestSlot excluding slot).
+4. **Landing build** — assets in landing/assets/brand/, accessibility plan in
+   design-system open threads; WAIT for Eran's example mockup sites first.
 
-## Then: קריאות polish (detail panel + workweek pager) → settings new-knob rows (knob rule:
-registry row + BOTH readers + test, same commit) → overrun popup engine slice (spec in
-outputs/worklog.md incl. UI-tail addendum) → landing build (assets in landing/assets/brand/,
-accessibility plan in design-system open threads).
+## Deferred polish (log, don't lose)
+- Weekly popover detail card (block click currently: rows→detail modal, header→daily view).
+- Manual archive action for הושלמו (new status value); archive date filter.
+- Reports duration-accuracy insight — needs E4 completion timestamps (interim footnote shipped).
+- Monthly view QA after calendar changes (port QA rule: daily+weekly+monthly all render).
 
 ## Standing rules
 One engine door for every action · never regenerate approved mockups · commit per slice +
