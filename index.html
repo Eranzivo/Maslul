@@ -1917,10 +1917,10 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
   </div>
 </div>
 
-<!-- MODAL: ADD PACKAGE -->
+<!-- MODAL: ADD/EDIT PACKAGE -->
 <div class="mo hidden" id="mo-pkg">
   <div class="mo-box">
-    <div class="mo-title">חבילה חדשה</div>
+    <div class="mo-title" id="pkg-modal-title">חבילה חדשה</div>
     <div class="fg"><label class="fl">שם החבילה</label><input class="fc" id="pkg-name"></div>
     <div id="pkg-cat-rows"></div>
     <button class="btn btn-outline btn-sm" onclick="addPkgRow()" style="margin-top:8px;">+ הוסף קטגוריה</button>
@@ -8558,10 +8558,13 @@ function renderCategories(){
     `<div class="tag-item">${h(c.name)} <span style="font-size:0.75rem;color:var(--ink-3);">(${c.time} דק')</span><button class="tag-del settings-edit-only" onclick="deleteCat(${i})">×</button></div>`
   ).join('');
   document.getElementById('pkgs-list').innerHTML=packages.map((p,i)=>{
-    const items=p.items.map(item=>{const c=categories.find(x=>x.id===item.catId);return`${c?h(c.name):'?'} ×${item.qty}`;}).join(' + ');
-    return`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-2);font-size:0.875rem;">
-      <div><strong>${h(p.name)}</strong> <span style="color:var(--ink-3);">${items}</span></div>
-      <button class="btn btn-ghost btn-sm settings-edit-only" onclick="deletePkg(${i})" style="color:var(--red);">הסר</button></div>`;
+    const items=(p.items||[]).map(item=>{const c=categories.find(x=>x.id===item.catId);return c?`${h(c.name)} ×${item.qty}`:`<span title="קטגוריה שנמחקה — ערוך את החבילה" style="color:var(--red);">? ×${item.qty}</span>`;}).join(' + ');
+    return`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line-2);font-size:0.875rem;">
+      <div style="min-width:0;"><strong>${h(p.name)}</strong> <span style="color:var(--ink-3);">${items}</span></div>
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        <button class="btn btn-ghost btn-sm settings-edit-only" onclick="openEditPkgModal(${i})">✏️ ערוך</button>
+        <button class="btn btn-ghost btn-sm settings-edit-only" onclick="deletePkg(${i})" style="color:var(--red);">הסר</button>
+      </div></div>`;
   }).join('')||'<div style="color:var(--ink-4);font-size:0.875rem;padding:1rem 0;">אין חבילות</div>';
   renderCatChips();
 }
@@ -8576,19 +8579,50 @@ function addCategory(){
 }
 function deleteCat(i){const cat=categories[i];if(cat&&cat._dbId)deleteCatFromSupabase(cat._dbId);categories.splice(i,1);save();renderCategories();}
 function deletePkg(i){const pkg=packages[i];if(pkg&&pkg._dbId)deletePkgFromSupabase(pkg._dbId);packages.splice(i,1);save();renderCategories();}
-let pkgRowCount=0;
-function openAddPkgModal(){pkgRowCount=0;document.getElementById('pkg-name').value='';document.getElementById('pkg-cat-rows').innerHTML='';addPkgRow();document.getElementById('mo-pkg').classList.remove('hidden');}
-function addPkgRow(){
-  const id=pkgRowCount++;const div=document.createElement('div');div.className='fg-2';
-  div.innerHTML=`<div class="fg"><label class="fl">קטגוריה</label><select class="fc" id="pkg-cat-${id}">${categories.map(c=>`<option value="${c.id}">${h(c.name)}</option>`).join('')}</select></div>
-    <div class="fg"><label class="fl">כמות</label><input class="fc" id="pkg-qty-${id}" type="number" min="1" value="1" style="width:90px;"></div>`;
+// Package modal — one modal for ADD + EDIT (Eran 2026-07-12: bundles must be editable,
+// and may only pick from EXISTING categories). Rows are class-based (removable ×),
+// items validated against `categories` at save; savePkgToSupabase already handles
+// both insert (no _dbId) and update (dbUpsert).
+let editingPkgIdx=null;
+function openAddPkgModal(){_openPkgModal(null);}
+function openEditPkgModal(i){_openPkgModal(i);}
+function _openPkgModal(i){
+  if(!categories.length){showToast('אין קטגוריות — הוסף קטגוריה קודם','error');return;}
+  editingPkgIdx=(i!=null&&packages[i])?i:null;
+  const p=editingPkgIdx!=null?packages[editingPkgIdx]:null;
+  document.getElementById('pkg-modal-title').textContent=p?'עריכת חבילה':'חבילה חדשה';
+  document.getElementById('pkg-name').value=p?p.name:'';
+  document.getElementById('pkg-cat-rows').innerHTML='';
+  const rows=(p&&p.items&&p.items.length)?p.items:[{}];
+  rows.forEach(it=>addPkgRow(it.catId,it.qty));
+  document.getElementById('mo-pkg').classList.remove('hidden');
+}
+function addPkgRow(catId,qty){
+  if(!categories.length)return;
+  const div=document.createElement('div');div.className='pkg-row';
+  div.style.cssText='display:flex;gap:8px;align-items:flex-end;margin-top:6px;';
+  div.innerHTML=`<div class="fg" style="flex:1;margin:0;"><label class="fl">קטגוריה</label><select class="fc pkg-row-cat">${categories.map(c=>`<option value="${c.id}"${String(c.id)===String(catId)?' selected':''}>${h(c.name)}</option>`).join('')}</select></div>
+    <div class="fg" style="margin:0;"><label class="fl">כמות</label><input class="fc pkg-row-qty" type="number" min="1" value="${Math.max(1,parseInt(qty)||1)}" style="width:80px;"></div>
+    <button type="button" title="הסר שורה" onclick="this.parentNode.remove()" style="border:1px solid var(--line);background:var(--white);border-radius:8px;width:34px;height:38px;cursor:pointer;color:var(--red);font-weight:800;flex-shrink:0;">×</button>`;
   document.getElementById('pkg-cat-rows').appendChild(div);
 }
 function savePkg(){
   const name=document.getElementById('pkg-name').value.trim();if(!name){alert('נא להזין שם');return;}
   const items=[];
-  for(let i=0;i<pkgRowCount;i++){const catEl=document.getElementById('pkg-cat-'+i),qtyEl=document.getElementById('pkg-qty-'+i);if(catEl&&qtyEl)items.push({catId:catEl.value,qty:parseInt(qtyEl.value)||1});}
-  const pkg={id:genClientId(),name,items};packages.push(pkg);save();closeMo('mo-pkg');renderCategories();
+  document.querySelectorAll('#pkg-cat-rows .pkg-row').forEach(row=>{
+    const catId=row.querySelector('.pkg-row-cat')?.value;
+    const qty=Math.max(1,parseInt(row.querySelector('.pkg-row-qty')?.value)||1);
+    if(catId&&categories.some(c=>String(c.id)===String(catId)))items.push({catId,qty}); // only EXISTING categories
+  });
+  if(!items.length){alert('חבילה חייבת לכלול לפחות קטגוריה אחת קיימת');return;}
+  let pkg;
+  if(editingPkgIdx!=null&&packages[editingPkgIdx]){
+    pkg=packages[editingPkgIdx];pkg.name=name;pkg.items=items;
+  }else{
+    pkg={id:genClientId(),name,items};packages.push(pkg);
+  }
+  editingPkgIdx=null;
+  save();closeMo('mo-pkg');renderCategories();
   savePkgToSupabase(pkg).then(ok=>{if(ok!==false)showToast('נשמר ✓');});
 }
 
