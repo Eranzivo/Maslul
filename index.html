@@ -1215,9 +1215,18 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
     <span class="badge badge-gray" id="tf-recurring_unassigned" onclick="filterTasks('recurring_unassigned')" style="cursor:pointer;padding:5px 12px;">⚠️ חוזרות ממתינות</span>
     <span class="badge badge-gray" id="tf-recurring_templates" onclick="showRecurringTemplates()" style="cursor:pointer;padding:5px 12px;">🔁 תבניות</span>
   </div>
-  <div class="card">
-    <div class="sb-bar"><span style="color:var(--ink-4);">🔍</span><input class="fc" id="task-search" placeholder="חיפוש..." oninput="renderTasks()" style="border:none;padding:6px 0;font-size:0.875rem;"></div>
-    <div id="tasks-list"></div>
+  <div id="tk-layout">
+    <div class="card">
+      <div id="tk-week-pager" class="week-nav hidden" style="margin-bottom:8px;">
+        <button class="week-nav-btn" onclick="tkWeek(-1)" title="שבוע קודם">‹</button>
+        <div class="week-title" id="tk-week-label" style="font-size:0.85rem;flex:1;text-align:center;"></div>
+        <button class="week-nav-btn" onclick="tkWeek(1)" title="שבוע הבא">›</button>
+        <button class="btn btn-outline btn-sm" onclick="tkWeek(0)" style="margin-right:4px;">היום</button>
+      </div>
+      <div class="sb-bar"><span style="color:var(--ink-4);">🔍</span><input class="fc" id="task-search" placeholder="חיפוש..." oninput="renderTasks()" style="border:none;padding:6px 0;font-size:0.875rem;"></div>
+      <div id="tasks-list"></div>
+    </div>
+    <div id="tk-panel" class="card hidden" style="position:sticky;top:12px;"></div>
   </div>
   <div id="recurring-templates-section" class="hidden">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -5907,6 +5916,8 @@ function _setDayHealth(techId,ds,hh){
   if(el)el.innerHTML=healthChipHtml(hh);
   const el2=document.getElementById(`hm-health-chip-${techId}-${ds}`); // home tech card (distinct id — both may be in DOM)
   if(el2)el2.innerHTML=healthChipHtml(hh);
+  const el3=document.getElementById(`tk-health-chip-${techId}-${ds}`); // קריאות detail panel (hidden pages persist in DOM)
+  if(el3)el3.innerHTML=healthChipHtml(hh);
 }
 async function _ensureDayHealth(techId,ds){
   const k=`${techId}|${ds}`;
@@ -7751,10 +7762,8 @@ function renderTasks(){
   const kEl=document.getElementById('tk-kpis');
   if(kEl){
     const today=todayStr();
-    const wk=new Date(today+'T12:00:00');wk.setDate(wk.getDate()-wk.getDay()); // week start (Sunday)
-    const wkStart=wk.toISOString().slice(0,10);
-    const wkEndD=new Date(wk);wkEndD.setDate(wkEndD.getDate()+6);
-    const wkEnd=wkEndD.toISOString().slice(0,10);
+    const kw=_tkWeekRange(0); // KPI strip = big-picture layer, always the CURRENT workweek
+    const wkStart=kw.from, wkEnd=kw.to;
     const month=today.slice(0,7);
     const pend=tasks.filter(t=>t.status==='pending');
     const age=t=>{const c=(t.createdAt||'').slice(0,10);return c?Math.max(0,Math.floor((new Date(today)-new Date(c))/864e5)):0;};
@@ -7767,6 +7776,20 @@ function renderTasks(){
       `<div class="tk-kpi"><div class="n">${wkAssigned}</div><div class="l">משובצות השבוע</div><div class="d">שבוע העבודה הנוכחי</div></div>`+
       `<div class="tk-kpi"><div class="n">${doneMonth}</div><div class="l">הושלמו החודש</div><div class="d">&nbsp;</div></div>`+
       `<div class="tk-kpi"><div class="n">${cancelled}</div><div class="l">בוטלו</div><div class="d">&nbsp;</div></div>`;
+  }
+  // Workweek pager (Eran's timeframe rule): date-anchored statuses (משובצות/הושלמו) scope to
+  // the SHOWN workweek (shape from the work_days knob); ממתינות are timeless — never scoped.
+  const wk=_tkWeekRange(tasksWeekOffset);
+  const inWk=t=>!t.date||(t.date>=wk.from&&t.date<=wk.to); // dateless anomalies stay visible
+  const pagerOn=['all','assigned','completed'].includes(currentFilter);
+  const pager=document.getElementById('tk-week-pager');
+  if(pager){
+    pager.classList.toggle('hidden',!pagerOn);
+    const lbl=document.getElementById('tk-week-label');
+    if(lbl){
+      const f=new Date(wk.from+'T12:00:00'), e=new Date(wk.to+'T12:00:00');
+      lbl.textContent=`${DAYS_SHORT[f.getDay()]}׳ ${f.getDate()}/${f.getMonth()+1} – ${DAYS_SHORT[e.getDay()]}׳ ${e.getDate()}/${e.getMonth()+1}`+(tasksWeekOffset===0?' · השבוע':'');
+    }
   }
   const q=(document.getElementById('task-search').value||'').toLowerCase();
   const fMap={all:null,pending:'pending',assigned:'assigned',completed:'completed',cancelled:'cancelled'};
@@ -7782,16 +7805,17 @@ function renderTasks(){
     if(b.status==='pending'&&a.status!=='pending')return 1;
     return(a.date+a.time).localeCompare(b.date+b.time);
   });
+  if(pagerOn&&fs)filtered=filtered.filter(t=>t.status==='pending'||inWk(t)); // single-status views scope too
   const list=document.getElementById('tasks-list');
-  if(!filtered.length){list.innerHTML='<div class="empty"><div class="empty-icon">📭</div><div>אין קריאות</div></div>';return;}
+  if(!filtered.length){list.innerHTML='<div class="empty"><div class="empty-icon">📭</div><div>אין קריאות'+(pagerOn&&tasksWeekOffset!==0?' בשבוע המוצג':'')+'</div></div>';_tkRenderPanel();return;}
   // Round-2 grouping (filter "הכל" only): ממתינות always on top, then משובצות → הושלמו.
   // ממתינות are timeless — never scoped by any date paging (design-system rule).
   const _rowHtml=t=>{
     const tech=technicians.find(x=>x.id===t.techId);
     const s=STATUS_MAP[t.status]||STATUS_MAP.pending;
     const canCancel=['assigned','en_route','arrived'].includes(t.status);
-    return`<div class="task-row">
-      <div class="task-main">
+    return`<div class="task-row${String(tkSelectedId)===String(t.id)?' tk-row-sel':''}" id="tkrow-${t.id}">
+      <div class="task-main" onclick="tkSelect('${t.id}')" style="cursor:pointer;">
         <div class="task-client">${h(t.client)} ${t.assignId?`<span class="assign-id-tag">${h(t.assignId)}</span>`:''}${t.recurringTemplateId?(t.techId?'<span style="font-size:0.7rem;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent-border);border-radius:4px;padding:1px 5px;margin-right:4px;">🔄 חוזרת</span>':'<span style="font-size:0.7rem;background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;border-radius:4px;padding:1px 5px;margin-right:4px;">⚠️ ממתין לשיבוץ</span>'):''}</div>
         <div class="task-detail">${h(t.cat)} • ${t.street?h(t.street):''}${t.floor?' קומה '+h(t.floor):''}${t.apartment?' דירה '+h(t.apartment):''}${t.street||t.floor||t.apartment?', ':''}${h(t.city)}${t.date?' • '+new Date(t.date+'T12:00:00').toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'}):''}${t.time?' '+t.time:''}${tech?' • '+h(tech.name):''}</div>
         ${t.notes?`<div style="font-size:0.75rem;color:var(--ink-4);margin-top:2px;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px;">💬 ${h(t.notes)}</div>`:''}
@@ -7807,17 +7831,115 @@ function renderTasks(){
   if(currentFilter==='all'){
     const groups=[
       ['ממתינות',filtered.filter(t=>t.status==='pending')],
-      ['משובצות',filtered.filter(t=>['assigned','en_route','arrived'].includes(t.status))],
-      ['הושלמו',filtered.filter(t=>t.status==='completed')]
+      ['משובצות',filtered.filter(t=>['assigned','en_route','arrived'].includes(t.status)&&inWk(t))],
+      ['הושלמו',filtered.filter(t=>t.status==='completed'&&inWk(t))]
     ];
     const other=filtered.filter(t=>!['pending','assigned','en_route','arrived','completed'].includes(t.status));
     if(other.length)groups.push(['נוספות',other]);
     list.innerHTML=groups.filter(([,g])=>g.length)
-      .map(([label,g])=>`<div class="tk-ghead">${label} · ${g.length}${label==='ממתינות'?' · מכל הזמנים':''}</div>`+g.map(_rowHtml).join(''))
+      .map(([label,g])=>`<div class="tk-ghead">${label} · ${g.length}${label==='ממתינות'?' · מכל הזמנים':' · בשבוע המוצג'}</div>`+g.map(_rowHtml).join(''))
       .join('');
   }else{
     list.innerHTML=filtered.map(_rowHtml).join('');
   }
+  _tkRenderPanel();
+}
+// ── קריאות detail side-panel + workweek pager (Round-2 polish, mockup 3a950879) ──
+// Workweek shape from the work_days knob (absent ⇒ Sat-off week): Sunday+offset → last work day.
+function _tkWeekRange(offset){
+  const now=new Date();
+  const sun=new Date(now);sun.setDate(now.getDate()-now.getDay()+offset*7);
+  const wds=(tenantConfig&&tenantConfig.defaults&&Array.isArray(tenantConfig.defaults.work_days)&&tenantConfig.defaults.work_days.length)?tenantConfig.defaults.work_days:[0,1,2,3,4,5];
+  const end=new Date(sun);end.setDate(sun.getDate()+Math.max(...wds));
+  return{from:sun.toISOString().slice(0,10),to:end.toISOString().slice(0,10)};
+}
+function tkWeek(dir){
+  tasksWeekOffset=dir===0?0:tasksWeekOffset+dir;
+  renderTasks();
+}
+// Row click: fresh→open, same row→close, other row→switch (mockup interaction rule).
+function tkSelect(id){
+  tkSelectedId=String(tkSelectedId)===String(id)?null:id;
+  renderTasks();
+}
+// פתח ביומן — jump to the call's exact day in the daily planner (one engine door).
+function tkOpenInPlanner(id){
+  const t=tasks.find(x=>String(x.id)===String(id));if(!t||!t.date)return;
+  goPage('planner'); // initializes pills + defaults; state set after so it survives
+  const d=new Date(t.date+'T12:00:00'), now=new Date();
+  const sunNow=new Date(now);sunNow.setDate(now.getDate()-now.getDay());sunNow.setHours(12,0,0,0);
+  const sunT=new Date(d);sunT.setDate(d.getDate()-d.getDay());
+  plannerWeekOffset=Math.round((sunT-sunNow)/(7*864e5));
+  plannerDayIdx=Math.min(d.getDay(),5);
+  const selT=technicians.filter(x=>plannerSelectedTechs.includes(x.id));
+  const ti=selT.findIndex(x=>String(x.id)===String(t.techId));
+  if(ti>=0)plannerDailyTechIdx=ti;
+  setPlannerMode('daily');
+}
+function _tkRenderPanel(){
+  const panel=document.getElementById('tk-panel'), layout=document.getElementById('tk-layout');
+  if(!panel||!layout)return;
+  const t=tkSelectedId&&tasks.find(x=>String(x.id)===String(tkSelectedId));
+  if(!t){panel.classList.add('hidden');layout.classList.remove('tk-layout-open');panel.innerHTML='';return;}
+  panel.classList.remove('hidden');layout.classList.add('tk-layout-open');
+  const tech=technicians.find(x=>String(x.id)===String(t.techId));
+  const s=STATUS_MAP[t.status]||STATUS_MAP.pending;
+  const cons=describeConstraintsHe(t);
+  const addr=[t.street,t.floor?'קומה '+t.floor:'',t.apartment?'דירה '+t.apartment:''].filter(Boolean).join(', ');
+  const dur=effectiveDuration(t.catId,tech,categories,settings);
+  const row=(ic,val)=>val?`<div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:0.82rem;"><span style="flex:0 0 18px;text-align:center;">${ic}</span><span style="min-width:0;">${val}</span></div>`:'';
+  // Current assignment box: tech, date, window + route position + day-health chip
+  let assign='';
+  if(tech&&t.date){
+    const tc=tech.color||'#0E7A6E';
+    const winLabel=t.windowStart?`${t.windowStart}–${t.windowEnd}`:(t.time||'');
+    const dayList=tasks.filter(x=>String(x.techId)===String(tech.id)&&x.date===t.date&&x.status!=='cancelled')
+      .sort((a,b)=>(a.windowStart||a.time||'').localeCompare(b.windowStart||b.time||'')||(a.time||'').localeCompare(b.time||''));
+    const pos=dayList.findIndex(x=>String(x.id)===String(t.id))+1;
+    assign=`<div style="background:${tc}0d;border:1px solid ${tc}30;border-radius:9px;padding:9px 11px;margin-top:10px;">
+      <div style="font-size:0.66rem;font-weight:800;color:var(--ink-3);margin-bottom:5px;">שיבוץ נוכחי</div>
+      <div style="display:flex;align-items:center;gap:7px;font-size:0.84rem;font-weight:700;flex-wrap:wrap;">
+        <span style="width:9px;height:9px;border-radius:50%;background:${tc};flex-shrink:0;"></span>${h(tech.name)}
+        <span style="color:var(--ink-3);font-weight:600;">· ${_fmtDMY(t.date)}</span>
+        ${winLabel?`<span class="md-win" style="font-size:0.76rem;">${winLabel}</span>`:''}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:0.7rem;color:var(--ink-3);">
+        ${pos?`<span>עצירה ${pos} מתוך ${dayList.length} ביום</span>`:''}
+        <span id="tk-health-chip-${tech.id}-${t.date}">${healthChipHtml(_dayHealth(tech.id,t.date))}</span>
+      </div>
+    </div>`;
+  }
+  // Status-aware actions — every door runs the same engine flow (one engine door)
+  let actions='';
+  if(t.status==='pending')actions=`<button class="btn btn-blue btn-full" onclick="goPage('dispatch');queueAssign('${t.id}')">⚡ שבץ עכשיו</button>`;
+  else if(['assigned','en_route','arrived'].includes(t.status))actions=
+    `<button class="btn btn-outline btn-full" onclick="tkOpenInPlanner('${t.id}')">📅 פתח ביומן</button>
+    <button class="btn btn-outline btn-full" onclick="goPage('dispatch');queueAssign('${t.id}')">🔀 שבץ מחדש</button>
+    <button class="btn btn-full" style="background:var(--red-l);color:var(--red);border:1px solid #FECACA;" onclick="openCancelModal('${t.id}')">בטל קריאה</button>`;
+  else actions=`<button class="btn btn-outline btn-full" onclick="openStatusModal('${t.id}')">עדכן סטטוס</button>`;
+  actions+=`<button class="btn btn-outline btn-full" onclick="openTaskDetail('${t.id}')">✏️ עריכה מלאה</button>`;
+  panel.innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:800;font-size:0.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h(t.client||'—')}</div>
+        ${t.assignId?`<div style="font-size:0.66rem;color:var(--ink-4);">${h(t.assignId)}</div>`:''}
+      </div>
+      <span class="badge ${s.badge}">${s.label}</span>
+      <button onclick="tkSelect('${t.id}')" title="סגור" style="border:none;background:none;cursor:pointer;font-size:1rem;color:var(--ink-4);padding:2px;">✕</button>
+    </div>
+    ${row('📞',t.phone?`<span style="direction:ltr;display:inline-block;">${h(t.phone)}</span>`:'')}
+    ${row('📍',[addr,t.city].filter(Boolean).map(h).join(', '))}
+    ${row('🔑',t.entranceNotes?h(t.entranceNotes):'')}
+    ${row('🔧',t.cat?`${h(t.cat)} · ${dur} דק׳`:'')}
+    ${row('💬',t.notes?h(t.notes):'')}
+    ${(cons.windows||cons.dates)?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;">
+      ${cons.windows?`<span style="font-size:0.66rem;background:var(--accent-light);color:var(--accent);border-radius:6px;padding:2px 8px;font-weight:700;">🕐 ${h(cons.windows)}</span>`:''}
+      ${cons.dates?`<span style="font-size:0.66rem;background:#FDF3E2;color:#B4791F;border-radius:6px;padding:2px 8px;font-weight:700;">📆 ${h(cons.dates)}</span>`:''}
+    </div>`:''}
+    ${assign}
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:12px;">${actions}</div>
+    <div style="font-size:0.6rem;color:var(--ink-4);margin-top:9px;text-align:center;">כל שינוי נרשם ביומן הביקורת</div>`;
+  if(tech&&t.date)_ensureDayHealth(tech.id,t.date);
 }
 function quickAssign(id){
   const t=tasks.find(x=>String(x.id)===String(id));if(!t)return;
