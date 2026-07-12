@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>מסלול</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#2563EB">
+<meta name="theme-color" content="#0E7A6E">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -25,25 +25,26 @@
 <script>if(window.L){window.LF=window.L;}</script>
 <style>
 :root{
-  --ink:#111827;--ink-2:#374151;--ink-3:#6B7280;--ink-4:#9CA3AF;
-  --line:#E4E4E7;--line-2:#F0F0F1;--bg:#F7F7F8;--white:#fff;
-  --blue:#6366F1;--blue-d:#4F46E5;--blue-l:#EEF2FF;--blue-m:#C7D2FE;
+  /* Round-2 warm palette (direction ג, approved 2026-07-11) — cream/teal/sun */
+  --ink:#2B2723;--ink-2:#4A443C;--ink-3:#8A8175;--ink-4:#A89F93;
+  --line:#EDE7DD;--line-2:#F4EFE7;--bg:#FBF8F3;--white:#fff;
+  --blue:#0E7A6E;--blue-d:#0B5D54;--blue-l:#E4F2EF;--blue-m:#B7DCD5;
   --accent: var(--blue);
   --accent-hover: var(--blue-d);
   --accent-light: var(--blue-l);
   --accent-border: var(--blue-m);
   --surface-0: #FFFFFF;
   --surface-1: var(--bg);
-  --surface-2: #EFEFEF;
+  --surface-2: #F1EBE1;
   --border: var(--line);
-  --green:#10B981;--green-l:#ECFDF5;--amber:#F59E0B;--amber-l:#FFFBEB;
+  --green:#10B981;--green-l:#ECFDF5;--amber:#E9A23B;--amber-l:#FBEED8;
   --orange: var(--amber);
   --orange-l: var(--amber-l);
-  --red:#EF4444;--red-l:#FEF2F2;--purple:#7C3AED;--purple-l:#F5F3FF;
-  --r:6px;--r-lg:10px;--r-xl:14px;
-  --sh:0 1px 2px rgba(0,0,0,0.05);
-  --sh-md:0 4px 12px rgba(0,0,0,0.08);
-  --sh-lg:0 8px 32px rgba(0,0,0,0.14);
+  --red:#D9634C;--red-l:#FBE7E1;--purple:#7C3AED;--purple-l:#F5F3FF;
+  --r:8px;--r-lg:12px;--r-xl:16px;
+  --sh:0 1px 3px rgba(64,52,30,0.06);
+  --sh-md:0 4px 18px rgba(64,52,30,0.07);
+  --sh-lg:0 8px 32px rgba(64,52,30,0.14);
 }
 body[data-zone-mode="none"] .zone-only{ display:none !important; }
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -67,7 +68,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .sb-nav{flex:1;overflow-y:auto;padding:2px 0 8px;}
 .sb-sec{font-size:0.6875rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:0.08em;padding:16px 16px 6px;}
 .ni-btn{position:relative;display:flex;align-items:center;gap:11px;padding:0 12px;height:42px;background:none;border:none;border-radius:9px;font-size:0.875rem;font-weight:500;color:var(--ink-2);cursor:pointer;text-align:right;transition:background 0.15s,color 0.15s;margin:1px 8px;width:calc(100% - 16px);font-family:'Heebo',sans-serif;}
-.ni-btn:hover{background:#efeff1;color:var(--ink);}
+.ni-btn:hover{background:var(--surface-2);color:var(--ink);}
 .ni-btn.active{background:var(--accent-light);color:var(--accent-hover);font-weight:700;}
 .ni-btn.active::before{content:"";position:absolute;left:-8px;top:50%;transform:translateY(-50%);width:3px;height:20px;border-radius:0 3px 3px 0;background:var(--accent);}
 .ni-btn svg{width:18px;height:18px;flex-shrink:0;color:var(--ink-4);transition:color 0.15s;}
@@ -2518,7 +2519,7 @@ function renderDrawerStep2(candidates){
     const loadStr=`${c.dayLoad||0} קריאות באותו יום`;
     return `<div class="slot-card" id="slot-card-${i}" onclick="drawerSelectSlot(${i})">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-        <div style="width:10px;height:10px;border-radius:50%;background:${h(c.tech.color||'#6366F1')};flex-shrink:0;"></div>
+        <div style="width:10px;height:10px;border-radius:50%;background:${h(c.tech.color||'#0E7A6E')};flex-shrink:0;"></div>
         <div class="slot-card-tech">${h(c.tech.name)}</div>
       </div>
       <div class="slot-card-detail">${dateStr} · ${timeStr} · ${h(window._drawerData&&window._drawerData.city||'')}</div>
@@ -3518,7 +3519,7 @@ function buildRoleSelect(){
     const active=currentRole===`tech_${t.id}`;
     const firstName=t.name.trim().split(' ')[0];
     const initials=t.name.trim().split(' ').map(w=>w[0]).slice(0,2).join('');
-    const color=t.color||'#6366F1';
+    const color=t.color||'#0E7A6E';
     parts.push(`<div class="role-chip${active?' active':''}" onclick="switchRoleTo('tech_${t.id}')" title="${h(t.name)}"><div class="role-chip-av" style="background:${color};">${h(initials)}</div><span>${h(firstName)}</span></div>`);
   });
   container.innerHTML=parts.join('');
@@ -7506,7 +7507,7 @@ function renderTechView(){
   const techCard=(t)=>{
     const statusDot={
       'assigned':'#94A3B8',
-      'en_route':'#6366F1',
+      'en_route':'#0E7A6E',
       'arrived':'#F59E0B',
       'completed':'#10B981',
       'issue':'#EF4444',

@@ -6,8 +6,8 @@
   "scope": "/Maslul/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#ffffff",
-  "theme_color": "#2563EB",
+  "background_color": "#FBF8F3",
+  "theme_color": "#0E7A6E",
   "lang": "he",
   "dir": "rtl",
   "icons": [
