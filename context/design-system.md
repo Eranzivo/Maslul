@@ -17,7 +17,7 @@ by a non-technical coordinator. Most relevant data per section, no repetition, e
 | **Tokens** (Heebo, RTL, indigo `#6366F1`, surfaces, spacing) | `context/style.md` + the `:root` vars in `index.html` |
 | **Namespaced component CSS** (the redesign foundation) | `md-*` classes in `index.html` `<style>` (`.md-btn .md-card .md-pill .md-status .md-seg .md-wblock .md-panel .md-kpi` …) |
 | **Approved screens & directions** (8 Claude Design mockups) | `mockups/DESIGN-LOG.md` + `mockups/claude-design/flow/*.html` |
-| **Port integration map** (mockup → index.html fn → engine wiring) | `outputs/ui-port-plan_2026-06-15.md` |
+| **Port integration map** (mockup → index.html fn → engine wiring) | `outputs/ui-port-plan_2026-06-15.md` (Round 1) · **`outputs/round2-port-map_2026-07-12.md` (Round 2 — THE current map: every button → verified backing, EXISTS/PARTIAL/NEW)** |
 | **Reference inspirations** | Linear / Invo / Okd; shapes.co (warm gradient, confident type, soft cards). DESIGN-LOG "Reference inspirations". |
 | **CRM / client-card pattern** (Eran reference 2026-07-11 — "build like this if we'll ever need") | Warm cream page; header = page title + count ("147 לקוחות פעילים") + global search; toolbar = segmented filter tabs (הכל / VIP / חדשות) + local search + primary "+ לקוח חדש". Card anatomy: big rounded initial-avatar (right), name + tier tag pill top-inline (VIP filled / רגילה outline / חדשה sun), phone + email rows with trailing icons (LTR numbers), dashed divider, footer stats row (⭐ N ביקורים · ביקור אחרון: X). Keep OUR warm tokens (teal primary; the reference's orange maps to our sun-amber for tier/avatar accents). Future WhatsApp integration hangs off these cards (message action per client) — design for a toggleable action slot. |
 
