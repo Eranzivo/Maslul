@@ -561,6 +561,21 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
 .md-job-row.done .city{color:var(--ink-3);}
 .md-job-row .sub{font-size:11.5px;color:var(--ink-4);margin-right:auto;font-weight:500;}
 
+/* Round-2 weekly (wk2): mockup-style call rows — tinted window block, white chip rows,
+   roomy enough for 5 tech rows in parallel (Eran 2026-07-12) */
+.md-wblock.wk2{border:none;box-shadow:var(--sh);border-radius:12px;background:var(--md-tint,var(--surface-1));}
+.md-wblock.wk2 .md-wblock-head{border-bottom:none;padding:7px 9px 4px;background:none;}
+.md-wblock.wk2 .md-win{font-size:0.72rem;font-weight:800;background:#fff;border-radius:99px;padding:2px 10px;color:var(--ink-2);box-shadow:0 1px 2px rgba(64,52,30,.08);}
+.wk2-rows{padding:0 6px 6px;display:flex;flex-direction:column;gap:4px;}
+.wk2-row{display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:9px;background:#fff;border-inline-start:3px solid var(--md-tcolor,var(--accent));box-shadow:0 1px 3px rgba(64,52,30,.07);cursor:grab;transition:box-shadow .12s;}
+.wk2-row:hover{box-shadow:var(--sh-md);}
+.wk2-row .dot{width:7px;height:7px;border-radius:50%;flex:0 0 7px;}
+.wk2-row .dot.pending{background:var(--amber);}
+.wk2-row .dot.assigned{background:var(--accent);}
+.wk2-row .dot.done{background:var(--green);}
+.wk2-row .city{font-size:0.78rem;font-weight:800;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.wk2-row .sub{font-size:0.66rem;color:var(--ink-3);margin-right:auto;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:64px;}
+
 /* Slide-in panel + scrim (detail / weekly) */
 .md-scrim{position:fixed;inset:0;background:rgba(17,24,39,.16);opacity:0;visibility:hidden;transition:opacity .2s;z-index:1100;}
 .md-scrim.show{opacity:1;visibility:visible;}
@@ -880,14 +895,16 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
 <div class="shell">
 <nav class="sidebar">
   <div class="sb-top">
-    <div class="md-brand" style="flex-direction:column;align-items:flex-start;gap:2px;">
-      <div class="sb-logo" style="font-size:1.35rem;color:#1B2A4E;">מסלול</div>
-      <svg viewBox="0 0 120 16" width="104" height="14" aria-hidden="true" style="direction:ltr;">
-        <defs><linearGradient id="brand-arrow" x1="0" y1="0" x2="1" y2="0">
+    <div class="md-brand" style="flex-direction:column;align-items:center;gap:0;">
+      <div class="sb-logo" style="font-size:1.35rem;color:#1B2A4E;position:relative;z-index:1;">מסלול</div>
+      <!-- brand arrow: hook rises to mid-letter height (left, beside ל), subtle route-zigzag,
+           teal arrowhead right — per landing/assets/brand/maslul-logo-hebrew-v2.png -->
+      <svg viewBox="0 0 118 28" width="106" height="25" aria-hidden="true" style="direction:ltr;transform:none;margin-top:-9px;display:block;">
+        <defs><linearGradient id="brand-arrow" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
           <stop offset="0" stop-color="#2563EB"/><stop offset="1" stop-color="#14B8A6"/>
         </linearGradient></defs>
-        <path d="M14 2 H10 A7 7 0 0 0 10 15 H108" fill="none" stroke="url(#brand-arrow)" stroke-width="4" stroke-linecap="round"/>
-        <path d="M103 9 L112 14.8 L103 20.5" transform="translate(0,-6.3)" fill="none" stroke="url(#brand-arrow)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M21 5 H14 A8 8 0 0 0 14 21 H46 L53 15.5 L60 21 H102" fill="none" stroke="url(#brand-arrow)" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M97 15 L106 21 L97 27" fill="none" stroke="#14B8A6" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
   </div>
@@ -8409,18 +8426,18 @@ function _plannerWeekCell(tech, sorted){
     const label=first.windowStart?`${first.windowStart}–${first.windowEnd}`:(first.time||'');
     const rows=grp.map(t=>{
       const dotCls=t.status==='completed'?'done':t.status==='pending'?'pending':'assigned';
-      return`<div class="md-job-row" draggable="true" ondragstart="event.stopPropagation();_onTaskDragStart(event,'${t.id}')" onclick="event.stopPropagation();openTaskDetail('${t.id}')" style="padding:5px 8px;cursor:grab;">
+      return`<div class="wk2-row" draggable="true" ondragstart="event.stopPropagation();_onTaskDragStart(event,'${t.id}')" onclick="event.stopPropagation();openTaskDetail('${t.id}')">
         <span class="dot ${dotCls}"></span>
-        <span class="city" style="font-size:0.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${taskOutOfZone(t)?'<span title="מחוץ לאזור היום" style="color:var(--amber);font-weight:800;">⚠ </span>':''}${h(t.city||'—')}</span>
-        <span class="sub" style="font-size:0.6rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:46px;">${h(t.client||'')}</span>
+        <span class="city">${taskOutOfZone(t)?'<span title="מחוץ לאזור היום" style="color:var(--amber);font-weight:800;">⚠ </span>':''}${h(t.city||'—')}</span>
+        <span class="sub">${h(t.client||'')}</span>
       </div>`;
     }).join('');
-    return`<div class="md-wblock" style="--md-tcolor:${tc};--md-tint:${tc}14;margin-bottom:6px;">
-      <div class="md-wblock-head" style="padding:5px 8px;">
-        <span class="tch" style="width:16px;height:16px;font-size:8px;border-radius:5px;">${grp.length}</span>
-        <span class="md-win" style="font-size:0.68rem;">${label}</span>
+    return`<div class="md-wblock wk2" style="--md-tcolor:${tc};--md-tint:${tc}14;margin-bottom:7px;">
+      <div class="md-wblock-head">
+        <span class="tch" style="width:18px;height:18px;font-size:9px;border-radius:6px;">${grp.length}</span>
+        <span class="md-win">${label}</span>
       </div>
-      <div>${rows}</div>
+      <div class="wk2-rows">${rows}</div>
     </div>`;
   }).join('');
 }
@@ -8449,7 +8466,7 @@ function renderPlannerWeekly(days){
   const dayHeaders=days.map(d=>{
     const ds=d.toISOString().split('T')[0];
     const isToday=ds===todayDs;
-    return`<th style="position:sticky;top:0;z-index:4;text-align:center;padding:10px 4px;font-size:0.75rem;font-weight:800;color:${isToday?'var(--blue)':'var(--ink-3)'};background:${isToday?'var(--accent-light)':'var(--line-2)'};white-space:nowrap;min-width:110px;border-bottom:${isToday?'3px solid var(--blue)':'3px solid transparent'};">
+    return`<th style="position:sticky;top:0;z-index:4;text-align:center;padding:10px 4px;font-size:0.75rem;font-weight:800;color:${isToday?'var(--blue)':'var(--ink-3)'};background:${isToday?'var(--accent-light)':'var(--line-2)'};white-space:nowrap;min-width:132px;border-bottom:${isToday?'3px solid var(--blue)':'3px solid transparent'};">
       ${DAYS_SHORT[d.getDay()]}׳ <span style="font-size:0.7rem;font-weight:${isToday?800:500};opacity:${isToday?1:0.7};">${d.getDate()}/${d.getMonth()+1}</span>${isToday?'<div style="font-size:0.6rem;color:var(--blue);margin-top:2px;">היום</div>':''}</th>`;
   }).join('');
   const rows=selTechs.map(tech=>{
@@ -8470,7 +8487,7 @@ function renderPlannerWeekly(days){
       const chips=_plannerWeekCell(tech,sorted);
       const canOptimize=CONFIG.OPTIMIZER_URL&&techTasks.length>=2&&ds>=todayStr();
       const optBtn=canOptimize?`<button id="opt-btn-${tech.id}-${ds}" onclick="runOptimize('${tech.id}','${ds}')" title="מסלול מיטבי" style="display:block;width:100%;text-align:center;background:var(--blue-l);border:1px solid var(--blue);border-radius:4px;font-size:0.65rem;color:var(--blue-d);padding:2px 4px;cursor:pointer;font-family:'Heebo',sans-serif;font-weight:700;margin-top:3px;">🔀 מסלול מיטבי</button>`:'';
-      return`<td ondragover="_onCellDragOver(event)" ondragenter="this.style.boxShadow='inset 0 0 0 2px var(--blue)'" ondragleave="this.style.boxShadow=''" ondrop="this.style.boxShadow='';_onCellDrop(event,'${tech.id}','${ds}')" style="vertical-align:top;padding:5px;border-left:1px solid var(--line-2);${bg?'background:'+bg+';':''}min-width:110px;">${chips||'<div style="height:32px;color:var(--ink-4);font-size:0.6rem;text-align:center;">—</div>'}${optBtn}</td>`;
+      return`<td ondragover="_onCellDragOver(event)" ondragenter="this.style.boxShadow='inset 0 0 0 2px var(--blue)'" ondragleave="this.style.boxShadow=''" ondrop="this.style.boxShadow='';_onCellDrop(event,'${tech.id}','${ds}')" style="vertical-align:top;padding:5px;border-left:1px solid var(--line-2);${bg?'background:'+bg+';':''}min-width:132px;">${chips||'<div style="height:32px;color:var(--ink-4);font-size:0.6rem;text-align:center;">—</div>'}${optBtn}</td>`;
     }).join('');
     return`<tr style="border-bottom:1px solid var(--line-2);">
       <td style="padding:10px 14px;white-space:nowrap;vertical-align:middle;background:var(--white);position:sticky;right:0;z-index:1;border-left:2px solid var(--line-2);box-shadow:-2px 0 4px rgba(0,0,0,0.04);">

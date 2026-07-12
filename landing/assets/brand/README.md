@@ -1,11 +1,11 @@
 # Brand assets — drop zone (Eran 2026-07-12)
 
-Drop here the brand pack shared in chat:
-- `logo.png` — מסלול wordmark + blue→teal gradient arrow (light background version)
-- `map-isometric-wide.png` — 3D white city map, 3 technicians, numbered route pins, orange target (hero-grade, wide)
-- `map-isometric-16x9.png` — same scene, tighter crop
-- `tech-network-dark.png` — dark-navy map, 4 technician avatars linked to a glowing job card, green optimal route (square)
-- `routes.gif` — the animated compilation
+Dropped 2026-07-12 ✅:
+- `maslul-logo-hebrew-v2.png` — מסלול wordmark + blue→teal gradient arrow
+- `route-optimization-hero.png` — 3D white city map, technicians + numbered route pins, orange target (hero-grade)
+- `live-eta-feature.png` — isometric map variant (live-ETA story)
+- `quick-assign-feature.png` — dark-navy network: 4 techs → glowing job card → green optimal route
+- `maslul-feature-teaser.gif` (8.9MB — for web use prefer `maslul-feature-teaser.webp`, 2.3MB; consider further compression at landing build)
 
 Usage plan (landing page, after app-design phase):
 - Hero background: the wide isometric map (fades from the dark-blue edge — text sits on the dark side)
