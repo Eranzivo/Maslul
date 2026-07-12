@@ -8037,8 +8037,17 @@ function getIsraelDefaultZones(){
 
 function renderZones(){
   const _roBanner=`<div class="settings-ro-banner">🔒 מצב צפייה בלבד — עריכת אזורים מותרת למנהל בלבד</div>`;
+  // Round-2: coverage-vs-demand line per zone (data only, no judgment — the
+  // suggestion layer with wait-time math is the P2 insights slice)
+  const _cutoff=new Date(Date.now()-90*864e5).toISOString().slice(0,10);
+  const _dNames=['א׳','ב׳','ג׳','ד׳','ה׳','ו׳'];
   document.getElementById('zones-list').innerHTML=_roBanner+(zones.map((z,zi)=>{
     const isPoly=!!(z.polygons&&z.polygons.length);
+    const covDays=[0,1,2,3,4,5].filter(d=>technicians.some(t=>String((t.rotation||{})[d])===String(z.id)));
+    let dem=0;try{dem=tasks.filter(t=>t.status!=='cancelled'&&(t.date||'')>=_cutoff&&(getCityZone(t.city)||{}).id===z.id).length;}catch(e){}
+    const covHtml=covDays.length
+      ?covDays.map(d=>`<span style="background:var(--accent-light);color:var(--accent);border-radius:6px;padding:1px 7px;font-size:0.66rem;font-weight:800;">${_dNames[d]}</span>`).join(' ')
+      :'<span style="color:#B4791F;font-weight:800;font-size:0.7rem;">⚠ אין יום כיסוי בסבב</span>';
     return `
     <div class="zone-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
@@ -8053,6 +8062,10 @@ function renderZones(){
         </div>
       </div>
       <div class="zone-cities">${z.cities.map((c,ci)=>`<span class="city-tag">${h(c)}<button class="settings-edit-only" onclick="removeCity('${z.id}',${ci})">×</button></span>`).join('')||'<span style="font-size:0.8rem;color:var(--ink-4);">אין ערים באזור</span>'}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding-top:7px;border-top:1px dashed var(--line);font-size:0.7rem;color:var(--ink-3);font-weight:700;">
+        <span>ימי כיסוי:</span>${covHtml}
+        <span style="margin-right:auto;">ביקוש 90 יום: <b style="color:var(--ink);font-variant-numeric:tabular-nums;">${dem}</b> קריאות</span>
+      </div>
       <div class="settings-edit-only" style="display:flex;gap:8px;align-items:center;margin-top:8px;">
         <input class="fc" id="new-city-${z.id}" list="il-cities-list" autocomplete="off" placeholder="הקלד שם עיר…" onkeydown="if(event.key==='Enter'){event.preventDefault();addCities('${z.id}');}" style="width:220px;max-width:100%;font-size:0.875rem;">
         <button class="btn btn-outline btn-sm" onclick="addCities('${z.id}')" style="flex-shrink:0;">+ הוסף</button>
