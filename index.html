@@ -337,6 +337,37 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
 .cancel-option p{font-size:0.8125rem;color:var(--ink-3);}
 /* SEARCH BAR HOME */
 .home-search{display:flex;gap:8px;margin-bottom:1.25rem;}
+/* ── Round-2 Home (hm-*): hero brick + so-what deltas + pending side ── */
+.hm-hero{background:linear-gradient(115deg,#0B6B60 0%,#0E7A6E 45%,#1FA98F 100%);color:#fff;border-radius:20px;padding:20px 24px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:1.25rem;box-shadow:0 12px 30px rgba(14,122,110,.22);}
+.hm-hero::before{content:"";position:absolute;inset-inline-start:-70px;top:-90px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.07);}
+.hm-hero::after{content:"";position:absolute;inset-inline-end:170px;bottom:-120px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.05);}
+.hm-hero-txt{position:relative;min-width:0;}
+.hm-hero h2{font-size:1.35rem;font-weight:800;letter-spacing:-0.02em;}
+.hm-hero .hm-sub{font-size:0.85rem;opacity:.88;margin-top:2px;}
+.hm-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px;position:relative;}
+.hm-chip{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:99px;padding:3px 12px;font-size:0.75rem;font-weight:700;}
+.hm-chip b{direction:ltr;unicode-bidi:embed;font-variant-numeric:tabular-nums;}
+.hm-hero-act{position:relative;display:flex;flex-direction:column;gap:8px;align-items:stretch;flex-shrink:0;}
+.hm-cta{background:#fff;color:var(--accent);font-weight:800;font-size:0.9rem;border-radius:12px;padding:11px 22px;border:none;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.15);font-family:'Heebo',sans-serif;white-space:nowrap;}
+.hm-ghost{background:transparent;color:#fff;font-weight:700;font-size:0.75rem;border-radius:9px;padding:7px 14px;border:1.5px solid rgba(255,255,255,.35);cursor:pointer;font-family:'Heebo',sans-serif;white-space:nowrap;}
+.kpi-delta{font-size:0.72rem;font-weight:700;color:var(--accent);margin-top:4px;}
+.kpi-delta.warn{color:#B4791F;}
+.kpi-delta b{direction:ltr;unicode-bidi:embed;font-variant-numeric:tabular-nums;}
+.hm-cols{display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;}
+.hm-pending{background:var(--white);border-radius:var(--r-xl);box-shadow:var(--sh-md);overflow:hidden;}
+.hm-pending .hp-h{display:flex;align-items:baseline;justify-content:space-between;padding:14px 18px 8px;}
+.hm-pending h3{font-size:0.95rem;font-weight:800;}
+.hp-more{font-size:0.75rem;font-weight:700;color:var(--accent);cursor:pointer;background:none;border:none;font-family:'Heebo',sans-serif;}
+.hp-row{display:flex;align-items:center;gap:9px;padding:10px 18px;border-top:1px dashed var(--line);font-size:0.82rem;}
+.hp-what{font-weight:700;}
+.hp-city{font-size:0.72rem;color:var(--ink-3);}
+.hp-age{font-size:0.68rem;font-weight:700;border-radius:99px;padding:2px 8px;background:var(--amber-l);color:#9A6B1F;margin-right:auto;white-space:nowrap;}
+.hp-age.hot{background:var(--red-l);color:var(--red);}
+.hp-row:not(:has(.hp-age)) .hp-assign{margin-right:auto;}
+.hp-assign{background:var(--accent);color:#fff;font-weight:800;font-size:0.72rem;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-family:'Heebo',sans-serif;flex-shrink:0;}
+.hp-empty{padding:14px 18px 16px;font-size:0.78rem;color:var(--ink-3);border-top:1px dashed var(--line);}
+.hm-health{cursor:pointer;flex-shrink:0;}
+@media(max-width:900px){.hm-cols{grid-template-columns:1fr;}.hm-hero{flex-direction:column;align-items:stretch;}}
 .home-search input{flex:1;}
 .search-results{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-md);margin-bottom:1rem;overflow:hidden;}
 .search-result-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line-2);cursor:pointer;transition:background 0.1s;}
@@ -891,11 +922,15 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
 
 <!-- HOME -->
 <div id="page-home" class="page">
-  <div class="ph ph-row">
-    <div><div class="ph-title">דף הבית</div><div class="ph-sub" id="home-date"></div></div>
-    <div class="flex-gap">
-      <button class="btn btn-ghost btn-sm" id="live-map-btn" onclick="toggleCoordinatorMap()" title="מפה חיה — מיקום טכנאים בשטח"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/></svg> מפה חיה</button>
-      <button class="btn btn-blue" onclick="goPage('dispatch')">+ שיבוץ קריאה</button>
+  <div class="hm-hero">
+    <div class="hm-hero-txt">
+      <h2 id="hm-greet">דף הבית</h2>
+      <div class="hm-sub" id="home-date"></div>
+      <div class="hm-chips" id="hm-chips"></div>
+    </div>
+    <div class="hm-hero-act">
+      <button class="hm-cta" onclick="goPage('dispatch')">+ שיבוץ קריאה</button>
+      <button class="hm-ghost" id="live-map-btn" onclick="toggleCoordinatorMap()" title="מפה חיה — מיקום טכנאים בשטח">🗺 מפה חיה</button>
     </div>
   </div>
   <!-- LIVE COORDINATOR MAP (hidden by default) -->
@@ -922,8 +957,13 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
   </div>
   <div id="client-search-results" class="hidden"></div>
   <div id="home-kpi" class="home-kpi"></div>
-  <div class="home-team-head"><h2>צוות בשטח</h2><span class="ht-hint">לחצו על טכנאי לצפייה בלוח השבועי</span></div>
-  <div id="home-tech-grid" class="tech-home-grid"></div>
+  <div class="hm-cols" id="hm-cols">
+    <div>
+      <div class="home-team-head"><h2>צוות בשטח</h2><span class="ht-hint">לחצו על טכנאי לצפייה בלוח השבועי</span></div>
+      <div id="home-tech-grid" class="tech-home-grid"></div>
+    </div>
+    <aside class="hm-pending" id="hm-pending"></aside>
+  </div>
   <div id="weekly-cal" class="hidden" style="margin-top:1.5rem;">
     <div class="flex-between" style="margin-bottom:1rem;">
       <button class="btn btn-outline btn-sm" onclick="closeWeeklyCal()">← חזרה לכל הטכנאים</button>
@@ -4706,19 +4746,37 @@ function filterByKpi(type){
 }
 function renderHomeTechCards(){
   document.getElementById('weekly-cal').classList.add('hidden');
+  const _cols=document.getElementById('hm-cols');if(_cols)_cols.classList.remove('hidden');
   document.getElementById('home-tech-grid').classList.remove('hidden');
   const today=todayStr();
+  const todayTasks=tasks.filter(t=>t.date===today&&t.status!=='cancelled');
+  const done=todayTasks.filter(t=>t.status==='completed').length;
+  const active=todayTasks.filter(t=>['en_route','arrived'].includes(t.status)).length;
+  const pendList=tasks.filter(t=>t.status==='pending'&&!t.date);
+  const unassigned=pendList.length;
+  const _ageDays=t=>{const c=(t.createdAt||'').slice(0,10);if(!c)return 0;return Math.max(0,Math.floor((new Date(today)-new Date(c))/864e5));};
+  const oldestAge=pendList.length?Math.max(...pendList.map(_ageDays)):0;
+  // Hero greeting + chips
+  const greetEl=document.getElementById('hm-greet');
+  if(greetEl){
+    const hr=new Date().getHours();
+    const g=hr<12?'בוקר טוב':hr<17?'צהריים טובים':'ערב טוב';
+    const un=(document.getElementById('current-user-name')?.textContent||'').trim().split(' ')[0];
+    greetEl.textContent=`${g}${un?', '+un:''} 👋`;
+    const chipsEl=document.getElementById('hm-chips');
+    if(chipsEl)chipsEl.innerHTML=
+      `<span class="hm-chip"><b>${todayTasks.length}</b> קריאות היום</span>`+
+      `<span class="hm-chip"><b>${unassigned}</b> ממתינות</span>`+
+      `<span class="hm-chip"><b>${done}</b> הושלמו</span>`;
+  }
   // KPI row
   const kpiEl=document.getElementById('home-kpi');
   if(kpiEl){
-    const todayTasks=tasks.filter(t=>t.date===today&&t.status!=='cancelled');
-    const done=todayTasks.filter(t=>t.status==='completed').length;
-    const active=todayTasks.filter(t=>['en_route','arrived'].includes(t.status)).length;
-    const unassigned=tasks.filter(t=>t.status==='pending'&&!t.date).length;
     kpiEl.innerHTML=`
       <div class="kpi-card k-slate${kpiFilter==='today'?' kpi-active':''}" onclick="filterByKpi('today')">
         <div class="k-top-row"><span class="k-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg></span><span class="k-lbl">היום</span></div>
         <div class="kpi-val">${todayTasks.length}</div><div class="kpi-lbl">סך ${LBL('tasks')} להיום</div>
+        <div class="kpi-delta">${done} מתוכן הושלמו</div>
       </div>
       <div class="kpi-card k-amber${kpiFilter==='active'?' kpi-active':''}" onclick="filterByKpi('active')">
         <div class="k-top-row"><span class="k-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="k-lbl">בביצוע</span></div>
@@ -4731,6 +4789,7 @@ function renderHomeTechCards(){
       <div class="kpi-card k-indigo${kpiFilter==='pending'?' kpi-active':''}" onclick="filterByKpi('pending')">
         <div class="k-top-row"><span class="k-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="k-lbl">ממתין לשיבוץ</span></div>
         <div class="kpi-val" style="color:${unassigned>0?'var(--red)':'inherit'};">${unassigned}</div><div class="kpi-lbl">${LBL('tasks')} בהמתנה להקצאה</div>
+        ${oldestAge>0?`<div class="kpi-delta warn">הוותיקה — <b>${oldestAge}</b> ימים</div>`:''}
       </div>`;
   }
   // Tech cards
@@ -4775,6 +4834,7 @@ function renderHomeTechCards(){
             <div class="th-name">${h(tech.name)}</div>
             ${zoneLabel?`<div class="th-zone">${zoneLabel}</div>`:''}
           </div>
+          <span id="hm-health-chip-${tech.id}-${today}" class="hm-health" onclick="event.stopPropagation();openHealthPanel('${tech.id}','${today}')">${healthChipHtml(_dayHealth(tech.id,today))}</span>
           <div class="th-status" style="background:${st.bg};color:${st.color};"><span class="ts-dot"></span>${st.label}</div>
         </div>
         <div class="th-capacity">
@@ -4792,6 +4852,24 @@ function renderHomeTechCards(){
       </div>
     </div>`;
   }).join('')||`<div class="empty"><div class="empty-icon">👷</div><div>הוסף ${LBL('worker')} ראשון</div></div>`;
+  technicians.forEach(t=>_ensureDayHealth(t.id,today));
+  // Pending side card — oldest first, timeless (never scoped by any week filter)
+  const pel=document.getElementById('hm-pending');
+  if(pel){
+    const rows=pendList.slice()
+      .sort((a,b)=>(a.createdAt||'').localeCompare(b.createdAt||'')).slice(0,5)
+      .map(t=>{
+        const cat=categories.find(c=>String(c.id)===String(t.catId));
+        const age=_ageDays(t);
+        return `<div class="hp-row">
+          <div style="min-width:0;"><div class="hp-what">${h(cat?cat.name:(t.client||'קריאה'))}</div><div class="hp-city">${h(t.city||'ללא עיר')}${t.client&&cat?' · '+h(t.client):''}</div></div>
+          ${age>0?`<span class="hp-age${age>=7?' hot':''}">${age} ימים</span>`:''}
+          <button class="hp-assign" onclick="goPage('dispatch');queueAssign('${t.id}')">שבץ</button>
+        </div>`;
+      }).join('');
+    pel.innerHTML=`<div class="hp-h"><h3>ממתינות לשיבוץ${pendList.length?` (${pendList.length})`:''}</h3><button class="hp-more" onclick="goPage('dispatch')">לכולן ←</button></div>`+
+      (rows||`<div class="hp-empty">אין קריאות ממתינות 🎉</div>`);
+  }
 }
 function getTechStatus(tech,dateStr){
   const inProgress=tasks.filter(t=>t.techId===tech.id&&t.date===dateStr&&['en_route','arrived'].includes(t.status));
@@ -4818,12 +4896,14 @@ function openTechWeekly(techId){
   currentWeekOffset=0;
   document.getElementById('weekly-cal').classList.remove('hidden');
   document.getElementById('home-tech-grid').classList.add('hidden');
+  const _c1=document.getElementById('hm-cols');if(_c1)_c1.classList.add('hidden');
   renderWeeklyCalendar();
   document.getElementById('weekly-cal').scrollIntoView({behavior:'smooth'});
 }
 function closeWeeklyCal(){
   document.getElementById('weekly-cal').classList.add('hidden');
   document.getElementById('home-tech-grid').classList.remove('hidden');
+  const _c2=document.getElementById('hm-cols');if(_c2)_c2.classList.remove('hidden');
   selectedTechForCal=null;
 }
 function changeWeek(dir){currentWeekOffset+=dir;renderWeeklyCalendar();}
@@ -5589,6 +5669,8 @@ function _setDayHealth(techId,ds,hh){
   _healthCache[`${techId}|${ds}`]=hh||'none';
   const el=document.getElementById(`health-chip-${techId}-${ds}`);
   if(el)el.innerHTML=healthChipHtml(hh);
+  const el2=document.getElementById(`hm-health-chip-${techId}-${ds}`); // home tech card (distinct id — both may be in DOM)
+  if(el2)el2.innerHTML=healthChipHtml(hh);
 }
 async function _ensureDayHealth(techId,ds){
   const k=`${techId}|${ds}`;
