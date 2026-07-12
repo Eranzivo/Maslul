@@ -337,6 +337,16 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
 .cancel-option p{font-size:0.8125rem;color:var(--ink-3);}
 /* SEARCH BAR HOME */
 .home-search{display:flex;gap:8px;margin-bottom:1.25rem;}
+/* ── Round-2 קריאות (tk-*): big-picture strip + status groups ── */
+.tk-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;}
+.tk-kpi{background:var(--white);border-radius:var(--r-xl);box-shadow:var(--sh-md);padding:12px 16px;}
+.tk-kpi .n{font-size:1.35rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2;}
+.tk-kpi .l{font-size:0.72rem;color:var(--ink-3);font-weight:700;}
+.tk-kpi .d{font-size:0.66rem;font-weight:700;color:var(--accent);margin-top:2px;}
+.tk-kpi .d.warn{color:#B4791F;}
+.tk-ghead{padding:8px 14px 6px;font-size:0.68rem;font-weight:800;letter-spacing:0.06em;color:var(--ink-3);background:var(--bg);border-bottom:1px solid var(--line);border-radius:var(--r) var(--r) 0 0;margin-top:10px;}
+.tk-ghead:first-child{margin-top:0;}
+@media(max-width:760px){.tk-kpis{grid-template-columns:repeat(2,1fr);gap:8px;}}
 /* ── Round-2 Home (hm-*): hero brick + so-what deltas + pending side ── */
 .hm-hero{background:linear-gradient(115deg,#0B6B60 0%,#0E7A6E 45%,#1FA98F 100%);color:#fff;border-radius:20px;padding:20px 24px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:1.25rem;box-shadow:0 12px 30px rgba(14,122,110,.22);}
 .hm-hero::before{content:"";position:absolute;inset-inline-start:-70px;top:-90px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.07);}
@@ -888,7 +898,7 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
     <button id="nav-dispatch" class="ni-btn" onclick="goPage('dispatch')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> <span data-label="dispatch">שיבוץ קריאה</span></button>
     <!-- קריאות tab hidden 2026-07-08 (Eran) — pending/archive queue on the dispatch page covers it;
          page-tasks + renderTasks kept dormant. Re-enable: restore this button + mtab-tasks. -->
-    <button id="nav-tasks" class="ni-btn hidden" onclick="goPage('tasks')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg> <span data-label="tasks">קריאות</span></button>
+    <button id="nav-tasks" class="ni-btn" onclick="goPage('tasks')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg> <span data-label="tasks">קריאות</span></button>
     <button id="nav-planner" class="ni-btn" onclick="goPage('planner')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg> יומן</button>
     <button id="nav-reports" class="ni-btn hidden" onclick="goPage('reports')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/></svg> דוחות</button>
     <div id="nav-sec-crm" class="sb-sec hidden">CRM</div>
@@ -1163,6 +1173,7 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
       -->
     </div>
   </div>
+  <div class="tk-kpis" id="tk-kpis"></div>
   <div class="task-filterbar" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:14px;">
     <span class="badge badge-blue" id="tf-all" onclick="filterTasks('all')" style="cursor:pointer;padding:5px 12px;">הכל</span>
     <span class="badge badge-gray" id="tf-pending" onclick="filterTasks('pending')" style="cursor:pointer;padding:5px 12px;">ממתינות</span>
@@ -3978,8 +3989,8 @@ function applyFeatureVisibility(){
   });
   // קריאות tab retired 2026-07-08 (Eran) — force-hidden for ALL roles regardless of
   // permissions (the dispatch pending/archive queue covers it; page kept dormant).
-  const _navTasks=document.getElementById('nav-tasks');if(_navTasks)_navTasks.classList.add('hidden');
-  const _mtabTasks=document.getElementById('mtab-tasks');if(_mtabTasks)_mtabTasks.style.display='none';
+  // קריאות tab REVIVED 2026-07-12 (Eran, Round-2 IA decision): separate oversight tab returns;
+  // quick-book pending strip stays on dispatch — same queue, one engine door.
 
   // Admin section — super_admin only
   const secAdmin=document.getElementById('nav-sec-admin');
@@ -7517,6 +7528,27 @@ function renderTasks(){
   }
   document.getElementById('tasks-list')?.closest('.card')?.classList.remove('hidden');
   document.getElementById('recurring-templates-section').classList.add('hidden');
+  // Big-picture strip (Round-2): waiting+oldest / scheduled this workweek / done this month / cancelled
+  const kEl=document.getElementById('tk-kpis');
+  if(kEl){
+    const today=todayStr();
+    const wk=new Date(today+'T12:00:00');wk.setDate(wk.getDate()-wk.getDay()); // week start (Sunday)
+    const wkStart=wk.toISOString().slice(0,10);
+    const wkEndD=new Date(wk);wkEndD.setDate(wkEndD.getDate()+6);
+    const wkEnd=wkEndD.toISOString().slice(0,10);
+    const month=today.slice(0,7);
+    const pend=tasks.filter(t=>t.status==='pending');
+    const age=t=>{const c=(t.createdAt||'').slice(0,10);return c?Math.max(0,Math.floor((new Date(today)-new Date(c))/864e5)):0;};
+    const oldest=pend.length?Math.max(...pend.map(age)):0;
+    const wkAssigned=tasks.filter(t=>t.techId&&t.date&&t.date>=wkStart&&t.date<=wkEnd&&!['cancelled','completed'].includes(t.status)).length;
+    const doneMonth=tasks.filter(t=>t.status==='completed'&&(t.date||'').slice(0,7)===month).length;
+    const cancelled=tasks.filter(t=>t.status==='cancelled').length;
+    kEl.innerHTML=
+      `<div class="tk-kpi"><div class="n">${pend.length}</div><div class="l">ממתינות לשיבוץ</div>${oldest>0?`<div class="d warn">הוותיקה — ${oldest} ימים</div>`:'<div class="d">אין המתנה</div>'}</div>`+
+      `<div class="tk-kpi"><div class="n">${wkAssigned}</div><div class="l">משובצות השבוע</div><div class="d">שבוע העבודה הנוכחי</div></div>`+
+      `<div class="tk-kpi"><div class="n">${doneMonth}</div><div class="l">הושלמו החודש</div><div class="d">&nbsp;</div></div>`+
+      `<div class="tk-kpi"><div class="n">${cancelled}</div><div class="l">בוטלו</div><div class="d">&nbsp;</div></div>`;
+  }
   const q=(document.getElementById('task-search').value||'').toLowerCase();
   const fMap={all:null,pending:'pending',assigned:'assigned',completed:'completed',cancelled:'cancelled'};
   const fs=fMap[currentFilter];
@@ -7533,7 +7565,9 @@ function renderTasks(){
   });
   const list=document.getElementById('tasks-list');
   if(!filtered.length){list.innerHTML='<div class="empty"><div class="empty-icon">📭</div><div>אין קריאות</div></div>';return;}
-  list.innerHTML=filtered.map(t=>{
+  // Round-2 grouping (filter "הכל" only): ממתינות always on top, then משובצות → הושלמו.
+  // ממתינות are timeless — never scoped by any date paging (design-system rule).
+  const _rowHtml=t=>{
     const tech=technicians.find(x=>x.id===t.techId);
     const s=STATUS_MAP[t.status]||STATUS_MAP.pending;
     const canCancel=['assigned','en_route','arrived'].includes(t.status);
@@ -7550,7 +7584,21 @@ function renderTasks(){
         ${canCancel?`<button class="btn btn-sm" style="background:var(--red-l);color:var(--red);border:1px solid #FECACA;" onclick="openCancelModal('${t.id}')">בטל</button>`:''}
       </div>
     </div>`;
-  }).join('');
+  };
+  if(currentFilter==='all'){
+    const groups=[
+      ['ממתינות',filtered.filter(t=>t.status==='pending')],
+      ['משובצות',filtered.filter(t=>['assigned','en_route','arrived'].includes(t.status))],
+      ['הושלמו',filtered.filter(t=>t.status==='completed')]
+    ];
+    const other=filtered.filter(t=>!['pending','assigned','en_route','arrived','completed'].includes(t.status));
+    if(other.length)groups.push(['נוספות',other]);
+    list.innerHTML=groups.filter(([,g])=>g.length)
+      .map(([label,g])=>`<div class="tk-ghead">${label} · ${g.length}${label==='ממתינות'?' · מכל הזמנים':''}</div>`+g.map(_rowHtml).join(''))
+      .join('');
+  }else{
+    list.innerHTML=filtered.map(_rowHtml).join('');
+  }
 }
 function quickAssign(id){
   const t=tasks.find(x=>String(x.id)===String(id));if(!t)return;
