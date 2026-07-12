@@ -257,6 +257,20 @@ requirement: windows need a DAY option, not just hours). Design: `outputs/prefwi
 - **Parity:** `prefWindowAllowsDay/Range` ↔ `pref_allows_day/range` asserted by golden
   fixture `tests/fixtures/prefwindow-cases.json` in BOTH suites + 3 batch e2e tests.
 
+## Window Overrun Policy (`scheduling.auto_overrun_min`) ✅ 2026-07-12
+
+Refines `window_semantics: arrive`: arrival inside the window but service spilling past its
+end is a **booking decision**, never silent. ONE decision fn both doors (`overrunDecision` ↔
+`overrun_decision`, golden fixture `tests/fixtures/overrun-cases.json`):
+- **Live door:** any spill → coordinator popup (שבץ בכל זאת → audited override stamp + calendar
+  tail · מצא חלון אחר → slot excluded, search re-runs · ביטול). `confirmAssign` gate.
+- **Automatic door (batch, no coordinator):** may book a spill ≤ `auto_overrun_min` (default 15;
+  0 = strict); beyond → next window/day. Enforced by `narrow_window_for_overrun` (pref-window
+  new calls, solver-hard) + `promote_spilled_window` (derived windows, fail-open on last slot).
+- **Existing calls' promises are never re-broken** — the sequencer re-times within promised
+  windows only (organic lateness = B5, unsurfaced). Registry row in `context/knobs.md`;
+  tests: test_overrun.py (11) + both JS suites.
+
 ## Structured Date Constraints (fixed/earliest/latest) ✅ 2026-07-06
 
 Per-task hard date bounds (handover §10/§13), stored as `tasks.earliest_date` /

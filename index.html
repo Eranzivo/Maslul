@@ -1792,6 +1792,18 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
 </div>
 
 <!-- MODAL: STATUS -->
+<div class="mo hidden" id="mo-overrun">
+  <div class="mo-box">
+    <div class="mo-title">⚠️ הקריאה גולשת לחלון הבא</div>
+    <div style="font-size:0.85rem;color:var(--ink-2);margin-bottom:12px;">שעת ההגעה בתוך החלון שהובטח ללקוח, אבל העבודה צפויה להסתיים אחרי סופו.</div>
+    <div id="overrun-facts" style="background:var(--surface-2,var(--line-2));border-radius:10px;padding:10px 14px;margin-bottom:14px;"></div>
+    <div style="display:grid;gap:8px;">
+      <button class="btn btn-blue btn-full" onclick="_overrunAct('book')">שבץ בכל זאת</button>
+      <button class="btn btn-outline btn-full" onclick="_overrunAct('other')">מצא חלון אחר</button>
+      <button class="btn btn-outline btn-full" onclick="_overrunAct('cancel')">ביטול</button>
+    </div>
+  </div>
+</div>
 <div class="mo hidden" id="mo-status">
   <div class="mo-box">
     <div class="mo-title">עדכון סטטוס</div>
@@ -6674,7 +6686,10 @@ async function _triggerGeocode() {
 }
 
 // ═══ DISPATCH ═══
-function findBestSlot(){
+function findBestSlot(_keepExcl){
+  // Fresh search drops slot exclusions; the overrun popup's "מצא חלון אחר" re-runs
+  // with _keepExcl=true so the declined slot stays excluded.
+  if(!_keepExcl)window._excludedSlots=null;
   const city=document.getElementById('s-city').value;
   const street=document.getElementById('s-street').value.trim();
   if(!city){alert('נא לבחור עיר');return;}
@@ -6948,7 +6963,8 @@ function showCandidate(idx){
     const preferred=!full&&inPref;
     const offPref=prefWindows.length>0&&!inPref
       &&resolvePrefWindowsMode(tenantConfig.scheduling||{})==='hard';
-    slots.push({start:sStart,end:sEnd,full,slotCount,slotCapacity,isSuggested,preferred,offPref});
+    const excluded=!!(window._excludedSlots&&window._excludedSlots.has(`${c.tech.id}|${c.date.str}|${sStart}`));
+    slots.push({start:sStart,end:sEnd,full,slotCount,slotCapacity,isSuggested,preferred,offPref,excluded});
   }
   const assignId=genId();
   window._currentSlots=slots;window._currentIdx=idx;
@@ -6974,7 +6990,7 @@ function showCandidate(idx){
       ${whyHtml}
       ${routeHtml}
       <div style="font-size:0.8rem;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 6px;">בחר חלון זמן</div>
-      <div class="time-slots">${slots.map((s,si)=>`<div class="time-slot ${s.full||s.offPref?'busy':s.isSuggested?'suggested':s.preferred?'preferred':''}" onclick="${s.full||s.offPref?'':'selectTimeSlot('+si+')'}" id="ts-${si}"><span class="time-slot-range">${s.start} — ${s.end}</span><span style="font-size:0.7rem;">${s.full?'מלא ('+s.slotCount+'/'+s.slotCapacity+')':s.offPref?'מחוץ לזמינות הלקוח':s.slotCount>0?''+s.slotCount+'/'+s.slotCapacity+(s.isSuggested?' ⭐':''):s.preferred?'⭐ מועדף':'פנוי'}</span></div>`).join('')}</div>
+      <div class="time-slots">${slots.map((s,si)=>`<div class="time-slot ${s.full||s.offPref||s.excluded?'busy':s.isSuggested?'suggested':s.preferred?'preferred':''}" onclick="${s.full||s.offPref||s.excluded?'':'selectTimeSlot('+si+')'}" id="ts-${si}"><span class="time-slot-range">${s.start} — ${s.end}</span><span style="font-size:0.7rem;">${s.excluded?'הוחרג — נבחר חלון אחר':s.full?'מלא ('+s.slotCount+'/'+s.slotCapacity+')':s.offPref?'מחוץ לזמינות הלקוח':s.slotCount>0?''+s.slotCount+'/'+s.slotCapacity+(s.isSuggested?' ⭐':''):s.preferred?'⭐ מועדף':'פנוי'}</span></div>`).join('')}</div>
       <div class="customer-form" id="cform-${idx}" style="display:none;">
         <div style="display:flex;gap:8px;margin-top:4px;">
           <button class="btn btn-outline" onclick="clearDispatch()">← חזרה</button>
@@ -6985,15 +7001,31 @@ function showCandidate(idx){
   selectedTimeSlot=null;
 }
 function selectTimeSlot(si){
-  if(window._currentSlots&&window._currentSlots[si]?.full)return;
+  if(window._currentSlots&&(window._currentSlots[si]?.full||window._currentSlots[si]?.excluded))return;
   selectedTimeSlot=si;
   document.querySelectorAll('.time-slot:not(.busy)').forEach((el,i)=>el.classList.toggle('selected',i===si));
   const formEl=document.getElementById('cform-'+window._currentIdx);
   if(formEl)formEl.style.display='block';
 }
+// Overrun popup (Eran spec): promise-based — resolves 'book' / 'other' / 'cancel'.
+let _overrunResolve=null;
+function overrunPopup(f){
+  document.getElementById('overrun-facts').innerHTML=`
+    <div class="cr"><span class="ck">חלון ללקוח</span><span class="cv" style="direction:ltr;font-feature-settings:'tnum';">${f.window}</span></div>
+    <div class="cr"><span class="ck">הגעה משוערת</span><span class="cv" style="direction:ltr;font-feature-settings:'tnum';">${f.arrival}</span></div>
+    <div class="cr"><span class="ck">סיום משוער</span><span class="cv" style="direction:ltr;font-feature-settings:'tnum';">${f.finish}</span></div>
+    <div class="cr"><span class="ck">גלישה</span><span class="cv" style="color:var(--red);font-weight:800;">${f.over} דק׳ אחרי סוף החלון</span></div>`;
+  document.getElementById('mo-overrun').classList.remove('hidden');
+  return new Promise(res=>{_overrunResolve=res;});
+}
+function _overrunAct(a){
+  document.getElementById('mo-overrun').classList.add('hidden');
+  const r=_overrunResolve;_overrunResolve=null;
+  if(r)r(a);
+}
 async function confirmAssign(idx,assignId){
   if(selectedTimeSlot===null){alert('נא לבחור חלון זמן');return;}
-  const slots=window._currentSlots;if(!slots||slots[selectedTimeSlot]?.full)return;
+  const slots=window._currentSlots;if(!slots||slots[selectedTimeSlot]?.full||slots[selectedTimeSlot]?.excluded)return;
   const c=allCandidates[idx];if(!c)return;
   const client=document.getElementById('c-name').value.trim();
   if(!client){document.getElementById('c-name').classList.add('error');document.getElementById('c-name').focus();alert('שם לקוח הוא שדה חובה');return;}
@@ -7019,6 +7051,23 @@ async function confirmAssign(idx,assignId){
     const jobMins=effectiveDuration(catId, c.tech, categories, settings)+10;
     taskTime=minsToTime(timeToMins(slot.start)+inSlot.length*jobMins);
   }
+  // Window-overrun gate (Eran spec 2026-07-11/12): arrival fits the window but the
+  // service would spill past its end → NEVER book silently. The coordinator decides:
+  // book anyway (audited stamp → calendar tail) / find another window (this slot
+  // excluded, search re-runs) / cancel. Automatic paths use auto_overrun_min instead.
+  const _dur=effectiveDuration(catId,c.tech,categories,settings);
+  const _overMin=overrunMinutes(timeToMins(taskTime),_dur,timeToMins(slot.end));
+  let _overStamp=null;
+  if(overrunDecision(resolveWindowSemantics(tenantConfig.scheduling||{}),_overMin,false,0)==='ask'){
+    const _act=await overrunPopup({window:`${slot.start}–${slot.end}`,arrival:taskTime,finish:minsToTime(timeToMins(taskTime)+_dur),over:_overMin});
+    if(_act==='cancel')return;
+    if(_act==='other'){
+      (window._excludedSlots=window._excludedSlots||new Set()).add(`${c.tech.id}|${c.date.str}|${slot.start}`);
+      findBestSlot(true); // re-run the search with this slot excluded
+      return;
+    }
+    _overStamp={manuallyOverridden:true,overrideReason:`אישור גלישת חלון: ${_overMin} דק׳ אחרי ${slot.end}`};
+  }
   // If dispatching a task from the pending queue — update in place, don't create new
   const qt=window._queueTask;
   let newTask,saved;
@@ -7031,6 +7080,7 @@ async function confirmAssign(idx,assignId){
     // Snapshot original state so we can roll back if the save fails
     const _orig={client:qt.client,phone:qt.phone,city:qt.city,street:qt.street,floor:qt.floor,apartment:qt.apartment,entranceNotes:qt.entranceNotes,cat:qt.cat,catId:qt.catId,techId:qt.techId,status:qt.status,time:qt.time,date:qt.date,notes:qt.notes,assignId:qt.assignId,preferredWindows:qt.preferredWindows,lat:qt.lat,lon:qt.lon,geocodedAt:qt.geocodedAt};
     Object.assign(qt,{client,phone,city,street,floor,apartment,entranceNotes,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,windowStart:slot.start,windowEnd:slot.end,notes,assignId,preferredWindows:[...prefWindows],earliestDate:dateCons.earliest_date||'',latestDate:dateCons.latest_date||'',fixedDate:dateCons.fixed_date||'',manuallyOverridden:false,overrideReason:null,lat:_gc?.lat||qt.lat||null,lon:_gc?.lon||qt.lon||null,geocodedAt:_gc?_gcAt:qt.geocodedAt||null});
+    if(_overStamp)Object.assign(qt,_overStamp); // popup-approved overrun — audited
     newTask=qt;save();
     saved=await saveTaskToSupabase(qt);
     if(!saved)Object.assign(qt,_orig); // roll back in-memory state on failure
@@ -7040,6 +7090,7 @@ async function confirmAssign(idx,assignId){
     window._queueTask=null;
   } else {
     newTask={id:nextTaskId++,client,phone,city,street,floor,apartment,entranceNotes,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,windowStart:slot.start,windowEnd:slot.end,notes,assignId,preferredWindows:[...prefWindows],earliestDate:dateCons.earliest_date||'',latestDate:dateCons.latest_date||'',fixedDate:dateCons.fixed_date||'',lat:_gc?.lat||null,lon:_gc?.lon||null,geocodedAt:_gcAt};
+    if(_overStamp)Object.assign(newTask,_overStamp); // popup-approved overrun — audited
     tasks.push(newTask);save();
     saved=await saveTaskToSupabase(newTask);
   }
@@ -7072,7 +7123,7 @@ function clearDispatch(){
   document.getElementById('dispatch-search-card').style.pointerEvents='';
   document.getElementById('dispatch-result').classList.add('hidden');
   selectedTimeSlot=null;allCandidates=[];currentCandidateIdx=0;
-  _pendingGeocode=null;
+  _pendingGeocode=null;window._excludedSlots=null;
 }
 // ─── Pending queue panel ──────────────────────────────────────────────────
 let _pendingView='active'; // 'active' (≤3 weeks) | 'archive' (older — Israel's past schedule, never deleted)
@@ -9095,24 +9146,33 @@ function renderPlannerDaily(days){
   const blockMeta=Object.entries(wGroups).map(([key,grp])=>{
     const first=grp[0];
     const hasWin=!!first.windowStart;
-    let topMins,heightMins;
+    let topMins,heightMins,tailMins=0;
     if(hasWin){
       topMins=timeToMins(first.windowStart)-startH*60;
       heightMins=slotH*60;
+      // Approved-overrun tail (Eran board-3): a popup-approved spill extends THIS
+      // block past a dashed window-end line — one block, neighbors never move.
+      // Only booking-decision overruns get the tail (organic lateness stays unsurfaced).
+      const _weMin=timeToMins(first.windowEnd||first.windowStart)||0;
+      tailMins=Math.max(0,...grp.map(t=>{
+        if(!(t.manuallyOverridden&&/גלישת חלון/.test(t.overrideReason||''))||!t.time)return 0;
+        const _ht2=technicians.find(x=>String(x.id)===String(t.techId));
+        return Math.max(0,timeToMins(t.time)+effectiveDuration(t.catId,_ht2,categories,settings)-_weMin);
+      }));
     }else{
       topMins=timeToMins(first.time)-startH*60;
       const _ht=technicians.find(x=>String(x.id)===String(first.techId));
       heightMins=effectiveDuration(first.catId, _ht, categories, settings);
     }
     topMins=Math.max(0,topMins);
-    return {grp,first,hasWin,topMins,heightMins};
+    return {grp,first,hasWin,topMins,heightMins,tailMins};
   });
-  const _cols=layoutColumns(blockMeta.map(b=>({start:b.topMins,end:b.topMins+b.heightMins})));
+  const _cols=layoutColumns(blockMeta.map(b=>({start:b.topMins,end:b.topMins+b.heightMins+(b.tailMins||0)})));
   const _gut=labelW+6, _avail=`(100% - ${_gut+6}px)`; // left gutter + right margin
   const taskBlocks=blockMeta.map((b,bi)=>{
-    const {grp,first,hasWin,topMins,heightMins}=b;
+    const {grp,first,hasWin,topMins,heightMins,tailMins}=b;
     const top=topMins*PX;
-    const height=Math.max(34,heightMins*PX);
+    const height=Math.max(34,(heightMins+(tailMins||0))*PX);
     const {col,cols:ncol}=_cols[bi];
     const left=`calc(${_gut}px + ${_avail} * ${col} / ${ncol})`;
     const width=`calc(${_avail} / ${ncol} - 4px)`;
@@ -9129,7 +9189,11 @@ function renderPlannerDaily(days){
         ${t.notes?`<div style="font-size:11px;color:var(--ink-3);padding-right:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">📝 ${h(t.notes)}</div>`:''}
       </div>
     </div>`).join('');
+    const tailHtml=(tailMins>0)?`<div style="position:absolute;top:${heightMins*PX}px;left:0;right:0;height:${tailMins*PX}px;border-top:2px dashed ${tc}66;background:repeating-linear-gradient(45deg,${tc}18 0 6px,transparent 6px 12px);pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+      <span style="font-size:9.5px;font-weight:700;color:${tc};background:var(--white);border:1px solid ${tc}30;border-radius:6px;padding:0 6px;white-space:nowrap;">גולש ${tailMins} דק׳ · אושר ע״י המתאם</span>
+    </div>`:'';
     return`<div style="position:absolute;top:${top}px;left:${left};width:${width};height:${height}px;background:${tc}08;border:1px solid ${tc}30;border-right:3px solid ${tc};border-radius:9px;overflow:hidden;box-sizing:border-box;z-index:2;box-shadow:0 1px 3px rgba(17,24,39,0.06),0 0 0 1px ${tc}12;">
+      ${tailHtml}
       <div style="display:flex;align-items:center;gap:7px;padding:6px 10px 5px;border-bottom:1px solid ${tc}22;background:${tc}12;">
         <span style="font-size:12px;font-weight:800;color:${tc};direction:ltr;font-feature-settings:'tnum';white-space:nowrap;flex:1;">${label}</span>
         <span style="min-width:18px;height:18px;padding:0 5px;border-radius:5px;background:var(--white);border:1px solid ${tc}30;display:inline-flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:var(--ink-2);">${grp.length}</span>

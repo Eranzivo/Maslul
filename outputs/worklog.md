@@ -36,22 +36,24 @@
 - [ ] Health-cache staleness: session-open while nightly sweep writes → chip shows older score until re-render/reload. Acceptable P1; revisit with P2 panel.
 - [ ] P2 (awaiting Eran): recommendations table + accept/reject workflow + stability knob `audit.min_saving_per_disturbed_min` (default 15, calibrate from replay histogram).
 
-## Window-overrun confirmation (Eran spec 2026-07-11 — NEXT ENGINE SLICE)
-Refines the shipped `window_semantics: arrive` knob:
-- Remaining window ≥ job duration → book silently (today's shipped behavior).
-- Arrival fits inside window BUT job overruns past window end (e.g. 15 min left, 30-min job)
-  → NO silent booking: coordinator popup "הקריאה גולשת לחלון הבא" with THREE options:
-  (1) שבץ בכל זאת (book) · (2) בטל (don't) · (3) מצא חלון אחר (re-run findBestSlot excluding this slot).
-- Scope: LIVE dispatch door only (slot picker + findBestSlot recommendation + manual placement) —
-  extend the guardManualPlacement / confirmCapacityDrop pattern.
-- OPEN sub-question for the slice: batch/auto-sequence has no coordinator — does it book the
-  overrun zone (pure arrive) or avoid it (finish) for NEW placements? Ask Eran at build time;
-  suggest: batch avoids (conservative), live asks (his spec).
-- Tests: JS decision-fn suite + scenarios row update when built.
-- **UI refinement (Eran 2026-07-11, design round):** a coordinator-APPROVED overrun IS shown in
-  the calendar — the call stays ONE block; the minutes past window-end render as a striped "tail"
-  inside the block + tag "גולש X דק׳ · אושר ע״י המתאם", with a dashed window-end line. The next
-  call's block must not move ("crossing calls well shown, not messy"). Display-layer only —
-  works for any tenant setup. This does NOT change B5: organic 10–15 min lateness (no booking
-  decision) stays unsurfaced; only the popup-approved overrun gets the tail.
-  Approved design: artifact 2bcb6ab4 board 3 (source: scratchpad maslul-dispatch-round2.html).
+## Window-overrun confirmation ✅ BUILT 2026-07-12 (Eran spec 2026-07-11 + his 07-12 decision)
+Refines the shipped `window_semantics: arrive` knob. **Eran's build-time decision:** automatic
+paths may book an overrun of **up to 15 minutes**; beyond that → next-best window/day.
+- **Live dispatch door:** arrival fits but service spills past window end → NEVER silent.
+  `confirmAssign` gate (`overrunMinutes`/`overrunDecision`) → `mo-overrun` popup with facts
+  (window/arrival/finish/spill) + THREE actions: שבץ בכל זאת (audited `overrideReason`
+  "אישור גלישת חלון…") · מצא חלון אחר (slot added to `window._excludedSlots`, `findBestSlot(true)`
+  re-runs with it disabled "הוחרג") · ביטול. Exclusions clear on fresh search / clearDispatch.
+- **Automatic door (batch — no coordinator):** knob **`scheduling.auto_overrun_min`** (default 15,
+  0 = strict). Pref-window new calls: `narrow_window_for_overrun` (solver-hard, start ≤ end−dur+tol,
+  never below window start). Free new calls: `promote_spilled_window` — spill > tol promises the
+  NEXT window (fail-open on the day's last slot). **Existing calls' promises never re-broken**
+  (sequencer unchanged — it re-times within already-promised windows; that's B5 organic lateness,
+  not a booking decision).
+- **Approved-overrun tail shipped** (board 3): daily-view window block extends by the spill with a
+  dashed window-end line + striped zone + tag "גולש X דק׳ · אושר ע״י המתאם"; lanes account for the
+  full extent so neighbors never move/cover. Keyed off the audited override stamp — organic
+  lateness stays unsurfaced. (Weekly-view tail = future polish.)
+- **Deliberate scope note:** manual DRAG placements don't popup — the dropped call re-sequences
+  and route-health audits flag lateness; revisit if coordinators ask.
+- Parity: `tests/fixtures/overrun-cases.json` in BOTH suites + `backend/tests/test_overrun.py` (11).
