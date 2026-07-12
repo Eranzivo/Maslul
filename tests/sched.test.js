@@ -370,6 +370,23 @@ suite('resolveReportCards (reports.cards knob — display-only, batch n/a by des
   check('card set is the 6 known cards', ctx.REPORT_CARDS.length === 6 && Object.keys(all).length === 6);
 });
 
+suite('window overrun: golden fixture (parity with backend resolve_auto_overrun_min/overrun_decision)', () => {
+  const fsO = require('fs'), pathO = require('path');
+  const fx = JSON.parse(fsO.readFileSync(pathO.join(__dirname, 'fixtures', 'overrun-cases.json'), 'utf8'));
+  for (const c of fx.resolver_cases) {
+    check(`resolver sc=${JSON.stringify(c.sc)} → ${c.expect}`, ctx.resolveAutoOverrunMin(c.sc) === c.expect);
+  }
+  for (const c of fx.decision_cases) {
+    check(`decision ${c.semantics}/over=${c.overrun}/auto=${c.auto}/tol=${c.tol} → ${c.expect}`,
+      ctx.overrunDecision(c.semantics, c.overrun, c.auto, c.tol) === c.expect);
+  }
+  // overrunMinutes math
+  check('fits exactly → 0', ctx.overrunMinutes(570, 30, 600) === 0);
+  check('spills 20 → 20', ctx.overrunMinutes(590, 30, 600) === 20);
+  check('no window → 0 (fail-open)', ctx.overrunMinutes(590, 30, null) === 0);
+  check('null start → 0 (fail-open)', ctx.overrunMinutes(null, 30, 600) === 0);
+});
+
 suite('resolveInsightsWindow (insights.window_days knob — display-only, batch n/a by design)', () => {
   check('absent config → 90', ctx.resolveInsightsWindow(undefined) === 90);
   check('empty insights → 90', ctx.resolveInsightsWindow({}) === 90);

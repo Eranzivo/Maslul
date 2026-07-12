@@ -132,6 +132,65 @@ def resolve_window_semantics(config: Optional[dict]) -> str:
     return v if v in ("finish", "arrive") else "finish"
 
 
+def resolve_auto_overrun_min(config: Optional[dict]) -> int:
+    """`scheduling.auto_overrun_min` (Eran 2026-07-12): minutes a NEW placement
+    made WITHOUT a coordinator (this batch) may let service spill past the
+    promised window end, under 'arrive' semantics. Default 15 (product
+    decision); 0 = strict avoid. The LIVE door never books an overrun silently
+    — the coordinator gets a popup. Mirror of the JS resolveAutoOverrunMin
+    (tests/fixtures/overrun-cases.json parity)."""
+    v = ((config or {}).get("scheduling") or {}).get("auto_overrun_min")
+    try:
+        n = float(v)
+    except (TypeError, ValueError):
+        return 15
+    if n != n or n in (float("inf"), float("-inf")) or n < 0:
+        return 15
+    return int(n + 0.5)  # JS Math.round parity (round-half-up)
+
+
+def overrun_decision(semantics: str, overrun_min: float, is_auto: bool, tol_min: float) -> str:
+    """ONE decision for both doors (mirror of JS overrunDecision): 'book'
+    (silent) / 'ask' (live coordinator popup) / 'defer' (automatic path takes
+    the next window/day). Live always asks on any overrun; automatic books only
+    under 'arrive' semantics within the tolerance."""
+    if not overrun_min > 0:
+        return "book"
+    if not is_auto:
+        return "ask"
+    if semantics != "arrive":
+        return "defer"
+    return "book" if overrun_min <= (tol_min or 0) else "defer"
+
+
+def narrow_window_for_overrun(ws_min: int, we_min: int, duration: int,
+                              semantics: str, tol_min: int) -> int:
+    """Solver-window narrowing for a NEW call with a HARD customer window
+    (preferred_windows): under 'arrive' the solver allows starts up to the
+    window end (spill = full duration) — cap the spill at the tolerance by
+    pulling the passed window_end back by max(0, duration − tol). Never narrows
+    below window start: a window smaller than duration−tol books at its start,
+    which minimizes the spill and keeps the model solvable. 'finish' needs no
+    narrowing (the solver already forbids any spill)."""
+    if semantics != "arrive":
+        return we_min
+    return max(ws_min, we_min - max(0, duration - tol_min))
+
+
+def promote_spilled_window(arr: int, duration: int, slot_start: int,
+                           win_mins: int, day_end_min: int, tol_min: int) -> int:
+    """Derived-window promise for a free new call (no customer window): if the
+    service would spill past the derived window end by more than the tolerance,
+    promise the NEXT window instead — the tech arrives ≤ duration−tol before it
+    opens and the next re-sequence pulls the start inside it. Fail-open: when
+    the day has no next window, keep the spilled promise rather than lose the
+    placement."""
+    spill = (arr + duration) - (slot_start + win_mins)
+    if spill > tol_min and (slot_start + win_mins) < day_end_min:
+        return slot_start + win_mins
+    return slot_start
+
+
 def tenant_works_day(dow: int, config: Optional[dict]) -> bool:
     """Is `dow` (0=Sun … 6=Sat) a tenant working day? Reads
     `config.defaults.work_days` (array of weekday ints). Absent/empty ⇒ today's
@@ -470,6 +529,7 @@ async def run_batch_schedule(
     placement_policy = resolve_placement_policy(config)
     placement_weight = (sched_conf.get("balance") or {}).get("weight", 50)
     pref_mode = resolve_pref_windows_mode(config)
+    auto_overrun_tol = resolve_auto_overrun_min(config)  # batch = no coordinator ⇒ tolerance applies
 
     # 2. Build lookup tables
     cat_duration = {c["id"]: c.get("duration_minutes", 30) for c in cats_raw}
@@ -745,7 +805,13 @@ async def run_batch_schedule(
                         best = mins
             if best is None:
                 return None, None  # day already passed pref_allows_day; only hours clash ⇒ open
-            return _min_to_time(max(best[0], day_start_min)), _min_to_time(min(best[1], day_end_min))
+            ws_min = max(best[0], day_start_min)
+            we_min = min(best[1], day_end_min)
+            # auto_overrun_min: cap how far this unattended booking may spill past
+            # the customer's hard window end (arrive semantics only)
+            we_min = narrow_window_for_overrun(ws_min, we_min, t["_duration"],
+                                               window_semantics, auto_overrun_tol)
+            return _min_to_time(ws_min), _min_to_time(we_min)
 
         new_v2 = []
         for t in day_tasks:
@@ -759,9 +825,9 @@ async def run_batch_schedule(
             matrix, existing_v2, new_v2, start_t, end_t, breaks=brk,
             return_node=bool(return_loc), route_strategy=route_strategy,
             window_semantics=window_semantics)
-        return r, day_existing, day_tasks, _time_to_min(start_t)
+        return r, day_existing, day_tasks, _time_to_min(start_t), _time_to_min(end_t)
 
-    # day_results holds the FINAL solve per day: (result, existing, new, start_min).
+    # day_results holds the FINAL solve per day: (result, existing, new, start_min, end_min).
     day_results: dict[tuple, tuple] = {}
     MAX_ROUNDS = max(6, (d_end - d_start).days + 1)  # >= covering days any task can try
     rounds = 0
@@ -790,7 +856,7 @@ async def run_batch_schedule(
                 dirty.add(key)
         next_pool = []
         for key in sorted(dirty):
-            r, day_existing, day_tasks, start_min = solve_day(key)
+            r, day_existing, day_tasks, start_min, end_min = solve_day(key)
             n_e = len(day_existing)
             for di in r["dropped_new"]:
                 dt = day_tasks[di - n_e]
@@ -798,14 +864,14 @@ async def run_batch_schedule(
                 excluded.setdefault(dt["id"], set()).add(key)
                 unbook(key, dt)
                 next_pool.append(dt)
-            day_results[key] = (r, day_existing, day_tasks, start_min)
+            day_results[key] = (r, day_existing, day_tasks, start_min, end_min)
         pool = next_pool
     for task in pool:  # rounds exhausted — treat like any other capacity failure
         unassigned.append({"id": task["id"], "city": task["city"], "reason": "day_over_capacity"})
 
     # 5. Emit results from the final day snapshots (dropped tasks are not in `ordered`).
     win_mins = int(round(arrival_window_h * 60))
-    for (tech_id, date_str), (r, day_existing, day_tasks, start_min) in sorted(day_results.items()):
+    for (tech_id, date_str), (r, day_existing, day_tasks, start_min, end_min) in sorted(day_results.items()):
         n_e = len(day_existing)
         if not any(i >= n_e for i in r["ordered"]):
             continue  # no new call survived on this day — leave its existing times alone
@@ -823,6 +889,9 @@ async def run_batch_schedule(
             task = day_tasks[i - n_e]
             slot_num   = max(0, (arr - start_min) // win_mins)
             slot_start = start_min + slot_num * win_mins
+            # auto_overrun_min: a spill beyond the tolerance promises the NEXT window
+            slot_start = promote_spilled_window(arr, task["_duration"], slot_start,
+                                                win_mins, end_min, auto_overrun_tol)
             payload = {
                 "technician_id":          tech_id,
                 "scheduled_date":         date_str,

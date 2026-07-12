@@ -1,0 +1,28 @@
+{
+  "_comment": "Window-overrun policy parity (Eran 2026-07-12): JS resolveAutoOverrunMin/overrunDecision ↔ Py resolve_auto_overrun_min/overrun_decision must agree on every case. Rule: live door always ASKS on any overrun (coordinator popup); automatic paths (batch) may BOOK an overrun up to scheduling.auto_overrun_min minutes under 'arrive' semantics (default 15), beyond that they DEFER to the next window/day; 'finish' semantics never books an automatic overrun.",
+  "resolver_cases": [
+    { "sc": null, "expect": 15 },
+    { "sc": {}, "expect": 15 },
+    { "sc": { "auto_overrun_min": 0 }, "expect": 0 },
+    { "sc": { "auto_overrun_min": 15 }, "expect": 15 },
+    { "sc": { "auto_overrun_min": 30 }, "expect": 30 },
+    { "sc": { "auto_overrun_min": "10" }, "expect": 10 },
+    { "sc": { "auto_overrun_min": -5 }, "expect": 15 },
+    { "sc": { "auto_overrun_min": "junk" }, "expect": 15 },
+    { "sc": { "auto_overrun_min": 12.6 }, "expect": 13 }
+  ],
+  "decision_cases": [
+    { "semantics": "arrive", "overrun": 0,  "auto": true,  "tol": 15, "expect": "book" },
+    { "semantics": "arrive", "overrun": 0,  "auto": false, "tol": 15, "expect": "book" },
+    { "semantics": "finish", "overrun": 0,  "auto": true,  "tol": 15, "expect": "book" },
+    { "semantics": "arrive", "overrun": 10, "auto": true,  "tol": 15, "expect": "book" },
+    { "semantics": "arrive", "overrun": 15, "auto": true,  "tol": 15, "expect": "book" },
+    { "semantics": "arrive", "overrun": 16, "auto": true,  "tol": 15, "expect": "defer" },
+    { "semantics": "arrive", "overrun": 20, "auto": true,  "tol": 0,  "expect": "defer" },
+    { "semantics": "arrive", "overrun": 1,  "auto": false, "tol": 15, "expect": "ask" },
+    { "semantics": "arrive", "overrun": 45, "auto": false, "tol": 15, "expect": "ask" },
+    { "semantics": "finish", "overrun": 5,  "auto": false, "tol": 15, "expect": "ask" },
+    { "semantics": "finish", "overrun": 5,  "auto": true,  "tol": 15, "expect": "defer" },
+    { "semantics": "finish", "overrun": 1,  "auto": true,  "tol": 60, "expect": "defer" }
+  ]
+}

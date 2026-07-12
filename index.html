@@ -5887,6 +5887,31 @@ function resolveReportCards(rep){
   for(const k of REPORT_CARDS) out[k]=cards[k]!==false;
   return out;
 }
+// ── Automatic-overrun tolerance (Eran 2026-07-12) ────────────────────────────
+// scheduling.auto_overrun_min: how many minutes a NEW placement made WITHOUT a
+// coordinator (batch) may let service spill past the promised window end, under
+// 'arrive' semantics. Default 15 (Eran's product decision); 0 = strict avoid.
+// The LIVE door never books an overrun silently — the coordinator gets a popup
+// (overrunDecision → 'ask'). Mirrors Python resolve_auto_overrun_min.
+function resolveAutoOverrunMin(sc){
+  const v=sc&&sc.auto_overrun_min;
+  const n=Number(v);
+  return (v!==undefined&&v!==null&&isFinite(n)&&n>=0)?Math.round(n):15;
+}
+// Minutes the job would run past the window end (0 = fits). Nulls ⇒ 0 (fail-open).
+function overrunMinutes(startMin,durationMin,windowEndMin){
+  if(windowEndMin==null||startMin==null)return 0;
+  return Math.max(0,(startMin+(Number(durationMin)||0))-windowEndMin);
+}
+// ONE decision for both doors: 'book' (silent) / 'ask' (coordinator popup) /
+// 'defer' (automatic path takes the next window/day). Live always asks on any
+// overrun; automatic books only under 'arrive' semantics within the tolerance.
+function overrunDecision(semantics,overrunMin,isAuto,tolMin){
+  if(!(overrunMin>0))return 'book';
+  if(!isAuto)return 'ask';
+  if(semantics!=='arrive')return 'defer';
+  return overrunMin<=(Number(tolMin)||0)?'book':'defer';
+}
 // ── Insights demand window (Eran's zones timeframe chip → tenant knob).
 // ins = tenants.config.insights. window_days drives how far back demand counts look
 // (zone cards' ביקוש line). Absent/invalid ⇒ 90 days. Display-only: batch n/a by design.
