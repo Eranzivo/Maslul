@@ -370,5 +370,16 @@ suite('resolveReportCards (reports.cards knob — display-only, batch n/a by des
   check('card set is the 6 known cards', ctx.REPORT_CARDS.length === 6 && Object.keys(all).length === 6);
 });
 
+suite('resolveInsightsWindow (insights.window_days knob — display-only, batch n/a by design)', () => {
+  check('absent config → 90', ctx.resolveInsightsWindow(undefined) === 90);
+  check('empty insights → 90', ctx.resolveInsightsWindow({}) === 90);
+  check('explicit 30 honored', ctx.resolveInsightsWindow({window_days:30}) === 30);
+  check('explicit 365 honored', ctx.resolveInsightsWindow({window_days:365}) === 365);
+  check('string number coerced', ctx.resolveInsightsWindow({window_days:'180'}) === 180);
+  check('zero/negative → 90 (never a dead window)', ctx.resolveInsightsWindow({window_days:0}) === 90 && ctx.resolveInsightsWindow({window_days:-5}) === 90);
+  check('junk → 90', ctx.resolveInsightsWindow({window_days:'abc'}) === 90 && ctx.resolveInsightsWindow({window_days:Infinity}) === 90);
+  check('fractional rounded', ctx.resolveInsightsWindow({window_days:90.6}) === 91);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

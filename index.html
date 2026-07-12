@@ -1377,6 +1377,27 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
       </div>
     </div>
     <div class="set-sec">
+      <div class="set-title">📊 דוחות ותובנות</div>
+      <div style="font-size:0.8125rem;color:var(--ink-3);margin-bottom:12px;">אילו כרטיסים יוצגו בדף הדוחות, וכמה אחורה מסתכל חישוב הביקוש בדף האזורים.</div>
+      <div id="set-report-cards" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;user-select:none;"><input type="checkbox" id="set-rc-kpis">מדדים ראשיים</label>
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;user-select:none;"><input type="checkbox" id="set-rc-team">ביצועי צוות</label>
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;user-select:none;"><input type="checkbox" id="set-rc-zones">ביקוש אזורים</label>
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;user-select:none;"><input type="checkbox" id="set-rc-categories">קטגוריות</label>
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;user-select:none;"><input type="checkbox" id="set-rc-weekday">עומס שבועי</label>
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;user-select:none;"><input type="checkbox" id="set-rc-insights">תובנות מסלול</label>
+      </div>
+      <div class="fg" style="max-width:260px;">
+        <label class="fl">חלון ביקוש לתובנות (אזורים)</label>
+        <select class="fc" id="set-insights-window">
+          <option value="30">30 יום</option>
+          <option value="90">90 יום (ברירת מחדל)</option>
+          <option value="180">180 יום</option>
+          <option value="365">שנה</option>
+        </select>
+      </div>
+    </div>
+    <div class="set-sec">
       <div class="set-title">גיבוי הגדרות</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn btn-outline" onclick="exportSettings()">📤 ייצא הגדרות</button>
@@ -3649,6 +3670,11 @@ function renderSettings(){
   const wd=tenantConfig.defaults?.work_days;
   const wdArr=Array.isArray(wd)&&wd.length?wd:[0,1,2,3,4,5];
   for(let i=0;i<7;i++){const el=document.getElementById('set-wd-'+i);if(el)el.checked=wdArr.includes(i);}
+  // Reports & insights knobs (reports.cards / insights.window_days)
+  const rc=resolveReportCards(tenantConfig.reports);
+  for(const k of REPORT_CARDS){const el=document.getElementById('set-rc-'+k);if(el)el.checked=rc[k];}
+  const iw=document.getElementById('set-insights-window');
+  if(iw)iw.value=String(resolveInsightsWindow(tenantConfig.insights));
   const f=tenantConfig.features||{};
   const sec=document.getElementById('sec-features');
   if(sec){
@@ -5860,6 +5886,13 @@ function resolveReportCards(rep){
   const out={};
   for(const k of REPORT_CARDS) out[k]=cards[k]!==false;
   return out;
+}
+// ── Insights demand window (Eran's zones timeframe chip → tenant knob).
+// ins = tenants.config.insights. window_days drives how far back demand counts look
+// (zone cards' ביקוש line). Absent/invalid ⇒ 90 days. Display-only: batch n/a by design.
+function resolveInsightsWindow(ins){
+  const n=ins&&Number(ins.window_days);
+  return (isFinite(n)&&n>0)?Math.round(n):90;
 }
 // </sched-logic>
 function appUsesZones(){ return usesZones(tenantConfig && tenantConfig.scheduling); }
@@ -8356,7 +8389,8 @@ function renderZones(){
   const _roBanner=`<div class="settings-ro-banner">🔒 מצב צפייה בלבד — עריכת אזורים מותרת למנהל בלבד</div>`;
   // Round-2: coverage-vs-demand line per zone (data only, no judgment — the
   // suggestion layer with wait-time math is the P2 insights slice)
-  const _cutoff=new Date(Date.now()-90*864e5).toISOString().slice(0,10);
+  const _demandDays=resolveInsightsWindow(tenantConfig&&tenantConfig.insights); // knob insights.window_days (default 90)
+  const _cutoff=new Date(Date.now()-_demandDays*864e5).toISOString().slice(0,10);
   const _dNames=['א׳','ב׳','ג׳','ד׳','ה׳','ו׳'];
   document.getElementById('zones-list').innerHTML=_roBanner+(zones.map((z,zi)=>{
     const isPoly=!!(z.polygons&&z.polygons.length);
@@ -8383,7 +8417,7 @@ function renderZones(){
       <div class="zone-cities">${z.cities.map((c,ci)=>`<span class="city-tag">${h(c)}<button class="settings-edit-only" onclick="removeCity('${z.id}',${ci})">×</button></span>`).join('')||'<span style="font-size:0.8rem;color:var(--ink-4);">אין ערים באזור</span>'}</div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding-top:7px;border-top:1px dashed var(--line);font-size:0.7rem;color:var(--ink-3);font-weight:700;">
         <span>ימי כיסוי:</span>${covHtml}
-        <span style="margin-right:auto;">ביקוש 90 יום: <b style="color:var(--ink);font-variant-numeric:tabular-nums;">${dem}</b> קריאות</span>
+        <span style="margin-right:auto;">ביקוש ${_demandDays} יום: <b style="color:var(--ink);font-variant-numeric:tabular-nums;">${dem}</b> קריאות</span>
       </div>
       <div class="settings-edit-only" style="display:flex;gap:8px;align-items:center;margin-top:8px;">
         <input class="fc" id="new-city-${z.id}" list="il-cities-list" autocomplete="off" placeholder="הקלד שם עיר…" onkeydown="if(event.key==='Enter'){event.preventDefault();addCities('${z.id}');}" style="width:220px;max-width:100%;font-size:0.875rem;">
@@ -8537,6 +8571,11 @@ function saveSettings(){
   // selection falls back to default behavior (Sat off) rather than scheduling zero days.
   const workDays=[];for(let i=0;i<7;i++){if(document.getElementById('set-wd-'+i)?.checked)workDays.push(i);}
   tenantConfig.defaults.work_days=workDays;
+  // Reports & insights knobs — persist via the same tenantConfig spread
+  const cards={};for(const k of REPORT_CARDS){const el=document.getElementById('set-rc-'+k);if(el)cards[k]=!!el.checked;}
+  tenantConfig.reports={...(tenantConfig.reports||{}),cards};
+  const iwEl=document.getElementById('set-insights-window');
+  if(iwEl)tenantConfig.insights={...(tenantConfig.insights||{}),window_days:parseInt(iwEl.value)||90};
   save();saveSettingsToSupabase().then(ok=>{if(ok!==false)showToast('הגדרות נשמרו ✓');});
 }
 function exportSettings(){
