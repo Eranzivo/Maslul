@@ -357,5 +357,18 @@ suite('route-health display templates (P1 — render-only, Python computes)', ()
   check('chip: no findings → no count', !partial.includes('ממצאים'));
 });
 
+suite('resolveReportCards (reports.cards knob — display-only, batch n/a by design)', () => {
+  const all = ctx.resolveReportCards(undefined);
+  check('absent config → every card visible', ctx.REPORT_CARDS.every(k => all[k] === true));
+  check('empty reports → every card visible', ctx.REPORT_CARDS.every(k => ctx.resolveReportCards({})[k] === true));
+  const trimmed = ctx.resolveReportCards({cards:{zones:false, insights:false}});
+  check('explicit false hides the card', trimmed.zones === false && trimmed.insights === false);
+  check('unmentioned cards stay visible', trimmed.kpis === true && trimmed.team === true && trimmed.weekday === true && trimmed.categories === true);
+  const truthy = ctx.resolveReportCards({cards:{zones:true, team:1}});
+  check('only explicit false hides — truthy/other values keep visible', truthy.zones === true && truthy.team === true);
+  check('unknown card keys ignored (no crash, not added)', !('bogus' in ctx.resolveReportCards({cards:{bogus:false}})));
+  check('card set is the 6 known cards', ctx.REPORT_CARDS.length === 6 && Object.keys(all).length === 6);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

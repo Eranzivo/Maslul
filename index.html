@@ -1528,6 +1528,8 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
       <div class="flex-gap" style="flex-wrap:wrap;gap:6px;">
         <button id="rp-week" class="btn btn-outline btn-sm" onclick="setReportPeriod('week')">שבוע זה</button>
         <button id="rp-month" class="btn btn-blue btn-sm" onclick="setReportPeriod('month')">חודש זה</button>
+        <button id="rp-3mo" class="btn btn-outline btn-sm" onclick="setReportPeriod('3mo')">3 חודשים</button>
+        <button id="rp-year" class="btn btn-outline btn-sm" onclick="setReportPeriod('year')">שנה</button>
         <button id="rp-all" class="btn btn-outline btn-sm" onclick="setReportPeriod('all')">הכל</button>
         <button id="rp-custom" class="btn btn-outline btn-sm" onclick="setReportPeriod('custom')">טווח תאריכים</button>
         <button class="btn btn-outline btn-sm" onclick="exportReportsCSV()">📥 ייצא CSV</button>
@@ -4501,7 +4503,7 @@ async function createTenant(){
 // ═══ REPORTS ═══
 function setReportPeriod(p){
   reportPeriod=p;
-  ['week','month','all','custom'].forEach(x=>{
+  ['week','month','3mo','year','all','custom'].forEach(x=>{
     const el=document.getElementById('rp-'+x);
     if(el)el.className='btn btn-sm'+(x===p?' btn-blue':' btn-outline');
   });
@@ -4517,23 +4519,39 @@ function setReportPeriod(p){
   }
   renderReports();
 }
-function getReportTasks(){
-  const now=new Date();const today=now.toISOString().split('T')[0];
-  if(reportPeriod==='week'){
-    const sun=new Date(now);sun.setDate(now.getDate()-now.getDay());
-    const sunStr=sun.toISOString().split('T')[0];
-    return tasks.filter(t=>t.date&&t.date>=sunStr&&t.date<=today);
-  }
+// Active period → inclusive [from,to] date strings (from null ⇒ all history) plus the
+// matching previous period for the compare stamp (prevFrom null ⇒ no comparison shown).
+// Period-seg rule (Eran): EVERY reports section re-renders from this one range.
+function _reportRange(){
+  const now=new Date(), today=now.toISOString().split('T')[0];
+  const back=n=>{const x=new Date(now);x.setDate(now.getDate()-n);return x.toISOString().split('T')[0];};
+  if(reportPeriod==='week'){const dow=now.getDay();return{from:back(dow),to:today,prevFrom:back(dow+7),prevTo:back(dow+1),label:'השבוע'};}
   if(reportPeriod==='month'){
     const ms=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-01';
-    return tasks.filter(t=>t.date&&t.date>=ms&&t.date<=today);
+    const pmY=now.getMonth()===0?now.getFullYear()-1:now.getFullYear(), pmM=now.getMonth()===0?12:now.getMonth();
+    const pmDays=new Date(now.getFullYear(),now.getMonth(),0).getDate();
+    return{from:ms,to:today,prevFrom:pmY+'-'+pad(pmM)+'-01',prevTo:pmY+'-'+pad(pmM)+'-'+pad(pmDays),label:'החודש'};
   }
+  if(reportPeriod==='3mo')return{from:back(91),to:today,prevFrom:back(183),prevTo:back(92),label:'ב־3 החודשים האחרונים'};
+  if(reportPeriod==='year')return{from:back(365),to:today,prevFrom:back(731),prevTo:back(366),label:'בשנה האחרונה'};
   if(reportPeriod==='custom'){
-    const from=document.getElementById('rp-from')?.value;
-    const to=document.getElementById('rp-to')?.value;
-    if(from&&to)return tasks.filter(t=>t.date&&t.date>=from&&t.date<=to);
+    const from=document.getElementById('rp-from')?.value, to=document.getElementById('rp-to')?.value;
+    if(from&&to)return{from,to,prevFrom:null,prevTo:null,label:'בטווח שנבחר'};
   }
-  return tasks.filter(t=>t.date);
+  return{from:null,to:null,prevFrom:null,prevTo:null,label:'בסך הכל'};
+}
+function getReportTasks(){
+  const r=_reportRange();
+  return tasks.filter(t=>t.date&&(!r.from||(t.date>=r.from&&t.date<=r.to)));
+}
+function _downloadCSV(rows,name){
+  const csv=rows.map(r=>r.map(cell=>'"'+String(cell==null?'':cell).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=name+'-'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();URL.revokeObjectURL(url);
+  showToast('קובץ CSV יוצא ✓');
 }
 function exportReportsCSV(){
   const filtered=getReportTasks();
@@ -4544,75 +4562,234 @@ function exportReportsCSV(){
     const catName=categories.find(c=>c.id===t.catId)?.name||t.catName||'';
     rows.push([t.date||'',t.client||'',t.city||'',catName,techName,t.status||'',t.assignId||'']);
   });
-  const csv=rows.map(r=>r.map(cell=>'"'+String(cell).replace(/"/g,'""')+'"').join(',')).join('\n');
-  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download='maslul-report-'+new Date().toISOString().split('T')[0]+'.csv';
-  a.click();URL.revokeObjectURL(url);
-  showToast('קובץ CSV יוצא ✓');
+  _downloadCSV(rows,'maslul-report');
 }
+// Per-card CSV export — honors the ACTIVE period filter (Eran's export rule): the rows
+// are the exact dataset the card was last rendered from.
+let _rpLast=null;
+function _rpExportCard(key){
+  if(!_rpLast){showToast('אין נתונים לייצוא','error');return;}
+  const L=_rpLast;
+  const sets={
+    kpis:[['מדד','ערך'],['קריאות '+L.rng.label,L.total],['הושלמו',L.completed],['שיעור השלמה %',L.rate],['ממתינות כעת',L.pending],['המתנה ממוצעת לשיבוץ (ימים)',L.avgWait!=null?L.avgWait.toFixed(1):''],['ניצולת %',L.util!=null?L.util:''],['ציון מסלול ממוצע',_rpScores.avg!=null?_rpScores.avg:'']],
+    team:[['טכנאי','קריאות','הושלמו','ציון מסלול ממוצע'],...L.team.map(x=>[x.tech.name,x.total,x.done,_rpScores.perTech[x.tech.id]!=null?_rpScores.perTech[x.tech.id]:''])],
+    zones:[['אזור','קריאות','הושלמו','ימי כיסוי בשבוע'],...L.zones.filter(x=>x.total>0).map(x=>[x.zone.name,x.total,x.done,x.covDays])],
+    categories:[['קטגוריה','קריאות','משך מוגדר (דק׳)'],...L.cats.map(x=>[x.cat.name,x.total,x.cat.time||30])],
+    weekday:[['יום','קריאות'],...L.days.map((c,i)=>[['ראשון','שני','שלישי','רביעי','חמישי','שישי'][i],c])],
+    insights:[['תובנה','מבוסס על'],...L.insights.map(x=>[x.text,L.rng.label])]
+  };
+  const rows=sets[key];
+  if(!rows||rows.length<2){showToast('אין נתונים לייצוא','error');return;}
+  _downloadCSV(rows,'maslul-report-'+key);
+}
+function _rpToggleExpand(key,btn){
+  const el=document.getElementById('rp-more-'+key);if(!el)return;
+  const open=el.style.display!=='none';
+  el.style.display=open?'none':'';
+  if(btn)btn.textContent=open?(btn.dataset.more||'⤢'):(btn.dataset.less||'⤡');
+}
+// Route-score aggregates for the active period — route_audits (browser has tenant SELECT;
+// latest row per tech-day wins; score null = unauditable → excluded). Async display fill:
+// renderReports paints — placeholders, this fills them when the fetch lands.
+let _rpScores={key:null,avg:null,perTech:{}};
+async function _rpEnsureScores(){
+  if(!currentTenantId)return; // demo mode — no Supabase reads
+  const r=_reportRange();
+  const from=r.from||new Date(Date.now()-365*864e5).toISOString().split('T')[0];
+  const to=r.to||new Date().toISOString().split('T')[0];
+  const key=from+'|'+to;
+  if(_rpScores.key!==key){
+    try{
+      const{data,error}=await sb.from('route_audits')
+        .select('technician_id,date,score,created_at')
+        .gte('date',from).lte('date',to)
+        .order('created_at',{ascending:false});
+      if(error||!data)return;
+      const latest={};
+      for(const row of data){const k2=row.technician_id+'|'+row.date;if(!(k2 in latest))latest[k2]=row.score;}
+      const sums={},cnts={};let sum=0,n=0;
+      for(const k2 in latest){
+        const s=latest[k2];if(s==null)continue;
+        const tid=k2.split('|')[0];
+        sums[tid]=(sums[tid]||0)+s;cnts[tid]=(cnts[tid]||0)+1;sum+=s;n++;
+      }
+      const perTech={};
+      for(const tid in sums)perTech[tid]=Math.round(sums[tid]/cnts[tid]);
+      _rpScores={key,avg:n?Math.round(sum/n):null,perTech};
+    }catch(e){return;/* display-only */}
+  }
+  if(_rpScores.key!==key)return; // a newer period's fetch overwrote — let it fill
+  const kEl=document.getElementById('rp-kpi-score');
+  if(kEl)kEl.textContent=_rpScores.avg!=null?_rpScores.avg:'—';
+  for(const tech of technicians){
+    const sEl=document.getElementById('rp-score-'+tech.id);
+    if(sEl)sEl.textContent=_rpScores.perTech[tech.id]!=null?_rpScores.perTech[tech.id]:'—';
+  }
+}
+// Reports page (Round-2 mockup 4164c874): period seg + compare stamp, 4 KPIs (calls /
+// avg wait / utilization / route score), team + zone-demand hbars + categories + weekday
+// cards — every card gets ⤢ expand + ⬇ export honoring the active period, and card
+// visibility is the per-tenant `reports.cards` knob (resolveReportCards). Insights follow
+// the doctrine: timeframe stamp, הצעה בלבד, max 2 visible + עוד toggle, never change config.
 function renderReports(){
   const el=document.getElementById('reports-content');if(!el)return;
+  const rng=_reportRange();
   const filtered=getReportTasks();
+  const vis=resolveReportCards(tenantConfig&&tenantConfig.reports);
   const completed=filtered.filter(t=>t.status==='completed').length;
   const total=filtered.length;
   const pending=tasks.filter(t=>t.status==='pending').length;
   const rate=total?Math.round((completed/total)*100):0;
+  // Compare stamp vs the matching previous period
+  let cmp='';
+  if(rng.prevFrom){
+    const prev=tasks.filter(t=>t.date&&t.date>=rng.prevFrom&&t.date<=rng.prevTo).length;
+    if(prev)cmp=`${total>=prev?'▲ +':'▼ '}${Math.round((total-prev)/prev*100)}% לעומת התקופה הקודמת (${prev})`;
+  }
+  // Avg wait: call creation → scheduled date, scheduled/completed calls only
+  const waits=filtered.filter(t=>t.createdAt&&t.date&&t.status!=='pending'&&t.status!=='cancelled')
+    .map(t=>Math.max(0,Math.round((new Date(t.date)-new Date(t.createdAt.slice(0,10)))/864e5)));
+  const avgWait=waits.length?(waits.reduce((a,b)=>a+b,0)/waits.length):null;
+  // Utilization: booked service minutes ÷ available tech-minutes over the period's PAST days
+  // (bounded loop ≤366 days; 'all' period has no bounds ⇒ shown as —)
+  let util=null;
+  if(rng.from){
+    let capMins=0,booked=0;
+    const today=todayStr();
+    for(let dt=new Date(rng.from);;dt.setDate(dt.getDate()+1)){
+      const ds=dt.toISOString().split('T')[0];
+      if(ds>rng.to||ds>today)break;
+      for(const tech of technicians){
+        if(!isTechAvailable(tech,ds))continue;
+        const sch=getTechDaySchedule(tech,ds);
+        capMins+=Math.max(0,timeToMins(sch.end||'17:00')-timeToMins(sch.start||'07:00'));
+      }
+    }
+    for(const t of filtered){
+      if(t.date<=today&&['assigned','en_route','arrived','completed'].includes(t.status)){
+        const _ht=technicians.find(x=>String(x.id)===String(t.techId));
+        booked+=effectiveDuration(t.catId,_ht,categories,settings);
+      }
+    }
+    if(capMins>0)util=Math.round(booked/capMins*100);
+  }
   const techStats=technicians.map(tech=>{
     const tt=filtered.filter(t=>t.techId===tech.id);
     return{tech,total:tt.length,done:tt.filter(t=>t.status==='completed').length};
   }).sort((a,b)=>b.total-a.total);
+  // Zone demand — getCityZone (single-answer resolve; avoids the dual-membership double count)
   const zoneStats=zones.map(zone=>{
-    const zt=filtered.filter(t=>zone.cities.includes(t.city));
-    return{zone,total:zt.length,done:zt.filter(t=>t.status==='completed').length};
-  }).sort((a,b)=>b.total-a.total).filter(x=>x.total>0);
-  const catStats=categories.map(cat=>{
-    return{cat,total:filtered.filter(t=>t.catId===cat.id).length};
-  }).sort((a,b)=>b.total-a.total).filter(x=>x.total>0);
-  const periodLabel=reportPeriod==='week'?'השבוע':reportPeriod==='month'?'החודש':'בסך הכל';
+    const covDays=[0,1,2,3,4,5].filter(d=>technicians.some(t=>String((t.rotation||{})[d])===String(zone.id)));
+    let zt=[];try{zt=filtered.filter(t=>t.status!=='cancelled'&&(getCityZone(t.city)||{}).id===zone.id);}catch(e){}
+    return{zone,total:zt.length,done:zt.filter(t=>t.status==='completed').length,covDays:covDays.length};
+  }).sort((a,b)=>b.total-a.total);
+  const catStats=categories.map(cat=>({cat,total:filtered.filter(t=>t.catId===cat.id).length}))
+    .sort((a,b)=>b.total-a.total).filter(x=>x.total>0);
+  const dayCounts=Array(6).fill(0);
+  filtered.forEach(t=>{if(t.date){const dow=new Date(t.date).getDay();if(dow<6)dayCounts[dow]++;}});
+  // Insights (zone-mode tenants): coverage gaps + relative overload. Suggestions only.
+  let insights=[];
+  if(appUsesZones()){
+    const withDem=zoneStats.filter(z=>z.total>0);
+    const ratios=withDem.filter(z=>z.covDays>0).map(z=>z.total/z.covDays).sort((a,b)=>a-b);
+    const median=ratios.length?ratios[Math.floor(ratios.length/2)]:0;
+    for(const z of withDem){
+      if(z.covDays===0)insights.push({text:`אזור ${z.zone.name}: ${z.total} קריאות ${rng.label} אך אין לו יום כיסוי בסבב — מומלץ לשבץ יום כיסוי`,pri:0});
+      else if(median>0&&z.total>=5&&z.total/z.covDays>=1.5*median)insights.push({text:`אזור ${z.zone.name} מרכז ${z.total} קריאות על ${z.covDays} ימי כיסוי בשבוע — עומס גבוה יחסית לשאר האזורים; שקול יום כיסוי נוסף`,pri:1});
+    }
+    insights.sort((a,b)=>a.pri-b.pri);
+  }
+  _rpLast={rng,total,completed,rate,pending,avgWait,util,team:techStats,zones:zoneStats,cats:catStats,days:dayCounts,insights};
   const sub=document.getElementById('reports-sub');
-  if(sub)sub.textContent=`${total} קריאות ${periodLabel}`;
+  if(sub)sub.textContent=`${total} קריאות ${rng.label} · ${pending} ממתינות כעת${cmp?' · '+cmp:''}`;
   const maxTech=Math.max(1,...techStats.map(x=>x.total));
+  const maxZone=Math.max(1,...zoneStats.map(x=>x.total));
   const rateColor=rate>=70?'var(--green)':rate>=40?'var(--amber)':'var(--red)';
-  el.innerHTML=`
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:1rem;margin-bottom:1.5rem;">
-      <div class="card" style="text-align:center;"><div style="font-size:2.25rem;font-weight:900;color:var(--blue);">${total}</div><div style="font-size:0.8rem;color:var(--ink-3);margin-top:3px;">קריאות ${periodLabel}</div></div>
-      <div class="card" style="text-align:center;"><div style="font-size:2.25rem;font-weight:900;color:var(--green);">${completed}</div><div style="font-size:0.8rem;color:var(--ink-3);margin-top:3px;">הושלמו</div></div>
-      <div class="card" style="text-align:center;"><div style="font-size:2.25rem;font-weight:900;color:${rateColor};">${rate}%</div><div style="font-size:0.8rem;color:var(--ink-3);margin-top:3px;">שיעור השלמה</div></div>
-      <div class="card" style="text-align:center;"><div style="font-size:2.25rem;font-weight:900;color:var(--amber);">${pending}</div><div style="font-size:0.8rem;color:var(--ink-3);margin-top:3px;">ממתינות כעת</div></div>
-    </div>
-    <div class="card" style="margin-bottom:1rem;">
-      <div class="card-title">${LBL('workers')} — ביצועים</div>
-      ${techStats.length?techStats.map(({tech,total:t,done})=>{
-        const pct=maxTech?Math.round((t/maxTech)*100):0;
-        return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line-2);">
-          <div style="width:32px;height:32px;border-radius:50%;background:${tech.color};display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:white;flex-shrink:0;">${h(initials(tech.name))}</div>
-          <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:0.875rem;">${h(tech.name)}</div><div style="background:var(--line-2);border-radius:4px;height:7px;margin-top:5px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${tech.color};border-radius:4px;"></div></div></div>
-          <div style="text-align:left;flex-shrink:0;"><div style="font-size:1.125rem;font-weight:900;">${t}</div><div style="font-size:0.7rem;color:var(--ink-3);">${done} הושלמו</div></div>
+  const actBtn=(fn,title,txt)=>`<button onclick="${fn}" title="${title}" style="border:1px solid var(--line);background:var(--white);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:0.72rem;color:var(--ink-3);font-family:'Heebo',sans-serif;">${txt}</button>`;
+  const cardHead=(title,key,expandable)=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+    <div class="card-title" style="flex:1;margin-bottom:0;">${title}</div>
+    ${expandable?actBtn(`_rpToggleExpand('${key}',this)`,'הצג הכל','⤢'):''}
+    ${actBtn(`_rpExportCard('${key}')`,'ייצוא CSV לפי הסינון הפעיל','⬇')}
+  </div>`;
+  const kpi=(val,label,sub2,color,idAttr)=>`<div class="card" style="text-align:center;">
+    <div${idAttr?` id="${idAttr}"`:''} style="font-size:2rem;font-weight:900;color:${color};">${val}</div>
+    <div style="font-size:0.8rem;color:var(--ink-3);margin-top:2px;font-weight:700;">${label}</div>
+    ${sub2?`<div style="font-size:0.68rem;color:var(--ink-4);margin-top:3px;">${sub2}</div>`:''}
+  </div>`;
+  const kpisHtml=vis.kpis?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:1rem;margin-bottom:1.25rem;">
+    ${kpi(total,'קריאות '+rng.label,`${completed} הושלמו · <span style="color:${rateColor};font-weight:800;">${rate}%</span> השלמה`,'var(--blue)')}
+    ${kpi(avgWait!=null?avgWait.toFixed(1):'—','המתנה ממוצעת (ימים)','מיצירת הקריאה ועד מועד השיבוץ','var(--amber)')}
+    ${kpi(util!=null?util+'%':'—','ניצולת צוות','זמן שירות מוזמן מתוך קיבולת זמינה','var(--green)')}
+    ${kpi('…','ציון מסלול ממוצע','מתוך ביקורות המסלול בתקופה','var(--accent)','rp-kpi-score')}
+  </div>`:'';
+  const teamRows=x=>{
+    const pct=Math.round((x.total/maxTech)*100);
+    return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line-2);">
+      <div style="width:32px;height:32px;border-radius:50%;background:${x.tech.color};display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:white;flex-shrink:0;">${h(initials(x.tech.name))}</div>
+      <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:0.875rem;">${h(x.tech.name)}</div><div style="background:var(--line-2);border-radius:4px;height:7px;margin-top:5px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${x.tech.color};border-radius:4px;"></div></div></div>
+      <div style="text-align:left;flex-shrink:0;"><div style="font-size:1.125rem;font-weight:900;">${x.total}</div><div style="font-size:0.7rem;color:var(--ink-3);">${x.done} הושלמו · מסלול <span id="rp-score-${x.tech.id}" style="font-weight:800;">…</span></div></div>
+    </div>`;
+  };
+  const teamHtml=vis.team?`<div class="card" style="margin-bottom:1rem;">
+    ${cardHead(`${LBL('workers')} — ביצועים`,'team',false)}
+    ${techStats.length?techStats.map(teamRows).join(''):'<div style="color:var(--ink-4);font-size:0.875rem;padding:1rem 0;text-align:center;">אין נתונים לתקופה זו</div>'}
+  </div>`:'';
+  const zoneRow=x=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line-2);">
+    <div style="flex:0 0 34%;min-width:0;font-size:0.82rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h(x.zone.name)}</div>
+    <div style="flex:1;background:var(--line-2);border-radius:4px;height:10px;overflow:hidden;"><div style="height:100%;width:${Math.round(x.total/maxZone*100)}%;background:var(--accent);border-radius:4px;"></div></div>
+    <div style="flex-shrink:0;font-size:0.82rem;font-weight:900;min-width:26px;text-align:left;">${x.total}</div>
+    <div style="flex-shrink:0;font-size:0.66rem;color:${x.covDays?'var(--ink-3)':'#B4791F'};font-weight:700;min-width:58px;">${x.covDays?x.covDays+' ימי כיסוי':'⚠ אין כיסוי'}</div>
+  </div>`;
+  const zoneList=zoneStats.filter(x=>x.total>0);
+  const zonesHtml=(vis.zones&&zoneList.length&&appUsesZones())?`<div class="card" style="margin-bottom:1rem;">
+    ${cardHead(`${LBL('zones')} — ביקוש ${rng.label}`,'zones',zoneList.length>5)}
+    ${zoneList.slice(0,5).map(zoneRow).join('')}
+    ${zoneList.length>5?`<div id="rp-more-zones" style="display:none;">${zoneList.slice(5).map(zoneRow).join('')}</div>`:''}
+  </div>`:'';
+  const catRow=x=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line-2);">
+    <div style="font-size:0.875rem;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h(x.cat.name)}</div>
+    <span style="font-size:0.68rem;color:var(--ink-4);white-space:nowrap;">מוגדר: ${x.cat.time||30} דק׳</span>
+    <span class="badge badge-blue">${x.total}</span>
+  </div>`;
+  const catsHtml=(vis.categories&&catStats.length)?`<div class="card" style="margin-bottom:1rem;">
+    ${cardHead('קטגוריות — נפח קריאות','categories',catStats.length>5)}
+    ${catStats.slice(0,5).map(catRow).join('')}
+    ${catStats.length>5?`<div id="rp-more-categories" style="display:none;">${catStats.slice(5).map(catRow).join('')}</div>`:''}
+    <div style="font-size:0.64rem;color:var(--ink-4);margin-top:7px;">השוואת משך בפועל מול המשך המוגדר תופעל כשדיווחי סיום יכללו שעות (שלב האירועים)</div>
+  </div>`:'';
+  const dayNames=['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
+  const maxDay=Math.max(1,...dayCounts);
+  const weekdayHtml=(vis.weekday&&filtered.length>=3)?`<div class="card" style="margin-bottom:1rem;">
+    ${cardHead('עומס לפי יום בשבוע','weekday',false)}
+    <div style="display:flex;align-items:flex-end;gap:8px;height:80px;padding:12px 0 4px;">
+      ${dayCounts.map((c,i)=>{
+        const pct=Math.round((c/maxDay)*100);
+        return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <div style="font-size:0.65rem;font-weight:700;color:var(--ink-3);">${c||''}</div>
+          <div style="width:100%;background:var(--blue);border-radius:3px 3px 0 0;height:${Math.max(4,pct*0.56)}px;opacity:${pct>0?0.4+pct*0.006:0.15};"></div>
+          <div style="font-size:0.65rem;color:var(--ink-3);white-space:nowrap;">${dayNames[i]}</div>
         </div>`;
-      }).join(''):'<div style="color:var(--ink-4);font-size:0.875rem;padding:1rem 0;text-align:center;">אין נתונים לתקופה זו</div>'}
+      }).join('')}
     </div>
-    ${zoneStats.length?`<div class="card" style="margin-bottom:1rem;"><div class="card-title">${LBL('zones')} — חלוקה גיאוגרפית</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:8px;">${zoneStats.map(({zone,total:t,done})=>`<div style="background:var(--blue-l);border-radius:var(--r);padding:12px;"><div style="font-weight:700;font-size:0.9rem;">${h(zone.name)}</div><div style="font-size:1.75rem;font-weight:900;color:var(--blue-d);margin-top:4px;">${t}</div><div style="font-size:0.7rem;color:var(--ink-3);">${done} הושלמו</div></div>`).join('')}</div></div>`:''}
-    ${catStats.length?`<div class="card" style="margin-bottom:1rem;"><div class="card-title">קטגוריות — נפח קריאות</div>${catStats.map(({cat,total:t})=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-2);"><div style="font-size:0.875rem;font-weight:600;">${h(cat.name)}</div><span class="badge badge-blue">${t}</span></div>`).join('')}</div>`:''}
-    ${(()=>{
-      const dayNames=['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
-      const dayCounts=Array(6).fill(0);
-      filtered.forEach(t=>{if(t.date){const d=new Date(t.date);const dow=d.getDay();if(dow<6)dayCounts[dow]++;}});
-      const maxDay=Math.max(1,...dayCounts);
-      if(filtered.length<3)return '';
-      return`<div class="card"><div class="card-title">עומס לפי יום בשבוע</div><div style="display:flex;align-items:flex-end;gap:8px;height:80px;padding:12px 0 4px;">
-        ${dayCounts.map((c,i)=>{
-          const pct=Math.round((c/maxDay)*100);
-          return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
-            <div style="font-size:0.65rem;font-weight:700;color:var(--ink-3);">${c||''}</div>
-            <div style="width:100%;background:var(--blue);border-radius:3px 3px 0 0;height:${Math.max(4,pct*0.56)}px;opacity:${pct>0?0.4+pct*0.006:0.15};"></div>
-            <div style="font-size:0.65rem;color:var(--ink-3);white-space:nowrap;">${dayNames[i]}</div>
-          </div>`;
-        }).join('')}
-      </div></div>`;
-    })()}
-  `;
+  </div>`:'';
+  const insightRow=x=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line-2);">
+    <span style="flex-shrink:0;">💡</span>
+    <div style="min-width:0;">
+      <div style="font-size:0.84rem;color:var(--ink);">${h(x.text)}</div>
+      <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
+        <span style="font-size:0.62rem;color:var(--ink-4);background:var(--line-2);border-radius:6px;padding:1px 7px;">מבוסס על: ${rng.label}</span>
+        <span style="font-size:0.62rem;color:#B4791F;background:#FDF3E2;border-radius:6px;padding:1px 7px;font-weight:700;">הצעה בלבד</span>
+      </div>
+    </div>
+  </div>`;
+  const insightsHtml=(vis.insights&&appUsesZones())?`<div class="card" style="margin-bottom:1rem;">
+    ${cardHead('תובנות מסלול','insights',false)}
+    ${insights.length?insights.slice(0,2).map(insightRow).join(''):'<div style="font-size:0.82rem;color:#166534;padding:6px 0;">אין הצעות לתקופה זו — הכיסוי תואם את הביקוש ✓</div>'}
+    ${insights.length>2?`<div id="rp-more-insights" style="display:none;">${insights.slice(2).map(insightRow).join('')}</div>
+    <button onclick="_rpToggleExpand('insights',this)" data-more="עוד הצעות (${insights.length-2})" data-less="צמצם" style="margin-top:8px;border:1px solid var(--line);background:var(--white);border-radius:6px;padding:3px 10px;cursor:pointer;font-size:0.72rem;color:var(--ink-3);font-family:'Heebo',sans-serif;">עוד הצעות (${insights.length-2})</button>`:''}
+  </div>`:'';
+  el.innerHTML=kpisHtml+insightsHtml+teamHtml+zonesHtml+catsHtml+weekdayHtml;
+  _rpEnsureScores(); // async — fills the score KPI + per-tech chips when the fetch lands
 }
 
 // ═══ CLIENTS (CRM) ═══
@@ -5657,6 +5834,17 @@ function healthChipHtml(hh){
   const pal={healthy:['#DCFCE7','#166534'],review:['#FEF3C7','#92400E'],issues:['#FEE2E2','#991B1B']}[hh.band]||['#E5E7EB','#374151'];
   const n=(hh.findings||[]).length;
   return `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;background:${pal[0]};color:${pal[1]};font-size:0.68rem;font-weight:700;">מסלול ${Number(hh.score)}${hh.partial?'*':''}${n?` · ${n} ממצאים`:''}</span>`;
+}
+// ── Per-tenant report-card visibility (Eran 2026-07-12: which report cards show =
+// tenant knob). rep = tenants.config.reports. Absent/partial ⇒ every card visible
+// (safe default — a new tenant sees everything; onboarding trims). Only an explicit
+// `false` hides a card. Display-only knob: batch/solver n/a by design.
+var REPORT_CARDS=['kpis','team','zones','categories','weekday','insights']; // var — the test VM reads it off the context (const wouldn't attach)
+function resolveReportCards(rep){
+  const cards=(rep&&rep.cards)||{};
+  const out={};
+  for(const k of REPORT_CARDS) out[k]=cards[k]!==false;
+  return out;
 }
 // </sched-logic>
 function appUsesZones(){ return usesZones(tenantConfig && tenantConfig.scheduling); }

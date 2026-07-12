@@ -52,6 +52,11 @@ Legend: ✅ enforced · ⚠ caveat (see note) · n/a not applicable to that laye
 > (Israel replay 2026-07-09: finish-inside semantics falsely flagged 10/89 real stops). Note
 > the solver is stricter when *placing* (finish-inside) — known asymmetry, deliberate.
 
+## tenants.config.reports (Round-2 reports page — 2026-07-12)
+| Knob | Meaning | Live JS | Batch/Py | Solver | Test |
+|---|---|---|---|---|---|
+| `reports.cards {key:bool}` (default all visible) | which report cards a tenant sees: `kpis` / `team` / `zones` / `categories` / `weekday` / `insights` — only an explicit `false` hides (Eran's per-tenant-cards rule) | `resolveReportCards` (gates every card in `renderReports`) | n/a **by design** (display-only) | n/a | sched.test.js `resolveReportCards` |
+
 > **Duration chain (unified 2026-07-08):** ONE resolver both doors — `effectiveDuration(catId,tech,categories,settings)` (JS) ⇄ `_effective_duration` (Py): per-tech override → **category time** → `regularTime` → 30. Every live spot (optimize payload, `calcOptimalTime`, candidate slot math, confirm-assign stacking, weekly/daily/monthly calendar block heights) routes through it — previously several ignored category time / tech override (live↔batch parity bug, fixed). **No per-call duration override by design** (Eran 2026-07-08 — durations are a per-tenant category-level setup decision; ad-hoc per-call values invite miscalculation). Parity locked by `tests/fixtures/duration-cases.json`.
 
 ## technicians.* (per-tech knobs)
