@@ -177,8 +177,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);direct
 .time-slot:hover{background:#DCFCE7;border-color:var(--green);}
 .time-slot.selected{background:var(--green);color:white;border-color:var(--green);}
 .time-slot.busy{background:var(--red-l);border-color:#FECACA;cursor:default;color:var(--red);}
-.time-slot.preferred{background:#EFF6FF;border-color:#BFDBFE;border-style:dashed;}
-.time-slot.preferred:hover{background:#DBEAFE;border-color:var(--blue);}
+.time-slot.preferred{background:var(--accent-light);border-color:var(--accent-border);border-style:dashed;}
+.time-slot.preferred:hover{background:#D5EBE6;border-color:var(--blue);}
 .time-slot.suggested{background:#FFFBEB;border-color:#FCD34D;border-width:2px;}
 .time-slot.suggested:hover{background:#FEF3C7;border-color:#F59E0B;}
 .time-slot-range{font-weight:700;}
@@ -747,7 +747,7 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
         </div>
 
         <div style="background:white;border:1px solid #E5E7EB;border-radius:18px;padding:1.875rem;box-shadow:0 1px 8px rgba(0,0,0,0.04);">
-          <div style="width:52px;height:52px;border-radius:14px;background:#DBEAFE;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:1.125rem;">⏱️</div>
+          <div style="width:52px;height:52px;border-radius:14px;background:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:1.125rem;">⏱️</div>
           <div style="font-weight:800;font-size:1.0625rem;margin-bottom:8px;color:#111827;">מחשבון חלונות זמן</div>
           <div style="font-size:0.82rem;color:#6B7280;line-height:1.7;">המערכת מציגה חלונות זמן ריאליים ללקוח לפי עומס הטכנאי, משך השירות ומרחק מהקריאות הקיימות. לא "08:00–18:00" — אלא "10:00–13:00".</div>
         </div>
@@ -6802,7 +6802,7 @@ function renderPendingQueue(){
   el.innerHTML=pending.map(t=>{
     const isOverdue=t.date&&t.date<today;
     const dateLabel=t.date?new Date(t.date+'T12:00:00').toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'}):'ללא תאריך';
-    const recurBadge=t.recurringTemplateId?'<span style="font-size:0.65rem;background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;border-radius:3px;padding:1px 4px;margin-right:3px;">🔄</span>':'';
+    const recurBadge=t.recurringTemplateId?'<span style="font-size:0.65rem;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent-border);border-radius:3px;padding:1px 4px;margin-right:3px;">🔄</span>':'';
     return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line-2);">
       <span style="font-size:0.75rem;font-weight:700;background:${isOverdue?'var(--red-l)':'var(--bg)'};color:${isOverdue?'var(--red)':'var(--ink-3)'};border:1px solid ${isOverdue?'#FECACA':'var(--line)'};border-radius:6px;padding:2px 7px;white-space:nowrap;">${dateLabel}</span>
       <div style="flex:1;min-width:0;">
@@ -7539,7 +7539,7 @@ function renderTasks(){
     const canCancel=['assigned','en_route','arrived'].includes(t.status);
     return`<div class="task-row">
       <div class="task-main">
-        <div class="task-client">${h(t.client)} ${t.assignId?`<span class="assign-id-tag">${h(t.assignId)}</span>`:''}${t.recurringTemplateId?(t.techId?'<span style="font-size:0.7rem;background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;border-radius:4px;padding:1px 5px;margin-right:4px;">🔄 חוזרת</span>':'<span style="font-size:0.7rem;background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;border-radius:4px;padding:1px 5px;margin-right:4px;">⚠️ ממתין לשיבוץ</span>'):''}</div>
+        <div class="task-client">${h(t.client)} ${t.assignId?`<span class="assign-id-tag">${h(t.assignId)}</span>`:''}${t.recurringTemplateId?(t.techId?'<span style="font-size:0.7rem;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent-border);border-radius:4px;padding:1px 5px;margin-right:4px;">🔄 חוזרת</span>':'<span style="font-size:0.7rem;background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;border-radius:4px;padding:1px 5px;margin-right:4px;">⚠️ ממתין לשיבוץ</span>'):''}</div>
         <div class="task-detail">${h(t.cat)} • ${t.street?h(t.street):''}${t.floor?' קומה '+h(t.floor):''}${t.apartment?' דירה '+h(t.apartment):''}${t.street||t.floor||t.apartment?', ':''}${h(t.city)}${t.date?' • '+new Date(t.date+'T12:00:00').toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'}):''}${t.time?' '+t.time:''}${tech?' • '+h(tech.name):''}</div>
         ${t.notes?`<div style="font-size:0.75rem;color:var(--ink-4);margin-top:2px;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px;">💬 ${h(t.notes)}</div>`:''}
       </div>
@@ -8190,7 +8190,7 @@ function renderPlannerTechPills(){
   const isSolo=plannerSelectedTechs.length===1;
   container.innerHTML=technicians.map(t=>{
     const on=plannerSelectedTechs.includes(t.id);
-    const c=t.color||'#2563EB';
+    const c=t.color||'#0E7A6E';
     const soloActive=isSolo&&on;
     return`<div class="tech-pill${on?' on':''}" style="${on?`border-color:${c};color:${c};background:${c}14;`:'color:var(--ink-2);'}" onclick="togglePlannerTech('${t.id}')">
       <span style="width:10px;height:10px;border-radius:50%;background:${on?c:'#D1D5DB'};display:inline-block;flex-shrink:0;"></span>${t.name}
@@ -8332,7 +8332,7 @@ function _plannerTaskChip(t){
     pending:{bg:'#FFFBEB',fg:'#D97706'},
     issue:{bg:'#FEF2F2',fg:'#DC2626'},
   };
-  const col=statusColors[t.status]||{bg:'#EFF6FF',fg:'#1D4ED8'};
+  const col=statusColors[t.status]||{bg:'#E4F2EF',fg:'#0B5D54'};
   const timeLabel=t.windowStart?`${t.windowStart}–${t.windowEnd}`:(t.time||'');
   return`<div class="planner-task-chip" draggable="true" ondragstart="event.stopPropagation();_onTaskDragStart(event,'${t.id}')" style="background:${col.bg};color:${col.fg};border-color:${col.fg}28;border-right-color:${col.fg};cursor:grab;" onclick="openTaskDetail('${t.id}')">
     <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.72rem;">${h(t.client||'לקוח')}</div>
@@ -8350,7 +8350,7 @@ function _plannerTaskChip(t){
 // own drop/dragover handlers still work for empty space.
 function _plannerWeekCell(tech, sorted){
   if(!sorted.length) return '';
-  const tc=tech.color||'#2563EB';
+  const tc=tech.color||'#0E7A6E';
   const groups={};
   for(const t of sorted){
     const key=t.windowStart?`${t.windowStart}|${t.windowEnd}`:(t.time||'—');
@@ -8401,7 +8401,7 @@ function renderPlannerWeekly(days){
   const dayHeaders=days.map(d=>{
     const ds=d.toISOString().split('T')[0];
     const isToday=ds===todayDs;
-    return`<th style="position:sticky;top:0;z-index:4;text-align:center;padding:10px 4px;font-size:0.75rem;font-weight:800;color:${isToday?'var(--blue)':'var(--ink-3)'};background:${isToday?'#DBEAFE':'var(--line-2)'};white-space:nowrap;min-width:110px;border-bottom:${isToday?'3px solid var(--blue)':'3px solid transparent'};">
+    return`<th style="position:sticky;top:0;z-index:4;text-align:center;padding:10px 4px;font-size:0.75rem;font-weight:800;color:${isToday?'var(--blue)':'var(--ink-3)'};background:${isToday?'var(--accent-light)':'var(--line-2)'};white-space:nowrap;min-width:110px;border-bottom:${isToday?'3px solid var(--blue)':'3px solid transparent'};">
       ${DAYS_SHORT[d.getDay()]}׳ <span style="font-size:0.7rem;font-weight:${isToday?800:500};opacity:${isToday?1:0.7};">${d.getDate()}/${d.getMonth()+1}</span>${isToday?'<div style="font-size:0.6rem;color:var(--blue);margin-top:2px;">היום</div>':''}</th>`;
   }).join('');
   const rows=selTechs.map(tech=>{
@@ -8410,7 +8410,7 @@ function renderPlannerWeekly(days){
       const isToday=ds===todayDs;
       const isDayOff=dayoffs.some(d=>String(d.techId)===String(tech.id)&&d.date===ds&&d.type==='full');
       const techTasks=tasks.filter(t=>String(t.techId)===String(tech.id)&&t.date===ds&&t.status!=='cancelled');
-      const bg=isToday?'#F0F7FF':isDayOff?'var(--line-2)':'';
+      const bg=isToday?'#F2F8F6':isDayOff?'var(--line-2)':'';
       if(isDayOff) return`<td style="background:var(--line-2);vertical-align:top;padding:6px;border-left:1px solid var(--line-2);"><div class="planner-day-off">יום חופש</div></td>`;
       // Sort by service window first, then exact time within it. A just-dragged call has its
       // time cleared (so the day can re-sequence) — sorting by time alone would float it to the
@@ -8427,7 +8427,7 @@ function renderPlannerWeekly(days){
     return`<tr style="border-bottom:1px solid var(--line-2);">
       <td style="padding:10px 14px;white-space:nowrap;vertical-align:middle;background:var(--white);position:sticky;right:0;z-index:1;border-left:2px solid var(--line-2);box-shadow:-2px 0 4px rgba(0,0,0,0.04);">
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="width:10px;height:10px;border-radius:50%;background:${tech.color||'#2563EB'};display:inline-block;flex-shrink:0;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:${tech.color||'#0E7A6E'};display:inline-block;flex-shrink:0;"></span>
           <span style="font-size:0.875rem;font-weight:700;">${h(tech.name)}</span>
         </div>
       </td>${cells}</tr>`;
@@ -8459,7 +8459,7 @@ function renderPlannerDaily(days){
   const tech=selTechs[plannerDailyTechIdx];
   const techTabs=selTechs.length>1?selTechs.map((t,i)=>{
     const active=i===plannerDailyTechIdx;
-    const tc=t.color||'#2563EB';
+    const tc=t.color||'#0E7A6E';
     return`<button onclick="plannerDailyTechIdx=${i};renderPlannerContent()" style="display:flex;align-items:center;gap:6px;padding:5px 12px;border:1.5px solid ${active?tc:'var(--line)'};background:${active?tc+'14':'var(--white)'};border-radius:6px;font-family:'Heebo',sans-serif;font-size:0.8rem;font-weight:${active?700:500};cursor:pointer;color:${active?tc:'var(--ink-2)'};">
       <span style="width:8px;height:8px;border-radius:50%;background:${tc};flex-shrink:0;"></span>${h(t.name)}</button>`;
   }).join(''):'';
@@ -8504,7 +8504,7 @@ function renderPlannerDaily(days){
   }
   const slotH=settings.window||3;
   const statusFg={completed:'#16A34A',cancelled:'#DC2626',pending:'#D97706',issue:'#DC2626'};
-  const tc=tech.color||'#2563EB';
+  const tc=tech.color||'#0E7A6E';
   // Build block metadata first, then lay overlapping windows into side-by-side columns
   // (calendar style) so blocks never stack on top of each other.
   const blockMeta=Object.entries(wGroups).map(([key,grp])=>{
