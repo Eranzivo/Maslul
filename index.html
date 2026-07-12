@@ -346,6 +346,11 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
 .tk-kpi .d.warn{color:#B4791F;}
 .tk-ghead{padding:8px 14px 6px;font-size:0.68rem;font-weight:800;letter-spacing:0.06em;color:var(--ink-3);background:var(--bg);border-bottom:1px solid var(--line);border-radius:var(--r) var(--r) 0 0;margin-top:10px;}
 .tk-ghead:first-child{margin-top:0;}
+/* detail side-panel layout: list right (RTL first col), panel left; stacks above on mobile */
+#tk-layout{display:grid;grid-template-columns:1fr;gap:14px;align-items:start;}
+#tk-layout.tk-layout-open{grid-template-columns:1fr 340px;}
+.tk-row-sel{background:var(--accent-light);border-radius:8px;box-shadow:inset -3px 0 0 var(--accent);}
+@media(max-width:900px){#tk-layout.tk-layout-open{grid-template-columns:1fr;}#tk-panel{order:-1;position:static!important;}}
 @media(max-width:760px){.tk-kpis{grid-template-columns:repeat(2,1fr);gap:8px;}}
 /* ── Round-2 Home (hm-*): hero brick + so-what deltas + pending side ── */
 .hm-hero{background:linear-gradient(115deg,#0B6B60 0%,#0E7A6E 45%,#1FA98F 100%);color:#fff;border-radius:20px;padding:20px 24px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:1.25rem;box-shadow:0 12px 30px rgba(14,122,110,.22);}
@@ -904,15 +909,16 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
   <div class="sb-top">
     <div class="md-brand" style="flex-direction:column;align-items:center;gap:0;">
       <div class="sb-logo" style="font-size:1.35rem;color:#1B2A4E;position:relative;z-index:1;">מסלול</div>
-      <!-- brand arrow (iter 3): stub starts from the MIDDLE of the ל at mid-letter height,
-           rounded hook left, double route-zigzag (up then down), teal arrowhead right —
-           per landing/assets/brand/maslul-logo-hebrew-v2.png -->
-      <svg viewBox="0 0 118 34" width="106" height="30" aria-hidden="true" style="direction:ltr;transform:none;margin-top:-14px;display:block;">
+      <!-- brand arrow (iter 4, per Eran's annotated asset): stub tip stops at the ל's left
+           edge (never ON the letter), rounded hook left, the long run sits with a clear gap
+           BELOW the wordmark, two subtle carets painted mid-line (up ^ then down v), teal
+           arrowhead right — landing/assets/brand/maslul-logo-hebrew-v2.png -->
+      <svg viewBox="0 0 118 30" width="106" height="27" aria-hidden="true" style="direction:ltr;transform:none;margin-top:-9px;display:block;">
         <defs><linearGradient id="brand-arrow" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
           <stop offset="0" stop-color="#2563EB"/><stop offset="1" stop-color="#14B8A6"/>
         </linearGradient></defs>
-        <path d="M30 3.5 H14 A9 9 0 0 0 14 21.5 H42 L49 16.5 L56 21.5 L63 26.5 L70 21.5 H102" fill="none" stroke="url(#brand-arrow)" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M97 15.5 L106 21.5 L97 27.5" fill="none" stroke="#14B8A6" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M26 3.5 H14 A8.5 8.5 0 0 0 14 20.5 H38 L44.5 16 L51 20.5 L57.5 25 L64 20.5 H102" fill="none" stroke="url(#brand-arrow)" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M97 14.5 L106 20.5 L97 26.5" fill="none" stroke="#14B8A6" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
   </div>
@@ -3435,7 +3441,7 @@ let dateCons={fixed_date:'',earliest_date:'',latest_date:''}; // per-call date c
 let currentRole='admin',currentTechView=null;
 let kpiFilter=null;
 let currentWeekOffset=0,selectedTechForCal=null;
-let plannerMode='weekly',plannerWeekOffset=0,plannerSelectedTechs=[],plannerDayIdx=0,plannerDailyTechIdx=0,plannerWeeklyTechIdx=-1,detailTaskId=null;
+let plannerMode='weekly',plannerWeekOffset=0,plannerSelectedTechs=[],plannerDayIdx=0,plannerDailyTechIdx=0,plannerWeeklyTechIdx=-1,detailTaskId=null,tkSelectedId=null,tasksWeekOffset=0;
 let allCandidates=[],currentCandidateIdx=0,selectedTimeSlot=null;
 let replaceSuggestion=null;
 let settings={company:'מסלול',startTime:'07:00',endTime:'18:00',window:3,maxDaily:9,lookahead:30,monthlyVolume:300,regularTime:30,packageTime:45};
@@ -3674,7 +3680,7 @@ function goPage(page){
   if(page!=='home'&&_coordMapInstance){destroyCoordinatorMap();} // free map memory when off home
   if(page==='zones')renderZones();
   if(page==='categories')renderCategories();
-  if(page==='tasks')renderTasks();
+  if(page==='tasks'){tkSelectedId=null;renderTasks();} // detail panel starts FRESH on every visit (mockup rule)
   if(page==='home')renderHomeTechCards();
   if(page==='clients'){clientArchiveView=false;renderClients();}
   if(page==='admin')renderAdminPanel(false);
