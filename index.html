@@ -3433,7 +3433,7 @@ let dateCons={fixed_date:'',earliest_date:'',latest_date:''}; // per-call date c
 let currentRole='admin',currentTechView=null;
 let kpiFilter=null;
 let currentWeekOffset=0,selectedTechForCal=null;
-let plannerMode='weekly',plannerWeekOffset=0,plannerSelectedTechs=[],plannerDayIdx=0,plannerDailyTechIdx=0,detailTaskId=null;
+let plannerMode='weekly',plannerWeekOffset=0,plannerSelectedTechs=[],plannerDayIdx=0,plannerDailyTechIdx=0,plannerWeeklyTechIdx=-1,detailTaskId=null;
 let allCandidates=[],currentCandidateIdx=0,selectedTimeSlot=null;
 let replaceSuggestion=null;
 let settings={company:'מסלול',startTime:'07:00',endTime:'18:00',window:3,maxDaily:9,lookahead:30,monthlyVolume:300,regularTime:30,packageTime:45};
@@ -8434,10 +8434,8 @@ function _plannerTaskChip(t){
   </div>`;
 }
 
-// Weekly cell — group a tech-day's calls into 3-hour service-window blocks (md-wblock),
-// each holding stacked job rows. Matches the dispatch-board mockup + PureWater's window model.
-// Preserves drag (_onTaskDragStart) + tap (openTaskDetail); rows stopPropagation so the cell's
-// own drop/dragover handlers still work for empty space.
+// Weekly cell — SUPERSEDED 2026-07-12 by the time-axis renderPlannerWeekly (Eran: wk2 chip
+// rows weren't the fuller treatment he asked for). Kept for one release as rollback; no caller.
 function _plannerWeekCell(tech, sorted){
   if(!sorted.length) return '';
   const tc=tech.color||'#0E7A6E';
@@ -8483,52 +8481,155 @@ function _needsAttentionStrip(){
     <div style="display:flex;gap:6px;flex-wrap:wrap;">${items}</div>
   </div>`;
 }
+// Open a weekly block's day in the daily view, focused on its tech — ONE ENGINE DOOR:
+// same daily grid, same task-detail modal, same actions from every surface.
+function _wkOpenDay(i,techId){
+  plannerDayIdx=i;
+  const selTechs=technicians.filter(t=>plannerSelectedTechs.includes(t.id));
+  const ti=selTechs.findIndex(t=>String(t.id)===String(techId));
+  if(ti>=0) plannerDailyTechIdx=ti;
+  setPlannerMode('daily');
+}
+// Weekly view (iter 3 — Eran's cascading-windows rule, supersedes the wk2 chip rows):
+// a real TIME AXIS — hour gutter on the physical right (RTL, his Google-Calendar reference),
+// day columns, every service window drawn as a block at its true time and full window height.
+// Overlapping windows cascade side-by-side into lanes via layoutColumns (tested) — a block
+// NEVER covers a block. Tech lens: single tech (primary) or כל הצוות (same lanes, per-tech
+// colors) — sized for up to 5 techs in parallel. Rows keep drag (_onTaskDragStart) + tap
+// (openTaskDetail); a day column accepts drops (_onCellDrop, single-tech lens — receiving day
+// re-sequences); block header ⤢ opens that day in the daily view. Weekly has its OWN scale
+// (WPX) — the daily grid's geometry (PX=1, 60px/hr, labelW=42; hard rule #3) is untouched.
 function renderPlannerWeekly(days){
   const content=document.getElementById('planner-content');
   const selTechs=technicians.filter(t=>plannerSelectedTechs.includes(t.id));
   if(!selTechs.length){content.innerHTML='<div class="empty"><div class="empty-icon">👆</div><div>בחר לפחות טכנאי אחד למעלה</div></div>';return;}
+  if(plannerWeeklyTechIdx>=selTechs.length) plannerWeeklyTechIdx=-1;
+  const allMode=plannerWeeklyTechIdx<0;
+  const viewTechs=allMode?selTechs:[selTechs[plannerWeeklyTechIdx]];
   const todayDs=new Date().toISOString().split('T')[0];
-  const dayHeaders=days.map(d=>{
-    const ds=d.toISOString().split('T')[0];
+  const startH=parseInt((settings.startTime||'07:00').split(':')[0]);
+  const endH=parseInt((settings.endTime||'18:00').split(':')[0]);
+  const WPX=1, gridH=(endH-startH)*60*WPX, headH=50, gutterW=46;
+  const minW=allMode?168:150;
+  const slotH=settings.window||3;
+  const statusFg={completed:'#16A34A',cancelled:'#DC2626',pending:'#D97706',issue:'#DC2626'};
+  // Tech lens picker — כל הצוות + one chip per selected tech (single tech = primary lens)
+  const lensChip=(i,label,color)=>{
+    const active=plannerWeeklyTechIdx===i;
+    const cc=color||'var(--blue)';
+    return`<button onclick="plannerWeeklyTechIdx=${i};renderPlannerContent()" style="display:flex;align-items:center;gap:6px;padding:5px 12px;border:1.5px solid ${active?cc:'var(--line)'};background:${active?(color?color+'14':'var(--accent-light)'):'var(--white)'};border-radius:6px;font-family:'Heebo',sans-serif;font-size:0.8rem;font-weight:${active?700:500};cursor:pointer;color:${active?(color||'var(--blue-d)'):'var(--ink-2)'};">${color?`<span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>`:'👥'}${label}</button>`;
+  };
+  const picker=selTechs.length>1?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${lensChip(-1,'כל הצוות',null)}${selTechs.map((t,i)=>lensChip(i,h(t.name),t.color||'#0E7A6E')).join('')}</div>`:'';
+  // Hour rules (per column, unlabeled) + gutter labels (labeled once)
+  const hourRules=Array.from({length:endH-startH+1},(_,i)=>`<div style="position:absolute;top:${i*60*WPX}px;left:0;right:0;border-top:1px solid var(--line-2);pointer-events:none;"></div>`).join('');
+  const gutterLabels=Array.from({length:endH-startH+1},(_,i)=>{
+    const top=i*60*WPX;
+    return`<div style="position:absolute;top:${top===0?2:top-8}px;left:0;right:0;text-align:center;font-size:0.62rem;font-weight:700;color:var(--ink-3);direction:ltr;font-feature-settings:'tnum';">${String(startH+i).padStart(2,'0')}:00</div>`;
+  }).join('');
+  const now=new Date(), nowMins=now.getHours()*60+now.getMinutes();
+  const heads=[], cols=[], noTimeCells=[];
+  let anyNoTime=false;
+  days.forEach((day,di)=>{
+    const ds=day.toISOString().split('T')[0];
     const isToday=ds===todayDs;
-    return`<th style="position:sticky;top:0;z-index:4;text-align:center;padding:10px 4px;font-size:0.75rem;font-weight:800;color:${isToday?'var(--blue)':'var(--ink-3)'};background:${isToday?'var(--accent-light)':'var(--line-2)'};white-space:nowrap;min-width:132px;border-bottom:${isToday?'3px solid var(--blue)':'3px solid transparent'};">
-      ${DAYS_SHORT[d.getDay()]}׳ <span style="font-size:0.7rem;font-weight:${isToday?800:500};opacity:${isToday?1:0.7};">${d.getDate()}/${d.getMonth()+1}</span>${isToday?'<div style="font-size:0.6rem;color:var(--blue);margin-top:2px;">היום</div>':''}</th>`;
-  }).join('');
-  const rows=selTechs.map(tech=>{
-    const cells=days.map(day=>{
-      const ds=day.toISOString().split('T')[0];
-      const isToday=ds===todayDs;
-      const isDayOff=dayoffs.some(d=>String(d.techId)===String(tech.id)&&d.date===ds&&d.type==='full');
+    const offTechs=viewTechs.filter(t=>dayoffs.some(d=>String(d.techId)===String(t.id)&&d.date===ds&&d.type==='full'));
+    const blockMeta=[], noTime=[];
+    let dayCount=0;
+    for(const tech of viewTechs){
+      if(offTechs.includes(tech)) continue;
       const techTasks=tasks.filter(t=>String(t.techId)===String(tech.id)&&t.date===ds&&t.status!=='cancelled');
-      const bg=isToday?'#F2F8F6':isDayOff?'var(--line-2)':'';
-      if(isDayOff) return`<td style="background:var(--line-2);vertical-align:top;padding:6px;border-left:1px solid var(--line-2);"><div class="planner-day-off">יום חופש</div></td>`;
-      // Sort by service window first, then exact time within it. A just-dragged call has its
-      // time cleared (so the day can re-sequence) — sorting by time alone would float it to the
-      // top; window-first keeps it in the right band (e.g. a 13:00–16:00 call stays below 10:00–13:00).
-      const sorted=techTasks.sort((a,b)=>
-        (a.windowStart||a.time||'').localeCompare(b.windowStart||b.time||'')
-        ||(a.time||'').localeCompare(b.time||''));
-      const cellId=`pc-${tech.id}-${ds}`;
-      const chips=_plannerWeekCell(tech,sorted);
-      const canOptimize=CONFIG.OPTIMIZER_URL&&techTasks.length>=2&&ds>=todayStr();
-      const optBtn=canOptimize?`<button id="opt-btn-${tech.id}-${ds}" onclick="runOptimize('${tech.id}','${ds}')" title="מסלול מיטבי" style="display:block;width:100%;text-align:center;background:var(--blue-l);border:1px solid var(--blue);border-radius:4px;font-size:0.65rem;color:var(--blue-d);padding:2px 4px;cursor:pointer;font-family:'Heebo',sans-serif;font-weight:700;margin-top:3px;">🔀 מסלול מיטבי</button>`:'';
-      return`<td ondragover="_onCellDragOver(event)" ondragenter="this.style.boxShadow='inset 0 0 0 2px var(--blue)'" ondragleave="this.style.boxShadow=''" ondrop="this.style.boxShadow='';_onCellDrop(event,'${tech.id}','${ds}')" style="vertical-align:top;padding:5px;border-left:1px solid var(--line-2);${bg?'background:'+bg+';':''}min-width:132px;">${chips||'<div style="height:32px;color:var(--ink-4);font-size:0.6rem;text-align:center;">—</div>'}${optBtn}</td>`;
-    }).join('');
-    return`<tr style="border-bottom:1px solid var(--line-2);">
-      <td style="padding:10px 14px;white-space:nowrap;vertical-align:middle;background:var(--white);position:sticky;right:0;z-index:1;border-left:2px solid var(--line-2);box-shadow:-2px 0 4px rgba(0,0,0,0.04);">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="width:10px;height:10px;border-radius:50%;background:${tech.color||'#0E7A6E'};display:inline-block;flex-shrink:0;"></span>
-          <span style="font-size:0.875rem;font-weight:700;">${h(tech.name)}</span>
+      dayCount+=techTasks.length;
+      for(const t of techTasks) if(!t.time&&!t.windowStart) noTime.push({t,tech});
+      const groups={};
+      for(const t of techTasks){
+        if(!t.time&&!t.windowStart) continue;
+        const k=t.windowStart?`${t.windowStart}|${t.windowEnd}`:('t'+t.time);
+        (groups[k]=groups[k]||[]).push(t);
+      }
+      for(const grp of Object.values(groups)){
+        grp.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+        const first=grp[0], hasWin=!!first.windowStart;
+        let topMins,heightMins;
+        if(hasWin){
+          topMins=timeToMins(first.windowStart)-startH*60;
+          const wlen=timeToMins(first.windowEnd)-timeToMins(first.windowStart);
+          heightMins=wlen>0?wlen:slotH*60; // real window length (variable-length windows), slot fallback
+        }else{
+          topMins=timeToMins(first.time)-startH*60;
+          heightMins=effectiveDuration(first.catId,tech,categories,settings);
+        }
+        topMins=Math.min(Math.max(0,topMins),(endH-startH)*60-30); // keep inside the axis
+        blockMeta.push({tech,grp,first,hasWin,topMins,heightMins});
+      }
+    }
+    const lanes=layoutColumns(blockMeta.map(b=>({start:b.topMins,end:b.topMins+b.heightMins})));
+    const blocks=blockMeta.map((b,bi)=>{
+      const tc=b.tech.color||'#0E7A6E';
+      const {col,cols:nc}=lanes[bi];
+      const left=`calc(100% * ${col} / ${nc} + 2px)`;
+      const width=`calc(100% / ${nc} - 5px)`;
+      const top=b.topMins*WPX, height=Math.max(30,b.heightMins*WPX);
+      const label=b.hasWin?`${b.first.windowStart}–${b.first.windowEnd}`:(b.first.time||'');
+      const rows=b.grp.map(t=>`<div draggable="true" ondragstart="event.stopPropagation();_onTaskDragStart(event,'${t.id}')" onclick="event.stopPropagation();openTaskDetail('${t.id}')" style="display:flex;align-items:center;gap:5px;padding:4px 7px;border-top:1px dashed ${tc}26;cursor:grab;min-width:0;" onmouseover="this.style.background='${tc}0d'" onmouseout="this.style.background=''">
+        <span style="width:6px;height:6px;border-radius:50%;background:${statusFg[t.status]||tc};flex:0 0 6px;"></span>
+        <span style="font-size:11.5px;font-weight:700;color:${t.status==='completed'?'var(--ink-3)':'var(--ink)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.locked?'🔒 ':''}${taskOutOfZone(t)?'<span title="מחוץ לאזור היום" style="color:#D97706;font-weight:800;">⚠ </span>':''}${h(t.city||'—')}</span>
+        <span style="font-size:10.5px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${h(t.client||'')}</span>
+        ${t.time?`<span style="font-size:10px;font-weight:700;color:var(--ink-3);direction:ltr;font-feature-settings:'tnum';white-space:nowrap;">${t.time}</span>`:''}
+      </div>`).join('');
+      return`<div style="position:absolute;top:${top}px;left:${left};width:${width};height:${height}px;background:${tc}0a;border:1px solid ${tc}30;border-right:3px solid ${tc};border-radius:8px;overflow:hidden;box-sizing:border-box;z-index:2;box-shadow:0 1px 3px rgba(17,24,39,0.06);">
+        <div onclick="_wkOpenDay(${di},'${b.tech.id}')" title="פתח ביומי" style="display:flex;align-items:center;gap:5px;padding:4px 7px;background:${tc}12;border-bottom:1px solid ${tc}22;min-width:0;cursor:pointer;">
+          <span style="font-size:11px;font-weight:800;color:${tc};direction:ltr;font-feature-settings:'tnum';white-space:nowrap;">${label}</span>
+          ${allMode?`<span style="font-size:10px;font-weight:700;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${h(b.tech.name)}</span>`:'<span style="flex:1;"></span>'}
+          <span style="min-width:16px;height:16px;padding:0 4px;border-radius:5px;background:var(--white);border:1px solid ${tc}30;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--ink-2);">${b.grp.length}</span>
         </div>
-      </td>${cells}</tr>`;
-  }).join('');
-  content.innerHTML=_needsAttentionStrip()+`<table style="border-collapse:collapse;width:100%;background:var(--white);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh);border:1px solid var(--line);">
-    <thead><tr>
-      <th style="background:var(--line-2);padding:10px 14px;font-size:0.75rem;font-weight:800;color:var(--ink-3);text-align:right;white-space:nowrap;position:sticky;top:0;right:0;z-index:5;border-left:2px solid var(--line-2);border-bottom:3px solid transparent;">${LBL('workers')}</th>
-      ${dayHeaders}
-    </tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
+        ${rows}
+      </div>`;
+    }).join('');
+    let nowLine='';
+    if(isToday&&nowMins>=startH*60&&nowMins<=endH*60)
+      nowLine=`<div style="position:absolute;top:${(nowMins-startH*60)*WPX}px;left:0;right:0;height:2px;background:#EF4444;z-index:6;pointer-events:none;"></div>`;
+    const offOverlay=(!allMode&&offTechs.length)?`<div style="position:absolute;inset:0;background:rgba(243,244,246,0.88);display:flex;align-items:center;justify-content:center;z-index:7;font-size:0.85rem;font-weight:700;color:var(--ink-3);">יום חופש</div>`
+      :(allMode&&offTechs.length?`<div style="position:absolute;top:3px;right:5px;z-index:5;font-size:0.6rem;color:var(--ink-3);background:var(--white);border:1px solid var(--line);border-radius:6px;padding:1px 6px;">🏖 ${offTechs.map(t=>h(t.name)).join(' · ')}</div>`:'');
+    const canOpt=!allMode&&CONFIG.OPTIMIZER_URL&&dayCount>=2&&ds>=todayStr();
+    heads.push(`<div style="flex:1;min-width:${minW}px;height:${headH}px;box-sizing:border-box;padding:7px 6px 5px;text-align:center;overflow:hidden;background:${isToday?'var(--accent-light)':'var(--line-2)'};border-left:1px solid var(--line-2);border-bottom:${isToday?'3px solid var(--blue)':'3px solid transparent'};">
+      <div style="font-size:0.78rem;font-weight:800;color:${isToday?'var(--blue)':'var(--ink-2)'};white-space:nowrap;">${DAYS_SHORT[day.getDay()]}׳ <span style="font-weight:600;font-size:0.7rem;">${day.getDate()}/${day.getMonth()+1}</span></div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:5px;margin-top:2px;font-size:0.62rem;color:var(--ink-3);white-space:nowrap;">
+        ${isToday?'<span style="color:var(--blue);font-weight:800;">היום</span>':''}
+        ${dayCount?`<span>${dayCount} קריאות</span>`:''}
+        ${canOpt?`<button id="opt-btn-${viewTechs[0].id}-${ds}" onclick="event.stopPropagation();runOptimize('${viewTechs[0].id}','${ds}')" title="מסלול מיטבי" style="border:1px solid var(--blue);background:var(--blue-l);border-radius:4px;font-size:0.62rem;color:var(--blue-d);padding:0 4px;cursor:pointer;font-family:'Heebo',sans-serif;font-weight:700;">🔀</button>`:''}
+      </div>
+    </div>`);
+    const dropAttrs=!allMode?` ondragover="_onCellDragOver(event)" ondragenter="this.style.boxShadow='inset 0 0 0 2px var(--blue)'" ondragleave="this.style.boxShadow=''" ondrop="this.style.boxShadow='';_onCellDrop(event,'${viewTechs[0].id}','${ds}')"`:'';
+    cols.push(`<div${dropAttrs} style="flex:1;min-width:${minW}px;position:relative;height:${gridH}px;box-sizing:border-box;border-left:1px solid var(--line-2);${isToday?'background:#F5FAF8;':''}">
+      ${hourRules}${nowLine}${blocks}${offOverlay}
+    </div>`);
+    if(noTime.length){
+      anyNoTime=true;
+      noTimeCells.push(`<div style="flex:1;min-width:${minW}px;box-sizing:border-box;border-left:1px solid var(--line-2);padding:5px;display:flex;flex-direction:column;gap:4px;">
+        ${noTime.map(({t,tech})=>`<div draggable="true" ondragstart="event.stopPropagation();_onTaskDragStart(event,'${t.id}')" onclick="openTaskDetail('${t.id}')" style="display:flex;align-items:center;gap:5px;padding:4px 7px;background:var(--white);border:1px dashed ${(tech.color||'#0E7A6E')}66;border-radius:7px;cursor:grab;min-width:0;">
+          <span style="width:6px;height:6px;border-radius:50%;background:${statusFg[t.status]||tech.color||'#0E7A6E'};flex:0 0 6px;"></span>
+          <span style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h(t.city||'—')}</span>
+          <span style="font-size:10px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${h(t.client||'')}</span>
+        </div>`).join('')}
+      </div>`);
+    }else noTimeCells.push(`<div style="flex:1;min-width:${minW}px;box-sizing:border-box;border-left:1px solid var(--line-2);"></div>`);
+  });
+  const cardMinW=gutterW+days.length*minW;
+  const noTimeRow=anyNoTime?`<div style="display:flex;border-top:1px solid var(--line);background:#FFFDF7;">
+    <div style="flex:0 0 ${gutterW}px;box-sizing:border-box;border-left:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:0.58rem;font-weight:800;color:var(--ink-3);text-align:center;">ללא<br>שעה</div>
+    ${noTimeCells.join('')}
+  </div>`:'';
+  content.innerHTML=_needsAttentionStrip()+picker+`<div style="background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh);overflow:hidden;min-width:${cardMinW}px;">
+    <div style="display:flex;">
+      <div style="flex:0 0 ${gutterW}px;height:${headH}px;box-sizing:border-box;background:var(--line-2);border-left:1px solid var(--line);border-bottom:3px solid transparent;"></div>
+      ${heads.join('')}
+    </div>
+    <div style="display:flex;">
+      <div style="flex:0 0 ${gutterW}px;position:relative;height:${gridH}px;box-sizing:border-box;background:var(--line-2);border-left:1px solid var(--line);">${gutterLabels}</div>
+      ${cols.join('')}
+    </div>
+    ${noTimeRow}
+  </div>`;
 }
 
 function renderPlannerDaily(days){
