@@ -3450,7 +3450,7 @@ let dateCons={fixed_date:'',earliest_date:'',latest_date:''}; // per-call date c
 let currentRole='admin',currentTechView=null;
 let kpiFilter=null;
 let currentWeekOffset=0,selectedTechForCal=null;
-let plannerMode='weekly',plannerWeekOffset=0,plannerSelectedTechs=[],plannerDayIdx=0,plannerDailyTechIdx=0,plannerWeeklyTechIdx=-1,detailTaskId=null,tkSelectedId=null,tasksWeekOffset=0;
+let plannerMode='weekly',plannerWeekOffset=0,plannerSelectedTechs=[],plannerDayIdx=0,plannerDailyTechIdx=0,plannerWeeklyLens=[],detailTaskId=null,tkSelectedId=null,tasksWeekOffset=0;
 let allCandidates=[],currentCandidateIdx=0,selectedTimeSlot=null;
 let replaceSuggestion=null;
 let settings={company:'מסלול',startTime:'07:00',endTime:'18:00',window:3,maxDaily:9,lookahead:30,monthlyVolume:300,regularTime:30,packageTime:45};
@@ -8374,7 +8374,9 @@ function renderZones(){
           <input class="fc settings-ro-input" value="${h(z.name)}" onchange="(function(v,id){const z=zones.find(x=>x.id===id);if(z){z.name=v;saveZoneToSupabase(z);save();}})(this.value,'${z.id}')" style="font-weight:800;font-size:0.9375rem;border:none;padding:0;background:transparent;flex:1;min-width:0;">
         </div>
         <div class="settings-edit-only" style="display:flex;gap:6px;flex-shrink:0;">
-          <button class="btn btn-outline btn-sm" onclick="openZoneDraw('${z.id}')">🗺️ צייר</button>
+          ${isPoly?`<button class="btn btn-outline btn-sm" onclick="openZoneDraw('${z.id}')">🗺️ ערוך פוליגון</button>`
+            :(!z.cities||!z.cities.length)?`<button class="btn btn-outline btn-sm" onclick="openZoneDraw('${z.id}')">🗺️ צייר פוליגון</button>`
+            :''/* manual city-list zone (Eran 2026-07-12): no polygon drawing offered */}
           <button class="btn btn-ghost btn-sm" onclick="deleteZone('${z.id}')" style="color:var(--red);">הסר</button>
         </div>
       </div>
@@ -8797,6 +8799,16 @@ function _needsAttentionStrip(){
     <div style="display:flex;gap:6px;flex-wrap:wrap;">${items}</div>
   </div>`;
 }
+// Weekly lens chip toggle (multi-select): any subset of techs; selecting every tech
+// collapses back to [] = כל הצוות so the team chip stays the "all" state.
+function _wkToggleLens(id){
+  id=String(id);
+  const i=plannerWeeklyLens.indexOf(id);
+  if(i>=0)plannerWeeklyLens.splice(i,1);else plannerWeeklyLens.push(id);
+  const selIds=technicians.filter(t=>plannerSelectedTechs.includes(t.id)).map(t=>String(t.id));
+  if(selIds.length&&selIds.every(x=>plannerWeeklyLens.includes(x)))plannerWeeklyLens=[];
+  renderPlannerContent();
+}
 // Open a weekly block's day in the daily view, focused on its tech — ONE ENGINE DOOR:
 // same daily grid, same task-detail modal, same actions from every surface.
 function _wkOpenDay(i,techId){
@@ -8819,9 +8831,11 @@ function renderPlannerWeekly(days){
   const content=document.getElementById('planner-content');
   const selTechs=technicians.filter(t=>plannerSelectedTechs.includes(t.id));
   if(!selTechs.length){content.innerHTML='<div class="empty"><div class="empty-icon">👆</div><div>בחר לפחות טכנאי אחד למעלה</div></div>';return;}
-  if(plannerWeeklyTechIdx>=selTechs.length) plannerWeeklyTechIdx=-1;
-  const allMode=plannerWeeklyTechIdx<0;
-  const viewTechs=allMode?selTechs:[selTechs[plannerWeeklyTechIdx]];
+  // Multi-select lens (Eran 2026-07-12): chips TOGGLE — any subset of techs, empty = כל הצוות
+  plannerWeeklyLens=plannerWeeklyLens.filter(id=>selTechs.some(t=>String(t.id)===String(id))); // prune stale
+  const viewTechs=plannerWeeklyLens.length?selTechs.filter(t=>plannerWeeklyLens.includes(String(t.id))):selTechs;
+  const soloTech=viewTechs.length===1?viewTechs[0]:null; // exactly one tech ⇒ drop targets + 🔀 apply
+  const allMode=viewTechs.length>1; // >1 tech in view ⇒ per-block tech name + wider columns
   const todayDs=new Date().toISOString().split('T')[0];
   const startH=parseInt((settings.startTime||'07:00').split(':')[0]);
   const endH=parseInt((settings.endTime||'18:00').split(':')[0]);
@@ -8829,13 +8843,13 @@ function renderPlannerWeekly(days){
   const minW=allMode?168:150;
   const slotH=settings.window||3;
   const statusFg={completed:'#16A34A',cancelled:'#DC2626',pending:'#D97706',issue:'#DC2626'};
-  // Tech lens picker — כל הצוות + one chip per selected tech (single tech = primary lens)
-  const lensChip=(i,label,color)=>{
-    const active=plannerWeeklyTechIdx===i;
+  const lensChip=(id,label,color)=>{
+    const active=id===null?!plannerWeeklyLens.length:plannerWeeklyLens.includes(String(id));
     const cc=color||'var(--blue)';
-    return`<button onclick="plannerWeeklyTechIdx=${i};renderPlannerContent()" style="display:flex;align-items:center;gap:6px;padding:5px 12px;border:1.5px solid ${active?cc:'var(--line)'};background:${active?(color?color+'14':'var(--accent-light)'):'var(--white)'};border-radius:6px;font-family:'Heebo',sans-serif;font-size:0.8rem;font-weight:${active?700:500};cursor:pointer;color:${active?(color||'var(--blue-d)'):'var(--ink-2)'};">${color?`<span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>`:'👥'}${label}</button>`;
+    const click=id===null?`plannerWeeklyLens=[];renderPlannerContent()`:`_wkToggleLens('${id}')`;
+    return`<button onclick="${click}" style="display:flex;align-items:center;gap:6px;padding:5px 12px;border:1.5px solid ${active?cc:'var(--line)'};background:${active?(color?color+'14':'var(--accent-light)'):'var(--white)'};border-radius:6px;font-family:'Heebo',sans-serif;font-size:0.8rem;font-weight:${active?700:500};cursor:pointer;color:${active?(color||'var(--blue-d)'):'var(--ink-2)'};">${color?`<span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>`:'👥'}${label}</button>`;
   };
-  const picker=selTechs.length>1?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${lensChip(-1,'כל הצוות',null)}${selTechs.map((t,i)=>lensChip(i,h(t.name),t.color||'#0E7A6E')).join('')}</div>`:'';
+  const picker=selTechs.length>1?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${lensChip(null,'כל הצוות',null)}${selTechs.map(t=>lensChip(t.id,h(t.name),t.color||'#0E7A6E')).join('')}</div>`:'';
   // Hour rules (per column, unlabeled) + gutter labels (labeled once)
   const hourRules=Array.from({length:endH-startH+1},(_,i)=>`<div style="position:absolute;top:${i*60*WPX}px;left:0;right:0;border-top:1px solid var(--line-2);pointer-events:none;"></div>`).join('');
   const gutterLabels=Array.from({length:endH-startH+1},(_,i)=>{
@@ -8904,18 +8918,18 @@ function renderPlannerWeekly(days){
     let nowLine='';
     if(isToday&&nowMins>=startH*60&&nowMins<=endH*60)
       nowLine=`<div style="position:absolute;top:${(nowMins-startH*60)*WPX}px;left:0;right:0;height:2px;background:#EF4444;z-index:6;pointer-events:none;"></div>`;
-    const offOverlay=(!allMode&&offTechs.length)?`<div style="position:absolute;inset:0;background:rgba(243,244,246,0.88);display:flex;align-items:center;justify-content:center;z-index:7;font-size:0.85rem;font-weight:700;color:var(--ink-3);">יום חופש</div>`
-      :(allMode&&offTechs.length?`<div style="position:absolute;top:3px;right:5px;z-index:5;font-size:0.6rem;color:var(--ink-3);background:var(--white);border:1px solid var(--line);border-radius:6px;padding:1px 6px;">🏖 ${offTechs.map(t=>h(t.name)).join(' · ')}</div>`:'');
-    const canOpt=!allMode&&CONFIG.OPTIMIZER_URL&&dayCount>=2&&ds>=todayStr();
+    const offOverlay=(soloTech&&offTechs.length)?`<div style="position:absolute;inset:0;background:rgba(243,244,246,0.88);display:flex;align-items:center;justify-content:center;z-index:7;font-size:0.85rem;font-weight:700;color:var(--ink-3);">יום חופש</div>`
+      :(offTechs.length?`<div style="position:absolute;top:3px;right:5px;z-index:5;font-size:0.6rem;color:var(--ink-3);background:var(--white);border:1px solid var(--line);border-radius:6px;padding:1px 6px;">🏖 ${offTechs.map(t=>h(t.name)).join(' · ')}</div>`:'');
+    const canOpt=!!soloTech&&CONFIG.OPTIMIZER_URL&&dayCount>=2&&ds>=todayStr();
     heads.push(`<div style="flex:1;min-width:${minW}px;height:${headH}px;box-sizing:border-box;padding:7px 6px 5px;text-align:center;overflow:hidden;background:${isToday?'var(--accent-light)':'var(--line-2)'};border-left:1px solid var(--line-2);border-bottom:${isToday?'3px solid var(--blue)':'3px solid transparent'};">
       <div style="font-size:0.78rem;font-weight:800;color:${isToday?'var(--blue)':'var(--ink-2)'};white-space:nowrap;">${DAYS_SHORT[day.getDay()]}׳ <span style="font-weight:600;font-size:0.7rem;">${day.getDate()}/${day.getMonth()+1}</span></div>
       <div style="display:flex;align-items:center;justify-content:center;gap:5px;margin-top:2px;font-size:0.62rem;color:var(--ink-3);white-space:nowrap;">
         ${isToday?'<span style="color:var(--blue);font-weight:800;">היום</span>':''}
         ${dayCount?`<span>${dayCount} קריאות</span>`:''}
-        ${canOpt?`<button id="opt-btn-${viewTechs[0].id}-${ds}" onclick="event.stopPropagation();runOptimize('${viewTechs[0].id}','${ds}')" title="מסלול מיטבי" style="border:1px solid var(--blue);background:var(--blue-l);border-radius:4px;font-size:0.62rem;color:var(--blue-d);padding:0 4px;cursor:pointer;font-family:'Heebo',sans-serif;font-weight:700;">🔀</button>`:''}
+        ${canOpt?`<button id="opt-btn-${soloTech.id}-${ds}" onclick="event.stopPropagation();runOptimize('${soloTech.id}','${ds}')" title="מסלול מיטבי" style="border:1px solid var(--blue);background:var(--blue-l);border-radius:4px;font-size:0.62rem;color:var(--blue-d);padding:0 4px;cursor:pointer;font-family:'Heebo',sans-serif;font-weight:700;">🔀</button>`:''}
       </div>
     </div>`);
-    const dropAttrs=!allMode?` ondragover="_onCellDragOver(event)" ondragenter="this.style.boxShadow='inset 0 0 0 2px var(--blue)'" ondragleave="this.style.boxShadow=''" ondrop="this.style.boxShadow='';_onCellDrop(event,'${viewTechs[0].id}','${ds}')"`:'';
+    const dropAttrs=soloTech?` ondragover="_onCellDragOver(event)" ondragenter="this.style.boxShadow='inset 0 0 0 2px var(--blue)'" ondragleave="this.style.boxShadow=''" ondrop="this.style.boxShadow='';_onCellDrop(event,'${soloTech.id}','${ds}')"`:'';
     cols.push(`<div${dropAttrs} style="flex:1;min-width:${minW}px;position:relative;height:${gridH}px;box-sizing:border-box;border-left:1px solid var(--line-2);${isToday?'background:#F5FAF8;':''}">
       ${hourRules}${nowLine}${blocks}${offOverlay}
     </div>`);
@@ -9612,7 +9626,7 @@ function openZoneDraw(zoneId) {
   }
   _zoneDrawId = zoneId;
   if (!GEO_BRAIN) loadGeoBrain(); // lazy retry — detection uses the brain once loaded
-  document.getElementById('mo-zone-draw-title').textContent = `צייר אזור — ${z ? z.name : ''}`;
+  document.getElementById('mo-zone-draw-title').textContent = `${(z&&z.polygons&&z.polygons.length)?'עריכת פוליגון':'צייר אזור'} — ${z ? z.name : ''}`;
   document.getElementById('zone-draw-status').textContent = '';
   document.getElementById('mo-zone-draw').classList.remove('hidden');
   setTimeout(() => _initZoneDrawMap(), 80);
