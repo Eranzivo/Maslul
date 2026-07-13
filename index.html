@@ -1596,6 +1596,7 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
       </div>
     </div>
   </div>
+  <div id="admin-leads"></div>
   <div id="admin-tenant-list"></div>
 </div>
 
@@ -4092,6 +4093,21 @@ function applyFeatureVisibility(){
   const navAdmin=document.getElementById('nav-admin');
   if(secAdmin)secAdmin.classList.toggle('hidden',!currentUserSuperAdmin);
   if(navAdmin)navAdmin.classList.toggle('hidden',!currentUserSuperAdmin);
+  _refreshLeadsBadge(); // passive lead notification on the master-admin nav (super_admin only)
+}
+// ── Landing leads inbox (2026-07-13): unhandled-lead count badge on the מנהל מאסטר
+// nav. Leads table is super_admin-read-only (RLS) — the head-count query returns
+// nothing for anyone else, and the badge simply stays hidden. Display-only, fail-open.
+async function _refreshLeadsBadge(){
+  if(!currentUserSuperAdmin||!currentTenantId)return;
+  try{
+    const{count,error}=await sb.from('leads').select('id',{count:'exact',head:true}).eq('handled',false);
+    const btn=document.getElementById('nav-admin');if(!btn)return;
+    let b=document.getElementById('leads-badge');
+    if(!b){b=document.createElement('span');b.id='leads-badge';b.style.cssText='margin-right:auto;background:var(--amber);color:#fff;border-radius:999px;min-width:19px;height:19px;padding:0 6px;display:none;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;';btn.appendChild(b);}
+    if(!error&&count>0){b.textContent=count;b.style.display='inline-flex';b.title=count+' לידים חדשים מהאתר';}
+    else b.style.display='none';
+  }catch(e){/* display-only */}
 }
 
 // ═══ USER MANAGEMENT ═══
@@ -4314,6 +4330,44 @@ async function saveSchedulingConfig(){
 
 // ═══ MASTER ADMIN PANEL ═══
 let editingTenantFeatId=null;
+// Leads inbox card on the master-admin page. Raw sb update (NOT dbUpsert — leads has
+// no tenant_id by design and is super_admin-only; the WAL/tenant machinery doesn't apply).
+function _renderAdminLeads(leads){
+  const el=document.getElementById('admin-leads');if(!el)return;
+  window._adminLeads=leads;
+  if(!leads.length){el.innerHTML='';return;}
+  const unhandled=leads.filter(l=>!l.handled).length;
+  const age=d=>{const days=Math.floor((Date.now()-new Date(d))/864e5);return days===0?'היום':days===1?'אתמול':'לפני '+days+' ימים';};
+  const rows=leads.map(l=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line-2);${l.handled?'opacity:0.55;':''}">
+    <div style="flex:1;min-width:0;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <strong style="font-size:0.9rem;">${h(l.name)}</strong>
+        ${l.business?`<span style="font-size:0.75rem;color:var(--ink-3);">· ${h(l.business)}</span>`:''}
+        <span style="font-size:0.7rem;color:var(--ink-4);">${age(l.created_at)}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:3px;font-size:0.82rem;">
+        <a href="tel:${h(l.phone)}" style="direction:ltr;font-weight:700;">${h(l.phone)}</a>
+        <a class="btn btn-outline btn-sm" href="https://wa.me/${String(l.phone).replace(/\D/g,'').replace(/^0/,'972')}" target="_blank" rel="noopener" title="WhatsApp">💬</a>
+      </div>
+      ${l.message?`<div style="font-size:0.8rem;color:var(--ink-2);margin-top:4px;white-space:pre-wrap;">${h(l.message)}</div>`:''}
+    </div>
+    <button class="btn ${l.handled?'btn-outline':'btn-blue'} btn-sm" style="flex-shrink:0;" onclick="_leadToggle('${l.id}',${l.handled?'false':'true'})">${l.handled?'החזר לחדשים':'✓ טופל'}</button>
+  </div>`).join('');
+  el.innerHTML=`<div class="card" style="margin-bottom:1rem;border-right:3px solid var(--amber);">
+    <div class="card-title">🌱 לידים מהאתר ${unhandled?`<span style="background:var(--amber);color:#fff;border-radius:999px;padding:1px 9px;font-size:0.72rem;margin-right:6px;">${unhandled} חדשים</span>`:''}</div>
+    ${rows}
+  </div>`;
+}
+async function _leadToggle(id,handled){
+  try{
+    const{error}=await sb.from('leads').update({handled}).eq('id',id);
+    if(error)throw error;
+    const l=(window._adminLeads||[]).find(x=>String(x.id)===String(id));
+    if(l)l.handled=handled;
+    _renderAdminLeads(window._adminLeads||[]);
+    _refreshLeadsBadge();
+  }catch(e){console.error('[leads] toggle:',e);showToast('שגיאה בעדכון הליד','error');}
+}
 async function renderAdminPanel(force=false){
   const list=document.getElementById('admin-tenant-list');
   if(!list)return;
@@ -4324,13 +4378,15 @@ async function renderAdminPanel(force=false){
   }
   list.innerHTML='<div style="text-align:center;padding:2rem;color:var(--ink-4);">טוען...</div>';
   try{
-    const[tenantRes,userRes,techRes,zoneRes,catRes]=await Promise.all([
+    const[tenantRes,userRes,techRes,zoneRes,catRes,leadsRes]=await Promise.all([
       sb.from('tenants').select('*'),
       sb.from('users').select('id,tenant_id,role,name,super_admin'),
       sb.from('technicians').select('id,tenant_id,name,color,rotation'),
       sb.from('zones').select('tenant_id'),
       sb.from('categories').select('tenant_id'),
+      sb.from('leads').select('*').order('handled',{ascending:true}).order('created_at',{ascending:false}).limit(50),
     ]);
+    _renderAdminLeads(leadsRes.error?[]:(leadsRes.data||[]));
     if(tenantRes.error){
       list.innerHTML=`<div class="empty"><div style="color:var(--red);font-weight:700;margin-bottom:6px;">שגיאה בטעינת הנתונים</div><div style="font-size:0.8125rem;color:var(--ink-3);">נסה לרענן את הדף. אם הבעיה נמשכת, פנה לתמיכה.</div></div>`;
       console.error('admin panel tenants error:',tenantRes.error);Sentry?.captureException(tenantRes.error);
