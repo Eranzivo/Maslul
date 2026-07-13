@@ -2437,6 +2437,16 @@ async function initAuth() {
         // loadTenantFromUser() already called showLogin() and set the error message — stop here
       }
     } else {
+      // ONE FRONT DOOR (Eran 2026-07-13): a fresh visit with no session goes to the
+      // marketing landing, which hosts the login modal (same-origin Supabase storage —
+      // logging in there lands back here authenticated). RELATIVE path — survives the
+      // future domain move. ?login=1 = classic form (QA / escape hatch). Error, recovery
+      // and watchdog paths below/above never redirect — hard-learned error visibility
+      // (auth-flow rules) is preserved.
+      if (!location.search.includes('login=1') && !location.hash.includes('type=recovery')) {
+        location.replace('landing/');
+        return;
+      }
       showLogin();
     }
   } catch(e) {
@@ -2843,10 +2853,15 @@ async function doLogout() {
   currentUser = null;
   currentTenantId = null;
   showLogin(); // show immediately — don't wait for the network call
-  // Fire-and-forget signOut. Flag ensures SIGNED_OUT event doesn't kick the user out
-  // if they manage to re-login before the network call completes.
+  // Flag ensures SIGNED_OUT event doesn't kick the user out if they manage to
+  // re-login before the network call completes.
   _suppressSignedOut = true;
-  sb.auth.signOut().catch(e => console.warn('[logout] signOut error:', e));
+  // One front door: after the sign-out completes, land on the marketing page (its
+  // login modal is the way back in). On failure stay on the classic form — never
+  // navigate away from a half-finished logout.
+  sb.auth.signOut()
+    .then(() => { location.replace('landing/'); })
+    .catch(e => console.warn('[logout] signOut error:', e));
 }
 
 // ═══ SUPABASE DATA LAYER ═══

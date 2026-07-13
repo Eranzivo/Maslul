@@ -101,6 +101,21 @@ textarea.fc{min-height:92px;resize:vertical;}
 .lead-ok .big{font-size:2.4rem;}
 .lead-ok h3{font-size:1.2rem;font-weight:900;color:var(--teal-d);margin:10px 0 6px;}
 .lead-err{display:none;margin-top:12px;font-size:0.88rem;color:#B4231F;background:#FDEBEA;border-radius:10px;padding:10px 14px;}
+/* login modal (one front door) */
+.lmo{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:18px;}
+.lmo[hidden]{display:none;}
+.lmo-back{position:absolute;inset:0;background:rgba(43,39,35,0.45);backdrop-filter:blur(4px);border:none;cursor:default;}
+.lmo-card{position:relative;background:var(--white);border-radius:22px;box-shadow:0 25px 70px rgba(43,39,35,0.25);width:100%;max-width:390px;padding:34px 30px 28px;}
+.lmo-x{position:absolute;top:14px;inset-inline-start:14px;border:none;background:none;font-size:1.1rem;color:var(--ink-3);cursor:pointer;padding:6px;line-height:1;border-radius:8px;}
+.lmo-x:hover{color:var(--ink);}
+.lmo-brand{display:flex;flex-direction:column;align-items:center;margin-bottom:4px;}
+.lmo-brand .word{font-size:1.5rem;font-weight:900;color:var(--navy);letter-spacing:-0.5px;line-height:1;}
+.lmo-sub{text-align:center;font-size:0.85rem;color:var(--ink-3);margin:6px 0 22px;}
+.lmo-forgot{display:block;margin:14px auto 0;border:none;background:none;color:var(--teal-d);font-family:inherit;font-size:0.85rem;font-weight:600;cursor:pointer;text-decoration:underline;}
+.lmo-eye{position:absolute;inset-inline-end:12px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;color:var(--ink-3);font-size:1rem;padding:4px;line-height:1;}
+.lmo-msg{display:none;margin-top:12px;font-size:0.88rem;border-radius:10px;padding:10px 14px;}
+.lmo-msg.err{color:#B4231F;background:#FDEBEA;}
+.lmo-msg.ok{color:var(--teal-d);background:var(--teal-l);}
 /* footer */
 footer{padding:40px 0 30px;border-top:1px solid var(--line);}
 footer .wrap{display:flex;flex-wrap:wrap;gap:18px;align-items:center;justify-content:space-between;font-size:0.88rem;color:var(--ink-3);}
@@ -131,7 +146,7 @@ footer a:hover{color:var(--teal);}
       <a href="#contact">השארת פרטים</a>
     </nav>
     <div class="top-actions">
-      <a class="btn btn-ghost" href="https://eranzivo.github.io/Maslul/">התחברות למערכת</a>
+      <button class="btn btn-ghost js-login" type="button">התחברות למערכת</button>
       <a class="btn btn-primary" href="#contact">דברו איתנו</a>
     </div>
   </div>
@@ -153,7 +168,7 @@ footer a:hover{color:var(--teal);}
     <p class="sub">מסלול מחליפה את הוואטסאפ והאקסל: מקלידים עיר וסוג קריאה — והמערכת כבר יודעת מי הטכנאי הנכון, מתי להגיע, ובאיזה סדר לנסוע. פשוט, בעברית, בלי כאב ראש.</p>
     <div class="hero-ctas">
       <a class="btn btn-primary btn-lg" href="#contact">השאירו פרטים — נחזור אליכם</a>
-      <a class="btn btn-ghost btn-lg" href="https://eranzivo.github.io/Maslul/">כניסה ללקוחות קיימים</a>
+      <button class="btn btn-ghost btn-lg js-login" type="button">כניסה ללקוחות קיימים</button>
     </div>
     <div class="hero-note">ללא התחייבות · הקמה מהירה · נבנה יחד עם עסקי שטח ישראליים</div>
   </div>
@@ -206,22 +221,6 @@ footer a:hover{color:var(--teal);}
   </div>
 </section>
 
-<!-- ACTION BAND 2 -->
-<section class="band flip" style="padding-top:0;" aria-labelledby="band2-h">
-  <div class="wrap">
-    <div class="band-copy">
-      <h3 id="band2-h">כל היום על מפה אחת</h3>
-      <p>עצירות ממוספרות, סדר נסיעה הגיוני, וזמן נסיעה בין קריאה לקריאה — כך נראה יום עבודה כשמכונה מתכננת אותו נכון.</p>
-      <ul>
-        <li>סדר עצירות שמכבד את הגיאוגרפיה</li>
-        <li>יום עבודה מנוצל עד הסוף — בלי חורים מתים</li>
-        <li>שינוי של הרגע האחרון? היום מסתדר מחדש לבד</li>
-      </ul>
-    </div>
-    <img src="assets/brand/live-eta-feature.png" alt="איור: מפה איזומטרית עם טכנאים ונקודות עצירה ממוספרות לאורך מסלול" loading="lazy">
-  </div>
-</section>
-
 <!-- LEAD FORM -->
 <section id="contact" class="lead" aria-labelledby="lead-h">
   <div class="wrap">
@@ -248,20 +247,125 @@ footer a:hover{color:var(--teal);}
 
 </main>
 
+<!-- LOGIN MODAL — one front door: clients sign in here; the Supabase session lives on
+     the same origin, so the app opens already authenticated. -->
+<div id="login-mo" class="lmo" hidden role="dialog" aria-modal="true" aria-labelledby="lmo-title">
+  <button class="lmo-back" data-close tabindex="-1" aria-hidden="true"></button>
+  <div class="lmo-card">
+    <button class="lmo-x" data-close aria-label="סגירת חלון ההתחברות" type="button">✕</button>
+    <div class="lmo-brand" aria-hidden="true">
+      <span class="word">מסלול</span>
+      <svg viewBox="0 0 100 20" width="66" height="13" style="direction:ltr;margin-top:2px;display:block;">
+        <path d="M6 10 H30 L39 4.5 L51 15.5 L59 10 H84" fill="none" stroke="url(#lg-arrow)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M79 3 L94 10 L79 17" fill="none" stroke="#14B8A6" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div id="lmo-title" class="lmo-sub">כניסה למערכת</div>
+    <form id="lmo-form" novalidate>
+      <div class="fg"><label for="lmo-email">אימייל</label><input class="fc" id="lmo-email" name="email" type="email" autocomplete="email" dir="ltr" required></div>
+      <div class="fg"><label for="lmo-pw">סיסמה</label>
+        <div style="position:relative;">
+          <input class="fc" id="lmo-pw" name="password" type="password" autocomplete="current-password" dir="ltr" required style="padding-inline-end:44px;">
+          <button type="button" class="lmo-eye" id="lmo-eye" aria-label="הצגת סיסמה">👁</button>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-lg" id="lmo-submit" type="submit" style="width:100%;margin-top:6px;">כניסה</button>
+      <div class="lmo-msg" id="lmo-msg" role="alert"></div>
+      <button class="lmo-forgot" id="lmo-forgot" type="button">שכחתי סיסמה</button>
+    </form>
+  </div>
+</div>
+
 <footer>
   <div class="wrap">
     <div>© <span id="yy"></span> מסלול · שיבוץ חכם לעובדי שטח</div>
     <div style="display:flex;gap:18px;flex-wrap:wrap;">
       <a href="mailto:infomaslul@gmail.com">infomaslul@gmail.com</a>
       <a href="accessibility.html">הצהרת נגישות</a>
-      <a href="https://eranzivo.github.io/Maslul/">התחברות למערכת</a>
+      <a href="#" class="js-login">התחברות למערכת</a>
     </div>
   </div>
 </footer>
 
 <script>
 document.getElementById('yy').textContent=new Date().getFullYear();
-// Lead capture → Supabase write-only drop box (anon INSERT policy; no read access).
+// ── One front door: login modal ─────────────────────────────────────────────
+// APP_URL is RELATIVE (landing lives one level under the app) — at domain-move
+// time this is one of exactly TWO lines to touch (see design-system open threads).
+const APP_URL=new URL('../',location.href).href;
+let _sbClient=null;
+function _loadSbSdk(){
+  return new Promise((res,rej)=>{
+    if(window.supabase){res();return;}
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js'; // pinned, jsDelivr — per CDN rules
+    s.onload=res;s.onerror=()=>rej(new Error('sdk load failed'));
+    document.head.appendChild(s);
+  });
+}
+async function _sbAuth(){
+  if(_sbClient)return _sbClient;
+  await _loadSbSdk();
+  // no-op auth lock — the default Web Locks API is shared across tabs; an open app
+  // tab must never contend with the landing (same hard-learned rule as the app).
+  _sbClient=window.supabase.createClient(SB_URL,SB_KEY,{auth:{lock:async(_n,_t,fn)=>fn()}});
+  return _sbClient;
+}
+function _lmoMsg(text,kind){
+  const m=document.getElementById('lmo-msg');
+  if(!text){m.style.display='none';return;}
+  m.textContent=text;m.className='lmo-msg '+kind;m.style.display='block';
+}
+function openLogin(){
+  document.getElementById('login-mo').hidden=false;
+  document.body.style.overflow='hidden';
+  _lmoMsg('');
+  setTimeout(()=>document.getElementById('lmo-email').focus(),30);
+  _sbAuth().catch(()=>{}); // warm the SDK while the user types
+}
+function closeLogin(){
+  document.getElementById('login-mo').hidden=true;
+  document.body.style.overflow='';
+}
+document.querySelectorAll('.js-login').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();openLogin();}));
+document.querySelectorAll('#login-mo [data-close]').forEach(el=>el.addEventListener('click',closeLogin));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('login-mo').hidden)closeLogin();});
+document.getElementById('lmo-eye').addEventListener('click',function(){
+  const pw=document.getElementById('lmo-pw');
+  pw.type=pw.type==='password'?'text':'password';
+  this.setAttribute('aria-label',pw.type==='password'?'הצגת סיסמה':'הסתרת סיסמה');
+});
+document.getElementById('lmo-form').addEventListener('submit',async function(e){
+  e.preventDefault();
+  _lmoMsg('');
+  const email=document.getElementById('lmo-email').value.trim();
+  const pw=document.getElementById('lmo-pw').value;
+  if(!email){document.getElementById('lmo-email').focus();return;}
+  if(!pw){document.getElementById('lmo-pw').focus();return;}
+  const btn=document.getElementById('lmo-submit');
+  btn.disabled=true;btn.textContent='מתחבר…';
+  try{
+    const sb=await _sbAuth();
+    const{error}=await sb.auth.signInWithPassword({email,password:pw});
+    if(error)throw error;
+    location.href=APP_URL; // session persisted on this origin — the app opens signed-in
+  }catch(ex){
+    _lmoMsg(ex&&ex.message==='sdk load failed'
+      ?'בעיית רשת בטעינת ההתחברות — רעננו את הדף ונסו שוב'
+      :'האימייל או הסיסמה שגויים — נסו שוב','err');
+    btn.disabled=false;btn.textContent='כניסה';
+  }
+});
+document.getElementById('lmo-forgot').addEventListener('click',async function(){
+  const email=document.getElementById('lmo-email').value.trim();
+  if(!email){_lmoMsg('הזינו את כתובת האימייל שלכם ואז לחצו "שכחתי סיסמה"','err');document.getElementById('lmo-email').focus();return;}
+  try{
+    const sb=await _sbAuth();
+    await sb.auth.resetPasswordForEmail(email,{redirectTo:APP_URL});
+    _lmoMsg('שלחנו קישור לאיפוס הסיסמה לכתובת שהזנתם','ok');
+  }catch(ex){_lmoMsg('לא הצלחנו לשלוח את הקישור — נסו שוב בעוד רגע','err');}
+});
+// ── Lead capture → Supabase write-only drop box (anon INSERT policy; no read access).
 const SB_URL='https://pxpqcdfxogaajwstwdtk.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB4cHFjZGZ4b2dhYWp3c3R3ZHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MDYzNzAsImV4cCI6MjA5Mzk4MjM3MH0.Taql-BR6thtbci0pMIRijC6I8JVvjSyDVwLF9lZ0Tus';
 document.getElementById('lead-form').addEventListener('submit',async function(e){
