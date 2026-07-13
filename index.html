@@ -9099,26 +9099,33 @@ function renderPlannerWeekly(days){
       for(const grp of Object.values(groups)){
         grp.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
         const first=grp[0], hasWin=!!first.windowStart;
-        let topMins,heightMins;
+        let topMins,heightMins,tailMins=0;
         if(hasWin){
           topMins=timeToMins(first.windowStart)-startH*60;
           const wlen=timeToMins(first.windowEnd)-timeToMins(first.windowStart);
           heightMins=wlen>0?wlen:slotH*60; // real window length (variable-length windows), slot fallback
+          // approved-overrun tail (parity with daily): only a popup-approved spill extends the block
+          const _weMin=timeToMins(first.windowEnd||first.windowStart)||0;
+          tailMins=Math.max(0,...grp.map(t=>{
+            if(!(t.manuallyOverridden&&/גלישת חלון/.test(t.overrideReason||''))||!t.time)return 0;
+            return Math.max(0,timeToMins(t.time)+effectiveDuration(t.catId,tech,categories,settings)-_weMin);
+          }));
         }else{
           topMins=timeToMins(first.time)-startH*60;
           heightMins=effectiveDuration(first.catId,tech,categories,settings);
         }
         topMins=Math.min(Math.max(0,topMins),(endH-startH)*60-30); // keep inside the axis
-        blockMeta.push({tech,grp,first,hasWin,topMins,heightMins});
+        blockMeta.push({tech,grp,first,hasWin,topMins,heightMins,tailMins});
       }
     }
-    const lanes=layoutColumns(blockMeta.map(b=>({start:b.topMins,end:b.topMins+b.heightMins})));
+    const lanes=layoutColumns(blockMeta.map(b=>({start:b.topMins,end:b.topMins+b.heightMins+(b.tailMins||0)})));
     const blocks=blockMeta.map((b,bi)=>{
       const tc=b.tech.color||'#0E7A6E';
       const {col,cols:nc}=lanes[bi];
       const left=`calc(100% * ${col} / ${nc} + 2px)`;
       const width=`calc(100% / ${nc} - 5px)`;
-      const top=b.topMins*WPX, height=Math.max(30,b.heightMins*WPX);
+      const top=b.topMins*WPX, height=Math.max(30,(b.heightMins+(b.tailMins||0))*WPX);
+      const tailHtml=(b.tailMins>0)?`<div title="גולש ${b.tailMins} דק׳ · אושר ע״י המתאם" style="position:absolute;top:${b.heightMins*WPX}px;left:0;right:0;height:${b.tailMins*WPX}px;border-top:2px dashed ${tc}66;background:repeating-linear-gradient(45deg,${tc}18 0 5px,transparent 5px 10px);pointer-events:none;overflow:hidden;"></div>`:'';
       const label=b.hasWin?`${b.first.windowStart}–${b.first.windowEnd}`:(b.first.time||'');
       const rows=b.grp.map(t=>`<div draggable="true" ondragstart="event.stopPropagation();_onTaskDragStart(event,'${t.id}')" onclick="event.stopPropagation();openTaskDetail('${t.id}')" style="display:flex;align-items:center;gap:5px;padding:4px 7px;border-top:1px dashed ${tc}26;cursor:grab;min-width:0;" onmouseover="this.style.background='${tc}0d'" onmouseout="this.style.background=''">
         <span style="width:6px;height:6px;border-radius:50%;background:${statusFg[t.status]||tc};flex:0 0 6px;"></span>
@@ -9127,6 +9134,7 @@ function renderPlannerWeekly(days){
         ${t.time?`<span style="font-size:10px;font-weight:700;color:var(--ink-3);direction:ltr;font-feature-settings:'tnum';white-space:nowrap;">${t.time}</span>`:''}
       </div>`).join('');
       return`<div style="position:absolute;top:${top}px;left:${left};width:${width};height:${height}px;background:${tc}0a;border:1px solid ${tc}30;border-right:3px solid ${tc};border-radius:8px;overflow:hidden;box-sizing:border-box;z-index:2;box-shadow:0 1px 3px rgba(17,24,39,0.06);">
+        ${tailHtml}
         <div onclick="_wkOpenDay(${di},'${b.tech.id}')" title="פתח ביומי" style="display:flex;align-items:center;gap:5px;padding:4px 7px;background:${tc}12;border-bottom:1px solid ${tc}22;min-width:0;cursor:pointer;">
           <span style="font-size:11px;font-weight:800;color:${tc};direction:ltr;font-feature-settings:'tnum';white-space:nowrap;">${label}</span>
           ${allMode?`<span style="font-size:10px;font-weight:700;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${h(b.tech.name)}</span>`:'<span style="flex:1;"></span>'}
