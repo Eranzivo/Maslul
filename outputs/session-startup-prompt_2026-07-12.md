@@ -10,23 +10,30 @@ detail-panel + workweek pager). Logo at **iter 4** (Eran's annotated asset — c
 below wordmark, stub at ל edge, two mid-line carets) — awaiting his visual OK.
 Suites 208 sched + 65 zones JS, 173 py. Deploy checklist per CLAUDE.md after every push.
 
+## State update 2026-07-13 (all LIVE through `5365d31`)
+Done since: slices 12–13 (weekly MULTI-select lens + zone-aware polygon buttons; settings
+דוחות+תובנות section w/ `reports.cards` UI + `insights.window_days` knob) · logo iter 5
+(Eran's final asset) · **overrun engine slice complete** (`auto_overrun_min` knob both doors,
+live popup + slot exclusion + approved-tail; Eran's decision: auto ≤15 min books, beyond →
+next window) · bundles editable + category-constrained (jsdom-verified) · **landing REBUILT**
+(warm family, teaser-webp living hero, `leads` write-only table verified, accessibility page).
+Suites: 241+65 JS · 195 py.
+
 ## Next (in order)
-1. **Eran visual QA** — logo iter 4, weekly time-axis (both lenses, drag/drop, ≤5 techs),
-   דוחות (period toggle re-renders all sections, per-card ⬇/⤢), קריאות panel+pager.
-   Fix-forward per feedback before starting new slices.
-2. **Settings new-knob rows** — per mockup 75c61312: insights.* + reports.cards rows in
-   #page-settings (knob rule: registry row + BOTH readers + test, same commit;
-   reports.cards reader already exists — needs only the settings row + save wiring).
-3. **Overrun popup engine slice** — spec in outputs/worklog.md incl. UI-tail addendum
-   (extend guardManualPlacement; מצא חלון אחר = re-run findBestSlot excluding slot).
-4. **Landing build** — assets in landing/assets/brand/, accessibility plan in
-   design-system open threads; WAIT for Eran's example mockup sites first.
+1. **Eran QA** — landing page (desktop+mobile), overrun popup flow (book a spilling slot),
+   דוחות, weekly lens multi-select. Fix-forward per feedback.
+2. **Lead NOTIFICATION** — leads are dashboard-read-only today; wire Supabase webhook→email
+   (or daily check) so Eran hears about new leads. Candidates in design-system open threads.
+3. **PureWater re-batch dry-run** (rebatch-dryrun skill) if Israel wants the calendar refreshed
+   under the new overrun policy.
 
 ## Deferred polish (log, don't lose)
 - Weekly popover detail card (block click currently: rows→detail modal, header→daily view).
+- Weekly-view overrun tail (daily shipped); drag-path overrun popup (deliberate scope note in worklog).
 - Manual archive action for הושלמו (new status value); archive date filter.
 - Reports duration-accuracy insight — needs E4 completion timestamps (interim footnote shipped).
 - Monthly view QA after calendar changes (port QA rule: daily+weekly+monthly all render).
+- Landing: real video asset if teaser webp isn't enough; teaser webp compression (2.3MB); domain trigger.
 
 ## Standing rules
 One engine door for every action · never regenerate approved mockups · commit per slice +
