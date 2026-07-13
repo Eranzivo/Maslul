@@ -5991,7 +5991,13 @@ function overrunMinutes(startMin,durationMin,windowEndMin){
 // overrun; automatic books only under 'arrive' semantics within the tolerance.
 function overrunDecision(semantics,overrunMin,isAuto,tolMin){
   if(!(overrunMin>0))return 'book';
-  if(!isAuto)return 'ask';
+  if(!isAuto){
+    // Live coordinator: interrupt only when the spill exceeds the tolerance the
+    // automatic path would silently absorb (unified 2026-07-13). 'finish' semantics
+    // tolerate no spill, so their effective tolerance is 0.
+    const tol=semantics==='arrive'?(Number(tolMin)||0):0;
+    return overrunMin<=tol?'book':'ask';
+  }
   if(semantics!=='arrive')return 'defer';
   return overrunMin<=(Number(tolMin)||0)?'book':'defer';
 }
@@ -7129,7 +7135,7 @@ async function confirmAssign(idx,assignId){
   const _dur=effectiveDuration(catId,c.tech,categories,settings);
   const _overMin=overrunMinutes(timeToMins(taskTime),_dur,timeToMins(slot.end));
   let _overStamp=null;
-  if(overrunDecision(resolveWindowSemantics(tenantConfig.scheduling||{}),_overMin,false,0)==='ask'){
+  if(overrunDecision(resolveWindowSemantics(tenantConfig.scheduling||{}),_overMin,false,resolveAutoOverrunMin(tenantConfig.scheduling||{}))==='ask'){
     const _act=await overrunPopup({window:`${slot.start}–${slot.end}`,arrival:taskTime,finish:minsToTime(timeToMins(taskTime)+_dur),over:_overMin});
     if(_act==='cancel')return;
     if(_act==='other'){

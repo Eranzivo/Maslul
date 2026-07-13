@@ -152,12 +152,14 @@ def resolve_auto_overrun_min(config: Optional[dict]) -> int:
 def overrun_decision(semantics: str, overrun_min: float, is_auto: bool, tol_min: float) -> str:
     """ONE decision for both doors (mirror of JS overrunDecision): 'book'
     (silent) / 'ask' (live coordinator popup) / 'defer' (automatic path takes
-    the next window/day). Live always asks on any overrun; automatic books only
-    under 'arrive' semantics within the tolerance."""
+    the next window/day). Live asks only when the spill exceeds the tolerance the
+    automatic path silently absorbs (unified 2026-07-13); automatic books within
+    the tolerance under 'arrive'. 'finish' tolerates no spill (effective tol 0)."""
     if not overrun_min > 0:
         return "book"
     if not is_auto:
-        return "ask"
+        tol = (tol_min or 0) if semantics == "arrive" else 0
+        return "book" if overrun_min <= tol else "ask"
     if semantics != "arrive":
         return "defer"
     return "book" if overrun_min <= (tol_min or 0) else "defer"

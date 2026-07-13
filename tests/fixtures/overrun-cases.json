@@ -1,5 +1,5 @@
 {
-  "_comment": "Window-overrun policy parity (Eran 2026-07-12): JS resolveAutoOverrunMin/overrunDecision ↔ Py resolve_auto_overrun_min/overrun_decision must agree on every case. Rule: live door always ASKS on any overrun (coordinator popup); automatic paths (batch) may BOOK an overrun up to scheduling.auto_overrun_min minutes under 'arrive' semantics (default 15), beyond that they DEFER to the next window/day; 'finish' semantics never books an automatic overrun.",
+  "_comment": "Window-overrun policy parity (Eran 2026-07-12; live-door tolerance UNIFIED 2026-07-13): JS resolveAutoOverrunMin/overrunDecision ↔ Py resolve_auto_overrun_min/overrun_decision must agree on every case. Rule: the live coordinator popup ASKS only when the spill exceeds the SAME tolerance the automatic path silently absorbs (scheduling.auto_overrun_min, default 15) — small spills book silently on both doors. Under 'arrive' the tolerance applies; under 'finish' the effective tolerance is 0 (any spill asks live / defers auto). Automatic (batch) BOOKS a spill up to the tolerance under 'arrive', beyond that DEFERS to the next window/day.",
   "resolver_cases": [
     { "sc": null, "expect": 15 },
     { "sc": {}, "expect": 15 },
@@ -19,9 +19,12 @@
     { "semantics": "arrive", "overrun": 15, "auto": true,  "tol": 15, "expect": "book" },
     { "semantics": "arrive", "overrun": 16, "auto": true,  "tol": 15, "expect": "defer" },
     { "semantics": "arrive", "overrun": 20, "auto": true,  "tol": 0,  "expect": "defer" },
-    { "semantics": "arrive", "overrun": 1,  "auto": false, "tol": 15, "expect": "ask" },
+    { "semantics": "arrive", "overrun": 1,  "auto": false, "tol": 15, "expect": "book" },
+    { "semantics": "arrive", "overrun": 15, "auto": false, "tol": 15, "expect": "book" },
+    { "semantics": "arrive", "overrun": 16, "auto": false, "tol": 15, "expect": "ask" },
     { "semantics": "arrive", "overrun": 45, "auto": false, "tol": 15, "expect": "ask" },
     { "semantics": "finish", "overrun": 5,  "auto": false, "tol": 15, "expect": "ask" },
+    { "semantics": "finish", "overrun": 1,  "auto": false, "tol": 60, "expect": "ask" },
     { "semantics": "finish", "overrun": 5,  "auto": true,  "tol": 15, "expect": "defer" },
     { "semantics": "finish", "overrun": 1,  "auto": true,  "tol": 60, "expect": "defer" }
   ]
