@@ -19,13 +19,17 @@ next window) · bundles editable + category-constrained (jsdom-verified) · **la
 (warm family, teaser-webp living hero, `leads` write-only table verified, accessibility page).
 Suites: 241+65 JS · 195 py.
 
+## State update 2026-07-13 late (through `8bb6661`, all live-verified)
+Also done: **ONE FRONT DOOR merged** (app no-session → landing; login modal on landing,
+same-origin session; logout → landing; `?login=1` escape; 10-check jsdom harness) ·
+**leads INBOX** (super_admin-only RLS read/update; 🌱 card on מנהל מאסטר + nav count badge) ·
+bundle edit fix · landing tightened. Domain-shift checklist in design-system open threads.
+
 ## Next (in order)
-1. **Eran QA** — landing page (desktop+mobile), overrun popup flow (book a spilling slot),
-   דוחות, weekly lens multi-select. Fix-forward per feedback.
-2. **Lead NOTIFICATION** — leads are dashboard-read-only today; wire Supabase webhook→email
-   (or daily check) so Eran hears about new leads. Candidates in design-system open threads.
-3. **PureWater re-batch dry-run** (rebatch-dryrun skill) if Israel wants the calendar refreshed
-   under the new overrun policy.
+1. **Eran QA** — landing+login-modal (desktop+mobile, incognito), overrun popup flow,
+   דוחות, weekly multi-lens, leads inbox (submit a test lead end-to-end). Fix-forward.
+2. **PureWater re-batch dry-run** (rebatch-dryrun skill) if Israel wants the calendar refreshed
+   under the new overrun policy — needs explicit approval before any write.
 
 ## Deferred polish (log, don't lose)
 - Weekly popover detail card (block click currently: rows→detail modal, header→daily view).
