@@ -9083,7 +9083,7 @@ function renderPlannerWeekly(days){
   const startH=parseInt((settings.startTime||'07:00').split(':')[0]);
   const endH=parseInt((settings.endTime||'18:00').split(':')[0]);
   const WPX=1, gridH=(endH-startH)*60*WPX, headH=50, gutterW=46;
-  const minW=allMode?Math.max(200,viewTechs.length*96):168;
+  const minW=allMode?168:150;
   const slotH=settings.window||3;
   const statusFg={completed:'#16A34A',cancelled:'#DC2626',pending:'#D97706',issue:'#DC2626'};
   const lensChip=(id,label,color)=>{
@@ -9160,9 +9160,9 @@ function renderPlannerWeekly(days){
       </div>`;}).join('');
       return`<div style="position:absolute;top:${top}px;left:${left};width:${width};height:${height}px;background:var(--white);border:1px solid var(--line);border-top:3px solid ${tc};border-radius:8px;overflow:hidden;box-sizing:border-box;z-index:2;box-shadow:0 1px 2px rgba(17,24,39,0.05);">
         ${tailHtml}
-        <div onclick="_wkOpenDay(${di},'${b.tech.id}')" title="פתח ביומי" style="display:flex;align-items:center;gap:5px;padding:5px 8px;background:${tc}0e;border-bottom:1px solid var(--line-2);min-width:0;cursor:pointer;">
-          <span style="font-size:11px;font-weight:800;color:${tc};direction:ltr;font-feature-settings:'tnum';white-space:nowrap;">${label}</span>
-          ${allMode?`<span style="font-size:10px;font-weight:700;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${h(b.tech.name)}</span>`:'<span style="flex:1;"></span>'}
+        <div onclick="_wkOpenDay(${di},'${b.tech.id}')" title="${label} · פתח ביומי" style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:${tc}0e;border-bottom:1px solid var(--line-2);min-width:0;cursor:pointer;">
+          <span style="width:8px;height:8px;border-radius:50%;background:${tc};flex:0 0 8px;"></span>
+          ${allMode?`<span style="font-size:11px;font-weight:800;color:${tc};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${h(b.tech.name)}</span>`:'<span style="flex:1;"></span>'}
           <span style="min-width:16px;height:16px;padding:0 4px;border-radius:5px;background:var(--white);border:1px solid ${tc}40;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${tc};">${b.grp.length}</span>
         </div>
         ${rows}
