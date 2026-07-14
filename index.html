@@ -3996,7 +3996,7 @@ async function createWizardTenant(){
     if(cd)catIds.push(cd.id);
   }
   // Technicians — auto-rotate zones, enable all skills
-  const techColors=['#2563EB','#D97706','#7C3AED','#059669','#DC2626','#0891B2'];
+  const techColors=['#2563EB','#D97706','#DB2777','#0891B2','#7C3AED','#059669']; // well-separated hues — adjacent techs never clash (blue/amber/rose lead)
   for(let i=0;i<techs.length;i++){
     const t=techs[i];
     const rotation={};
@@ -9170,9 +9170,10 @@ function renderPlannerWeekly(days){
       </div>`;}).join('');
       return`<div style="position:absolute;top:${top}px;left:${left};width:${width};height:${height}px;background:${tc};border:1.5px solid var(--white);border-radius:8px;overflow:hidden;box-sizing:border-box;z-index:2;box-shadow:0 1px 3px rgba(17,24,39,0.2);">
         ${tailHtml}
-        <div onclick="_wkOpenDay(${di},'${b.tech.id}')" title="${label} · פתח ביומי" style="display:flex;align-items:center;gap:6px;padding:4px 8px 3px;border-bottom:1px solid ${hair};min-width:0;cursor:pointer;">
-          <span style="font-size:10.5px;font-weight:800;color:${ink};direction:ltr;font-feature-settings:'tnum';white-space:nowrap;">${label}</span>
-          ${allMode?`<span style="font-size:10.5px;font-weight:700;color:${soft};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;text-align:left;">${h(b.tech.name)}</span>`:'<span style="flex:1;"></span>'}
+        <div onclick="_wkOpenDay(${di},'${b.tech.id}')" title="${h(b.tech.name)} · ${label} · פתח ביומי" style="display:flex;align-items:center;gap:6px;padding:4px 7px 3px;border-bottom:1px solid ${hair};min-width:0;cursor:pointer;">
+          ${allMode?`<span style="flex:0 0 auto;width:17px;height:17px;border-radius:50%;background:rgba(255,255,255,0.95);border:1px solid rgba(0,0,0,0.08);color:${tc};font-size:8.5px;font-weight:900;display:inline-flex;align-items:center;justify-content:center;">${h(initials(b.tech.name))}</span>
+          <span style="font-size:10.5px;font-weight:800;color:${ink};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${h(b.tech.name)}</span>`:'<span style="flex:1;"></span>'}
+          <span style="font-size:10px;font-weight:800;color:${ink==='#ffffff'?'rgba(255,255,255,0.9)':soft};direction:ltr;font-feature-settings:'tnum';white-space:nowrap;">${label}</span>
         </div>
         ${rows}
       </div>`;
