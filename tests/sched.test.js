@@ -398,5 +398,24 @@ suite('resolveInsightsWindow (insights.window_days knob — display-only, batch 
   check('fractional rounded', ctx.resolveInsightsWindow({window_days:90.6}) === 91);
 });
 
+suite('durationAccuracyInsights (E4-lite)', () => {
+  const cats=[{id:'c1',name:'טוחן',time:30},{id:'c2',name:'מים',time:60}];
+  const st={regularTime:30};
+  const a='2026-06-09T08:00:00Z';
+  const mkT=(catId,mins)=>({catId,arrivedAt:a,completedAt:new Date(new Date(a).getTime()+mins*60000).toISOString()});
+  check('exact ~30 on c1 (3 jobs) → no insight', ctx.durationAccuracyInsights([mkT('c1',30),mkT('c1',30),mkT('c1',30)],cats,st).length===0);
+  const over=ctx.durationAccuracyInsights([mkT('c1',48),mkT('c1',48),mkT('c1',48)],cats,st);
+  check('c1 ~48 vs 30 → one insight for c1', over.length===1 && over[0].catId==='c1');
+  check('  actualMedian rounded to 50, n=3, configured 30', over.length===1 && over[0].actualMedian===50 && over[0].n===3 && over[0].configured===30);
+  check('  deltaPct positive (over-run) ≥ 0.25', over.length===1 && over[0].deltaPct>0.25);
+  check('n<3 suppressed', ctx.durationAccuracyInsights([mkT('c1',48),mkT('c1',48)],cats,st).length===0);
+  check('outlier >8h dropped → median unchanged → no insight', ctx.durationAccuracyInsights([mkT('c1',30),mkT('c1',30),mkT('c1',30),mkT('c1',600)],cats,st).length===0);
+  check('sub-3-min glitch dropped', ctx.durationAccuracyInsights([mkT('c1',48),mkT('c1',48),mkT('c1',48),mkT('c1',1)],cats,st)[0].n===3);
+  const miss=ctx.durationAccuracyInsights([{catId:'c1',completedAt:a},mkT('c1',48),mkT('c1',48),mkT('c1',48)],cats,st);
+  check('missing arrived_at excluded (n stays 3)', miss.length===1 && miss[0].n===3);
+  const under=ctx.durationAccuracyInsights([mkT('c2',20),mkT('c2',20),mkT('c2',20)],cats,st);
+  check('c2 ~20 vs 60 → insight with negative delta (faster than configured)', under.length===1 && under[0].deltaPct<0 && under[0].actualMedian===20);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

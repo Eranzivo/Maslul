@@ -1,6 +1,11 @@
 # E4-lite — Completion Timestamps → Reports Duration-Accuracy Insight (scope)
 
-**Date:** 2026-07-13 · **Status:** SPEC ONLY (no code shipped this pass) · **Owner:** Eran approval before build
+**Date:** 2026-07-13 · **Status:** ✅ PHASE A SHIPPED 2026-07-14 (Eran: "prioritize yourself, continue building").
+Delivered: migration `en_route_at`/`arrived_at`/`completed_at` (nullable, applied via MCP, advisors clean);
+`stampStatusTimestamps` on both write paths (first-write-wins); loader + `saveTaskToSupabase` mapping;
+pure `durationAccuracyInsights` (min 3 jobs, ≥25% gap, median, outlier-clamped) surfaced in the reports
+insights feed + the two stamps added to the CSV export. Tests: 9 golden cases in sched.test.js (253 green).
+Q1 answered **yes** — `en_route_at` included (enables future travel-leg timing). **Phase B remains future.**
 
 ## 1. Why this exists — the learning loop
 The engine's whole schedule quality rests on one number per category: **service duration**

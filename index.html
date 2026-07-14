@@ -2943,6 +2943,7 @@ async function loadFromSupabase() {
       recurringTemplateId: t.recurring_template_id || null,
       lat: t.lat || null, lon: t.lon || null,
       geocodedAt: t.geocoded_at || null,
+      enRouteAt: t.en_route_at || null, arrivedAt: t.arrived_at || null, completedAt: t.completed_at || null,
       _dbId: t.id
     }));
 
@@ -3343,6 +3344,7 @@ async function saveTaskToSupabase(task) {
     scheduled_date: task.date || null, scheduled_time: task.time || null,
     scheduled_window_start: task.windowStart || null, scheduled_window_end: task.windowEnd || null, locked: !!task.locked,
     notes: task.notes || '', cancelled_at: task.cancelledAt || null,
+    en_route_at: task.enRouteAt || null, arrived_at: task.arrivedAt || null, completed_at: task.completedAt || null,
     preferred_windows: task.preferredWindows || [],
     earliest_date: task.earliestDate || null, latest_date: task.latestDate || null,
     fixed_date: task.fixedDate || null,
@@ -4687,11 +4689,12 @@ function _downloadCSV(rows,name){
 function exportReportsCSV(){
   const filtered=getReportTasks();
   if(!filtered.length){showToast('אין נתונים לייצוא','error');return;}
-  const rows=[['תאריך','לקוח','עיר','קטגוריה','טכנאי','סטטוס','מזהה']];
+  const rows=[['תאריך','לקוח','עיר','קטגוריה','טכנאי','סטטוס','מזהה','הגעה בפועל','סיום בפועל','משך בפועל (דק׳)']];
   filtered.forEach(t=>{
     const techName=technicians.find(x=>x.id===t.techId)?.name||'';
     const catName=categories.find(c=>c.id===t.catId)?.name||t.catName||'';
-    rows.push([t.date||'',t.client||'',t.city||'',catName,techName,t.status||'',t.assignId||'']);
+    const actualMin=(t.arrivedAt&&t.completedAt)?Math.round((new Date(t.completedAt)-new Date(t.arrivedAt))/60000):'';
+    rows.push([t.date||'',t.client||'',t.city||'',catName,techName,t.status||'',t.assignId||'',t.arrivedAt||'',t.completedAt||'',actualMin]);
   });
   _downloadCSV(rows,'maslul-report');
 }
@@ -4830,6 +4833,13 @@ function renderReports(){
     }
     insights.sort((a,b)=>a.pri-b.pri);
   }
+  // Duration-accuracy (E4-lite, all tenants): configured vs actual service time per category.
+  try{
+    for(const d of durationAccuracyInsights(filtered,categories,settings)){
+      const verb=d.deltaPct>0?`נמשכת בפועל ~${d.actualMedian}`:`מהירה בפועל ~${d.actualMedian}`;
+      insights.push({text:`קטגוריה "${d.catName}" מוגדרת ל-${d.configured} דק׳ אך ${verb} דק׳ (חציון על ${d.n} קריאות ${rng.label}) — שקול לעדכן את משך השירות`,pri:2});
+    }
+  }catch(e){}
   _rpLast={rng,total,completed,rate,pending,avgWait,util,team:techStats,zones:zoneStats,cats:catStats,days:dayCounts,insights};
   const sub=document.getElementById('reports-sub');
   if(sub)sub.textContent=`${total} קריאות ${rng.label} · ${pending} ממתינות כעת${cmp?' · '+cmp:''}`;
@@ -6014,6 +6024,40 @@ function overrunDecision(semantics,overrunMin,isAuto,tolMin){
 function resolveInsightsWindow(ins){
   const n=ins&&Number(ins.window_days);
   return (isFinite(n)&&n>0)?Math.round(n):90;
+}
+// Duration-accuracy insight (E4-lite): per category, compare the CONFIGURED service duration
+// (effectiveDuration) to the ACTUAL time on site — median of (completed_at − arrived_at) over
+// jobs in the period that carry BOTH stamps and a sane delta. Suggestion only; never changes
+// config. DISPLAY-ONLY — does not influence any assignment/sequence decision, so there is no
+// batch counterpart and no cross-runtime fixture (unlike a real knob). Thresholds are named
+// constants (pilot-tuned: min 3 jobs, ≥25% gap); promote to insights.* knobs only if a 2nd
+// tenant needs different sensitivity. var so the test VM reads them off the context.
+var DURACC_MIN_SAMPLE=3, DURACC_DELTA_PCT=0.25, DURACC_MIN_MIN=3, DURACC_MAX_MIN=480;
+function durationAccuracyInsights(taskList,categories,settings,opts){
+  opts=opts||{};
+  const minN=opts.minSample||DURACC_MIN_SAMPLE, dth=opts.deltaPct||DURACC_DELTA_PCT;
+  const byCat={};
+  for(const t of (taskList||[])){
+    if(!t||!t.catId||!t.arrivedAt||!t.completedAt)continue;
+    const mins=(new Date(t.completedAt)-new Date(t.arrivedAt))/60000;
+    if(!(mins>=DURACC_MIN_MIN&&mins<=DURACC_MAX_MIN))continue; // drop clock glitches / overnight
+    (byCat[t.catId]=byCat[t.catId]||[]).push(mins);
+  }
+  const out=[];
+  for(const catId of Object.keys(byCat)){
+    const arr=byCat[catId].sort((a,b)=>a-b);
+    if(arr.length<minN)continue;
+    const mid=Math.floor(arr.length/2);
+    const median=arr.length%2?arr[mid]:(arr[mid-1]+arr[mid])/2; // robust to outliers
+    const actualMedian=Math.round(median/5)*5;
+    const configured=effectiveDuration(catId,null,categories,settings);
+    if(!(configured>0))continue;
+    const deltaPct=(actualMedian-configured)/configured;
+    if(Math.abs(deltaPct)<dth)continue;
+    const cat=(categories||[]).find(c=>c.id===catId);
+    out.push({catId,catName:cat?cat.name:catId,configured,actualMedian,deltaPct,n:arr.length});
+  }
+  return out.sort((a,b)=>Math.abs(b.deltaPct)-Math.abs(a.deltaPct));
 }
 // </sched-logic>
 function appUsesZones(){ return usesZones(tenantConfig && tenantConfig.scheduling); }
@@ -8154,9 +8198,18 @@ function openStatusModal(id){
   }).join('')||'<div style="color:var(--ink-4);">אין פעולות</div>';
   document.getElementById('mo-status').classList.remove('hidden');
 }
+// E4-lite: stamp the real time a status transition first happens (first-write-wins — the first
+// arrival/finish is the truth; re-flips never overwrite). Feeds the duration-accuracy insight.
+// ONE implementation for both write paths (coordinator modal + tech view).
+function stampStatusTimestamps(t,ns){
+  if(!t)return;const now=new Date().toISOString();
+  if(ns==='en_route'&&!t.enRouteAt)t.enRouteAt=now;
+  if(ns==='arrived'&&!t.arrivedAt)t.arrivedAt=now;
+  if(ns==='completed'&&!t.completedAt)t.completedAt=now;
+}
 function setStatus(ns){
   const t=tasks.find(x=>String(x.id)===String(statusTaskId));
-  if(t){t.status=ns;saveTaskToSupabase(t);}
+  if(t){stampStatusTimestamps(t,ns);t.status=ns;saveTaskToSupabase(t);}
   save();renderTasks();renderHomeTechCards();closeMo('mo-status');
 }
 
@@ -8263,6 +8316,7 @@ function openCompleteTask(taskId){openStatusModal(taskId);}
 function techSetStatus(taskId,ns){
   const t=tasks.find(x=>String(x.id)===String(taskId));
   if(!t)return;
+  stampStatusTimestamps(t,ns);
   t.status=ns;
   saveTaskToSupabase(t);
   save();
