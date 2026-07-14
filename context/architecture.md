@@ -35,6 +35,7 @@
 | `backend/batch_schedule.py` | Batch auto-scheduler — greedy zone rotation + OR-Tools per tech-day |
 | `backend/cities.py` | 200+ Israeli city coordinates (haversine fallback, logs unknown cities) |
 | `backend/geo_health.py` | Geo Health report (pure) — classifies a tenant's task-cities as unresolved / out-of-zone; served READ-ONLY by `/geo-health`. Self-healing geo Slice 1 |
+| `backend/geo_suggest.py` | Fuzzy place suggestion (pure) — `resolve_or_suggest`/`suggest`/`levenshtein`; confidence tiers (resolved / suggest+auto_ok / fail). Backend-only (single resolution authority, NO JS mirror). Self-healing geo Slice 2 |
 
 ## Internal HTML Structure
 ```

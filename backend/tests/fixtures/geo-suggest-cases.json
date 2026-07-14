@@ -1,0 +1,13 @@
+{
+  "_comment": "Golden fixture for geo_suggest.suggest(). Shared candidate pool = a slice of real brain keys. Eran's 4 examples + guards. See outputs/geo-selfheal-design_2026-07-14.md.",
+  "candidates": ["נהריה", "באר שבע", "קרית שמונה", "גת", "גן", "תל אביב", "חיפה", "אשקלון", "אשדוד"],
+  "cases": [
+    {"raw": "נהרייה",   "status": "suggest", "auto_ok": true,  "match": "נהריה",       "why": "yod-doubling, dist 1, len≥4 → auto"},
+    {"raw": "באר ש בע",  "status": "suggest", "auto_ok": true,  "match": "באר שבע",     "why": "extra inside-word space, dist 1 → auto"},
+    {"raw": "קרית שמנה", "status": "suggest", "auto_ok": true,  "match": "קרית שמונה", "why": "missing vav, dist 1 → auto"},
+    {"raw": "קרת שמה",   "status": "fail",    "auto_ok": false,                          "why": "too messy (dist ≥3) → ask user to re-enter"},
+    {"raw": "גט",        "status": "suggest", "auto_ok": false, "match": "גת",          "why": "dist 1 but len<4 → never auto (גת≠גן collision) → human picks"},
+    {"raw": "זזזזזז",    "status": "fail",    "auto_ok": false,                          "why": "nothing close → fail"},
+    {"raw": "אשדד",      "status": "suggest", "auto_ok": true,  "match": "אשדוד",       "why": "missing vav, dist 1, len≥4 → auto"}
+  ]
+}
