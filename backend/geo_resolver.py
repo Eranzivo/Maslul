@@ -71,6 +71,12 @@ def alias_map() -> dict:
     return _brain["alias_to_key"]
 
 
+def place_keys() -> list:
+    """All canonical place keys currently in the brain — the candidate pool for fuzzy
+    suggestion (geo_suggest). [] when not loaded ⇒ callers get no suggestion (fail-open)."""
+    return list(_brain["places"].keys())
+
+
 def lookup(name):
     """Resolve a name against the in-memory brain only. (lat, lon) or None — never guesses."""
     key = normalize_place_key(name)

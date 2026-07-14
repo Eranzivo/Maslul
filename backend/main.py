@@ -14,6 +14,7 @@ from batch_auth import resolve_effective_tenant, AuthzError
 import route_observations
 import geo_resolver
 import geo_health
+import geo_suggest
 import geo_addresses
 import route_health
 import audit_sweep
@@ -557,3 +558,36 @@ async def geo_health_report(req: GeoHealthRequest, request: Request):
         counts.items(), zone_keys, geo_resolver.resolve, match_key)
     report["tenant_id"] = tenant
     return report
+
+
+class GeoSuggestRequest(BaseModel):
+    city: str
+
+
+@app.post("/geo-suggest")
+async def geo_suggest_city(req: GeoSuggestRequest, request: Request):
+    """Resolve a raw city name, or fuzzy-suggest the most likely real place (Slice 2/3).
+    Returns `{status: resolved|suggest|fail, match, confidence, auto_ok, [coords]}`. Geography
+    is global + PII-free, so there is NO tenant logic — but a valid session (user JWT or the
+    service key) is required so the endpoint can't be hammered anonymously. Fail-open: any error
+    ⇒ `{status:'fail'}` so the calling door degrades to today's behavior (free-text city)."""
+    service_key = os.getenv("SUPABASE_SERVICE_KEY", "")
+    if not service_key:
+        raise HTTPException(status_code=503, detail="Not configured")
+
+    auth = request.headers.get("Authorization", "")
+    token = auth[7:] if auth.startswith("Bearer ") else ""
+    if not token:
+        raise HTTPException(status_code=401, detail="Auth required")
+    if token != service_key:
+        uid = await _introspect_user_token(token, service_key)
+        if not uid:
+            raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+    fail = {"status": "fail", "match": None, "confidence": 0.0, "auto_ok": False}
+    try:
+        await geo_resolver.ensure_loaded(service_key)  # shared brain (fail-open)
+        return geo_suggest.resolve_or_suggest(
+            req.city, geo_resolver.place_keys(), geo_resolver.alias_map(), geo_resolver.resolve)
+    except Exception:
+        return fail
