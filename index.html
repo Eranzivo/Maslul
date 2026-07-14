@@ -6978,7 +6978,38 @@ async function _triggerGeocode() {
 }
 
 // ═══ DISPATCH ═══
-function findBestSlot(_keepExcl){
+// ── Geo suggest (self-healing Slice 3, flag-gated features.geo_suggest, default OFF) ──
+// Upgrades the doors' weak local fuzzy layer to the backend brain (1,310 places + levenshtein).
+// FIELD-only auto-fix (never writes the shared brain — that needs coordinator approval, P2).
+// Fail-open: backend off/slow/error ⇒ returns null ⇒ the door keeps today's exact behavior.
+function _geoSuggestOn(){ return !!(tenantConfig&&tenantConfig.features&&tenantConfig.features.geo_suggest) && !!CONFIG.OPTIMIZER_URL; }
+async function geoSuggestCity(raw){
+  if(!_geoSuggestOn()||!raw)return null;
+  try{
+    const hdrs={'Content-Type':'application/json'};
+    try{const{data:{session}}=await sb.auth.getSession();if(session&&session.access_token)hdrs['Authorization']=`Bearer ${session.access_token}`;}catch(e){}
+    const res=await fetch(`${CONFIG.OPTIMIZER_URL}/geo-suggest`,{method:'POST',headers:hdrs,body:JSON.stringify({city:raw})});
+    if(!res.ok)return null;
+    return await res.json();
+  }catch(e){return null;}
+}
+// Dispatch: no candidates for the typed city → ask the brain for a correction, then re-search ONCE.
+async function _trySuggestThenSearch(city,catId){
+  const s=await geoSuggestCity(city);
+  if(s&&s.status==='suggest'&&s.match&&s.match!==normalizeCity(city)){
+    const apply=s.auto_ok||confirm(`העיר "${city}" לא זוהתה. האם התכוונת ל-"${s.match}"?`);
+    if(apply){
+      const el=document.getElementById('s-city');if(el)el.value=s.match;
+      if(typeof saveDispatchDraft==='function')saveDispatchDraft();
+      if(s.auto_ok)showToast(`תוקן ל-"${s.match}" ✓`);
+      findBestSlot(false,true); // retry once, skip re-suggest → no loop
+      return;
+    }
+  }
+  const r=resolveZone(city,(_pendingGeocode&&_pendingGeocode.lat)||null,(_pendingGeocode&&_pendingGeocode.lon)||null,tenantConfig,zones);
+  showNoResult(city,r.reason);
+}
+function findBestSlot(_keepExcl,_noSuggest){
   // Fresh search drops slot exclusions; the overrun popup's "מצא חלון אחר" re-runs
   // with _keepExcl=true so the declined slot stays excluded.
   if(!_keepExcl)window._excludedSlots=null;
@@ -6991,6 +7022,7 @@ function findBestSlot(_keepExcl){
   allCandidates=buildCandidates(city,catId);
   currentCandidateIdx=0;selectedTimeSlot=null;
   if(!allCandidates.length){
+    if(_geoSuggestOn()&&!_noSuggest){ _trySuggestThenSearch(city,catId); return; }
     const r=resolveZone(city,(_pendingGeocode&&_pendingGeocode.lat)||null,(_pendingGeocode&&_pendingGeocode.lon)||null,tenantConfig,zones);
     showNoResult(city,r.reason);return;
   }
@@ -7752,11 +7784,11 @@ function openAddTaskModal(){
   document.getElementById('at-error').textContent='';
   document.getElementById('mo-add-task').classList.remove('hidden');
 }
-function confirmAddTask(){
+async function confirmAddTask(){
   const catEl=document.getElementById('at-cat');
   const name=document.getElementById('at-name').value.trim();
   const phone=document.getElementById('at-phone').value.trim();
-  const city=normalizeCity(document.getElementById('at-city').value);
+  let city=normalizeCity(document.getElementById('at-city').value);
   const street=document.getElementById('at-street').value.trim();
   const notes=document.getElementById('at-notes').value.trim();
   const errEl=document.getElementById('at-error');
@@ -7765,6 +7797,12 @@ function confirmAddTask(){
   if(!name){errEl.textContent='נא להזין שם לקוח';return;}
   if(!phone){errEl.textContent='נא להזין מספר טלפון';return;}
   if(!city){errEl.textContent='נא לבחור עיר';return;}
+  if(_geoSuggestOn()){ // brain fallback — correct a mistyped city before it's saved
+    const s=await geoSuggestCity(city);
+    if(s&&s.status==='suggest'&&s.match&&s.match!==city&&(s.auto_ok||confirm(`העיר "${city}" לא זוהתה. האם התכוונת ל-"${s.match}"?`))){
+      city=s.match; if(s.auto_ok)showToast(`תוקן ל-"${s.match}" ✓`);
+    }
+  }
   if(!street){errEl.textContent='נא להזין רחוב ומספר — כתובת מלאה נדרשת לשיבוץ מדויק';return;}
   const catObj=categories.find(c=>c.id===catEl.value);
   const newTask={id:nextTaskId++,client:name,phone,city,street,cat:catObj?.name||'',catId:catEl.value,techId:null,status:'pending',time:'',date:'',notes,assignId:'',preferredWindows:[]};
@@ -7788,9 +7826,13 @@ async function runBulkImport(){
     const parts=row.split(',').map(s=>s.trim());
     const street=parts.length>1?parts[0]:'';
     const rawCity=parts.length>1?parts[1]:parts[0];
-    const {city}=canonicalCity(rawCity);
+    let city=canonicalCity(rawCity).city;
     // Non-zone tenants (open/radius) have no zones — import every row; zone-match only gates zone tenants.
-    const r=appUsesZones()?resolveZone(city,null,null,tenantConfig,zones):{matched:true,zoneId:null,reason:null};
+    let r=appUsesZones()?resolveZone(city,null,null,tenantConfig,zones):{matched:true,zoneId:null,reason:null};
+    if(!r.matched&&_geoSuggestOn()){ // brain fallback — AUTO-fix only (bulk has no per-row prompts)
+      const s=await geoSuggestCity(city);
+      if(s&&s.status==='suggest'&&s.auto_ok&&s.match){ city=s.match; r=appUsesZones()?resolveZone(city,null,null,tenantConfig,zones):{matched:true,zoneId:null,reason:null}; }
+    }
     if(!r.matched){unmatched.push(`${row} — ${r.reason==='city_not_in_zone'?'עיר לא משויכת לאזור':'מחוץ לאזור'}`);continue;}
     const saved=await dbInsert('tasks',{
       assign_id:null,
@@ -7908,7 +7950,7 @@ function openAddCityModal(prefillCity){
   document.getElementById('mo-add-city').classList.remove('hidden');
   setTimeout(()=>document.getElementById(prefillCity?'ac-zone-sel':'ac-city-name').focus(),100);
 }
-function confirmAddCity(){
+async function confirmAddCity(){
   const rawCity=document.getElementById('ac-city-name').value.trim();
   const zoneId=document.getElementById('ac-zone-sel').value;
   const errEl=document.getElementById('ac-error');
@@ -7918,8 +7960,16 @@ function confirmAddCity(){
   const _cc=canonicalCity(rawCity);
   // Fuzzy correction only for genuinely UNrecognized input (valid listed cities like
   // אחיהוד must never be second-guessed) — same gate as the zones-page editor.
-  const cityName=(_cc.suggestion&&_cc.suggestion!==_cc.city&&!isKnownCity(_cc.city)
+  let cityName=(_cc.suggestion&&_cc.suggestion!==_cc.city&&!isKnownCity(_cc.city)
     &&confirm(`"${rawCity}" אינה מזוהה. האם התכוונת ל"${_cc.suggestion}"?`))?_cc.suggestion:_cc.city;
+  // Backend brain fallback (flag-gated): if the local layer still doesn't recognize it,
+  // ask the 1,310-place brain for a better match before adding by raw name.
+  if(_geoSuggestOn()&&!isKnownCity(cityName)){
+    const s=await geoSuggestCity(rawCity);
+    if(s&&s.status==='suggest'&&s.match&&s.match!==cityName&&(s.auto_ok||confirm(`"${rawCity}" אינה מזוהה. האם התכוונת ל-"${s.match}"?`))){
+      cityName=s.match; if(s.auto_ok)showToast(`תוקן ל-"${s.match}" ✓`);
+    }
+  }
   // Never guess: a city absent from the national geo brain gets an explicit confirm —
   // it will schedule by name, but has no coordinates until curated (flag, don't block).
   if(!isKnownCity(cityName)&&!confirm(`"${cityName}" אינה מוכרת במאגר היישובים הארצי.\n\nניתן להוסיף ולשבץ לפי שם, אך ללא נקודת ציון מדויקת עד לאימות. להוסיף בכל זאת?`))return;
