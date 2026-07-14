@@ -6073,6 +6073,29 @@ function trafficBucket(mode,hhmm){
   if(!isFinite(h))return 'static';
   return ((h>=7&&h<10)||(h>=16&&h<19))?'rush':'static';
 }
+// Normalize a location into a stable key — MIRROR of backend route_cache.norm_key so tenant
+// observations key-align with the global brain: "lat,lon" rounded to 4dp, else trimmed name.
+function obsLocKey(loc){
+  const s=String(loc||'').trim();
+  const p=s.split(',');
+  if(p.length===2){const la=parseFloat(p[0]),lo=parseFloat(p[1]);
+    if(isFinite(la)&&isFinite(lo))return (Math.round(la*1e4)/1e4)+','+(Math.round(lo*1e4)/1e4);}
+  return s;
+}
+// Cross-tenant brain P1: derive ONE observed travel leg from a task's execution timestamps.
+// The leg (prevLoc → this task) took arrived_at − en_route_at. Returns null unless both stamps
+// exist, the delta is physically sane, and from≠to. Pure + testable; the writer supplies prevLoc.
+function deriveLegObservation(task,prevLoc,config){
+  if(!task||!task.enRouteAt||!task.arrivedAt)return null;
+  const mins=Math.round((new Date(task.arrivedAt)-new Date(task.enRouteAt))/60000);
+  if(!(mins>=1&&mins<=600))return null; // clock-glitch / overnight guard
+  const from=obsLocKey(prevLoc),to=obsLocKey(task.city);
+  if(!from||!to||from===to)return null;
+  const d=new Date(task.enRouteAt);
+  const hhmm=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); // local (tech's device)
+  return {from_key:from,to_key:to,time_bucket:trafficBucket(resolveTrafficMode(config),hhmm),
+    observed_min:mins,source:'timestamps',task_id:task._dbId||null};
+}
 // </sched-logic>
 function appUsesZones(){ return usesZones(tenantConfig && tenantConfig.scheduling); }
 // ═══ AUTO-SEQUENCING SEAM (features.auto_sequence) ═══════════════════════════
@@ -8221,9 +8244,25 @@ function stampStatusTimestamps(t,ns){
   if(ns==='arrived'&&!t.arrivedAt)t.arrivedAt=now;
   if(ns==='completed'&&!t.completedAt)t.completedAt=now;
 }
+// Cross-tenant brain P1: on a task's FIRST arrival, log the observed travel leg (prev stop → here)
+// into route_observations. Fire-and-forget + fail-open: a logging error must NEVER affect the
+// status update. Tenant-scoped (dbInsert adds tenant_id); no consumption yet (Phase 2).
+async function logLegObservation(t){
+  try{
+    if(CONFIG.DEMO_MODE||!currentTenantId||!t||!t.arrivedAt||!t.enRouteAt)return;
+    const prev=tasks.filter(x=>x&&x.id!==t.id&&String(x.techId)===String(t.techId)&&x.date===t.date
+        &&x.arrivedAt&&new Date(x.arrivedAt)<new Date(t.arrivedAt))
+      .sort((a,b)=>new Date(b.arrivedAt)-new Date(a.arrivedAt));
+    const tech=technicians.find(x=>String(x.id)===String(t.techId));
+    const prevLoc=prev.length?prev[0].city:(tech&&(tech.base||tech.return_city||tech.baseCity));
+    const obs=deriveLegObservation(t,prevLoc,tenantConfig);
+    if(obs)await dbInsert('route_observations',obs);
+  }catch(e){console.error('logLegObservation (non-blocking)',e);}
+}
 function setStatus(ns){
   const t=tasks.find(x=>String(x.id)===String(statusTaskId));
-  if(t){stampStatusTimestamps(t,ns);t.status=ns;saveTaskToSupabase(t);}
+  if(t){const wasArrived=!!t.arrivedAt;stampStatusTimestamps(t,ns);t.status=ns;saveTaskToSupabase(t);
+    if(ns==='arrived'&&!wasArrived)logLegObservation(t);}
   save();renderTasks();renderHomeTechCards();closeMo('mo-status');
 }
 
@@ -8330,9 +8369,11 @@ function openCompleteTask(taskId){openStatusModal(taskId);}
 function techSetStatus(taskId,ns){
   const t=tasks.find(x=>String(x.id)===String(taskId));
   if(!t)return;
+  const wasArrived=!!t.arrivedAt;
   stampStatusTimestamps(t,ns);
   t.status=ns;
   saveTaskToSupabase(t);
+  if(ns==='arrived'&&!wasArrived)logLegObservation(t);
   save();
   renderTechView();
   showToast('סטטוס עודכן ✓');

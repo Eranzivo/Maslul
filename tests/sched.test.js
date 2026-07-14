@@ -423,5 +423,21 @@ suite('traffic mode/bucket: golden fixture (parity with backend resolve_traffic_
   fx.bucket_cases.forEach((c, i) => check(`bucket[${i}] ${c.mode}@${c.hhmm} → ${c.expect}`, ctx.trafficBucket(c.mode, c.hhmm) === c.expect));
 });
 
+suite('deriveLegObservation + obsLocKey (cross-tenant brain P1)', () => {
+  check('obsLocKey rounds coords to 4dp', ctx.obsLocKey('32.1234567,34.7654321') === '32.1235,34.7654');
+  check('obsLocKey trims city name', ctx.obsLocKey('  חיפה ') === 'חיפה');
+  // local-time (no-Z) timestamps → deterministic getHours() regardless of machine tz
+  const mk = (er, ar, city) => ({ enRouteAt: er, arrivedAt: ar, city, _dbId: 't1' });
+  const o = ctx.deriveLegObservation(mk('2026-06-09T08:00:00', '2026-06-09T08:30:00', 'חיפה'), 'עכו', null);
+  check('valid 30-min leg → observation (off ⇒ static)', !!o && o.from_key === 'עכו' && o.to_key === 'חיפה' && o.observed_min === 30 && o.time_bucket === 'static' && o.source === 'timestamps' && o.task_id === 't1');
+  check('missing en_route_at → null', ctx.deriveLegObservation({ arrivedAt: '2026-06-09T08:30:00', city: 'חיפה' }, 'עכו', null) === null);
+  check('missing arrived_at → null', ctx.deriveLegObservation({ enRouteAt: '2026-06-09T08:00:00', city: 'חיפה' }, 'עכו', null) === null);
+  check('same from/to → null', ctx.deriveLegObservation(mk('2026-06-09T08:00:00', '2026-06-09T08:30:00', 'חיפה'), 'חיפה', null) === null);
+  check('zero/negative delta → null', ctx.deriveLegObservation(mk('2026-06-09T08:30:00', '2026-06-09T08:30:00', 'חיפה'), 'עכו', null) === null);
+  check('overnight/huge delta (>600m) → null', ctx.deriveLegObservation(mk('2026-06-09T08:00:00', '2026-06-09T20:00:00', 'חיפה'), 'עכו', null) === null);
+  const rush = ctx.deriveLegObservation(mk('2026-06-09T08:00:00', '2026-06-09T08:30:00', 'חיפה'), 'עכו', { routing: { traffic_mode: 'rush_hour' } });
+  check('rush_hour config + 08:00 departure → rush bucket', !!rush && rush.time_bucket === 'rush');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

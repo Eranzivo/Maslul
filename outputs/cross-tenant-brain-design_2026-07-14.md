@@ -45,8 +45,12 @@ signal ⇒ tenant signal wins locally (local truth beats the average).
   `(from_key,to_key,time_bucket)`, existing rows unchanged); `routing.traffic_mode` knob (`off`|`rush_hour`|
   `live`, **PureWater = off**) + both-engine readers + a pure `trafficBucket(mode,hhmm)` helper + golden
   fixture. Default `off` ⇒ always `'static'` ⇒ **zero behavior change**. Lays the bucket seam.
-- **Phase 1 — log observations.** `route_observations` table + write from the E4-lite timestamps/GPS on
-  job completion (tenant-scoped, fail-open). No consumption yet.
+- **Phase 1 — log observations. ✅ SHIPPED 2026-07-14.** `route_observations` table (tenant-scoped,
+  append-only, RLS insert+select, no update/delete; migration applied, advisors clean). Pure
+  `deriveLegObservation(task,prevLoc,config)` + `obsLocKey` (mirrors backend `norm_key` so keys align);
+  `logLegObservation` writes fire-and-forget on a task's FIRST arrival (prev stop → here = arrived−en_route,
+  sane-bounded, bucketed by local departure time), wired into `setStatus`/`techSetStatus`, fail-open. No
+  consumption yet. 9 golden cases (282 sched green). GPS-sourced legs = a later add.
 - **Phase 2 — tenant aggregation.** Roll observations into tenant-trusted `(leg,bucket)` durations; optimizer
   reads tenant-trusted first, then global `route_cache`, then Google/haversine. `rush_hour` mode = static ×
   per-tenant multiplier windows (zero API). `live` mode = evening re-solve of tomorrow's legs only.
