@@ -26,6 +26,7 @@
 | `auth-users.md` | Roles, RLS, impersonation, technician↔user linkage. |
 | `style.md` + `design-system.md` | CSS tokens, RTL, md-* components; read design-system before ANY UI work. |
 | `new-entity-checklist.md` | Mandatory steps before any new Supabase table. |
+| `impact-map.md` | **The dual-engine parity / coupling map** ("Neurons brain") — read BEFORE changing any rule that runs in both engines, any shared `tenants.config` knob, or any shared DB column. The JS↔Py pairs that must agree + "change X → verify Y". |
 
 ## Layer 3 — What is configurable (the tenant contract)
 | File | What it holds |
