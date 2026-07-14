@@ -9083,6 +9083,9 @@ function renderPlannerWeekly(days){
   const startH=parseInt((settings.startTime||'07:00').split(':')[0]);
   const endH=parseInt((settings.endTime||'18:00').split(':')[0]);
   const WPX=1, gridH=(endH-startH)*60*WPX, headH=50, gutterW=46;
+  // Block height fits its CONTENT (header + call rows), never the full window height — a
+  // 1-call block in a 3h window is a compact card, not a big empty chunk (Eran 2026-07-13).
+  const WK_HEAD_PX=30, WK_ROW_PX=27, WK_MIN_PX=46;
   const minW=allMode?168:150;
   const slotH=settings.window||3;
   const statusFg={completed:'#16A34A',cancelled:'#DC2626',pending:'#D97706',issue:'#DC2626'};
@@ -9126,7 +9129,9 @@ function renderPlannerWeekly(days){
         if(hasWin){
           topMins=timeToMins(first.windowStart)-startH*60;
           const wlen=timeToMins(first.windowEnd)-timeToMins(first.windowStart);
-          heightMins=wlen>0?wlen:slotH*60; // real window length (variable-length windows), slot fallback
+          const winLen=wlen>0?wlen:slotH*60; // real window length (variable-length windows), slot fallback
+          // fit to content (header + rows), capped at the true window length, floored for legibility
+          heightMins=Math.min(winLen,Math.max(WK_MIN_PX,WK_HEAD_PX+grp.length*WK_ROW_PX));
           // approved-overrun tail (parity with daily): only a popup-approved spill extends the block
           const _weMin=timeToMins(first.windowEnd||first.windowStart)||0;
           tailMins=Math.max(0,...grp.map(t=>{
