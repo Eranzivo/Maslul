@@ -130,6 +130,14 @@ def resolve_traffic_mode(config: Optional[dict]) -> str:
     return m if m in ("rush_hour", "live") else "off"
 
 
+def resolve_learned_durations(config: Optional[dict]) -> bool:
+    """`routing.learned_durations` (default False) — when ON, /optimize prefers the tenant's OWN
+    observed leg durations (route_observations) over the global cache/Google/haversine. Backend-only
+    (matrix building is server-side); default OFF ⇒ every current tenant unchanged. Cross-tenant
+    brain P2. Design: outputs/cross-tenant-brain-design_2026-07-14.md"""
+    return bool(((config or {}).get("routing") or {}).get("learned_durations"))
+
+
 def traffic_bucket(mode, hhmm) -> str:
     """Mirror of JS trafficBucket — map mode + departure hh:mm → route_cache time_bucket.
     off/unknown → static; rush_hour → rush inside 07-09 / 16-18 else static; live → live."""

@@ -102,13 +102,21 @@ async def build_matrix_gmaps(locations: list[str], api_key: str) -> list[list[in
 LAST_GOOGLE_ELEMENTS = 0
 
 
-async def build_matrix_cached(locations: list[str], api_key: str, service_key: str) -> list[list[int]]:
+async def build_matrix_cached(locations: list[str], api_key: str, service_key: str,
+                              learned_legs: dict | None = None) -> list[list[int]]:
     """Cache-first travel matrix: reuse cached legs, fetch only misses from Google
     (trust-checked before storing), fall back to haversine for anything still missing.
-    A fully-warm cache performs zero Google calls."""
+    A fully-warm cache performs zero Google calls.
+
+    Cross-tenant brain P2: `learned_legs` {(from_key,to_key): minutes} — a tenant's OWN observed
+    durations — take TOP priority over cache/Google/haversine when provided (flag-gated upstream;
+    None ⇒ today's behavior exactly). Learned legs are never re-stored as google rows."""
     global LAST_GOOGLE_ELEMENTS
     keys = [route_cache.norm_key(l) for l in locations]
+    learned_legs = learned_legs or {}
     hits, misses = route_cache.split_hits_misses(locations, service_key)
+    if learned_legs:  # a learned leg is "covered" — never spend Google on it
+        misses = [p for p in misses if p not in learned_legs]
     n = len(locations)
     matrix = [[0] * n for _ in range(n)]
     new_rows = []
@@ -122,6 +130,9 @@ async def build_matrix_cached(locations: list[str], api_key: str, service_key: s
             if i == j:
                 continue
             pair = (keys[i], keys[j])
+            if pair in learned_legs:            # tenant's own observed duration wins
+                matrix[i][j] = learned_legs[pair]
+                continue
             if pair in hits:
                 matrix[i][j] = hits[pair]
                 continue
@@ -462,7 +473,7 @@ def _health_for_tech(tech, v2_tasks, matrix, r, route_strategy, weights):
 
 async def optimize_routes(technicians: list, google_maps_api_key: Optional[str], service_key: str = "",
                           route_strategy: str = "flexible", health_weights: Optional[dict] = None,
-                          window_semantics: str = "finish") -> list[dict]:
+                          window_semantics: str = "finish", learned_legs: Optional[dict] = None) -> list[dict]:
     global LAST_GOOGLE_ELEMENTS
     LAST_GOOGLE_ELEMENTS = 0
     await geo_resolver.ensure_loaded(service_key)  # load the shared brain once (fail-open)
@@ -488,7 +499,7 @@ async def optimize_routes(technicians: list, google_maps_api_key: Optional[str],
         if service_key:
             # Cache-first: cached legs are reused even when Google is unavailable/quota-blocked
             # (api_key None → misses fall back to haversine, hits still use real drive times).
-            matrix = await build_matrix_cached(locations, google_maps_api_key, service_key)
+            matrix = await build_matrix_cached(locations, google_maps_api_key, service_key, learned_legs)
             mode = 'gmaps-cached' if google_maps_api_key else 'local-cached'
         elif google_maps_api_key:
             matrix = await build_matrix_gmaps(locations, google_maps_api_key)

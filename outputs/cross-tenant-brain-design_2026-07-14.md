@@ -51,11 +51,19 @@ signal ⇒ tenant signal wins locally (local truth beats the average).
   `logLegObservation` writes fire-and-forget on a task's FIRST arrival (prev stop → here = arrived−en_route,
   sane-bounded, bucketed by local departure time), wired into `setStatus`/`techSetStatus`, fail-open. No
   consumption yet. 9 golden cases (282 sched green). GPS-sourced legs = a later add.
-- **Phase 2 — tenant aggregation.** Roll observations into tenant-trusted `(leg,bucket)` durations; optimizer
-  reads tenant-trusted first, then global `route_cache`, then Google/haversine. `rush_hour` mode = static ×
-  per-tenant multiplier windows (zero API). `live` mode = evening re-solve of tomorrow's legs only.
-- **Phase 3 — the supervisor / promotion.** Cross-tenant quorum → promote to global with confidence;
-  super-admin "brain health" view (see→confirm→promote/rollback). This is the "major brain."
+- **Phase 2 — tenant aggregation. ✅ CORE SHIPPED 2026-07-14** (flag-gated, off by default).
+  `route_observations.get_learned_legs` (median per leg, ≥3 samples, fail-open) → `optimize_routes`
+  → `build_matrix_cached(learned_legs=)`: a tenant's OWN observed duration wins over cache/Google/
+  haversine (and is excluded from Google misses = no spend). Knob `routing.learned_durations` (default
+  off ⇒ every current tenant unchanged); `/optimize` resolves it server-side + fetches legs only when on.
+  Tests: test_route_observations.py + test_matrix_cached.py (override + None-unchanged). **Deferred to
+  P2.5:** bucket-aware/time-dependent matrix (rush_hour × departure time) — hard with a static OR-Tools
+  matrix; v1 aggregates bucket-agnostic. `live` mode (evening re-solve) also later.
+- **Phase 3 — the supervisor / promotion.** Cross-tenant quorum → promote to global with confidence.
+  **✅ GROUNDWORK SHIPPED 2026-07-14:** super-admin **read-only "brain health" card** (מנהל מאסטר →
+  🧠 מוח המערכת) — total observations, per-tenant counts, top legs (median · N), empty-state guidance.
+  Reads `route_observations` (super_admin RLS). **Still future:** the promotion job itself (quorum →
+  write to `route_cache`) + a confirm/rollback control.
 
 ## Guardrails (carry from the geo/route doctrine)
 Fail-open (cache/brain errors never break scheduling) · physics trust-bounds on every learned leg

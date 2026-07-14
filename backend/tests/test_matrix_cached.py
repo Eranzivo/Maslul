@@ -64,3 +64,26 @@ def test_no_api_key_uses_hits_plus_haversine(monkeypatch):
     m = _run(optimizer.build_matrix_cached(LOCS, api_key=None, service_key="x"))
     assert m[0][1] == 64       # cached leg reused even without Google
     assert m[1][0] > 30        # missing reverse leg → haversine
+
+
+def test_learned_leg_wins_over_cache_and_google(monkeypatch):
+    # cache has a value; a tenant-learned observation for the same leg must win.
+    monkeypatch.setattr(rc, "get_cached", lambda pairs, key, bucket="static": {("תל אביב", "חיפה"): 64})
+    stored = []
+    monkeypatch.setattr(rc, "put_cached", lambda rows, key, bucket="static": stored.extend(rows))
+
+    async def boom(locations, api_key):
+        raise AssertionError("learned+cache cover everything → Google must not be called")
+    monkeypatch.setattr(optimizer, "build_matrix_gmaps", boom)
+
+    learned = {("תל אביב", "חיפה"): 48, ("חיפה", "תל אביב"): 52}
+    m = _run(optimizer.build_matrix_cached(LOCS, api_key="fake", service_key="x", learned_legs=learned))
+    assert m[0][1] == 48 and m[1][0] == 52     # learned durations, not the cached 64
+    assert stored == []                        # learned legs are never re-stored as google rows
+
+
+def test_learned_legs_none_is_unchanged_behavior(monkeypatch):
+    monkeypatch.setattr(rc, "get_cached", lambda pairs, key, bucket="static": {("תל אביב", "חיפה"): 64, ("חיפה", "תל אביב"): 70})
+    monkeypatch.setattr(rc, "put_cached", lambda rows, key, bucket="static": None)
+    m = _run(optimizer.build_matrix_cached(LOCS, api_key=None, service_key="x", learned_legs=None))
+    assert m[0][1] == 64 and m[1][0] == 70     # None ⇒ exactly today's cache behavior

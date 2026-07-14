@@ -9,8 +9,9 @@ from typing import Optional
 from dotenv import load_dotenv
 from optimizer import optimize_routes
 import optimizer as optimizer_module
-from batch_schedule import run_batch_schedule
+from batch_schedule import run_batch_schedule, resolve_learned_durations
 from batch_auth import resolve_effective_tenant, AuthzError
+import route_observations
 import geo_resolver
 import geo_addresses
 import route_health
@@ -189,6 +190,22 @@ async def _get_tenant_audit_cfg(tenant_id: str, service_key: str) -> dict:
         return {}
 
 
+async def _get_tenant_routing(tenant_id: str, service_key: str) -> dict:
+    """config.routing for a tenant ({} when absent/unreadable) — the cross-tenant-brain knobs."""
+    try:
+        async with httpx.AsyncClient(timeout=8) as c:
+            r = await c.get(
+                f"{SUPABASE_URL}/rest/v1/tenants",
+                headers={"apikey": service_key, "Authorization": f"Bearer {service_key}"},
+                params={"id": f"eq.{tenant_id}", "select": "config"},
+            )
+        if r.status_code != 200 or not r.json():
+            return {}
+        return (r.json()[0].get("config") or {}).get("routing") or {}
+    except Exception:
+        return {}
+
+
 async def _resolve_audit_context(request: Request, req_tenant_id: Optional[str],
                                  service_key: str) -> tuple[Optional[str], dict]:
     """(verified tenant_id, audit config) for an optionally-authenticated call.
@@ -319,6 +336,16 @@ async def optimize(req: OptimizeRequest, request: Request):
     # Anonymous callers still get routes + health in the response, never a DB write.
     audit_tenant, audit_cfg = await _resolve_audit_context(request, req.tenant_id, service_key)
 
+    # Cross-tenant brain P2: tenant-learned leg durations (flag-gated, fail-open). Only for a
+    # verified tenant with routing.learned_durations ON; otherwise None ⇒ today's behavior exactly.
+    learned_legs = None
+    if audit_tenant and service_key:
+        try:
+            if resolve_learned_durations({"routing": await _get_tenant_routing(audit_tenant, service_key)}):
+                learned_legs = route_observations.get_learned_legs(audit_tenant, service_key)
+        except Exception:
+            learned_legs = None
+
     # Only use Google Maps if key is set AND daily quota has headroom.
     # Cache path: PEEK here, charge actual fetches after (cache hits are free).
     # Legacy path (no service key): pre-charge as before.
@@ -336,6 +363,7 @@ async def optimize(req: OptimizeRequest, request: Request):
         route_strategy=(req.scheduling.route_strategy if req.scheduling else "flexible"),
         health_weights=(audit_cfg.get("health_weights") or None),
         window_semantics=(req.scheduling.window_semantics if req.scheduling else "finish"),
+        learned_legs=learned_legs,
     )
     if service_key and optimizer_module.LAST_GOOGLE_ELEMENTS:
         _gmaps_quota_ok(optimizer_module.LAST_GOOGLE_ELEMENTS)  # charge real spend
