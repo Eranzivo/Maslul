@@ -987,6 +987,8 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
       <button class="hm-ghost" id="live-map-btn" onclick="toggleCoordinatorMap()" title="מפה חיה — מיקום טכנאים בשטח">🗺 מפה חיה</button>
     </div>
   </div>
+  <!-- GEO HEALTH TILE (super_admin) — unresolved / out-of-zone task-cities from live data (read-only) -->
+  <div id="geo-health-tile" class="hidden" style="margin-bottom:1.25rem;"></div>
   <!-- LIVE COORDINATOR MAP (hidden by default) -->
   <div id="coord-map-wrap" class="hidden" style="margin-bottom:1.25rem;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -5183,7 +5185,53 @@ function filterByKpi(type){
   kpiFilter=(kpiFilter===type)?null:type;
   renderHomeTechCards();
 }
+// ── Geo Health tile (super_admin, home) — READ-ONLY: unresolved / out-of-zone cities ──
+// Slice 1 of the self-healing geo brain. Resolution authority is 100% backend (/geo-health);
+// this only renders the report. Fail-open: any error hides the tile silently, never blocks home.
+// Design: outputs/geo-selfheal-design_2026-07-14.md
+let _geoHealthInFlight=false;
+async function loadGeoHealthTile(){
+  const el=document.getElementById('geo-health-tile');
+  if(!el)return;
+  if(!currentUserSuperAdmin||!CONFIG.OPTIMIZER_URL||!currentTenantId){el.classList.add('hidden');return;}
+  if(_geoHealthInFlight)return;
+  _geoHealthInFlight=true;
+  try{
+    const hdrs={'Content-Type':'application/json'};
+    try{const{data:{session}}=await sb.auth.getSession();if(session&&session.access_token)hdrs['Authorization']=`Bearer ${session.access_token}`;}catch(e){}
+    const res=await fetch(`${CONFIG.OPTIMIZER_URL}/geo-health`,{method:'POST',headers:hdrs,body:JSON.stringify({tenant_id:currentTenantId})});
+    if(!res.ok)throw new Error('geo-health '+res.status);
+    renderGeoHealthTile(await res.json());
+  }catch(e){el.classList.add('hidden');}
+  finally{_geoHealthInFlight=false;}
+}
+function renderGeoHealthTile(rep){
+  const el=document.getElementById('geo-health-tile');if(!el)return;
+  const s=(rep&&rep.summary)||{};const n=s.attention||0;
+  const badge=n>0
+    ?`<span style="background:var(--amber-light,#fef3c7);color:var(--amber,#b45309);font-weight:800;border-radius:999px;padding:2px 10px;font-size:0.8rem;">⚠ ${n} ${n===1?'עיר דורשת':'ערים דורשות'} טיפול</span>`
+    :`<span style="color:var(--ok,#16a34a);font-weight:700;font-size:0.8rem;">✓ כל הערים מזוהות ומשויכות</span>`;
+  const chips=(list,label)=>list&&list.length
+    ?`<div style="margin-top:6px;"><span style="font-size:0.72rem;color:var(--ink-4);font-weight:700;">${label}</span> ${list.map(r=>`<span style="display:inline-block;background:var(--line-2,#f1f5f9);border-radius:6px;padding:2px 8px;margin:2px 3px;font-size:0.78rem;">${h(r.city)} · ${r.calls} ${r.calls===1?'קריאה':'קריאות'}</span>`).join('')}</div>`
+    :'';
+  const details=n>0
+    ?`<div id="geo-health-details" class="hidden" style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px;">
+        ${chips(rep.unresolved,'לא זוהו:')}
+        ${chips(rep.out_of_zone,'מחוץ לאזור:')}
+        <div style="font-size:0.7rem;color:var(--ink-4);margin-top:6px;">קריאה בעיר שלא זוהתה או שאינה משויכת לאזור אינה ניתנת לשיבוץ עד לתיקון.</div>
+      </div>`
+    :'';
+  el.innerHTML=`<div style="background:var(--surface,#fff);border:1px solid var(--line);border-radius:var(--r-lg);padding:12px 14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:1rem;">🧠</span><span style="font-weight:800;font-size:0.85rem;">בריאות גאוגרפית</span>${badge}</div>
+      ${n>0?`<button class="btn btn-outline btn-sm" onclick="document.getElementById('geo-health-details').classList.toggle('hidden')">פרט</button>`:''}
+    </div>
+    ${details}
+  </div>`;
+  el.classList.remove('hidden');
+}
 function renderHomeTechCards(){
+  loadGeoHealthTile(); // async, fail-open — never blocks the home render
   document.getElementById('weekly-cal').classList.add('hidden');
   const _cols=document.getElementById('hm-cols');if(_cols)_cols.classList.remove('hidden');
   document.getElementById('home-tech-grid').classList.remove('hidden');

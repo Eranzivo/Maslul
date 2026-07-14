@@ -34,6 +34,7 @@
 | `backend/optimizer.py` | OR-Tools TSP solver + Google Maps / haversine distance matrix |
 | `backend/batch_schedule.py` | Batch auto-scheduler — greedy zone rotation + OR-Tools per tech-day |
 | `backend/cities.py` | 200+ Israeli city coordinates (haversine fallback, logs unknown cities) |
+| `backend/geo_health.py` | Geo Health report (pure) — classifies a tenant's task-cities as unresolved / out-of-zone; served READ-ONLY by `/geo-health`. Self-healing geo Slice 1 |
 
 ## Internal HTML Structure
 ```
@@ -85,6 +86,11 @@
 - `_parse_loc(loc)` in optimizer.py handles `"lat,lon"` strings and city name strings uniformly
 - 5-second solver time limit
 - "🔀 מסלול מיטבי" button on home when tech has 2+ tasks today
+
+## Geo Health — self-healing brain, Slice 1 (READ-ONLY) 2026-07-14
+- POST `/geo-health` — for the caller's tenant, returns `{unresolved:[{city,calls}], out_of_zone:[{city,calls,lat,lon}], summary}`: task-cities that don't resolve to coords (`geo_resolver.resolve`→None) vs. resolve-but-not-in-any-zone. Auth mirrors `/batch-schedule` (service-key OR user-JWT forced to caller's tenant, techs denied, super_admin may impersonate). **Never writes; fail-open** (any data/brain error ⇒ all-clear report, never a 500). Zone membership uses the SAME `batch_schedule._match_key` seam the batch/`resolveZone` use — no duplicated resolution logic. Pure report + tests: `backend/geo_health.py`, `backend/tests/test_geo_health.py` (7).
+- **Frontend**: super_admin-only home tile `#geo-health-tile` (🧠 בריאות גאוגרפית) — async after home paint, fail-open (hides on any error), read-only detail panel. `loadGeoHealthTile()`/`renderGeoHealthTile()` in `index.html`, called from `renderHomeTechCards`.
+- Roadmap (design `outputs/geo-selfheal-design_2026-07-14.md`): Slice 2 backend `resolve_or_suggest` (confidence tiers) → Slice 4 add-city→zone flow → Slice 3 data-entry-door auto-fix/ask → Slice 5 small-settlement seeding. Learned aliases stay **approval-gated** (doctrine).
 
 ## Geocoding (Google Geocoding API + shared address KB)
 - POST `/geocode` — accepts `{street, city}`, returns `{lat, lon, source}`. **Cache-first (Geo Slice B, 2026-07-05):** checks the global `geo_addresses` KB before Google — a repeat address from ANY tenant costs zero spend/quota; only real Google calls are metered. Trusted results (IL bbox) are stored back, so the KB grows with every client's calls. Lookup tiers: `exact` (city+street+number) → `street` (same street, NEAREST known house number — same-block reuse, never a cross-street guess) → Google. `backend/geo_addresses.py`; tests `tests/test_geo_addresses.py`

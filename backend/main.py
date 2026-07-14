@@ -9,10 +9,11 @@ from typing import Optional
 from dotenv import load_dotenv
 from optimizer import optimize_routes
 import optimizer as optimizer_module
-from batch_schedule import run_batch_schedule, resolve_learned_durations
+from batch_schedule import run_batch_schedule, resolve_learned_durations, _match_key, _sb_get
 from batch_auth import resolve_effective_tenant, AuthzError
 import route_observations
 import geo_resolver
+import geo_health
 import geo_addresses
 import route_health
 import audit_sweep
@@ -485,3 +486,74 @@ async def batch_schedule(req: BatchScheduleRequest, request: Request):
         service_key=service_key,
     )
     return result
+
+
+class GeoHealthRequest(BaseModel):
+    # Only honoured for super_admin / service-key callers (impersonation / cron);
+    # everyone else is FORCED to their JWT's own tenant.
+    tenant_id: Optional[str] = None
+
+
+# Active (schedulable) statuses whose cities are worth a geo-health check.
+_GEOHEALTH_STATUSES = "pending,assigned,en_route,arrived"
+
+
+@app.post("/geo-health")
+async def geo_health_report(req: GeoHealthRequest, request: Request):
+    """READ-ONLY geo diagnostics for the caller's tenant (Slice 1): which active task-cities
+    don't resolve to coordinates (`unresolved`), and which resolve but aren't in any zone
+    (`out_of_zone`), each with an affected-call count. Never writes.
+
+    Auth mirrors /batch-schedule: SUPABASE_SERVICE_KEY Bearer (full trust; req.tenant_id as-is)
+    OR a Supabase user JWT (introspected; tenant FORCED to the caller's own — super_admin may
+    target another via req.tenant_id; techs denied). Fail-open: any data/brain error returns an
+    all-clear report rather than a 500 into the UI."""
+    service_key = os.getenv("SUPABASE_SERVICE_KEY", "")
+    if not service_key:
+        raise HTTPException(status_code=503, detail="Not configured")
+
+    auth = request.headers.get("Authorization", "")
+    token = auth[7:] if auth.startswith("Bearer ") else ""
+    if token and token == service_key:
+        tenant = req.tenant_id
+    else:
+        uid = await _introspect_user_token(token, service_key)
+        user_row = await _get_user_row(uid, service_key) if uid else None
+        try:
+            tenant = resolve_effective_tenant(user_row, req.tenant_id or "")
+        except AuthzError as e:
+            raise HTTPException(status_code=e.status, detail=e.detail)
+    if not tenant:
+        raise HTTPException(status_code=400, detail="No tenant")
+
+    empty = {"tenant_id": tenant, "unresolved": [], "out_of_zone": [],
+             "summary": {"unresolved": 0, "out_of_zone": 0, "attention": 0, "checked_cities": 0}}
+    try:
+        await geo_resolver.ensure_loaded(service_key)  # shared brain (fail-open)
+        tasks = await _sb_get("tasks", {
+            "tenant_id": f"eq.{tenant}",
+            "status": f"in.({_GEOHEALTH_STATUSES})",
+            "select": "city",
+        }, service_key)
+        zones = await _sb_get("zones", {
+            "tenant_id": f"eq.{tenant}",
+            "select": "cities",
+        }, service_key)
+    except Exception:
+        return empty
+
+    # Distinct city → active-call count.
+    counts: dict = {}
+    for t in tasks:
+        c = (t.get("city") or "").strip()
+        if c:
+            counts[c] = counts.get(c, 0) + 1
+
+    alias_map = geo_resolver.alias_map()          # {} when brain not loaded → fail-open
+    match_key = lambda name: _match_key(name, alias_map)  # noqa: E731  (same zone seam batch uses)
+    zone_keys = {match_key(c) for z in zones for c in (z.get("cities") or [])}
+
+    report = geo_health.build_health_report(
+        counts.items(), zone_keys, geo_resolver.resolve, match_key)
+    report["tenant_id"] = tenant
+    return report
