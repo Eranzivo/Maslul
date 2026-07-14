@@ -40,20 +40,33 @@ def aggregate_legs(rows: list, min_samples: int = 3) -> dict:
 
 # ── Supabase REST I/O (best-effort, fail-open) ────────────────────────────────
 
-def get_learned_legs(tenant_id: str, service_key: str, min_samples: int = 3) -> dict:
-    """Fetch a tenant's observed legs and aggregate → {(from_key, to_key): median_min}.
-    Missing table / errors / no service key → {} (fail-open — optimizer is unaffected)."""
+def get_learned_legs(tenant_id: str, service_key: str) -> dict:
+    """Fetch a tenant's APPROVED learned legs → {(from_key, to_key): approved_min}.
+
+    APPROVAL GATE (Eran 2026-07-14): routing NEVER uses raw observations. A trend must be
+    explicitly approved (business-owner decision, stored in route_learned_approved) before it
+    reaches the optimizer. This reads ONLY that approved store. Missing table / errors / no key
+    → {} (fail-open — optimizer falls back to cache/Google/haversine). Bucket-agnostic v1: keyed
+    by (from,to); a 'static'-bucket approval covers the default matrix."""
     if not tenant_id or not service_key:
         return {}
     try:
         with httpx.Client(timeout=15) as c:
             r = c.get(
-                f"{SUPABASE_URL}/rest/v1/route_observations",
+                f"{SUPABASE_URL}/rest/v1/route_learned_approved",
                 headers={"apikey": service_key, "Authorization": f"Bearer {service_key}"},
-                params={"select": "from_key,to_key,observed_min", "tenant_id": f"eq.{tenant_id}"},
+                params={"select": "from_key,to_key,approved_min", "tenant_id": f"eq.{tenant_id}"},
             )
             r.raise_for_status()
             rows = r.json()
     except Exception:
         return {}
-    return aggregate_legs(rows, min_samples)
+    out = {}
+    for row in rows or []:
+        try:
+            m = int(row["approved_min"])
+            if m > 0:
+                out[(row["from_key"], row["to_key"])] = m
+        except (KeyError, TypeError, ValueError):
+            continue
+    return out

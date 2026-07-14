@@ -4342,39 +4342,78 @@ async function saveSchedulingConfig(){
 let editingTenantFeatId=null;
 // Leads inbox card on the master-admin page. Raw sb update (NOT dbUpsert — leads has
 // no tenant_id by design and is super_admin-only; the WAL/tenant machinery doesn't apply).
-// Cross-tenant brain P3 (groundwork) — READ-ONLY "brain health" for super_admin: what the system
-// has learned so far. route_observations = Tier-1 tenant travel legs (RLS lets super_admin read all
-// tenants'). Aggregates per tenant + top legs (median). No writes, no consumption knobs here —
-// just visibility so real learning can be watched as schedules are worked. [[cross-tenant-brain]]
-function _renderAdminBrain(obs,tenants){
+// Cross-tenant brain P2 approval gate + P3 groundwork (super_admin, מנהל מאסטר). Learned durations
+// NEVER auto-apply to routing: observed trends surface here as PROPOSALS with context (observed
+// median · N · current estimate if any); the business owner APPROVES (writes route_learned_approved)
+// and only THEN does /optimize use them. Approved legs are listed with revoke (reversible). Cross-
+// tenant quorum (≥2 tenants approved the same leg) is flagged as a global-rule candidate. Reads
+// route_observations + route_learned_approved (super_admin RLS). [[cross-tenant-brain]]
+var _BRAIN_MIN_SAMPLES=3;
+function _brainMedian(a){const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length?(s.length%2?s[m]:Math.round((s[m-1]+s[m])/2)):0;}
+function _renderAdminBrain(obs,approved,tenants){
   const el=document.getElementById('admin-brain');if(!el)return;
   const tName={};(tenants||[]).forEach(t=>{tName[t.id]=t.name;});
-  const median=a=>{const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length?(s.length%2?s[m]:Math.round((s[m-1]+s[m])/2)):0;};
-  const byTenant={},byLeg={};
+  const bkLbl=b=>(b&&b!=='static')?' ['+h(b)+']':'';
+  // approved index + cross-tenant quorum (how many distinct tenants approved each leg+bucket)
+  const apprSet={},quorum={};
+  (approved||[]).forEach(a=>{const bk=a.time_bucket||'static';
+    apprSet[a.tenant_id+'|'+a.from_key+'|'+a.to_key+'|'+bk]=a;
+    const lk=a.from_key+'|'+a.to_key+'|'+bk;(quorum[lk]=quorum[lk]||new Set()).add(a.tenant_id);});
+  // aggregate observations per (tenant, leg, bucket)
+  const agg={};
   for(const o of (obs||[])){
     if(!o||!o.from_key||!o.to_key)continue;
-    byTenant[o.tenant_id]=(byTenant[o.tenant_id]||0)+1;
-    const k=o.from_key+' → '+o.to_key+(o.time_bucket&&o.time_bucket!=='static'?' ['+o.time_bucket+']':'');
-    (byLeg[k]=byLeg[k]||[]).push(Number(o.observed_min)||0);
+    const bk=o.time_bucket||'static',k=o.tenant_id+'|'+o.from_key+'|'+o.to_key+'|'+bk;
+    (agg[k]=agg[k]||{tid:o.tenant_id,from:o.from_key,to:o.to_key,bucket:bk,mins:[]}).mins.push(Number(o.observed_min)||0);
   }
-  const tenantRows=Object.entries(byTenant).sort((a,b)=>b[1]-a[1])
-    .map(([tid,n])=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line-2);font-size:0.82rem;"><span>${h(tName[tid]||tid)}</span><span style="font-weight:800;">${n}</span></div>`).join('');
-  const topLegs=Object.entries(byLeg).map(([k,arr])=>({k,n:arr.length,med:median(arr)}))
-    .sort((a,b)=>b.n-a.n).slice(0,12)
-    .map(x=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--line-2);font-size:0.82rem;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h(x.k)}</span><span style="white-space:nowrap;color:var(--ink-3);">${x.med} דק׳ · <b style="color:var(--ink);">${x.n}</b> תצפיות</span></div>`).join('');
-  const total=(obs||[]).length, legs=Object.keys(byLeg).length;
+  // proposals = trends with ≥N samples not already approved at ~the same value
+  const props=[];
+  for(const k of Object.keys(agg)){
+    const g=agg[k];if(g.mins.length<_BRAIN_MIN_SAMPLES)continue;
+    const med=_brainMedian(g.mins),appr=apprSet[k];
+    if(appr&&Math.abs((appr.approved_min||0)-med)<=2)continue;
+    props.push({tid:g.tid,from:g.from,to:g.to,bucket:g.bucket,med,n:g.mins.length,cur:appr?appr.approved_min:null});
+  }
+  props.sort((a,b)=>b.n-a.n);
+  window._brainProps=props; window._brainApproved=approved||[];
+  const propRows=props.slice(0,40).map((p,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line-2);font-size:0.82rem;">
+    <div style="flex:1;min-width:0;"><div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h(p.from)} → ${h(p.to)}${bkLbl(p.bucket)}</div>
+      <div style="font-size:0.72rem;color:var(--ink-3);">${h(tName[p.tid]||p.tid)} · ${p.n} תצפיות${p.cur!=null?` · מאושר כעת: ${p.cur} דק׳`:''}</div></div>
+    <div style="font-weight:900;white-space:nowrap;">${p.med} דק׳</div>
+    <button class="btn btn-green btn-sm" onclick="_approveProp(${i})" title="החל על מנוע השיבוץ (אחרי אישור מול הלקוח)">✓ אשר</button>
+  </div>`).join('');
+  const apprRows=(approved||[]).map((a,i)=>{const bk=a.time_bucket||'static',q=(quorum[a.from_key+'|'+a.to_key+'|'+bk]||{size:0}).size||0;
+    return`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line-2);font-size:0.82rem;">
+    <div style="flex:1;min-width:0;"><div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h(a.from_key)} → ${h(a.to_key)}${bkLbl(bk)}</div>
+      <div style="font-size:0.72rem;color:var(--ink-3);">${h(tName[a.tenant_id]||a.tenant_id)}${q>=2?` · <span style="color:var(--teal);font-weight:700;">🌐 מאושר ב-${q} לקוחות (מועמד לכלל גלובלי)</span>`:''}</div></div>
+    <div style="font-weight:900;white-space:nowrap;">${a.approved_min} דק׳</div>
+    <button class="btn btn-outline btn-sm" onclick="_revokeAppr(${i})" title="בטל אישור">↩ בטל</button>
+  </div>`;}).join('');
+  const totalObs=(obs||[]).length;
   el.innerHTML=`<div class="card" style="margin-top:1rem;">
-    <div class="card-title" style="display:flex;align-items:center;gap:8px;">🧠 מוח המערכת — למידת זמני נסיעה <span style="font-size:0.7rem;font-weight:600;color:var(--ink-4);">(Tier-1 · לקריאה בלבד)</span></div>
-    ${total?`<div style="display:flex;gap:20px;margin:8px 0 14px;font-size:0.82rem;color:var(--ink-2);">
-        <span><b style="font-size:1.1rem;color:var(--ink);">${total}</b> תצפיות</span>
-        <span><b style="font-size:1.1rem;color:var(--ink);">${legs}</b> מקטעי נסיעה</span>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;">
-        <div><div style="font-size:0.72rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">לפי לקוח</div>${tenantRows||'<div style="color:var(--ink-4);font-size:0.8rem;">—</div>'}</div>
-        <div><div style="font-size:0.72rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">מקטעים מובילים (חציון)</div>${topLegs}</div>
-      </div>`
-    :`<div style="color:var(--ink-4);font-size:0.85rem;padding:0.5rem 0;">עדיין לא נצברו תצפיות. ברגע שטכנאים יסמנו "בדרך" ו"הגיע" על קריאות, מקטעי הנסיעה בפועל יופיעו כאן ויוזנו למוח המערכת.</div>`}
+    <div class="card-title" style="display:flex;align-items:center;gap:8px;">🧠 מוח המערכת — למידת זמני נסיעה <span style="font-size:0.7rem;font-weight:600;color:var(--ink-4);">(מאושר ידנית · לא משנה שיבוץ ללא אישור)</span></div>
+    <div style="font-size:0.78rem;color:var(--ink-3);margin:2px 0 12px;">${totalObs} תצפיות בפועל נאספו. הצעות מבוססות על ≥${_BRAIN_MIN_SAMPLES} תצפיות; אישור מחיל את הזמן הנלמד על מנוע השיבוץ של אותו לקוח (כשהמתג routing.learned_durations דלוק).</div>
+    <div style="font-size:0.72rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">הצעות ללמידה (${props.length})</div>
+    ${propRows||'<div style="color:var(--ink-4);font-size:0.8rem;padding:4px 0 10px;">אין הצעות עדיין — צריך ≥'+_BRAIN_MIN_SAMPLES+' תצפיות למקטע. סמנו "בדרך"/"הגיע" על קריאות כדי לצבור.</div>'}
+    <div style="font-size:0.72rem;font-weight:800;color:var(--ink-4);text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 2px;">מאושר ופעיל (${(approved||[]).length})</div>
+    ${apprRows||'<div style="color:var(--ink-4);font-size:0.8rem;padding:4px 0;">עדיין לא אושרו מקטעים.</div>'}
   </div>`;
+}
+async function _approveProp(i){
+  const p=(window._brainProps||[])[i];if(!p)return;
+  try{
+    const{error}=await sb.from('route_learned_approved').upsert({tenant_id:p.tid,from_key:p.from,to_key:p.to,time_bucket:p.bucket||'static',approved_min:p.med,sample_count:p.n,approved_at:new Date().toISOString()},{onConflict:'tenant_id,from_key,to_key,time_bucket'});
+    if(error)throw error;
+    showToast('המקטע אושר — יוחל על השיבוץ ✓');renderAdminPanel(true);
+  }catch(e){showToast('שגיאה באישור','error');console.error('approveProp',e);}
+}
+async function _revokeAppr(i){
+  const a=(window._brainApproved||[])[i];if(!a)return;
+  try{
+    const{error}=await sb.from('route_learned_approved').delete().eq('tenant_id',a.tenant_id).eq('from_key',a.from_key).eq('to_key',a.to_key).eq('time_bucket',a.time_bucket||'static');
+    if(error)throw error;
+    showToast('האישור בוטל');renderAdminPanel(true);
+  }catch(e){showToast('שגיאה בביטול','error');console.error('revokeAppr',e);}
 }
 function _renderAdminLeads(leads){
   const el=document.getElementById('admin-leads');if(!el)return;
@@ -4422,7 +4461,7 @@ async function renderAdminPanel(force=false){
   }
   list.innerHTML='<div style="text-align:center;padding:2rem;color:var(--ink-4);">טוען...</div>';
   try{
-    const[tenantRes,userRes,techRes,zoneRes,catRes,leadsRes,obsRes]=await Promise.all([
+    const[tenantRes,userRes,techRes,zoneRes,catRes,leadsRes,obsRes,apprRes]=await Promise.all([
       sb.from('tenants').select('*'),
       sb.from('users').select('id,tenant_id,role,name,super_admin'),
       sb.from('technicians').select('id,tenant_id,name,color,rotation'),
@@ -4430,9 +4469,11 @@ async function renderAdminPanel(force=false){
       sb.from('categories').select('tenant_id'),
       sb.from('leads').select('*').order('handled',{ascending:true}).order('created_at',{ascending:false}).limit(50),
       sb.from('route_observations').select('tenant_id,from_key,to_key,time_bucket,observed_min').limit(4000),
+      sb.from('route_learned_approved').select('*').limit(4000),
     ]);
     _renderAdminLeads(leadsRes.error?[]:(leadsRes.data||[]));
     window._adminObs=obsRes&&!obsRes.error?(obsRes.data||[]):[];
+    window._adminApproved=apprRes&&!apprRes.error?(apprRes.data||[]):[];
     if(tenantRes.error){
       list.innerHTML=`<div class="empty"><div style="color:var(--red);font-weight:700;margin-bottom:6px;">שגיאה בטעינת הנתונים</div><div style="font-size:0.8125rem;color:var(--ink-3);">נסה לרענן את הדף. אם הבעיה נמשכת, פנה לתמיכה.</div></div>`;
       console.error('admin panel tenants error:',tenantRes.error);Sentry?.captureException(tenantRes.error);
@@ -4444,7 +4485,7 @@ async function renderAdminPanel(force=false){
       return;
     }
     adminTenants=tenantRes.data||[];
-    _renderAdminBrain(window._adminObs||[],adminTenants);
+    _renderAdminBrain(window._adminObs||[],window._adminApproved||[],adminTenants);
     adminUsers=userRes.data||[];
     _adminCache={techs:techRes.data||[],zones:zoneRes.data||[],cats:catRes.data||[]};
     console.log('admin panel: tenants=',adminTenants.length,'users=',adminUsers.length,adminUsers);

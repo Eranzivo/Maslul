@@ -51,19 +51,28 @@ signal ⇒ tenant signal wins locally (local truth beats the average).
   `logLegObservation` writes fire-and-forget on a task's FIRST arrival (prev stop → here = arrived−en_route,
   sane-bounded, bucketed by local departure time), wired into `setStatus`/`techSetStatus`, fail-open. No
   consumption yet. 9 golden cases (282 sched green). GPS-sourced legs = a later add.
-- **Phase 2 — tenant aggregation. ✅ CORE SHIPPED 2026-07-14** (flag-gated, off by default).
-  `route_observations.get_learned_legs` (median per leg, ≥3 samples, fail-open) → `optimize_routes`
-  → `build_matrix_cached(learned_legs=)`: a tenant's OWN observed duration wins over cache/Google/
-  haversine (and is excluded from Google misses = no spend). Knob `routing.learned_durations` (default
-  off ⇒ every current tenant unchanged); `/optimize` resolves it server-side + fetches legs only when on.
-  Tests: test_route_observations.py + test_matrix_cached.py (override + None-unchanged). **Deferred to
-  P2.5:** bucket-aware/time-dependent matrix (rush_hour × departure time) — hard with a static OR-Tools
-  matrix; v1 aggregates bucket-agnostic. `live` mode (evening re-solve) also later.
-- **Phase 3 — the supervisor / promotion.** Cross-tenant quorum → promote to global with confidence.
-  **✅ GROUNDWORK SHIPPED 2026-07-14:** super-admin **read-only "brain health" card** (מנהל מאסטר →
-  🧠 מוח המערכת) — total observations, per-tenant counts, top legs (median · N), empty-state guidance.
-  Reads `route_observations` (super_admin RLS). **Still future:** the promotion job itself (quorum →
-  write to `route_cache`) + a confirm/rollback control.
+- **Phase 2 — consumption behind an APPROVAL GATE. ✅ SHIPPED 2026-07-14** (Eran's rule: learned data
+  must NEVER auto-change a client's routing — it surfaces as a proposal, the business owner approves it
+  after understanding the impact, and only then does the engine use it). Mechanics:
+  - `route_learned_approved` (approved store) — the ONLY thing routing reads. `get_learned_legs` reads
+    it (not raw observations). `build_matrix_cached(learned_legs=)`: an APPROVED leg wins over cache/
+    Google/haversine and is excluded from Google misses (no spend). Master switch `routing.learned_durations`
+    (default off ⇒ every current tenant unchanged); `/optimize` resolves it server-side.
+  - **Surfacing + approval (P3-tenant tier)** in 🧠 מוח המערכת (super_admin): observed trends (≥3 samples,
+    not already approved at ~same value) list as PROPOSALS with context (observed median · N · current
+    approved if any); **✓ אשר** writes the approved leg (→ applies on next optimize); approved legs list
+    with **↩ בטל** (reversible). Cross-tenant quorum (≥2 tenants approved the same leg) flagged 🌐 as a
+    global-rule candidate. Verified: fake-DOM harness (empty / proposal / quorum / approved-suppresses) +
+    test_route_observations + test_matrix_cached.
+  - **Deferred → P2.5:** time-dependent matrix (rush_hour × per-departure-time buckets) — genuinely hard
+    with a static OR-Tools matrix; needs either time-windowed matrices or a per-day rush multiplier. The
+    DATA already supports it (observations + approvals carry `time_bucket`); only the matrix consumption is
+    deferred. `live` mode (evening re-solve of tomorrow's legs) also later. Both stay approval-gated.
+- **Phase 3 — the supervisor / cross-tenant promotion.** ✅ **GROUNDWORK SHIPPED:** the quorum flag (🌐)
+  shows which approved legs ≥2 tenants agree on. **Still future:** an automated promotion path (quorum +
+  confidence → write to global `route_cache` via a super_admin service-key endpoint) + confirm/rollback.
+  Until then promotion is implicit (each tenant approves its own; the flag surfaces global candidates for a
+  human to promote). This is the deliberate human-in-the-loop the whole design now enforces at every tier.
 
 ## Guardrails (carry from the geo/route doctrine)
 Fail-open (cache/brain errors never break scheduling) · physics trust-bounds on every learned leg
