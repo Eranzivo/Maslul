@@ -34,17 +34,18 @@ backend = Railway (`v1.3.0`). `HEAD == origin/main`, clean tree. Advisors clean.
 - **Landing** — hero background REMOVED entirely (Eran: waste of resources); clean text hero. Old hero
   assets kept on disk (Eran will do a unified version later). Leads inbox + one-front-door still live.
 
-## OPEN — the one thing to resume (gap-mapped, awaiting a scope decision)
-**Geo self-healing P1** (chosen next item; design `outputs/geo-corrections-loop-design_2026-06-13.md`).
-Gap-map done (2026-07-14): `geo_places.confidence` already exists; `place_resolution_log` table exists
-but **nothing writes to it** (empty); `resolveZone` already flags `not_geocoded`/`needs_location`. So P1
-is "turn on the eyes," and there's a **fork Eran must pick**:
-- **(A, recommended)** read-only Geo Health view first — surface unresolved cities from EXISTING data
-  (tasks w/o coords / city not in a zone) + affected call count. Zero routing risk, reuses the brain-card
-  pattern. See the problem immediately when real calls land.
-- **(B)** backend resolution logging first — hook `geo_resolver.resolve()` to write failures/low-confidence
-  to `place_resolution_log` (best-effort, non-blocking), then a view reads the durable history.
-→ **Ask Eran A or B, then build.** (He was leaning toward starting simple/safe.)
+## OPEN — Geo self-healing (Slices 1-3 SHIPPED 2026-07-14; Slices 4-5 next)
+Design `outputs/geo-selfheal-design_2026-07-14.md`. Eran chose the read-only Health view first (A),
+then expanded scope to the full correction loop. Memory `geo-selfheal-slices`.
+- **Slice 1 LIVE on main** — `/geo-health` (read-only, fail-open) + super_admin home tile
+  (🧠 בריאות גאוגרפית: unresolved + out-of-zone task-cities). Verified live (flags חרב + ~9 settlements).
+- **Slice 2** — `backend/geo_suggest.py` confidence engine (backend-only, golden fixture).
+- **Slice 3 DEPLOYED DARK** — `/geo-suggest` + 4 doors wired behind **`features.geo_suggest` (OFF)**.
+  Enable on a tenant via `jsonb_set(config,'{features,geo_suggest}','true')` → **browser-QA the 4 doors**
+  (dispatch/add-task/bulk/zone) before trusting. Auto-fixes `נהרייה`→`נהריה`; asks on `קרת שמה`.
+- **Rule (Eran):** field-level auto-fix OK; **brain writes (aliases/places) need coordinator approval** (P2 page). Slice 3 writes nothing to the brain.
+→ **Next:** Slice 4 add-city→pick-zone (nearest-member suggest); Slice 5 seed the ~9 real settlements
+  (already have coords — only need zone assignment) + חרב. Then the P2 approval page.
 
 ## Deferred (documented, not lost)
 - **Cross-tenant brain P2.5** — time-dependent rush-hour matrix (rush_hour × per-departure-time buckets);
