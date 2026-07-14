@@ -9029,6 +9029,15 @@ function _plannerWeekCell(tech, sorted){
 // A client_name of "לקוח"/"לקוחה"/"קריאה"/empty is a generic placeholder (common in imports) —
 // showing it next to the city is redundant noise. Return '' for placeholders, the real name otherwise.
 function realClientName(c){c=(c||'').trim();return(c&&c!=='לקוח'&&c!=='לקוחה'&&c!=='קריאה')?c:'';}
+// Pick legible text color for a solid tech-color block (dark on light fills like amber, white on
+// dark fills like blue/purple/teal) — perceived-luminance threshold, so contrast never fails.
+function _readableInk(hex){
+  hex=String(hex||'').replace('#','');
+  if(hex.length===3)hex=hex.split('').map(c=>c+c).join('');
+  if(hex.length<6)return '#ffffff';
+  const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
+  return (0.299*r+0.587*g+0.114*b)/255>0.62?'#1F2937':'#ffffff';
+}
 function _needsAttentionStrip(){
   const pend=tasks.filter(t=>t.status==='pending').sort((a,b)=>(a.city||'').localeCompare(b.city||''));
   if(!pend.length) return '';
@@ -9083,9 +9092,6 @@ function renderPlannerWeekly(days){
   const startH=parseInt((settings.startTime||'07:00').split(':')[0]);
   const endH=parseInt((settings.endTime||'18:00').split(':')[0]);
   const WPX=1, gridH=(endH-startH)*60*WPX, headH=50, gutterW=46;
-  // Block height fits its CONTENT (header + call rows), never the full window height — a
-  // 1-call block in a 3h window is a compact card, not a big empty chunk (Eran 2026-07-13).
-  const WK_HEAD_PX=30, WK_ROW_PX=27, WK_MIN_PX=46;
   const minW=allMode?168:150;
   const slotH=settings.window||3;
   const statusFg={completed:'#16A34A',cancelled:'#DC2626',pending:'#D97706',issue:'#DC2626'};
@@ -9129,9 +9135,7 @@ function renderPlannerWeekly(days){
         if(hasWin){
           topMins=timeToMins(first.windowStart)-startH*60;
           const wlen=timeToMins(first.windowEnd)-timeToMins(first.windowStart);
-          const winLen=wlen>0?wlen:slotH*60; // real window length (variable-length windows), slot fallback
-          // fit to content (header + rows), capped at the true window length, floored for legibility
-          heightMins=Math.min(winLen,Math.max(WK_MIN_PX,WK_HEAD_PX+grp.length*WK_ROW_PX));
+          heightMins=wlen>0?wlen:slotH*60; // full window height — solid blocks span their real time (Google-calendar style)
           // approved-overrun tail (parity with daily): only a popup-approved spill extends the block
           const _weMin=timeToMins(first.windowEnd||first.windowStart)||0;
           tailMins=Math.max(0,...grp.map(t=>{
@@ -9153,22 +9157,22 @@ function renderPlannerWeekly(days){
       const left=`calc(100% * ${col} / ${nc} + 2px)`;
       const width=`calc(100% / ${nc} - 5px)`;
       const top=b.topMins*WPX, height=Math.max(30,(b.heightMins+(b.tailMins||0))*WPX);
-      const tailHtml=(b.tailMins>0)?`<div title="גולש ${b.tailMins} דק׳ · אושר ע״י המתאם" style="position:absolute;top:${b.heightMins*WPX}px;left:0;right:0;height:${b.tailMins*WPX}px;border-top:2px dashed ${tc}66;background:repeating-linear-gradient(45deg,${tc}18 0 5px,transparent 5px 10px);pointer-events:none;overflow:hidden;"></div>`:'';
+      const ink=_readableInk(tc), soft=ink==='#ffffff'?'rgba(255,255,255,0.82)':'rgba(31,41,55,0.7)', hair=ink==='#ffffff'?'rgba(255,255,255,0.22)':'rgba(31,41,55,0.14)';
+      const tailHtml=(b.tailMins>0)?`<div title="גולש ${b.tailMins} דק׳ · אושר ע״י המתאם" style="position:absolute;top:${b.heightMins*WPX}px;left:0;right:0;height:${b.tailMins*WPX}px;border-top:2px dashed rgba(255,255,255,0.55);background:repeating-linear-gradient(45deg,rgba(255,255,255,0.28) 0 5px,transparent 5px 10px);pointer-events:none;overflow:hidden;"></div>`:'';
       const label=b.hasWin?`${b.first.windowStart}–${b.first.windowEnd}`:(b.first.time||'');
-      const rows=b.grp.map(t=>{
+      const rows=b.grp.map((t,ri)=>{
         const sub=(t.street||'').trim()||realClientName(t.client);
-        return`<div draggable="true" ondragstart="event.stopPropagation();_onTaskDragStart(event,'${t.id}')" onclick="event.stopPropagation();openTaskDetail('${t.id}')" style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-top:1px solid var(--line-2);cursor:grab;min-width:0;" onmouseover="this.style.background='${tc}0a'" onmouseout="this.style.background=''">
-        <span style="width:6px;height:6px;border-radius:50%;background:${statusFg[t.status]||tc};flex:0 0 6px;"></span>
-        <span style="font-size:11.5px;font-weight:700;color:${t.status==='completed'?'var(--ink-3)':'var(--ink)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.locked?'🔒 ':''}${taskOutOfZone(t)?'<span title="מחוץ לאזור היום" style="color:#D97706;font-weight:800;">⚠ </span>':''}${h(t.city||'—')}</span>
-        ${sub?`<span style="font-size:10.5px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${h(sub)}</span>`:'<span style="flex:1;"></span>'}
-        ${t.time?`<span style="font-size:10px;font-weight:700;color:var(--ink-3);direction:ltr;font-feature-settings:'tnum';white-space:nowrap;">${t.time}</span>`:''}
+        const done=t.status==='completed';
+        return`<div draggable="true" ondragstart="event.stopPropagation();_onTaskDragStart(event,'${t.id}')" onclick="event.stopPropagation();openTaskDetail('${t.id}')" title="${h((t.city||'')+(sub?' · '+sub:''))}" style="display:flex;align-items:center;gap:6px;padding:3px 8px;${ri?`border-top:1px solid ${hair};`:''}cursor:grab;min-width:0;${done?'opacity:0.6;':''}">
+        <span style="font-size:11.5px;font-weight:700;color:${ink};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${done?'text-decoration:line-through;':''}">${t.locked?'🔒 ':''}${taskOutOfZone(t)?'<span title="מחוץ לאזור היום" style="color:#FEF08A;font-weight:900;">⚠ </span>':''}${h(t.city||'—')}</span>
+        ${sub?`<span style="font-size:10.5px;color:${soft};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${h(sub)}</span>`:'<span style="flex:1;"></span>'}
+        ${t.time?`<span style="font-size:10px;font-weight:700;color:${soft};direction:ltr;font-feature-settings:'tnum';white-space:nowrap;">${t.time}</span>`:''}
       </div>`;}).join('');
-      return`<div style="position:absolute;top:${top}px;left:${left};width:${width};height:${height}px;background:var(--white);border:1px solid var(--line);border-top:3px solid ${tc};border-radius:8px;overflow:hidden;box-sizing:border-box;z-index:2;box-shadow:0 1px 2px rgba(17,24,39,0.05);">
+      return`<div style="position:absolute;top:${top}px;left:${left};width:${width};height:${height}px;background:${tc};border:1.5px solid var(--white);border-radius:8px;overflow:hidden;box-sizing:border-box;z-index:2;box-shadow:0 1px 3px rgba(17,24,39,0.2);">
         ${tailHtml}
-        <div onclick="_wkOpenDay(${di},'${b.tech.id}')" title="${label} · פתח ביומי" style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:${tc}0e;border-bottom:1px solid var(--line-2);min-width:0;cursor:pointer;">
-          <span style="width:8px;height:8px;border-radius:50%;background:${tc};flex:0 0 8px;"></span>
-          ${allMode?`<span style="font-size:11px;font-weight:800;color:${tc};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${h(b.tech.name)}</span>`:'<span style="flex:1;"></span>'}
-          <span style="min-width:16px;height:16px;padding:0 4px;border-radius:5px;background:var(--white);border:1px solid ${tc}40;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${tc};">${b.grp.length}</span>
+        <div onclick="_wkOpenDay(${di},'${b.tech.id}')" title="${label} · פתח ביומי" style="display:flex;align-items:center;gap:6px;padding:4px 8px 3px;border-bottom:1px solid ${hair};min-width:0;cursor:pointer;">
+          <span style="font-size:10.5px;font-weight:800;color:${ink};direction:ltr;font-feature-settings:'tnum';white-space:nowrap;">${label}</span>
+          ${allMode?`<span style="font-size:10.5px;font-weight:700;color:${soft};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;text-align:left;">${h(b.tech.name)}</span>`:'<span style="flex:1;"></span>'}
         </div>
         ${rows}
       </div>`;
