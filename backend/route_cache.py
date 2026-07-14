@@ -44,9 +44,11 @@ def _headers(key: str) -> dict:
     return {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
 
 
-def get_cached(pairs: list, key: str) -> dict:
-    """Fetch cached drive_minutes for the given directional (from_key, to_key) pairs.
-    Returns {(from_key, to_key): minutes}. Missing table / errors → {} (fail-open)."""
+def get_cached(pairs: list, key: str, bucket: str = "static") -> dict:
+    """Fetch cached drive_minutes for the given directional (from_key, to_key) pairs, for ONE
+    time_bucket (default 'static' = today's behavior). Returns {(from_key, to_key): minutes}.
+    Missing table / errors → {} (fail-open). Cross-tenant brain P0: the bucket is the time-of-day
+    seam; default keeps reads on the existing rows."""
     if not pairs or not key:
         return {}
     or_terms = ",".join(f'and(from_key.eq."{f}",to_key.eq."{t}")' for f, t in pairs)
@@ -55,7 +57,8 @@ def get_cached(pairs: list, key: str) -> dict:
             r = c.get(
                 f"{SUPABASE_URL}/rest/v1/route_cache",
                 headers=_headers(key),
-                params={"select": "from_key,to_key,drive_minutes", "or": f"({or_terms})"},
+                params={"select": "from_key,to_key,drive_minutes",
+                        "time_bucket": f"eq.{bucket}", "or": f"({or_terms})"},
             )
             r.raise_for_status()
             rows = r.json()
@@ -64,26 +67,29 @@ def get_cached(pairs: list, key: str) -> dict:
     return {(row["from_key"], row["to_key"]): row["drive_minutes"] for row in rows}
 
 
-def put_cached(rows: list, key: str) -> None:
-    """Upsert cache rows: [{from_key, to_key, drive_minutes, source}]. Best-effort —
-    a cache write failure must never break optimization."""
+def put_cached(rows: list, key: str, bucket: str = "static") -> None:
+    """Upsert cache rows: [{from_key, to_key, drive_minutes, source}]. Stamps the time_bucket
+    (default 'static') so callers need not know about buckets yet. Best-effort — a cache write
+    failure must never break optimization."""
     if not rows or not key:
         return
+    payload = [{**row, "time_bucket": row.get("time_bucket", bucket)} for row in rows]
     try:
         with httpx.Client(timeout=15) as c:
             c.post(
                 f"{SUPABASE_URL}/rest/v1/route_cache",
                 headers={**_headers(key), "Prefer": "resolution=merge-duplicates"},
-                json=rows,
+                json=payload,
             )
     except Exception:
         pass
 
 
-def split_hits_misses(locations: list, service_key: str) -> tuple:
-    """For all directional non-self location pairs, return (hits {pair: minutes}, miss pairs)."""
+def split_hits_misses(locations: list, service_key: str, bucket: str = "static") -> tuple:
+    """For all directional non-self location pairs, return (hits {pair: minutes}, miss pairs)
+    for ONE time_bucket (default 'static')."""
     keys = [norm_key(l) for l in locations]
     pairs = [(keys[i], keys[j]) for i in range(len(keys)) for j in range(len(keys)) if i != j]
-    hits = get_cached(pairs, service_key)
+    hits = get_cached(pairs, service_key, bucket)
     misses = [p for p in pairs if p not in hits]
     return hits, misses

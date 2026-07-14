@@ -34,7 +34,7 @@ def test_trust_accepts_fast_intercity_highway_leg():
 def test_assemble_matrix_uses_cache_then_marks_misses(monkeypatch):
     # cache has only A→B; the rest are misses
     cached = {("A", "B"): 12}
-    def fake_get_cached(pairs, key):
+    def fake_get_cached(pairs, key, bucket="static"):
         return {p: cached[p] for p in pairs if p in cached}
     monkeypatch.setattr(rc, "get_cached", fake_get_cached)
     hits, misses = rc.split_hits_misses(["A", "B", "C"], service_key="x")
@@ -46,7 +46,7 @@ def test_assemble_matrix_uses_cache_then_marks_misses(monkeypatch):
 
 def test_norm_key_applied_inside_split(monkeypatch):
     seen = {}
-    def fake_get_cached(pairs, key):
+    def fake_get_cached(pairs, key, bucket="static"):
         seen["pairs"] = pairs
         return {}
     monkeypatch.setattr(rc, "get_cached", fake_get_cached)

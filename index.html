@@ -6059,6 +6059,20 @@ function durationAccuracyInsights(taskList,categories,settings,opts){
   }
   return out.sort((a,b)=>Math.abs(b.deltaPct)-Math.abs(a.deltaPct));
 }
+// routing.traffic_mode knob (cross-tenant brain P0): off (default) | rush_hour | live. Maps a
+// departure time to the route_cache time_bucket. Default off ⇒ always 'static' ⇒ zero behavior
+// change (no optimizer consumption yet — Phase 2). Parity: traffic-cases.json BOTH suites.
+function resolveTrafficMode(config){
+  const m=config&&config.routing&&config.routing.traffic_mode;
+  return (m==='rush_hour'||m==='live')?m:'off';
+}
+function trafficBucket(mode,hhmm){
+  if(mode==='live')return 'live';
+  if(mode!=='rush_hour')return 'static';
+  const h=parseInt(String(hhmm||'').split(':')[0],10);
+  if(!isFinite(h))return 'static';
+  return ((h>=7&&h<10)||(h>=16&&h<19))?'rush':'static';
+}
 // </sched-logic>
 function appUsesZones(){ return usesZones(tenantConfig && tenantConfig.scheduling); }
 // ═══ AUTO-SEQUENCING SEAM (features.auto_sequence) ═══════════════════════════

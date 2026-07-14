@@ -122,6 +122,28 @@ def resolve_route_strategy(config: Optional[dict]) -> str:
     return "flexible"
 
 
+def resolve_traffic_mode(config: Optional[dict]) -> str:
+    """Mirror of JS resolveTrafficMode — `routing.traffic_mode`: off (default) | rush_hour |
+    live. Cross-tenant brain P0: default off ⇒ static bucket ⇒ zero behavior change. Parity:
+    traffic-cases.json (both suites)."""
+    m = ((config or {}).get("routing") or {}).get("traffic_mode")
+    return m if m in ("rush_hour", "live") else "off"
+
+
+def traffic_bucket(mode, hhmm) -> str:
+    """Mirror of JS trafficBucket — map mode + departure hh:mm → route_cache time_bucket.
+    off/unknown → static; rush_hour → rush inside 07-09 / 16-18 else static; live → live."""
+    if mode == "live":
+        return "live"
+    if mode != "rush_hour":
+        return "static"
+    try:
+        h = int(str(hhmm or "").split(":")[0])
+    except (ValueError, TypeError):
+        return "static"
+    return "rush" if (7 <= h < 10 or 16 <= h < 19) else "static"
+
+
 def resolve_window_semantics(config: Optional[dict]) -> str:
     """`scheduling.window_semantics` — what the customer window promises (Eran
     2026-07-11). 'finish' (default, conservative): job must END inside the

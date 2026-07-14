@@ -13,9 +13,9 @@ def _run(coro):
 
 def test_warm_cache_uses_hits_and_never_calls_google(monkeypatch):
     hits = {("תל אביב", "חיפה"): 64, ("חיפה", "תל אביב"): 70}
-    monkeypatch.setattr(rc, "get_cached", lambda pairs, key: dict(hits))
+    monkeypatch.setattr(rc, "get_cached", lambda pairs, key, bucket="static": dict(hits))
     stored = []
-    monkeypatch.setattr(rc, "put_cached", lambda rows, key: stored.extend(rows))
+    monkeypatch.setattr(rc, "put_cached", lambda rows, key, bucket="static": stored.extend(rows))
 
     async def boom(locations, api_key):
         raise AssertionError("Google must not be called on a fully warm cache")
@@ -27,9 +27,9 @@ def test_warm_cache_uses_hits_and_never_calls_google(monkeypatch):
 
 
 def test_cold_cache_fetches_google_and_stores_trusted(monkeypatch):
-    monkeypatch.setattr(rc, "get_cached", lambda pairs, key: {})
+    monkeypatch.setattr(rc, "get_cached", lambda pairs, key, bucket="static": {})
     stored = []
-    monkeypatch.setattr(rc, "put_cached", lambda rows, key: stored.extend(rows))
+    monkeypatch.setattr(rc, "put_cached", lambda rows, key, bucket="static": stored.extend(rows))
 
     async def fake_gmaps(locations, api_key):
         # plausible drive times (haversine TLV→Haifa ≈ 85km ≈ 145 min floor at 35km/h → ~? )
@@ -43,9 +43,9 @@ def test_cold_cache_fetches_google_and_stores_trusted(monkeypatch):
 
 
 def test_untrusted_google_leg_falls_back_to_haversine_and_not_stored(monkeypatch):
-    monkeypatch.setattr(rc, "get_cached", lambda pairs, key: {})
+    monkeypatch.setattr(rc, "get_cached", lambda pairs, key, bucket="static": {})
     stored = []
-    monkeypatch.setattr(rc, "put_cached", lambda rows, key: stored.extend(rows))
+    monkeypatch.setattr(rc, "put_cached", lambda rows, key, bucket="static": stored.extend(rows))
 
     async def fake_gmaps(locations, api_key):
         return [[0, 1], [1, 0]]  # 1 minute TLV→Haifa — absurd, must be distrusted
@@ -58,8 +58,8 @@ def test_untrusted_google_leg_falls_back_to_haversine_and_not_stored(monkeypatch
 
 def test_no_api_key_uses_hits_plus_haversine(monkeypatch):
     hits = {("תל אביב", "חיפה"): 64}
-    monkeypatch.setattr(rc, "get_cached", lambda pairs, key: dict(hits))
-    monkeypatch.setattr(rc, "put_cached", lambda rows, key: None)
+    monkeypatch.setattr(rc, "get_cached", lambda pairs, key, bucket="static": dict(hits))
+    monkeypatch.setattr(rc, "put_cached", lambda rows, key, bucket="static": None)
 
     m = _run(optimizer.build_matrix_cached(LOCS, api_key=None, service_key="x"))
     assert m[0][1] == 64       # cached leg reused even without Google

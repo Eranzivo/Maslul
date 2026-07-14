@@ -417,5 +417,11 @@ suite('durationAccuracyInsights (E4-lite)', () => {
   check('c2 ~20 vs 60 → insight with negative delta (faster than configured)', under.length===1 && under[0].deltaPct<0 && under[0].actualMedian===20);
 });
 
+suite('traffic mode/bucket: golden fixture (parity with backend resolve_traffic_mode/traffic_bucket)', () => {
+  const fx = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'traffic-cases.json'), 'utf8'));
+  fx.mode_cases.forEach((c, i) => check(`mode[${i}] → ${c.expect}`, ctx.resolveTrafficMode(c.config) === c.expect));
+  fx.bucket_cases.forEach((c, i) => check(`bucket[${i}] ${c.mode}@${c.hhmm} → ${c.expect}`, ctx.trafficBucket(c.mode, c.hhmm) === c.expect));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

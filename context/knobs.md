@@ -39,6 +39,11 @@ Legend: ✅ enforced · ⚠ caveat (see note) · n/a not applicable to that laye
 | `break {enabled,start,end}` | tenant default break | `getTechPartialBlocks` | `tech_breaks` (+clamped to hours) | ✅ pinned pseudo-node | both |
 | `lookahead_days` | candidate search horizon | `getNextDates` | n/a (explicit range) | n/a | — |
 
+## tenants.config.routing (cross-tenant brain P0 — 2026-07-14)
+| Knob | Meaning | Live JS | Batch/Py | Solver | Test |
+|---|---|---|---|---|---|
+| **`routing.traffic_mode`** (off/rush_hour/live, default off) | time-of-day travel bucketing for the global route brain. `off` (PureWater) ⇒ always `static` bucket ⇒ zero behavior change; `rush_hour` ⇒ `rush` inside 07-09/16-18 else `static`; `live` ⇒ `live`. Maps departure time → `route_cache.time_bucket` (`route_cache.py` now bucket-aware, default static). **No optimizer consumption yet — Phase 2.** Vision: [[cross-tenant-brain]] / `outputs/cross-tenant-brain-design_2026-07-14.md` | `resolveTrafficMode` + `trafficBucket` | `resolve_traffic_mode` + `traffic_bucket` | n/a yet (Phase 2 = bucket-keyed matrix) | traffic-cases.json BOTH suites (sched.test.js + test_traffic_parity.py) |
+
 ## tenants.config.audit (Route Intelligence P1 — 2026-07-09)
 | Knob | Meaning | Live JS | Batch/Py | Solver | Test |
 |---|---|---|---|---|---|

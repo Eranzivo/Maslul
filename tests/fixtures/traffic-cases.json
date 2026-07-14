@@ -1,0 +1,27 @@
+{
+  "_doc": "Cross-tenant brain P0 — routing.traffic_mode + trafficBucket parity (JS resolveTrafficMode/trafficBucket ⇄ Py resolve_traffic_mode/traffic_bucket). Asserted by tests/sched.test.js and backend/tests/test_traffic_parity.py.",
+  "mode_cases": [
+    {"config": null, "expect": "off"},
+    {"config": {}, "expect": "off"},
+    {"config": {"routing": {}}, "expect": "off"},
+    {"config": {"routing": {"traffic_mode": "off"}}, "expect": "off"},
+    {"config": {"routing": {"traffic_mode": "rush_hour"}}, "expect": "rush_hour"},
+    {"config": {"routing": {"traffic_mode": "live"}}, "expect": "live"},
+    {"config": {"routing": {"traffic_mode": "garbage"}}, "expect": "off"},
+    {"config": {"scheduling": {"route_strategy": "far_to_near"}}, "expect": "off"}
+  ],
+  "bucket_cases": [
+    {"mode": "off", "hhmm": "08:00", "expect": "static"},
+    {"mode": "off", "hhmm": "17:00", "expect": "static"},
+    {"mode": "rush_hour", "hhmm": "07:00", "expect": "rush"},
+    {"mode": "rush_hour", "hhmm": "08:30", "expect": "rush"},
+    {"mode": "rush_hour", "hhmm": "10:00", "expect": "static"},
+    {"mode": "rush_hour", "hhmm": "11:00", "expect": "static"},
+    {"mode": "rush_hour", "hhmm": "16:00", "expect": "rush"},
+    {"mode": "rush_hour", "hhmm": "18:59", "expect": "rush"},
+    {"mode": "rush_hour", "hhmm": "19:00", "expect": "static"},
+    {"mode": "rush_hour", "hhmm": "", "expect": "static"},
+    {"mode": "rush_hour", "hhmm": "bad", "expect": "static"},
+    {"mode": "live", "hhmm": "11:00", "expect": "live"}
+  ]
+}
