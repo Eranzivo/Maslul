@@ -8,6 +8,12 @@
 |---|---|---|---|
 | 1 | Weekly "State of Maslul" digest | **Feasible now — recommended first** | Low effort, high value; one small backend endpoint + a low-code scenario |
 | 2 | Government document filler (MoD/NDA) | **Recorded for reference — Eran develops externally** | Not a Maslul feature; local-only for security |
+| 3 | Export-control list search (MTCR/Wassenaar) | **Recorded for reference — Eran develops externally** | Public lists; a finding aid, not a ruling |
+
+**Tooling decision (2026-07-15): n8n** — self-hostable (security + own-your-stack, fits the existing
+Railway/Supabase setup), flat cost, has Code + AI/LangChain nodes. Make is the faster no-ops visual
+option but cloud-only (a non-starter for the NDA-local #2/#3). **Only #1 is genuinely a workflow-tool
+job; #2 and #3 are local scripts/apps that n8n could at most glue.**
 
 ---
 
@@ -110,3 +116,35 @@ handled only manually · no NDA data to any SaaS · drafts in one controlled fol
 
 **Open question that decides the tooling:** are the 3 docs **Word**, **fillable PDF**, or
 **flat/scanned PDF**? That picks the library + starter script.
+
+---
+
+## Automation 3 — Export-control list search (MTCR / Wassenaar) — EXTERNAL, reference only
+
+> A finding aid over the PUBLIC control lists: query in GENERAL terms → get pointers to the
+> relevant entries (regime + entry number + title), then classify manually. **Not a ruling** —
+> final classification belongs to a licensed export-control officer / DECA (Israel MoD) / counsel;
+> national law binds (Israel's own control lists), the regimes are the reference.
+
+**Scope (Eran, 2026-07-15):** queries are generic product categories only ("a gun", "a satellite
+that does X") — **no technical specs, parts, or NDA data**. Because nothing sensitive is entered,
+the strict local-only constraint relaxes → a cloud no-build option is viable.
+
+**Option A — fastest, no build (do first):** upload the current, official list documents to a
+document-QA tool with citations — **Claude Project**, a **Custom GPT with File Search**, or
+**Google NotebookLM** — and ask in plain terms. Returns the entry + quoted source. Stands up in ~an
+hour. **Caveat:** verify each cited entry number against the source text; keep the current version
+loaded (lists update ~annually).
+
+**Option B — better for repeated/fast/offline use:** a small search index — parse each list into
+structured entries `{regime, entry_no, title, text, notes, version}`, index with SQLite **FTS5**
+(exact terminology) + optional **embeddings** (Chroma/LanceDB) for synonym matching
+("USV" ↔ "unmanned surface vessel"). Query → ranked hits across all lists: `regime · entry_no ·
+title · snippet`. Hybrid (keyword + semantic) gives precision + synonym coverage.
+
+**Lists to load:** MTCR Annex · Wassenaar (Munitions + Dual-Use Cat 1–9) · + as needed EU Dual-Use
+Annex I, US CCL/EAR + USML, Australia Group, NSG, **and Israel's national control lists** (what
+legally applies).
+
+**Guardrails:** always cite entry + version; label every result "candidate — verify"; never let it
+make the classification decision.

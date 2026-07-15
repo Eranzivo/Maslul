@@ -82,6 +82,8 @@ section{padding:64px 0;}
 .band ul{margin:14px 0 0;padding:0;list-style:none;}
 .band li{display:flex;gap:10px;align-items:flex-start;font-size:0.94rem;color:var(--ink-2);margin-bottom:8px;}
 .band li::before{content:'✓';color:var(--teal);font-weight:900;flex-shrink:0;}
+.band.band-solo .wrap{grid-template-columns:1fr;max-width:760px;text-align:center;}
+.band.band-solo ul{display:inline-block;text-align:right;margin-top:16px;}
 @media(max-width:820px){.band .wrap{grid-template-columns:1fr;} .band.flip .wrap{direction:rtl;}}
 /* lead form */
 .lead{background:linear-gradient(150deg,#0B6B60 0%,#0E7A6E 50%,#15917E 100%);color:#fff;}
@@ -197,7 +199,7 @@ footer a:hover{color:var(--teal);}
 </section>
 
 <!-- ACTION BAND 1 -->
-<section class="band" aria-labelledby="band1-h">
+<section class="band band-solo" aria-labelledby="band1-h">
   <div class="wrap">
     <div class="band-copy">
       <h3 id="band1-h">המנוע בוחר את הטכנאי הנכון — ומסביר למה</h3>
@@ -208,7 +210,6 @@ footer a:hover{color:var(--teal);}
         <li>שקיפות מלאה — רואים בדיוק למה שובץ מי ששובץ</li>
       </ul>
     </div>
-    <img src="assets/brand/quick-assign-feature.png" alt="איור: המערכת בוחנת ארבעה טכנאים ומסמנת את המסלול האופטימלי לקריאה חדשה" loading="lazy">
   </div>
 </section>
 
