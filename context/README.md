@@ -27,6 +27,7 @@
 | `style.md` + `design-system.md` | CSS tokens, RTL, md-* components; read design-system before ANY UI work. |
 | `new-entity-checklist.md` | Mandatory steps before any new Supabase table. |
 | `impact-map.md` | **The dual-engine parity / coupling map** ("Neurons brain") — read BEFORE changing any rule that runs in both engines, any shared `tenants.config` knob, or any shared DB column. The JS↔Py pairs that must agree + "change X → verify Y". |
+| `automations.md` | External-tool automations registry (n8n/Make/Zapier). #1 weekly "State of Maslul" digest (feasible now, needs a small `/digest` endpoint); #2 gov-doc filler (external, MoD/NDA local-only reference). |
 
 ## Layer 3 — What is configurable (the tenant contract)
 | File | What it holds |
