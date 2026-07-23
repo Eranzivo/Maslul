@@ -6993,18 +6993,27 @@ async function geoSuggestCity(raw){
     return await res.json();
   }catch(e){return null;}
 }
+// One decision for ALL doors: what correction (if any) to apply from a /geo-suggest result.
+// 'suggest' → the fuzzy match (auto_ok = apply silently, else confirm). 'resolved' with a
+// DIFFERENT canonical → a curated alias (e.g. נהרייה→נהריה): apply silently so the live zone
+// matcher (which lacks the brain alias map) resolves it too. Returns {value,auto} or null.
+function geoCorrectionFor(s,input){
+  if(!s||!s.match)return null;
+  if(s.match===normalizeCity(input))return null;
+  if(s.status==='suggest')return {value:s.match,auto:!!s.auto_ok};
+  if(s.status==='resolved')return {value:s.match,auto:true};
+  return null;
+}
 // Dispatch: no candidates for the typed city → ask the brain for a correction, then re-search ONCE.
 async function _trySuggestThenSearch(city,catId){
   const s=await geoSuggestCity(city);
-  if(s&&s.status==='suggest'&&s.match&&s.match!==normalizeCity(city)){
-    const apply=s.auto_ok||confirm(`העיר "${city}" לא זוהתה. האם התכוונת ל-"${s.match}"?`);
-    if(apply){
-      const el=document.getElementById('s-city');if(el)el.value=s.match;
-      if(typeof saveDispatchDraft==='function')saveDispatchDraft();
-      if(s.auto_ok)showToast(`תוקן ל-"${s.match}" ✓`);
-      findBestSlot(false,true); // retry once, skip re-suggest → no loop
-      return;
-    }
+  const c=geoCorrectionFor(s,city);
+  if(c&&(c.auto||confirm(`העיר "${city}" לא זוהתה. האם התכוונת ל-"${c.value}"?`))){
+    const el=document.getElementById('s-city');if(el)el.value=c.value;
+    if(typeof saveDispatchDraft==='function')saveDispatchDraft();
+    if(c.auto)showToast(`תוקן ל-"${c.value}" ✓`);
+    findBestSlot(false,true); // retry once, skip re-suggest → no loop
+    return;
   }
   const r=resolveZone(city,(_pendingGeocode&&_pendingGeocode.lat)||null,(_pendingGeocode&&_pendingGeocode.lon)||null,tenantConfig,zones);
   showNoResult(city,r.reason);
@@ -7799,8 +7808,9 @@ async function confirmAddTask(){
   if(!city){errEl.textContent='נא לבחור עיר';return;}
   if(_geoSuggestOn()){ // brain fallback — correct a mistyped city before it's saved
     const s=await geoSuggestCity(city);
-    if(s&&s.status==='suggest'&&s.match&&s.match!==city&&(s.auto_ok||confirm(`העיר "${city}" לא זוהתה. האם התכוונת ל-"${s.match}"?`))){
-      city=s.match; if(s.auto_ok)showToast(`תוקן ל-"${s.match}" ✓`);
+    const c=geoCorrectionFor(s,city);
+    if(c&&(c.auto||confirm(`העיר "${city}" לא זוהתה. האם התכוונת ל-"${c.value}"?`))){
+      city=c.value; if(c.auto)showToast(`תוקן ל-"${c.value}" ✓`);
     }
   }
   if(!street){errEl.textContent='נא להזין רחוב ומספר — כתובת מלאה נדרשת לשיבוץ מדויק';return;}
@@ -7831,7 +7841,8 @@ async function runBulkImport(){
     let r=appUsesZones()?resolveZone(city,null,null,tenantConfig,zones):{matched:true,zoneId:null,reason:null};
     if(!r.matched&&_geoSuggestOn()){ // brain fallback — AUTO-fix only (bulk has no per-row prompts)
       const s=await geoSuggestCity(city);
-      if(s&&s.status==='suggest'&&s.auto_ok&&s.match){ city=s.match; r=appUsesZones()?resolveZone(city,null,null,tenantConfig,zones):{matched:true,zoneId:null,reason:null}; }
+      const c=geoCorrectionFor(s,city);
+      if(c&&c.auto){ city=c.value; r=appUsesZones()?resolveZone(city,null,null,tenantConfig,zones):{matched:true,zoneId:null,reason:null}; }
     }
     if(!r.matched){unmatched.push(`${row} — ${r.reason==='city_not_in_zone'?'עיר לא משויכת לאזור':'מחוץ לאזור'}`);continue;}
     const saved=await dbInsert('tasks',{
@@ -7966,8 +7977,9 @@ async function confirmAddCity(){
   // ask the 1,310-place brain for a better match before adding by raw name.
   if(_geoSuggestOn()&&!isKnownCity(cityName)){
     const s=await geoSuggestCity(rawCity);
-    if(s&&s.status==='suggest'&&s.match&&s.match!==cityName&&(s.auto_ok||confirm(`"${rawCity}" אינה מזוהה. האם התכוונת ל-"${s.match}"?`))){
-      cityName=s.match; if(s.auto_ok)showToast(`תוקן ל-"${s.match}" ✓`);
+    const c=geoCorrectionFor(s,rawCity);
+    if(c&&(c.auto||confirm(`"${rawCity}" אינה מזוהה. האם התכוונת ל-"${c.value}"?`))){
+      cityName=c.value; if(c.auto)showToast(`תוקן ל-"${c.value}" ✓`);
     }
   }
   // Never guess: a city absent from the national geo brain gets an explicit confirm —
