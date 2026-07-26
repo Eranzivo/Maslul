@@ -14,6 +14,7 @@ Deliberately NOT mirrored in JS (unlike the engine parity pairs): resolution liv
 Thresholds are NAMED constants here (auditable/tunable), never scattered magic numbers.
 Design: outputs/geo-selfheal-design_2026-07-14.md.
 """
+import math
 from canonicalize import normalize_place_key, resolve_place_key
 
 # ── Confidence thresholds (the one place they live) ───────────────────────────
@@ -74,3 +75,33 @@ def resolve_or_suggest(raw, candidate_keys, alias_map, resolve_fn) -> dict:
         return {"status": "resolved", "match": resolve_place_key(raw, alias_map),
                 "confidence": 1.0, "auto_ok": True, "coords": list(coords)}
     return suggest(raw, candidate_keys)
+
+
+def _haversine_km(a, b) -> float:
+    """Great-circle km between (lat,lon) tuples."""
+    R = 6371.0
+    dlat = math.radians(b[0] - a[0])
+    dlon = math.radians(b[1] - a[1])
+    h = (math.sin(dlat / 2) ** 2
+         + math.cos(math.radians(a[0])) * math.cos(math.radians(b[0])) * math.sin(dlon / 2) ** 2)
+    return 2 * R * math.asin(min(1.0, math.sqrt(h)))
+
+
+def nearest_zone(coords, zones, resolve):
+    """Coordinate-driven zone recommendation (Slice 4). Given a place's (lat,lon) and the tenant's
+    zones ``[{id,name,cities}]``, return the zone whose NEAREST member (resolved via `resolve`) is
+    closest: ``{zone_id, zone_name, nearest_member, km}`` — or ``None`` when coords is None or no
+    member resolves. Pure; the same nearest-member method used to seed the 9 settlements by hand."""
+    if coords is None:
+        return None
+    best = None
+    for z in zones:
+        for m in (z.get("cities") or []):
+            mc = resolve(m)
+            if mc is None:
+                continue
+            d = _haversine_km(coords, mc)
+            if best is None or d < best["km"]:
+                best = {"zone_id": z.get("id"), "zone_name": z.get("name"),
+                        "nearest_member": m, "km": round(d, 1)}
+    return best

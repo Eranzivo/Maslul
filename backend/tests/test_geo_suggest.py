@@ -56,3 +56,26 @@ def test_levenshtein_basic():
     assert geo_suggest.levenshtein("abc", "abd") == 1
     assert geo_suggest.levenshtein("", "abc") == 3
     assert geo_suggest.levenshtein("kitten", "sitting") == 3
+
+
+# ── nearest_zone (Slice 4) ────────────────────────────────────────────────────
+_COORDS = {"חיפה": (32.79, 34.99), "אשקלון": (31.67, 34.57), "דימונה": (31.07, 35.03)}
+
+
+def test_nearest_zone_picks_closest_member():
+    zones = [{"id": "z1", "name": "North", "cities": ["חיפה"]},
+             {"id": "z2", "name": "South", "cities": ["אשקלון", "דימונה"]}]
+    r = geo_suggest.nearest_zone((31.70, 34.60), zones, lambda c: _COORDS.get(c))
+    assert r["zone_id"] == "z2" and r["nearest_member"] == "אשקלון"
+    assert r["km"] < 10
+
+
+def test_nearest_zone_none_when_no_member_resolves():
+    r = geo_suggest.nearest_zone((31.7, 34.6), [{"id": "z", "name": "X", "cities": ["לאמזוהה"]}],
+                                 lambda c: None)
+    assert r is None
+
+
+def test_nearest_zone_none_coords():
+    assert geo_suggest.nearest_zone(None, [{"id": "z", "name": "X", "cities": ["חיפה"]}],
+                                    lambda c: _COORDS.get(c)) is None

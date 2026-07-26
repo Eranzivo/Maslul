@@ -591,3 +591,46 @@ async def geo_suggest_city(req: GeoSuggestRequest, request: Request):
             req.city, geo_resolver.place_keys(), geo_resolver.alias_map(), geo_resolver.resolve)
     except Exception:
         return fail
+
+
+class SuggestZoneRequest(BaseModel):
+    tenant_id: Optional[str] = None
+    city: str
+
+
+@app.post("/suggest-zone")
+async def suggest_zone(req: SuggestZoneRequest, request: Request):
+    """Coordinate-driven zone recommendation (Slice 4): given a city, return the caller-tenant's
+    zone whose NEAREST member is closest. Read-only. Auth like /geo-health (tenant forced). Fail-open:
+    city not resolvable / no zones / error ⇒ `{zone_id:null, resolved:false}` → the UI lets the user pick."""
+    service_key = os.getenv("SUPABASE_SERVICE_KEY", "")
+    if not service_key:
+        raise HTTPException(status_code=503, detail="Not configured")
+    auth = request.headers.get("Authorization", "")
+    token = auth[7:] if auth.startswith("Bearer ") else ""
+    if token and token == service_key:
+        tenant = req.tenant_id
+    else:
+        uid = await _introspect_user_token(token, service_key)
+        user_row = await _get_user_row(uid, service_key) if uid else None
+        try:
+            tenant = resolve_effective_tenant(user_row, req.tenant_id or "")
+        except AuthzError as e:
+            raise HTTPException(status_code=e.status, detail=e.detail)
+    if not tenant:
+        raise HTTPException(status_code=400, detail="No tenant")
+
+    none_resp = {"zone_id": None, "resolved": False}
+    try:
+        await geo_resolver.ensure_loaded(service_key)
+        coords = geo_resolver.resolve(req.city)
+        if coords is None:
+            return none_resp
+        zones = await _sb_get("zones", {"tenant_id": f"eq.{tenant}", "select": "id,name,cities"}, service_key)
+        best = geo_suggest.nearest_zone(coords, zones, geo_resolver.resolve)
+        if best is None:
+            return {"zone_id": None, "resolved": True}
+        best["resolved"] = True
+        return best
+    except Exception:
+        return none_resp

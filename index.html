@@ -1979,11 +1979,12 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
     <div class="mo-title">⊕ הוסף עיר חדשה</div>
     <div class="fg">
       <label class="fl">שם העיר / יישוב <span class="req">*</span></label>
-      <input class="fc" id="ac-city-name" list="il-cities-list" autocomplete="off" placeholder="לדוגמה: מצפה רמון">
+      <input class="fc" id="ac-city-name" list="il-cities-list" autocomplete="off" placeholder="לדוגמה: מצפה רמון" onchange="suggestZoneForAddCity()">
     </div>
     <div class="fg">
       <label class="fl">אזור <span class="req">*</span></label>
       <select class="fc" id="ac-zone-sel"><option value="">בחר אזור...</option></select>
+      <div id="ac-zone-hint" style="font-size:0.75rem;color:var(--ok,#16a34a);margin-top:4px;"></div>
     </div>
     <div id="ac-error" style="color:var(--red);font-size:0.8rem;margin-bottom:8px;"></div>
     <div class="mo-actions" style="margin-top:0;">
@@ -7953,13 +7954,35 @@ async function commitBatchSchedule(){
 // City-create-from-search (scenarios B1/E17): assign a not-yet-zoned city to a zone
 // WITHOUT leaving the dispatch context. prefillCity comes from the failed search.
 // Zone writes are admin-only under RLS — callers gate on role (see showNoResult).
+// Slice 4: coordinate-driven zone recommendation for the add-city modal. Asks the backend for the
+// zone whose nearest member is closest to the typed city, pre-selects it, and shows a hint. Fail-open:
+// no suggestion (new/unresolvable city, backend down, flag off) ⇒ the coordinator just picks manually.
+async function suggestZoneForAddCity(){
+  const hint=document.getElementById('ac-zone-hint');const sel=document.getElementById('ac-zone-sel');
+  if(hint)hint.textContent='';
+  const city=(document.getElementById('ac-city-name').value||'').trim();
+  if(!_geoSuggestOn()||!city||!currentTenantId||!sel)return;
+  try{
+    const hdrs={'Content-Type':'application/json'};
+    try{const{data:{session}}=await sb.auth.getSession();if(session&&session.access_token)hdrs['Authorization']=`Bearer ${session.access_token}`;}catch(e){}
+    const res=await fetch(`${CONFIG.OPTIMIZER_URL}/suggest-zone`,{method:'POST',headers:hdrs,body:JSON.stringify({tenant_id:currentTenantId,city})});
+    if(!res.ok)return;
+    const d=await res.json();
+    if(d&&d.zone_id&&zones.some(z=>z.id===d.zone_id)){
+      if(!sel.value)sel.value=d.zone_id; // don't override a zone the coordinator already chose
+      if(hint)hint.textContent=`🎯 מומלץ: ${d.zone_name} (הקרוב ל־${d.nearest_member}, ${d.km} ק"מ)`;
+    }
+  }catch(e){}
+}
 function openAddCityModal(prefillCity){
   document.getElementById('ac-city-name').value=(typeof prefillCity==='string'&&prefillCity)?prefillCity:'';
   document.getElementById('ac-error').textContent='';
+  const _h=document.getElementById('ac-zone-hint');if(_h)_h.textContent='';
   const zoneSel=document.getElementById('ac-zone-sel');
   zoneSel.innerHTML='<option value="">בחר אזור...</option>'+zones.map(z=>`<option value="${z.id}">${h(z.name)}</option>`).join('');
   document.getElementById('mo-add-city').classList.remove('hidden');
   setTimeout(()=>document.getElementById(prefillCity?'ac-zone-sel':'ac-city-name').focus(),100);
+  suggestZoneForAddCity(); // Slice 4: recommend the zone (flag-gated, fail-open)
 }
 async function confirmAddCity(){
   const rawCity=document.getElementById('ac-city-name').value.trim();
