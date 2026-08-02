@@ -1,0 +1,36 @@
+name: keepalive
+
+# Keeps the Supabase FREE project from pausing — it sleeps after 7 days with no API activity —
+# by making a real REST/DB request on a schedule. Also pings the Railway backend. If either is
+# unreachable the job FAILS, and GitHub emails the repo owner (a lightweight uptime alert).
+#
+# Schedule: Mon & Thu 06:00 UTC → gaps of at most ~4 days, safely under the 7-day pause threshold.
+# Test it by hand: Actions tab → "keepalive" → "Run workflow".
+#
+# Notes:
+#  - The apikey below is the PUBLIC anon key (already shipped in index.html) — safe to commit.
+#  - This PREVENTS pausing; it does not resume an already-paused project (do that in the dashboard).
+#  - GitHub auto-DISABLES scheduled workflows after 60 days with no repo commits. If Maslul goes
+#    fully idle for 2+ months, re-enable it from the Actions tab (or push any commit).
+
+on:
+  schedule:
+    - cron: '0 6 * * 1,4'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Keep Supabase awake (Auth API request to the project)
+        run: |
+          curl --fail --show-error --silent \
+            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB4cHFjZGZ4b2dhYWp3c3R3ZHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MDYzNzAsImV4cCI6MjA5Mzk4MjM3MH0.Taql-BR6thtbci0pMIRijC6I8JVvjSyDVwLF9lZ0Tus" \
+            "https://pxpqcdfxogaajwstwdtk.supabase.co/auth/v1/health" \
+            -o /dev/null -w "Supabase auth: HTTP %{http_code}\n"
+
+      - name: Ping Railway backend
+        run: |
+          curl --fail --show-error --silent \
+            "https://maslul-production-77fa.up.railway.app/health" \
+            -o /dev/null -w "Railway /health: HTTP %{http_code}\n"
