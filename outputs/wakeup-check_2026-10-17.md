@@ -14,8 +14,8 @@ RLS simulation.
 > ✅ 28 poisoned `route_cache` rows purged (10 genuine remain). ✅ Key restricted to DM + Geocoding;
 > Geocoding v4 methods capped at 0; ₪75 alert budget; Railway hard limit $10 / alert $5.
 > ✅ `geo_suggest` QA'd and kept ON (`outputs/geo-suggest-qa_2026-10-17.md`).
-> ⏳ **Still open:** keepalive Action (still `disabled_inactivity`), leaked-password protection,
-> and the code hardening in §2.0 step 3.
+> ✅ Keepalive Action re-enabled (`active`, manual run #19 succeeded).
+> ⏳ **Still open:** leaked-password protection, and the code hardening in §2.0 step 3 (in backlog).
 
 ---
 
