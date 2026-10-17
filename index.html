@@ -1894,7 +1894,7 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
     <div id="at-error" style="color:var(--red);font-size:0.8125rem;min-height:1.2rem;"></div>
     <div class="mo-actions">
       <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-add-task')">ביטול</button>
-      <button class="btn btn-blue" style="flex:2;" onclick="confirmAddTask()">שמור קריאה ←</button>
+      <button class="btn btn-blue" id="at-save-btn" style="flex:2;" onclick="confirmAddTask()">שמור קריאה ←</button>
     </div>
   </div>
 </div>
@@ -7798,7 +7798,8 @@ async function confirmAddTask(){
   const catEl=document.getElementById('at-cat');
   const name=document.getElementById('at-name').value.trim();
   const phone=document.getElementById('at-phone').value.trim();
-  let city=normalizeCity(document.getElementById('at-city').value);
+  const cityEl=document.getElementById('at-city');
+  let city=normalizeCity(cityEl.value);
   const street=document.getElementById('at-street').value.trim();
   const notes=document.getElementById('at-notes').value.trim();
   const errEl=document.getElementById('at-error');
@@ -7807,23 +7808,38 @@ async function confirmAddTask(){
   if(!name){errEl.textContent='נא להזין שם לקוח';return;}
   if(!phone){errEl.textContent='נא להזין מספר טלפון';return;}
   if(!city){errEl.textContent='נא לבחור עיר';return;}
-  if(_geoSuggestOn()){ // brain fallback — correct a mistyped city before it's saved
-    const s=await geoSuggestCity(city);
-    const c=geoCorrectionFor(s,city);
-    if(c&&(c.auto||confirm(`העיר "${city}" לא זוהתה. האם התכוונת ל-"${c.value}"?`))){
-      city=c.value; if(c.auto)showToast(`תוקן ל-"${c.value}" ✓`);
-    }
-  }
   if(!street){errEl.textContent='נא להזין רחוב ומספר — כתובת מלאה נדרשת לשיבוץ מדויק';return;}
-  const catObj=categories.find(c=>c.id===catEl.value);
-  const newTask={id:nextTaskId++,client:name,phone,city,street,cat:catObj?.name||'',catId:catEl.value,techId:null,status:'pending',time:'',date:'',notes,assignId:'',preferredWindows:[]};
-  tasks.push(newTask);
-  save();
-  saveTaskToSupabase(newTask);
-  closeMo('mo-add-task');
-  goPage('tasks');
-  filterTasks('pending');
-  showToast('הקריאה נרשמה ✓');
+  if(!currentTenantId){errEl.textContent='לא מחובר — יש להתחבר מחדש';return;}
+  const btn=document.getElementById('at-save-btn');
+  if(btn&&btn.disabled)return; // double-click guard — one save in flight at a time
+  if(btn){btn.disabled=true;btn.textContent='שומר…';}
+  try{
+    if(_geoSuggestOn()){ // brain fallback — correct a mistyped city before it's saved
+      const s=await geoSuggestCity(city);
+      const c=geoCorrectionFor(s,city);
+      if(c&&(c.auto||confirm(`העיר "${city}" לא זוהתה. האם התכוונת ל-"${c.value}"?`))){
+        city=c.value; cityEl.value=c.value; // keep the fix in the field if the save must be retried
+        if(c.auto)showToast(`תוקן ל-"${c.value}" ✓`);
+      }
+    }
+    const catObj=categories.find(c=>c.id===catEl.value);
+    // A NEW call is not WAL-covered, so it enters local state only once the DB confirms the
+    // insert (saveTaskToSupabase sets id/_dbId to the row UUID). On failure the modal stays
+    // open with the details intact — never a success toast for a call that wasn't saved.
+    const newTask={id:null,client:name,phone,city,street,cat:catObj?.name||'',catId:catEl.value,techId:null,status:'pending',time:'',date:'',notes,assignId:'',preferredWindows:[]};
+    let saved=false;
+    try{saved=await saveTaskToSupabase(newTask);}
+    catch(e){console.error('[addTask] save failed:',e);window.Sentry?.captureException(e);}
+    if(!saved){errEl.textContent='השמירה נכשלה — הקריאה לא נשמרה. בדוק חיבור לרשת ולחץ שוב על שמירה.';return;}
+    tasks.push(newTask);
+    save();
+    closeMo('mo-add-task');
+    goPage('tasks');
+    filterTasks('pending');
+    showToast('הקריאה נרשמה ✓');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='שמור קריאה ←';}
+  }
 }
 
 // ═══ BULK TASK IMPORT ═══
