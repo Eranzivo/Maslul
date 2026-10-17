@@ -237,6 +237,8 @@ outputs/archive/migrations/migration-zones-polygons_2026-06-09.sql       — pol
 2. `await` all `saveXToSupabase()` calls in user-facing flows — never fire-and-forget on a confirmed action
 3. Show explicit error toast if save returns false/null — never silent failure
 4. For new entities (no `_dbId`): the WAL does NOT cover them — they rely on the Supabase call completing
+   - **New calls (tasks): ONLY via `insertNewTaskConfirmed(task)`** (2026-10-17) — it adds the call to local state only after the DB confirms the insert, returns true/false, never throws, and stays local-only in demo mode. Every door uses it (dispatch confirm, call drawer, save-pending, add-call, recurring series, CSV import); callers show success only on `true` and keep the form for retry on `false`. `tests/addtask.test.js` has a structural guard that fails if `tasks.push(` appears outside the allow-list (`insertNewTaskConfirmed`, `_generateRecurringInstances`, `runBulkImport` — the latter two push only after a confirmed `dbInsert`).
+   - External calls awaited while a save button is locked go through `_fetchTimeout` (fail-open).
 5. **Supabase user row invariant:** Every auth user MUST have a row in `public.users` with correct `tenant_id`. Missing row = `currentTenantId` stays null = all saves silently fail. Verify: `SELECT id, tenant_id, role FROM users WHERE id = '<auth_user_id>'`
 
 ---

@@ -1893,7 +1893,7 @@ body[data-ro-settings="1"] .settings-ro-banner{display:flex;align-items:center;g
     <div class="fg"><label class="fl">הערות</label><input class="fc" id="at-notes" placeholder="הערות, בקשות מיוחדות..."></div>
     <div id="at-error" style="color:var(--red);font-size:0.8125rem;min-height:1.2rem;"></div>
     <div class="mo-actions">
-      <button class="btn btn-outline" style="flex:1;" onclick="closeMo('mo-add-task')">ביטול</button>
+      <button class="btn btn-outline" style="flex:1;" onclick="cancelAddTask()">ביטול</button>
       <button class="btn btn-blue" id="at-save-btn" style="flex:2;" onclick="confirmAddTask()">שמור קריאה ←</button>
     </div>
   </div>
@@ -2715,7 +2715,6 @@ async function drawerConfirmSlot(){
   const catName=catObj?catObj.name:'';
   const taskTime=c.optTime||slot.start;
   const newTask={
-    id:nextTaskId++,
     client:d.clientName,
     phone:d.phone,
     city:d.city,
@@ -2730,14 +2729,12 @@ async function drawerConfirmSlot(){
     assignId,
     preferredWindows:[]
   };
-  tasks.push(newTask);
-  save();
-  const saved=await saveTaskToSupabase(newTask);
+  const saved=await insertNewTaskConfirmed(newTask);
   if(btn){btn.disabled=false;btn.textContent='אשר שיבוץ ←';}
   if(!saved){
-    // task is in localStorage; show a softer toast — WAL not available for new inserts,
-    // so warn the user their data is local-only until network recovers
-    showToast('קריאה נוספה מקומית — בדוק חיבור לרשת לאישור סופי','error');
+    // New inserts aren't WAL-covered: nothing was kept locally — keep the drawer open to retry.
+    showToast('השמירה נכשלה — הקריאה לא שובצה. בדוק חיבור לרשת ונסה שוב.','error');
+    return;
   }
   closeCallDrawer();
   const dateLabel=c.date.d.toLocaleDateString('he-IL',{weekday:'short',day:'numeric',month:'numeric'});
@@ -3326,24 +3323,32 @@ async function dbUpsert(table, row) {
 async function dbInsert(table, row) {
   if (!currentTenantId) { showToast('שגיאה: לא מחובר — יש להתחבר מחדש', 'error'); return null; }
   _trackSave(+1);
-  const { data, error } = await sb.from(table)
-    .insert({ ...row, tenant_id: currentTenantId })
-    .select().single();
-  _trackSave(-1);
-  if (error) {
-    console.error(`[db] ${table}:`, error);
-    Sentry?.captureException(error);
+  try {
+    const { data, error } = await sb.from(table)
+      .insert({ ...row, tenant_id: currentTenantId })
+      .select().single();
+    _trackSave(-1);
+    if (error) {
+      console.error(`[db] ${table}:`, error);
+      Sentry?.captureException(error);
+      showToast('שגיאה בשמירה — בדוק חיבור לרשת', 'error');
+      return null;
+    }
+    return data;
+  } catch(e) {
+    _trackSave(-1); // prevent permanent leak if client throws instead of returning error (mirror of dbUpsert)
+    console.error(`[db] ${table} threw:`, e);
+    Sentry?.captureException(e);
     showToast('שגיאה בשמירה — בדוק חיבור לרשת', 'error');
     return null;
   }
-  return data;
 }
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function saveTaskToSupabase(task) {
   const row = {
     assign_id: task.assignId || null, client_name: task.client, client_phone: task.phone,
-    city: task.city, street: task.street, floor: task.floor || null, apartment: task.apartment || null, entrance_notes: task.entranceNotes || null, category_id: task.catId, category_name: task.cat,
+    city: task.city, street: task.street, floor: task.floor || null, apartment: task.apartment || null, entrance_notes: task.entranceNotes || null, category_id: task.catId || null /* uuid column: '' would reject the row */, category_name: task.cat,
     technician_id: task.techId || null, status: task.status,
     scheduled_date: task.date || null, scheduled_time: task.time || null,
     scheduled_window_start: task.windowStart || null, scheduled_window_end: task.windowEnd || null, locked: !!task.locked,
@@ -3363,6 +3368,21 @@ async function saveTaskToSupabase(task) {
   const data = await dbInsert('tasks', row);
   if (data) { task._dbId = data.id; task.id = data.id; save(); }
   return data !== null;
+}
+
+// THE one way to create a NEW call — every door (dispatch confirm, call drawer, save-pending,
+// add-call, recurring series, CSV import) goes through here; tests/addtask.test.js enforces it.
+// A new row is NOT WAL-covered (the WAL replays updates of existing rows only), so the call
+// enters local state ONLY after the DB confirms the insert (id/_dbId = row UUID). Callers show
+// success only when this returns true. Never throws. Demo mode never touches Supabase.
+async function insertNewTaskConfirmed(task){
+  if(CONFIG.DEMO_MODE){ task.id=nextTaskId++; tasks.push(task); save(); return true; }
+  let ok=false;
+  try{ ok=await saveTaskToSupabase(task); }
+  catch(e){ console.error('[task] insert threw:',e); window.Sentry?.captureException(e); }
+  if(!ok)return false;
+  tasks.push(task); save();
+  return true;
 }
 
 async function deleteTaskFromSupabase(taskId) {
@@ -3793,7 +3813,7 @@ function _addHours(timeStr,h){
 }
 
 // ═══ RECURRING TASKS ═══
-function createRecurring(){
+async function createRecurring(){
   const d=window._lastDispatched;if(!d){showToast('אין קריאה אחרונה','error');return;}
   const freq=document.getElementById('recur-freq').value;
   const count=parseInt(document.getElementById('recur-count').value)||3;
@@ -3801,21 +3821,19 @@ function createRecurring(){
   const delta=deltas[freq];
   const recurId='REC-'+genId().slice(0,6).toUpperCase();
   let base=new Date(d.date);
-  let created=0;
+  let created=0,failed=0;
   for(let i=0;i<count;i++){
     base=new Date(base.getTime()+delta*86400000);
     while(base.getDay()===6)base=new Date(base.getTime()+86400000); // skip Shabbat
     const dateStr=base.toISOString().split('T')[0];
-    const t={id:nextTaskId++,client:d.client,phone:d.phone,city:d.city,street:d.street,
+    const t={client:d.client,phone:d.phone,city:d.city,street:d.street,
       cat:d.catName,catId:d.catId,techId:null,status:'pending',time:'',date:dateStr,
       notes:(d.notes?d.notes+' ':'')+`[חוזר:${recurId}]`,assignId:''};
-    tasks.push(t);
-    saveTaskToSupabase(t);
-    created++;
+    if(await insertNewTaskConfirmed(t))created++;else failed++;
   }
-  save();
   document.getElementById('recur-section').classList.add('hidden');
-  showToast(`נוצרו ${created} קריאות ממתינות לסדרה ${recurId} ✓`);
+  if(failed)showToast(`נוצרו ${created} מתוך ${count} קריאות לסדרה ${recurId} — ${failed} לא נשמרו (בדוק חיבור לרשת)`,'error');
+  else showToast(`נוצרו ${created} קריאות ממתינות לסדרה ${recurId} ✓`);
 }
 
 // ═══ TECH LOGIN ROUTING ═══
@@ -6959,6 +6977,15 @@ function geoCityCoords(city) {
 let _pendingGeocode = null;
 const _geocodeCache = {};
 
+// fetch with a hard timeout. An external call awaited while a save button is locked must fail
+// OPEN (reject → caller's catch → null) instead of hanging the UI on a cold/stuck backend.
+async function _fetchTimeout(url, opts, ms) {
+  const ac = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  const t = ac ? setTimeout(() => ac.abort(), ms) : null;
+  try { return await fetch(url, ac ? { ...opts, signal: ac.signal } : opts); }
+  finally { if (t) clearTimeout(t); }
+}
+
 async function _triggerGeocode() {
   if (!tenantConfig?.features?.geocoding_enabled || !CONFIG.OPTIMIZER_URL) return;
   const city = (document.getElementById('s-city').value || '').trim();
@@ -6967,10 +6994,10 @@ async function _triggerGeocode() {
   const cacheKey = `${street}|${city}`;
   if (_geocodeCache[cacheKey]) { _pendingGeocode = _geocodeCache[cacheKey]; return; }
   try {
-    const res = await fetch(`${CONFIG.OPTIMIZER_URL}/geocode`, {
+    const res = await _fetchTimeout(`${CONFIG.OPTIMIZER_URL}/geocode`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ street, city })
-    });
+    }, 8000);
     if (!res.ok) return;
     const coords = await res.json();
     _geocodeCache[cacheKey] = coords;
@@ -6989,7 +7016,7 @@ async function geoSuggestCity(raw){
   try{
     const hdrs={'Content-Type':'application/json'};
     try{const{data:{session}}=await sb.auth.getSession();if(session&&session.access_token)hdrs['Authorization']=`Bearer ${session.access_token}`;}catch(e){}
-    const res=await fetch(`${CONFIG.OPTIMIZER_URL}/geo-suggest`,{method:'POST',headers:hdrs,body:JSON.stringify({city:raw})});
+    const res=await _fetchTimeout(`${CONFIG.OPTIMIZER_URL}/geo-suggest`,{method:'POST',headers:hdrs,body:JSON.stringify({city:raw})},4000);
     if(!res.ok)return null;
     return await res.json();
   }catch(e){return null;}
@@ -7075,17 +7102,24 @@ async function savePendingFromDispatch(){
   const _gc=_pendingGeocode; const _gcAt=_gc?new Date().toISOString():null;
   const fields={client,phone,city,street,floor,apartment,entranceNotes,cat:catName,catId,status:'pending',techId:null,time:'',date:'',windowStart:'',windowEnd:'',notes,preferredWindows:[...prefWindows],earliestDate:dateCons.earliest_date||'',latestDate:dateCons.latest_date||'',fixedDate:dateCons.fixed_date||'',manuallyOverridden:false,overrideReason:null,lat:_gc?.lat||null,lon:_gc?.lon||null,geocodedAt:_gcAt};
   const qt=window._queueTask;
-  let task;
-  if(qt){ Object.assign(qt,fields); task=qt; window._queueTask=null; }
-  else { task={id:nextTaskId++,assignId:'',...fields}; tasks.push(task); }
-  save();
-  const saved=await saveTaskToSupabase(task);
+  let saved;
+  if(qt){
+    // Existing call → an UPDATE: kept in memory + WAL-queued by dbUpsert on failure (it says so).
+    Object.assign(qt,fields); window._queueTask=null; save();
+    saved=await saveTaskToSupabase(qt);
+  } else {
+    saved=await insertNewTaskConfirmed({assignId:'',...fields});
+  }
   if(btn){ btn.disabled=false; btn.textContent='💾 שמור ללא שיבוץ — קריאה ממתינה'; }
-  if(!saved) showToast('נשמר מקומית — בדוק חיבור לרשת','error');
+  if(!saved&&!qt){
+    // A NEW call that failed is NOT kept anywhere — keep the form filled so it can be retried.
+    showToast('השמירה נכשלה — הקריאה לא נשמרה. בדוק חיבור לרשת ונסה שוב.','error');
+    return;
+  }
   _pendingGeocode=null;
   clearDispatchDraft();
   resetDispatch(); // stays on dispatch — the pending/archive queue alongside shows the new call
-  showToast('הקריאה נשמרה כקריאה ממתינה ✓ — מופיעה ברשימת הממתינות');
+  if(saved)showToast('הקריאה נשמרה כקריאה ממתינה ✓ — מופיעה ברשימת הממתינות');
 }
 // Gather the signals explainCandidate needs from a built candidate. Impure (reads
 // zones/prefWindows/settings/tenantConfig) — all values are ALREADY computed by the
@@ -7421,16 +7455,16 @@ async function confirmAssign(idx,assignId){
     // Task moved tech/day: the day it LEFT also needs re-sequencing (tightens the hole)
     if(saved&&_orig.techId&&_orig.date&&(String(_orig.techId)!==String(qt.techId)||_orig.date!==qt.date))
       markDayDirty(_orig.techId,_orig.date);
-    window._queueTask=null;
+    if(saved)window._queueTask=null; // on failure keep the link so a retry updates THIS call, not a duplicate
   } else {
-    newTask={id:nextTaskId++,client,phone,city,street,floor,apartment,entranceNotes,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,windowStart:slot.start,windowEnd:slot.end,notes,assignId,preferredWindows:[...prefWindows],earliestDate:dateCons.earliest_date||'',latestDate:dateCons.latest_date||'',fixedDate:dateCons.fixed_date||'',lat:_gc?.lat||null,lon:_gc?.lon||null,geocodedAt:_gcAt};
+    newTask={client,phone,city,street,floor,apartment,entranceNotes,cat:catName,catId,techId:c.tech.id,status:'assigned',time:taskTime,date:c.date.str,windowStart:slot.start,windowEnd:slot.end,notes,assignId,preferredWindows:[...prefWindows],earliestDate:dateCons.earliest_date||'',latestDate:dateCons.latest_date||'',fixedDate:dateCons.fixed_date||'',lat:_gc?.lat||null,lon:_gc?.lon||null,geocodedAt:_gcAt};
     if(_overStamp)Object.assign(newTask,_overStamp); // popup-approved overrun — audited
-    tasks.push(newTask);save();
-    saved=await saveTaskToSupabase(newTask);
+    saved=await insertNewTaskConfirmed(newTask);
   }
   _pendingGeocode=null;
   if(btn){btn.disabled=false;btn.textContent='אשר שיבוץ ✓';}
-  if(!saved){showToast('קריאה נוספה מקומית — בדוק חיבור לרשת לאישור סופי','error');}
+  // Never show the success screen for an unsaved call — stay on the result so it can be retried.
+  if(!saved){showToast('השמירה נכשלה — הקריאה לא שובצה. בדוק חיבור לרשת ונסה שוב.','error');return;}
   clearDispatchDraft();
   document.getElementById('dispatch-result').classList.add('hidden');
   document.getElementById('suc-id').textContent=assignId;
@@ -7792,8 +7826,11 @@ function openAddTaskModal(){
   catSel.innerHTML='<option value="">בחר קטגוריה...</option>'+categories.map(c=>`<option value="${c.id}">${h(c.name)}</option>`).join('');
   ['at-name','at-phone','at-city','at-street','at-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('at-error').textContent='';
+  window._atSession=(window._atSession||0)+1; // a save still in flight from a previous opening must not touch this one
+  const b=document.getElementById('at-save-btn');if(b){b.disabled=false;b.textContent='שמור קריאה ←';}
   document.getElementById('mo-add-task').classList.remove('hidden');
 }
+function cancelAddTask(){ window._atSession=(window._atSession||0)+1; closeMo('mo-add-task'); }
 async function confirmAddTask(){
   const catEl=document.getElementById('at-cat');
   const name=document.getElementById('at-name').value.trim();
@@ -7809,9 +7846,11 @@ async function confirmAddTask(){
   if(!phone){errEl.textContent='נא להזין מספר טלפון';return;}
   if(!city){errEl.textContent='נא לבחור עיר';return;}
   if(!street){errEl.textContent='נא להזין רחוב ומספר — כתובת מלאה נדרשת לשיבוץ מדויק';return;}
-  if(!currentTenantId){errEl.textContent='לא מחובר — יש להתחבר מחדש';return;}
+  if(!CONFIG.DEMO_MODE&&!currentTenantId){errEl.textContent='לא מחובר — יש להתחבר מחדש';return;}
+  if(window._atSaving)return; // double-click guard — one save in flight at a time
+  window._atSaving=true;
+  const session=window._atSession; // which opening of the modal this save belongs to
   const btn=document.getElementById('at-save-btn');
-  if(btn&&btn.disabled)return; // double-click guard — one save in flight at a time
   if(btn){btn.disabled=true;btn.textContent='שומר…';}
   try{
     if(_geoSuggestOn()){ // brain fallback — correct a mistyped city before it's saved
@@ -7823,22 +7862,28 @@ async function confirmAddTask(){
       }
     }
     const catObj=categories.find(c=>c.id===catEl.value);
-    // A NEW call is not WAL-covered, so it enters local state only once the DB confirms the
-    // insert (saveTaskToSupabase sets id/_dbId to the row UUID). On failure the modal stays
-    // open with the details intact — never a success toast for a call that wasn't saved.
-    const newTask={id:null,client:name,phone,city,street,cat:catObj?.name||'',catId:catEl.value,techId:null,status:'pending',time:'',date:'',notes,assignId:'',preferredWindows:[]};
-    let saved=false;
-    try{saved=await saveTaskToSupabase(newTask);}
-    catch(e){console.error('[addTask] save failed:',e);window.Sentry?.captureException(e);}
-    if(!saved){errEl.textContent='השמירה נכשלה — הקריאה לא נשמרה. בדוק חיבור לרשת ולחץ שוב על שמירה.';return;}
-    tasks.push(newTask);
-    save();
+    // On failure the modal stays open with the details intact — never a success toast for a
+    // call that wasn't saved (insertNewTaskConfirmed adds it locally only after the DB confirms).
+    const newTask={client:name,phone,city,street,cat:catObj?.name||'',catId:catEl.value,techId:null,status:'pending',time:'',date:'',notes,assignId:'',preferredWindows:[]};
+    const saved=await insertNewTaskConfirmed(newTask);
+    const sameModal=session===window._atSession; // false ⇒ the user cancelled/reopened meanwhile
+    if(!saved){
+      if(sameModal)errEl.textContent='השמירה נכשלה — הקריאה לא נשמרה. בדוק חיבור לרשת ולחץ שוב על שמירה.';
+      else showToast(`הקריאה של ${name} לא נשמרה — בדוק חיבור לרשת`,'error');
+      return;
+    }
+    if(!sameModal){ // an insert can't be un-sent: be honest that it WAS saved, don't touch the new modal
+      showToast(`הקריאה של ${name} נשמרה ✓`);
+      if(typeof renderTasks==='function')renderTasks();
+      return;
+    }
     closeMo('mo-add-task');
     goPage('tasks');
     filterTasks('pending');
     showToast('הקריאה נרשמה ✓');
   }finally{
-    if(btn){btn.disabled=false;btn.textContent='שמור קריאה ←';}
+    window._atSaving=false;
+    if(btn&&session===window._atSession){btn.disabled=false;btn.textContent='שמור קריאה ←';}
   }
 }
 
@@ -8146,23 +8191,22 @@ async function importCsvRows(){
   const btn=document.getElementById('csv-import-btn');
   const resultEl=document.getElementById('csv-import-result');
   btn.disabled=true;btn.textContent='מייבא...';
-  let ok=0,fail=0;
+  let ok=0,fail=0;const failedRows=[];
   for(const r of csvParsedRows){
+    let saved=false;
     try{
       const catObj=categories.find(c=>c.name===r.category_name)||null;
       const newTask={
-        id:nextTaskId++,
         client:r.client_name,phone:r.client_phone||'',
         city:r.city,street:r.street||'',
-        cat:catObj?.name||r.category_name||'',catId:catObj?.id||'',
+        cat:catObj?.name||r.category_name||'',catId:catObj?.id||null,
         techId:null,status:'pending',time:r.scheduled_time||'',
         date:parseImportDate(r.scheduled_date),notes:r.notes||'',
         assignId:r.assign_id||'',preferredWindows:[]
       };
-      tasks.push(newTask);
-      await saveTaskToSupabase(newTask);
-      ok++;
-    }catch(e){fail++;}
+      saved=await insertNewTaskConfirmed(newTask); // counts as added ONLY on a confirmed insert
+    }catch(e){console.error('[csv] row failed:',e);}
+    if(saved)ok++;else{fail++;failedRows.push(`${r.client_name||'?'} · ${r.city||'?'}`);}
   }
   save();renderTasks();
   btn.textContent='ייבא קריאות';
@@ -8172,7 +8216,7 @@ async function importCsvRows(){
     resultEl.textContent=`✓ ${ok} קריאות נוספו בהצלחה`;
   }else{
     resultEl.style.cssText='margin-bottom:0.75rem;padding:12px;border-radius:8px;font-size:0.85rem;font-weight:700;text-align:center;background:#FEF3C7;color:#92400E;border:1px solid #FDE68A;';
-    resultEl.textContent=`${ok} נוספו בהצלחה · ${fail} שגיאות`;
+    resultEl.textContent=`${ok} נוספו בהצלחה · ${fail} לא נשמרו: ${failedRows.slice(0,10).join(', ')}${failedRows.length>10?'…':''}`;
   }
   csvParsedRows=[];
   const fi=document.getElementById('csv-file-input');if(fi)fi.value='';
